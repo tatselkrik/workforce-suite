@@ -10,16 +10,19 @@ Application identifier: `io.github.tatselkrik.hrisdesktop`.
 - **Employee records:** add/edit employees, search and filter the directory, customize annual allowances, and archive employees while retaining history.
 - **Attendance:** record check-in/check-out, browse dates, reject duplicate daily check-ins and multiple open shifts. Live timestamps come from the database server and use the company time zone.
 - **Leave:** request annual, sick, or unpaid leave; approve or reject pending requests; prevent overlaps and annual leave over-allocation.
-- **Settings:** company name, IANA time zone, default leave allowance for new employees, and account sign-out. Database configuration is handled during deployment.
+- **Settings:** company name, IANA time zone, and default leave allowance for new employees. Database configuration is handled during deployment.
+- **Company sidebar:** a transparent deployment logo above the company name, followed by Overview, Employees, Attendance, Leave and Settings. Profile and Sign out are in the bottom-left menu; Settings contains company defaults.
 - **CI:** checked-in GitHub Actions workflow tests Rust behavior and database access rules and builds a Windows executable. It does not deploy a database or publish a release.
 
 The interface uses `egui`/`eframe`. The domain rules and Supabase Auth/REST adapter are also Rust. There is no browser UI, web server, or SQLite database in the application. Node.js is used only by the separate local PostgreSQL test harness.
 
 ## Try it
 
-The private Windows setup installs version 0.1.1 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection profile, but no account password or session.
+The private Windows setup installs version 0.1.2 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection profile, but no account password or session.
 
 Open **HRIS Desktop** and sign in with your assigned HRIS account. Its company database is already selected by the installation. Account login remains necessary to access HR records; database setup is not part of that login.
+
+Press **Enter** in the email or password field to sign in, or use the Sign in button. Submission is disabled while a sign-in is already running. Use **Profile → Sign out** at the bottom left to clear the session.
 
 An unconfigured source build can run demo mode without an account. Sample changes reset when the application closes. To try the employee workflows in either workspace:
 
@@ -41,13 +44,15 @@ cargo build --release --locked
 
 The executable is `target/release/hris-desktop.exe`. Run `cargo run --locked` during development. The current executable was built for Windows x64; other platforms have not been verified.
 
-For a prepared private six-file Windows distribution bundle, build the per-user setup with NSIS 3.11:
+For a prepared private Windows distribution bundle, build the per-user setup with NSIS 3.11:
 
 ```powershell
 makensis /DAPP_BUNDLE=C:\absolute\bundle /DSETUP_OUTPUT=C:\absolute\HRIS-Desktop-Setup.exe tools/windows/installer.nsi
 ```
 
 The installer refuses an unfamiliar existing installation directory or shortcuts. It uses the application's fixed identifier for its uninstall registration. Its uninstaller targets only the named installed files and retains local connection settings. Installation, file integrity, shortcuts, normal launch and an uninstall/reinstall cycle were tested locally. The uninstaller removed its own files, shortcuts and registration while preserving a synthetic unknown file in the installation folder; reinstallation restored the verified app.
+
+For company branding, optionally include `company-logo.png` beside the executable in the deployment bundle. Use a transparent PNG up to 2 MiB and 2048 × 2048 pixels; it is scaled proportionally without adding an opaque background. The company name comes from company Settings. Missing or invalid logos use company initials as a fallback. Company-specific logos stay outside generic source control.
 
 ## Deployment setup (administrator only)
 
@@ -107,6 +112,6 @@ $env:HRIS_SCREENSHOT_TO = 'C:\absolute\path\hris-preview.png'
 ./target/debug/hris-desktop.exe
 ```
 
-`HRIS_PREVIEW_PAGE` can select `employees`, `attendance`, `leave`, or `settings` in this QA build. `HRIS_PREVIEW_FORM` can open `employee` or `leave`. These environment controls are excluded from a normal production build.
+`HRIS_PREVIEW_PAGE` can select `employees`, `attendance`, `leave`, or `settings` in this QA build. `HRIS_PREVIEW_FORM` can open `employee` or `leave`. `HRIS_PREVIEW_PROFILE=open` previews the profile popup; `sample-account` renders a fictional account menu over the visibly labeled demo without authenticating. `HRIS_PREVIEW_SIZE=compact` uses the minimum window size, and `HRIS_PREVIEW_COMPANY_NAME` can override the fictional demo name for layout checks. These environment controls are excluded from a normal production build.
 
 Implementation references: [eframe native applications](https://docs.rs/eframe/0.37.0/eframe/), [Supabase row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security), [Supabase publishable API keys](https://supabase.com/docs/guides/getting-started/api-keys), [Supabase password authentication](https://supabase.com/docs/guides/auth/passwords), and [PGlite extensions](https://pglite.dev/extensions/).

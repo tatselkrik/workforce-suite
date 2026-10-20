@@ -9,10 +9,17 @@ fn main() -> eframe::Result {
             windows_sys::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID(app_id.as_ptr());
         }
     }
+    let window_size = [1320.0, 880.0];
+    #[cfg(feature = "qa-screenshot")]
+    let window_size = if std::env::var("HRIS_PREVIEW_SIZE").as_deref() == Ok("compact") {
+        [1000.0, 720.0]
+    } else {
+        window_size
+    };
     let options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
             .with_app_id(hris_desktop::APP_ID)
-            .with_inner_size([1320.0, 880.0])
+            .with_inner_size(window_size)
             .with_min_inner_size([1000.0, 720.0]),
         renderer: eframe::Renderer::Glow,
         ..Default::default()

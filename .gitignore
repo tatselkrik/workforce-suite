@@ -4,6 +4,7 @@
 /.env
 /hris-config.json
 /hris-connection.json
+/company-logo.png
 /memory.md
 /supabase/.temp/
 /supabase/.branches/

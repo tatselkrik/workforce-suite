@@ -20,11 +20,11 @@ OutFile "${SETUP_OUTPUT}"
 InstallDir "$LOCALAPPDATA\Programs\HRIS Desktop"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
-VIProductVersion "0.1.1.0"
+VIProductVersion "0.1.2.0"
 VIAddVersionKey /LANG=1033 "ProductName" "HRIS Desktop"
-VIAddVersionKey /LANG=1033 "ProductVersion" "0.1.1"
+VIAddVersionKey /LANG=1033 "ProductVersion" "0.1.2"
 VIAddVersionKey /LANG=1033 "FileDescription" "HRIS Desktop private prototype setup"
-VIAddVersionKey /LANG=1033 "FileVersion" "0.1.1.0"
+VIAddVersionKey /LANG=1033 "FileVersion" "0.1.2.0"
 VIAddVersionKey /LANG=1033 "LegalCopyright" ""
 
 !define MUI_ABORTWARNING
@@ -68,6 +68,9 @@ Section "HRIS Desktop"
   File "${APP_BUNDLE}\VERIFICATION.md"
   File "${APP_BUNDLE}\BUILD.json"
   File "${APP_BUNDLE}\SHA256SUMS.txt"
+  !if /FileExists "${APP_BUNDLE}\company-logo.png"
+    File "${APP_BUNDLE}\company-logo.png"
+  !endif
   FileOpen $0 "$INSTDIR\.hris-installation" w
   FileWrite $0 "${APP_ID}"
   FileClose $0
@@ -75,7 +78,7 @@ Section "HRIS Desktop"
   CreateShortCut "$SMPROGRAMS\HRIS Desktop.lnk" "$INSTDIR\HRIS-Desktop.exe" "" "$INSTDIR\HRIS-Desktop.exe" 0
   CreateShortCut "$DESKTOP\HRIS Desktop.lnk" "$INSTDIR\HRIS-Desktop.exe" "" "$INSTDIR\HRIS-Desktop.exe" 0
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayName" "HRIS Desktop"
-  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "0.1.1"
+  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "0.1.2"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\HRIS-Desktop.exe"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "UninstallString" '$\"$INSTDIR\Uninstall.exe$\"'
@@ -112,6 +115,7 @@ Section "Uninstall"
   Delete "$INSTDIR\VERIFICATION.md"
   Delete "$INSTDIR\BUILD.json"
   Delete "$INSTDIR\SHA256SUMS.txt"
+  Delete "$INSTDIR\company-logo.png"
   Delete "$INSTDIR\.hris-installation"
   Delete "$INSTDIR\Uninstall.exe"
   Delete "$SMPROGRAMS\HRIS Desktop.lnk"

@@ -1,5 +1,14 @@
 # Prototype verification — 2026-10-20
 
+## Company sidebar, profile and Enter-key login — version 0.1.2
+
+- Native live workflows were verified in the user-signed-in 0.1.1 installation before rebuilding: employee creation/editing and server refresh, attendance check-in/check-out, annual leave request/approval and balance 15 to 14, and successful sign-out returning to an empty login screen. Hosted queries independently confirmed the saved records. Cleanup verified the exact synthetic employee and QA markers before deleting only that employee's attendance, leave and parent record. The database returned to one company and zero employees, attendance and leave requests.
+- The sidebar now places a transparent company logo, or initials fallback, above the company name. It contains only the five navigation items followed by a bottom-left Profile menu. COMPANY/WORKSPACE headings and the old prototype footer were removed. Sign out moved from Settings into Profile; company Settings retains policy/default fields only.
+- The optional deployment logo is bounded to PNG, 2 MiB and 2048 × 2048 pixels. Tests confirm transparent and partially transparent pixels are preserved and invalid/oversized images are rejected. No actual company logo was supplied; QA used a synthetic alpha fixture that is not packaged.
+- All 22 Rust tests passed, including two headless egui tests that send Enter events to the actual email/password widgets and confirm one submission without a newline and no resubmission while busy. This verifies keyboard handling without automating a Windows authentication dialog or sending synthetic credentials to a real server.
+- Native screenshots were visually inspected for the sidebar, company Settings without account actions, Profile with a fictional account at minimum window size and a long company name, transparent-logo rendering, and sign-in. The account preview remains visibly labeled demo and never authenticates. One unsupported decorative arrow glyph was removed after inspection.
+- Database schema, authorization policies and HR workflow rules are unchanged. Installation/build hashes and the exact source revision belong to this version's distribution manifest and update report. The revised installed UI requires a fresh local login after restart; native live workflows above were tested before the visual update, not falsely reported as retested afterward.
+
 ## Company deployment flow — version 0.1.1
 
 - Company database selection is deployment configuration. The app reads only its packaged profile; remembered device settings and environment variables cannot select another project. Connection setup controls were removed from the interface.

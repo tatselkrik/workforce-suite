@@ -1,5 +1,6 @@
 use crate::{
     backend::{self, Command, ConnectionConfig, Update},
+    branding,
     domain::*,
 };
 use chrono::{Datelike, Duration};
@@ -63,6 +64,7 @@ pub struct HrisApp {
     deployment_error: Option<String>,
     login_email: String,
     login_password: String,
+    company_logo: Option<egui::TextureHandle>,
     #[cfg(feature = "qa-screenshot")]
     qa_frames: u32,
 }
@@ -116,6 +118,14 @@ impl HrisApp {
             .map(|store| store.data.clone())
             .unwrap_or_else(Snapshot::signed_out);
         let (commands, updates) = backend::worker(demo, cc.egui_ctx.clone());
+        let company_logo = std::env::current_exe()
+            .ok()
+            .and_then(|exe| exe.parent().map(|folder| folder.join("company-logo.png")))
+            .and_then(|path| branding::load_logo(&path).ok())
+            .map(|image| {
+                cc.egui_ctx
+                    .load_texture("company-logo", image, egui::TextureOptions::LINEAR)
+            });
         let mut app = Self {
             attendance_date: data.company.today().to_string(),
             company_draft: data.company.clone(),
@@ -137,11 +147,17 @@ impl HrisApp {
             deployment_error,
             login_email: String::new(),
             login_password: String::new(),
+            company_logo,
             #[cfg(feature = "qa-screenshot")]
             qa_frames: 0,
         };
         #[cfg(feature = "qa-screenshot")]
         {
+            if app.data.mode == Mode::Demo {
+                if let Ok(name) = std::env::var("HRIS_PREVIEW_COMPANY_NAME") {
+                    app.data.company.name = name;
+                }
+            }
             match std::env::var("HRIS_PREVIEW_PAGE").as_deref() {
                 Ok("employees") => app.page = Page::Employees,
                 Ok("attendance") => app.page = Page::Attendance,
@@ -235,48 +251,40 @@ impl HrisApp {
 
     fn sidebar(&mut self, ui: &mut Ui) {
         ui.add_space(12.0);
-        ui.horizontal(|ui| {
-            Frame::new()
-                .fill(TEAL)
-                .corner_radius(10)
-                .inner_margin(12)
-                .show(ui, |ui| {
-                    ui.label(RichText::new("H").color(Color32::WHITE).size(24.0).strong());
-                });
-            ui.vertical(|ui| {
-                ui.label(
-                    RichText::new("HRIS")
+        ui.vertical_centered(|ui| {
+            if let Some(logo) = &self.company_logo {
+                ui.add(
+                    egui::Image::new(logo)
+                        .fit_to_exact_size(Vec2::new(112.0, 72.0))
+                        .maintain_aspect_ratio(true),
+                );
+            } else {
+                let (rect, _) = ui.allocate_exact_size(Vec2::splat(72.0), egui::Sense::hover());
+                ui.painter().circle_stroke(
+                    rect.center(),
+                    32.0,
+                    Stroke::new(1.5, Color32::from_rgb(115, 214, 197)),
+                );
+                ui.painter().text(
+                    rect.center(),
+                    egui::Align2::CENTER_CENTER,
+                    branding::initials(&self.data.company.name),
+                    FontId::proportional(25.0),
+                    Color32::from_rgb(222, 242, 237),
+                );
+            }
+            ui.add_space(10.0);
+            ui.add(
+                egui::Label::new(
+                    RichText::new(&self.data.company.name)
                         .color(Color32::WHITE)
-                        .size(23.0)
+                        .size(18.0)
                         .strong(),
-                );
-                ui.label(
-                    RichText::new("DESKTOP WORKSPACE")
-                        .color(Color32::from_rgb(153, 174, 191))
-                        .size(9.0),
-                );
-            });
+                )
+                .wrap(),
+            );
         });
-        ui.add_space(30.0);
-        ui.label(
-            RichText::new("COMPANY")
-                .color(Color32::from_rgb(144, 165, 182))
-                .size(10.0)
-                .strong(),
-        );
-        ui.label(
-            RichText::new(&self.data.company.name)
-                .color(Color32::from_rgb(222, 232, 240))
-                .size(15.0),
-        );
-        ui.add_space(24.0);
-        ui.label(
-            RichText::new("WORKSPACE")
-                .color(Color32::from_rgb(144, 165, 182))
-                .size(10.0)
-                .strong(),
-        );
-        ui.add_space(4.0);
+        ui.add_space(28.0);
         for page in Page::ALL {
             let selected = self.page == page;
             let label = RichText::new(page.title()).size(15.0).color(if selected {
@@ -295,20 +303,51 @@ impl HrisApp {
         ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
             ui.add_space(4.0);
             ui.label(
-                RichText::new("Administrator prototype")
-                    .color(Color32::from_rgb(153, 174, 191))
-                    .size(11.0),
-            );
-            ui.label(
                 RichText::new(if self.data.mode == Mode::Demo {
-                    "DEMO · SAMPLE DATA"
+                    "DEMO · NOT SAVED"
                 } else {
-                    "COMPANY WORKSPACE · CONNECTED"
+                    "CONNECTED"
                 })
                 .color(Color32::from_rgb(115, 214, 197))
                 .size(11.0)
                 .strong(),
             );
+            let profile = ui.add_sized(
+                [ui.available_width(), 44.0],
+                egui::Button::new(RichText::new("Profile").color(Color32::WHITE).size(14.0))
+                    .fill(Color32::from_rgb(35, 53, 70))
+                    .stroke(Stroke::NONE)
+                    .corner_radius(8),
+            );
+            let popup = egui::Popup::menu(&profile)
+                .id(egui::Id::unique("profile_menu"))
+                .align(egui::emath::RectAlign::TOP_START);
+            #[cfg(feature = "qa-screenshot")]
+            let popup = if matches!(
+                std::env::var("HRIS_PREVIEW_PROFILE").as_deref(),
+                Ok("open" | "sample-account")
+            ) {
+                popup.open(true)
+            } else {
+                popup
+            };
+            popup.show(|ui| {
+                let profile_info = (self.data.mode == Mode::Supabase, self.login_email.as_str());
+                #[cfg(feature = "qa-screenshot")]
+                let profile_info =
+                    if std::env::var("HRIS_PREVIEW_PROFILE").as_deref() == Ok("sample-account") {
+                        (true, "preview@example.invalid")
+                    } else {
+                        profile_info
+                    };
+                if profile_contents(ui, profile_info.0, profile_info.1) {
+                    self.login_email.clear();
+                    self.login_password.clear();
+                    clear_login_history(ui.ctx());
+                    self.send(Command::SignOut);
+                    ui.close();
+                }
+            });
             ui.separator();
         });
     }
@@ -316,13 +355,10 @@ impl HrisApp {
     fn header(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
             ui.label(
-                RichText::new(format!(
-                    "WORKSPACE  /  {}",
-                    self.page.title().to_uppercase()
-                ))
-                .color(MUTED)
-                .size(11.0)
-                .strong(),
+                RichText::new(self.page.title().to_uppercase())
+                    .color(MUTED)
+                    .size(11.0)
+                    .strong(),
             );
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 if self.busy {
@@ -899,8 +935,6 @@ impl HrisApp {
     }
 
     fn settings(&mut self, ui: &mut Ui) {
-        self.account_settings(ui);
-        ui.add_space(8.0);
         card(ui, |ui| {
             ui.label(RichText::new("Company defaults").size(18.0).strong());
             ui.set_max_width(630.0);
@@ -934,11 +968,6 @@ impl HrisApp {
                 }
             }
         });
-        ui.label(
-            RichText::new("HRIS Desktop · Native Rust prototype · One company per installation")
-                .color(MUTED)
-                .size(11.0),
-        );
     }
 
     fn sign_in(&mut self, ui: &mut Ui) {
@@ -963,13 +992,7 @@ impl HrisApp {
                             ui.colored_label(if *error { Color32::from_rgb(160, 52, 38) } else { TEAL }, message);
                         }
                         ui.add_space(8.0);
-                        ui.add_enabled_ui(!self.busy, |ui| {
-                            field(ui, "Email", &mut self.login_email, "Your work email");
-                            ui.label("Password");
-                            ui.add_sized([ui.available_width(), 34.0],
-                                egui::TextEdit::singleline(&mut self.login_password).password(true).hint_text("Your HRIS password"));
-                            ui.add_space(8.0);
-                            if primary(ui, "Sign in") {
+                        if login_controls(ui, &mut self.login_email, &mut self.login_password, !self.busy) {
                                 if self.login_email.trim().is_empty() || self.login_password.is_empty() {
                                     self.notice = Some(("Enter your email and password.".into(), true));
                                 } else if let Some(config) = &self.connection {
@@ -978,36 +1001,15 @@ impl HrisApp {
                                         email: self.login_email.trim().into(),
                                         password: std::mem::take(&mut self.login_password),
                                     };
+                                    clear_login_history(ui.ctx());
                                     self.send(command);
                                 }
-                            }
-                        });
+                        }
                         if self.busy {
                             ui.horizontal(|ui| { ui.spinner(); ui.label("Signing in…"); });
                         }
                     });
                 });
-        });
-    }
-
-    fn account_settings(&mut self, ui: &mut Ui) {
-        card(ui, |ui| {
-            ui.set_max_width(660.0);
-            ui.label(RichText::new("Account").size(18.0).strong());
-            if self.data.mode == Mode::Supabase {
-                badge(ui, "Signed in to your company workspace", true);
-                ui.label(
-                    RichText::new("Use Refresh to load changes made on another device.")
-                        .color(MUTED),
-                );
-                if ui.button("Sign out").clicked() {
-                    self.login_email.clear();
-                    self.login_password.clear();
-                    self.send(Command::SignOut);
-                }
-            } else {
-                ui.label(RichText::new("Fictional demo workspace. No account is connected, and sample changes are not saved.").color(MUTED));
-            }
         });
     }
 
@@ -1181,6 +1183,134 @@ impl eframe::App for HrisApp {
             }
         }
         ctx.request_repaint_after(std::time::Duration::from_secs(20));
+    }
+}
+
+fn clear_login_history(ctx: &egui::Context) {
+    for name in ["hris-login-email", "hris-login-password"] {
+        let id = egui::Id::unique(name);
+        if let Some(mut state) = egui::text_edit::TextEditState::load(ctx, id) {
+            state.clear_undoer();
+            state.store(ctx, id);
+        }
+    }
+}
+
+fn login_controls(ui: &mut Ui, email: &mut String, password: &mut String, enabled: bool) -> bool {
+    let submitted = ui
+        .add_enabled_ui(enabled, |ui| {
+            ui.label("Email");
+            let email_response = ui.add_sized(
+                [ui.available_width(), 34.0],
+                egui::TextEdit::singleline(email)
+                    .id(egui::Id::unique("hris-login-email"))
+                    .hint_text("Your work email"),
+            );
+            ui.label("Password");
+            let password_response = ui.add_sized(
+                [ui.available_width(), 34.0],
+                egui::TextEdit::singleline(password)
+                    .id(egui::Id::unique("hris-login-password"))
+                    .password(true)
+                    .hint_text("Your HRIS password"),
+            );
+            let enter = ui.input(|input| input.key_pressed(egui::Key::Enter))
+                && (email_response.has_focus()
+                    || email_response.lost_focus()
+                    || password_response.has_focus()
+                    || password_response.lost_focus());
+            ui.add_space(8.0);
+            primary(ui, "Sign in") || enter
+        })
+        .inner;
+    enabled && submitted
+}
+
+fn profile_contents(ui: &mut Ui, signed_in: bool, email: &str) -> bool {
+    ui.set_min_width(200.0);
+    ui.set_max_width(280.0);
+    ui.label(
+        RichText::new(if signed_in {
+            "Administrator"
+        } else {
+            "Demo profile"
+        })
+        .strong()
+        .size(16.0),
+    );
+    if signed_in {
+        if !email.trim().is_empty() {
+            ui.add(egui::Label::new(RichText::new(email.trim()).color(MUTED).size(12.0)).wrap());
+        }
+        ui.separator();
+        ui.button("Sign out").clicked()
+    } else {
+        ui.label(
+            RichText::new("Fictional sample data. Changes are not saved.")
+                .color(MUTED)
+                .size(12.0),
+        );
+        false
+    }
+}
+
+#[cfg(test)]
+mod login_tests {
+    use super::*;
+
+    fn enter_from(field: &str, enabled: bool) -> (usize, String) {
+        let ctx = egui::Context::default();
+        configure_theme(&ctx);
+        let mut email = "qa@example.invalid".to_string();
+        let mut password = "synthetic fixture".to_string();
+        let input = egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::Pos2::ZERO,
+                Vec2::new(500.0, 600.0),
+            )),
+            ..Default::default()
+        };
+        let mut output = ctx.run_ui(input.clone(), |ui| {
+            login_controls(ui, &mut email, &mut password, true);
+        });
+        output.textures_delta.clear(); // This headless harness intentionally has no painter.
+        ctx.memory_mut(|memory| memory.request_focus(egui::Id::unique(field)));
+        let mut keyboard = input.clone();
+        keyboard.events.push(egui::Event::Key {
+            key: egui::Key::Enter,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::NONE,
+        });
+        let mut submissions = 0;
+        let mut available = enabled;
+        let mut output = ctx.run_ui(keyboard, |ui| {
+            if login_controls(ui, &mut email, &mut password, available) {
+                submissions += 1;
+                available = false; // The real app disables submission while its worker is busy.
+            }
+        });
+        output.textures_delta.clear();
+        let mut output = ctx.run_ui(input, |ui| {
+            assert!(!login_controls(ui, &mut email, &mut password, available));
+        });
+        output.textures_delta.clear();
+        (submissions, password)
+    }
+
+    #[test]
+    fn enter_in_email_or_password_submits_once_without_inserting_a_newline() {
+        for field in ["hris-login-email", "hris-login-password"] {
+            let (submissions, password) = enter_from(field, true);
+            assert_eq!(submissions, 1, "Enter must submit from {field}");
+            assert_eq!(password, "synthetic fixture");
+        }
+    }
+
+    #[test]
+    fn enter_cannot_resubmit_while_sign_in_is_busy() {
+        assert_eq!(enter_from("hris-login-password", false).0, 0);
     }
 }
 
