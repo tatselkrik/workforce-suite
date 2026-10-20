@@ -292,7 +292,9 @@ impl HrisApp {
                         self.employee_form = None;
                         self.leave_form = None;
                     }
-                    self.company_draft = data.company.clone();
+                    if self.data.company != data.company {
+                        self.company_draft = data.company.clone();
+                    }
                     self.data = data;
                     if self.close_on_success {
                         self.employee_form = None;
@@ -317,17 +319,14 @@ impl HrisApp {
                             ctx.load_texture("profile-avatar", image, egui::TextureOptions::LINEAR)
                         });
                 }
-                self.personal_draft = update
-                    .account
-                    .as_ref()
-                    .map(|a| a.details.clone())
-                    .unwrap_or_default();
-                self.display_draft = update
-                    .account
-                    .as_ref()
-                    .map(|a| a.display)
-                    .unwrap_or_default();
-                ctx.set_zoom_factor(self.display_draft.scale_percent as f32 / 100.0);
+                if sync_account_drafts(
+                    self.account.as_ref(),
+                    update.account.as_ref(),
+                    &mut self.personal_draft,
+                    &mut self.display_draft,
+                ) {
+                    ctx.set_zoom_factor(self.display_draft.scale_percent as f32 / 100.0);
+                }
                 self.account = update.account;
             }
             self.close_on_success = false;
@@ -1631,6 +1630,25 @@ impl eframe::App for HrisApp {
     }
 }
 
+fn sync_account_drafts(
+    previous: Option<&AccountProfile>,
+    next: Option<&AccountProfile>,
+    personal: &mut PersonalDetails,
+    display: &mut DisplayPreferences,
+) -> bool {
+    let changed_identity = previous.map(|a| a.id) != next.map(|a| a.id);
+    // A photo/security update must not discard edits in another account section.
+    if changed_identity || previous.map(|a| &a.details) != next.map(|a| &a.details) {
+        *personal = next.map(|a| a.details.clone()).unwrap_or_default();
+    }
+    let changed_display =
+        changed_identity || previous.map(|a| a.display) != next.map(|a| a.display);
+    if changed_display {
+        *display = next.map(|a| a.display).unwrap_or_default();
+    }
+    changed_display
+}
+
 fn clear_login_history(ctx: &egui::Context) {
     clear_edit_history(ctx, &["hris-login-email", "hris-login-password"]);
 }
@@ -1856,6 +1874,47 @@ mod login_tests {
 #[cfg(test)]
 mod profile_navigation_tests {
     use super::*;
+
+    #[test]
+    fn photo_and_security_updates_preserve_unsaved_personal_and_display_edits() {
+        let previous = AccountProfile::demo();
+        let mut next = previous.clone();
+        next.photo = Some(vec![1, 2, 3]);
+        next.pending_email = "pending@example.invalid".into();
+        let mut personal = PersonalDetails {
+            full_name: "Unsaved name".into(),
+            ..Default::default()
+        };
+        let mut display = DisplayPreferences {
+            scale_percent: 115,
+            clock_24h: false,
+        };
+        assert!(!sync_account_drafts(
+            Some(&previous),
+            Some(&next),
+            &mut personal,
+            &mut display
+        ));
+        assert_eq!(personal.full_name, "Unsaved name");
+        assert_eq!(display.scale_percent, 115);
+        next.details.full_name = "Saved name".into();
+        assert!(!sync_account_drafts(
+            Some(&previous),
+            Some(&next),
+            &mut personal,
+            &mut display
+        ));
+        assert_eq!(personal.full_name, "Saved name");
+        assert_eq!(display.scale_percent, 115);
+        assert!(sync_account_drafts(
+            Some(&next),
+            None,
+            &mut personal,
+            &mut display
+        ));
+        assert!(personal.full_name.is_empty());
+        assert_eq!(display.scale_percent, 100);
+    }
 
     #[test]
     fn clicking_the_avatar_activates_the_account_control_with_or_without_a_photo() {
