@@ -1,0 +1,48 @@
+name: HRIS checks and Windows build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.95.0 --profile minimal --component rustfmt
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Test workflows and Supabase transport
+        run: cargo test --locked
+      - name: Build Windows application
+        run: cargo build --release --locked
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HRIS-Desktop-Windows
+          path: target/release/hris-desktop.exe
+          if-no-files-found: error
+          retention-days: 14
+
+  database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tools/db-tests/package-lock.json
+      - name: Install pinned PostgreSQL test engine
+        working-directory: tools/db-tests
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Test schema and tenant authorization
+        working-directory: tools/db-tests
+        run: npm test
+
+# No automatic database deployment, release publication, or signing is configured.
+# Choose a dedicated Supabase project and deployment approval policy first.

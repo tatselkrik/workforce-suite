@@ -1,0 +1,578 @@
+use anyhow::{Result, bail, ensure};
+use chrono::{DateTime, Datelike, Days, NaiveDate, Utc};
+use chrono_tz::Tz;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct Company {
+    pub id: Uuid,
+    pub owner_id: Uuid,
+    pub name: String,
+    pub timezone: String,
+    pub annual_leave_days: u32,
+}
+
+impl Default for Company {
+    fn default() -> Self {
+        Self {
+            id: Uuid::from_u128(1),
+            owner_id: Uuid::nil(),
+            name: "Northstar Company".into(),
+            timezone: "Asia/Manila".into(),
+            annual_leave_days: 15,
+        }
+    }
+}
+
+impl Company {
+    pub fn tz(&self) -> Tz {
+        self.timezone.parse().unwrap_or(chrono_tz::UTC)
+    }
+
+    pub fn today(&self) -> NaiveDate {
+        Utc::now().with_timezone(&self.tz()).date_naive()
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        ensure!(!self.name.trim().is_empty(), "Enter a company name.");
+        ensure!(
+            self.name.chars().count() <= 100,
+            "Company name is too long."
+        );
+        ensure!(
+            self.timezone.parse::<Tz>().is_ok(),
+            "Use a valid IANA time zone, such as Asia/Manila."
+        );
+        ensure!(
+            self.annual_leave_days <= 366,
+            "Annual leave must be between 0 and 366 days."
+        );
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum EmployeeStatus {
+    #[default]
+    Active,
+    Archived,
+}
+
+impl EmployeeStatus {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Active => "Active",
+            Self::Archived => "Archived",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct Employee {
+    pub id: Uuid,
+    pub company_id: Uuid,
+    pub employee_code: String,
+    pub full_name: String,
+    pub department: String,
+    pub job_title: String,
+    pub joined_on: NaiveDate,
+    pub annual_leave_days: u32,
+    pub status: EmployeeStatus,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct EmployeeDraft {
+    pub id: Option<Uuid>,
+    pub employee_code: String,
+    pub full_name: String,
+    pub department: String,
+    pub job_title: String,
+    pub joined_on: String,
+    pub annual_leave_days: u32,
+    pub status: EmployeeStatus,
+}
+
+impl From<&Employee> for EmployeeDraft {
+    fn from(e: &Employee) -> Self {
+        Self {
+            id: Some(e.id),
+            employee_code: e.employee_code.clone(),
+            full_name: e.full_name.clone(),
+            department: e.department.clone(),
+            job_title: e.job_title.clone(),
+            joined_on: e.joined_on.to_string(),
+            annual_leave_days: e.annual_leave_days,
+            status: e.status,
+        }
+    }
+}
+
+impl EmployeeDraft {
+    pub fn employee(&self, company_id: Uuid) -> Result<Employee> {
+        ensure!(
+            !self.employee_code.trim().is_empty(),
+            "Enter an employee code."
+        );
+        ensure!(
+            self.employee_code.trim().chars().count() <= 30,
+            "Employee code is too long."
+        );
+        ensure!(
+            !self.full_name.trim().is_empty(),
+            "Enter the employee's name."
+        );
+        ensure!(
+            self.full_name.trim().chars().count() <= 120,
+            "Employee name is too long."
+        );
+        ensure!(!self.department.trim().is_empty(), "Enter a department.");
+        ensure!(!self.job_title.trim().is_empty(), "Enter a job title.");
+        ensure!(
+            self.department.chars().count() <= 80 && self.job_title.chars().count() <= 100,
+            "Department or job title is too long."
+        );
+        ensure!(
+            self.annual_leave_days <= 366,
+            "Annual leave must be between 0 and 366 days."
+        );
+        Ok(Employee {
+            id: self.id.unwrap_or_else(Uuid::new_v4),
+            company_id,
+            employee_code: self.employee_code.trim().to_uppercase(),
+            full_name: self.full_name.trim().into(),
+            department: self.department.trim().into(),
+            job_title: self.job_title.trim().into(),
+            joined_on: parse_date(&self.joined_on)?,
+            annual_leave_days: self.annual_leave_days,
+            status: self.status,
+        })
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct Attendance {
+    pub id: Uuid,
+    pub company_id: Uuid,
+    pub employee_id: Uuid,
+    pub work_date: NaiveDate,
+    pub checked_in_at: DateTime<Utc>,
+    pub checked_out_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum LeaveKind {
+    #[default]
+    Annual,
+    Sick,
+    Unpaid,
+}
+
+impl LeaveKind {
+    pub const ALL: [Self; 3] = [Self::Annual, Self::Sick, Self::Unpaid];
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Annual => "Annual leave",
+            Self::Sick => "Sick leave",
+            Self::Unpaid => "Unpaid leave",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LeaveStatus {
+    Pending,
+    Approved,
+    Rejected,
+}
+
+impl LeaveStatus {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Pending => "Pending",
+            Self::Approved => "Approved",
+            Self::Rejected => "Rejected",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct LeaveRequest {
+    pub id: Uuid,
+    pub company_id: Uuid,
+    pub employee_id: Uuid,
+    pub kind: LeaveKind,
+    pub starts_on: NaiveDate,
+    pub ends_on: NaiveDate,
+    pub reason: String,
+    pub status: LeaveStatus,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct LeaveDraft {
+    pub employee_id: Option<Uuid>,
+    pub kind: LeaveKind,
+    pub starts_on: String,
+    pub ends_on: String,
+    pub reason: String,
+}
+
+impl LeaveDraft {
+    pub fn request(&self, company_id: Uuid) -> Result<LeaveRequest> {
+        let starts_on = parse_date(&self.starts_on)?;
+        let ends_on = parse_date(&self.ends_on)?;
+        ensure!(
+            ends_on >= starts_on,
+            "End date must be on or after the start date."
+        );
+        ensure!(
+            starts_on.year() == ends_on.year(),
+            "Split requests that cross a calendar year into two requests."
+        );
+        ensure!(
+            weekdays(starts_on, ends_on) > 0,
+            "Choose at least one Monday–Friday workday."
+        );
+        ensure!(
+            self.reason.chars().count() <= 500,
+            "Keep the note to 500 characters."
+        );
+        Ok(LeaveRequest {
+            id: Uuid::new_v4(),
+            company_id,
+            employee_id: self
+                .employee_id
+                .ok_or_else(|| anyhow::anyhow!("Choose an employee."))?,
+            kind: self.kind,
+            starts_on,
+            ends_on,
+            reason: self.reason.trim().into(),
+            status: LeaveStatus::Pending,
+        })
+    }
+}
+
+pub fn parse_date(value: &str) -> Result<NaiveDate> {
+    let value = value.trim();
+    let date = NaiveDate::parse_from_str(value, "%Y-%m-%d")
+        .map_err(|_| anyhow::anyhow!("Enter a valid date as YYYY-MM-DD."))?;
+    ensure!(
+        date.format("%Y-%m-%d").to_string() == value && (1900..=2200).contains(&date.year()),
+        "Use YYYY-MM-DD and a year between 1900 and 2200."
+    );
+    Ok(date)
+}
+
+pub fn weekdays(start: NaiveDate, end: NaiveDate) -> u32 {
+    if end < start {
+        return 0;
+    }
+    let count = end.signed_duration_since(start).num_days() as u64 + 1;
+    let full_weeks = count / 7;
+    let remainder = count % 7;
+    (full_weeks * 5
+        + (0..remainder)
+            .filter(|i| {
+                start
+                    .checked_add_days(Days::new(*i))
+                    .is_some_and(|d| d.weekday().number_from_monday() <= 5)
+            })
+            .count() as u64) as u32
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Mode {
+    Demo,
+    Supabase,
+}
+
+#[derive(Clone, Debug)]
+pub struct Snapshot {
+    pub company: Company,
+    pub employees: Vec<Employee>,
+    pub attendance: Vec<Attendance>,
+    pub leave: Vec<LeaveRequest>,
+    pub mode: Mode,
+}
+
+impl Snapshot {
+    pub fn employee_name(&self, id: Uuid) -> &str {
+        self.employees
+            .iter()
+            .find(|e| e.id == id)
+            .map(|e| e.full_name.as_str())
+            .unwrap_or("Unknown employee")
+    }
+
+    pub fn annual_used(&self, id: Uuid, year: i32) -> u32 {
+        self.leave
+            .iter()
+            .filter(|r| {
+                r.employee_id == id
+                    && r.kind == LeaveKind::Annual
+                    && r.status == LeaveStatus::Approved
+                    && r.starts_on.year() == year
+            })
+            .map(|r| weekdays(r.starts_on, r.ends_on))
+            .sum()
+    }
+
+    pub fn active(&self) -> impl Iterator<Item = &Employee> {
+        self.employees
+            .iter()
+            .filter(|e| e.status == EmployeeStatus::Active)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum Action {
+    SaveEmployee(EmployeeDraft),
+    CheckIn(Uuid),
+    CheckOut(Uuid),
+    RequestLeave(LeaveDraft),
+    DecideLeave(Uuid, LeaveStatus),
+    SaveCompany(Company),
+}
+
+pub struct DemoStore {
+    pub data: Snapshot,
+}
+
+impl Default for DemoStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DemoStore {
+    pub fn new() -> Self {
+        let company = Company::default();
+        let today = company.today();
+        let roster = [
+            ("Alex Rivera", "People Operations", "HR lead"),
+            ("Jamie Santos", "Engineering", "Software engineer"),
+            ("Taylor Chen", "Operations", "Operations associate"),
+            ("Morgan Lee", "Finance", "Finance officer"),
+            ("Sam Reyes", "Engineering", "Product designer"),
+            ("Jordan Cruz", "Operations", "Team coordinator"),
+            ("Casey Torres", "People Operations", "HR associate"),
+            ("Riley Tan", "Finance", "Accounts assistant"),
+        ];
+        let employees: Vec<_> = roster
+            .iter()
+            .enumerate()
+            .map(|(i, (name, department, title))| Employee {
+                id: Uuid::from_u128(100 + i as u128),
+                company_id: company.id,
+                employee_code: format!("NS-{:03}", i + 1),
+                full_name: (*name).into(),
+                department: (*department).into(),
+                job_title: (*title).into(),
+                joined_on: today - chrono::Duration::days(180 + 23 * i as i64),
+                annual_leave_days: 15,
+                status: if i == 7 {
+                    EmployeeStatus::Archived
+                } else {
+                    EmployeeStatus::Active
+                },
+            })
+            .collect();
+        let now = Utc::now();
+        let attendance = employees
+            .iter()
+            .take(5)
+            .enumerate()
+            .map(|(i, e)| Attendance {
+                id: Uuid::from_u128(200 + i as u128),
+                company_id: company.id,
+                employee_id: e.id,
+                work_date: today,
+                checked_in_at: now - chrono::Duration::minutes(150 + i as i64 * 5),
+                checked_out_at: if i == 4 {
+                    Some(now - chrono::Duration::minutes(10))
+                } else {
+                    None
+                },
+            })
+            .collect();
+        let next_workday = (0..7)
+            .map(|i| today + chrono::Duration::days(i))
+            .find(|d| d.weekday().number_from_monday() <= 5)
+            .unwrap_or(today);
+        let leave = [
+            (1, LeaveKind::Annual, LeaveStatus::Pending),
+            (3, LeaveKind::Sick, LeaveStatus::Pending),
+            (5, LeaveKind::Annual, LeaveStatus::Approved),
+        ]
+        .into_iter()
+        .enumerate()
+        .map(|(i, (employee, kind, status))| LeaveRequest {
+            id: Uuid::from_u128(300 + i as u128),
+            company_id: company.id,
+            employee_id: employees[employee].id,
+            kind,
+            starts_on: next_workday,
+            ends_on: next_workday,
+            reason: "Sample request".into(),
+            status,
+        })
+        .collect();
+        Self {
+            data: Snapshot {
+                company,
+                employees,
+                attendance,
+                leave,
+                mode: Mode::Demo,
+            },
+        }
+    }
+
+    pub fn execute(&mut self, action: Action) -> Result<()> {
+        match action {
+            Action::SaveEmployee(draft) => {
+                let employee = draft.employee(self.data.company.id)?;
+                ensure!(
+                    !self.data.employees.iter().any(|e| e.id != employee.id
+                        && e.employee_code
+                            .eq_ignore_ascii_case(&employee.employee_code)),
+                    "That employee code is already in use."
+                );
+                ensure!(
+                    employee.annual_leave_days
+                        >= self
+                            .data
+                            .annual_used(employee.id, self.data.company.today().year()),
+                    "Allowance cannot be less than approved annual leave this year."
+                );
+                if let Some(id) = draft.id {
+                    let existing = self
+                        .data
+                        .employees
+                        .iter_mut()
+                        .find(|e| e.id == id)
+                        .ok_or_else(|| anyhow::anyhow!("Employee was not found."))?;
+                    *existing = employee;
+                } else {
+                    self.data.employees.push(employee);
+                }
+            }
+            Action::CheckIn(id) => {
+                self.require_active(id)?;
+                let today = self.data.company.today();
+                ensure!(
+                    !self
+                        .data
+                        .attendance
+                        .iter()
+                        .any(|a| a.employee_id == id && a.work_date == today),
+                    "A check-in already exists for this employee today."
+                );
+                ensure!(
+                    !self
+                        .data
+                        .attendance
+                        .iter()
+                        .any(|a| a.employee_id == id && a.checked_out_at.is_none()),
+                    "Close the employee's previous open attendance record first."
+                );
+                self.data.attendance.push(Attendance {
+                    id: Uuid::new_v4(),
+                    company_id: self.data.company.id,
+                    employee_id: id,
+                    work_date: today,
+                    checked_in_at: Utc::now(),
+                    checked_out_at: None,
+                });
+            }
+            Action::CheckOut(id) => {
+                let row = self
+                    .data
+                    .attendance
+                    .iter_mut()
+                    .find(|a| a.id == id)
+                    .ok_or_else(|| anyhow::anyhow!("Attendance record was not found."))?;
+                ensure!(
+                    row.checked_out_at.is_none(),
+                    "This attendance record is already closed."
+                );
+                ensure!(
+                    Utc::now() >= row.checked_in_at,
+                    "Check-out cannot be before check-in."
+                );
+                row.checked_out_at = Some(Utc::now());
+            }
+            Action::RequestLeave(draft) => {
+                let row = draft.request(self.data.company.id)?;
+                self.require_active(row.employee_id)?;
+                ensure!(
+                    !self
+                        .data
+                        .leave
+                        .iter()
+                        .any(|r| r.employee_id == row.employee_id
+                            && r.status != LeaveStatus::Rejected
+                            && r.starts_on <= row.ends_on
+                            && r.ends_on >= row.starts_on),
+                    "These dates overlap an existing pending or approved request."
+                );
+                self.data.leave.push(row);
+            }
+            Action::DecideLeave(id, status) => {
+                ensure!(status != LeaveStatus::Pending, "Choose approve or reject.");
+                let row = self
+                    .data
+                    .leave
+                    .iter()
+                    .find(|r| r.id == id)
+                    .ok_or_else(|| anyhow::anyhow!("Leave request was not found."))?;
+                ensure!(
+                    row.status == LeaveStatus::Pending,
+                    "Only pending requests can be reviewed."
+                );
+                if status == LeaveStatus::Approved {
+                    self.require_active(row.employee_id)?;
+                    if row.kind == LeaveKind::Annual {
+                        let employee = self
+                            .data
+                            .employees
+                            .iter()
+                            .find(|e| e.id == row.employee_id)
+                            .unwrap();
+                        ensure!(
+                            self.data.annual_used(row.employee_id, row.starts_on.year())
+                                + weekdays(row.starts_on, row.ends_on)
+                                <= employee.annual_leave_days,
+                            "This request exceeds the employee's annual leave allowance."
+                        );
+                    }
+                }
+                self.data
+                    .leave
+                    .iter_mut()
+                    .find(|r| r.id == id)
+                    .unwrap()
+                    .status = status;
+            }
+            Action::SaveCompany(mut company) => {
+                company.validate()?;
+                company.name = company.name.trim().into();
+                company.id = self.data.company.id;
+                company.owner_id = self.data.company.owner_id;
+                self.data.company = company;
+            }
+        }
+        Ok(())
+    }
+
+    fn require_active(&self, id: Uuid) -> Result<()> {
+        match self.data.employees.iter().find(|e| e.id == id) {
+            Some(e) if e.status == EmployeeStatus::Active => Ok(()),
+            Some(_) => bail!("Archived employees cannot receive new records."),
+            None => bail!("Employee was not found."),
+        }
+    }
+}

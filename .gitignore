@@ -1,0 +1,11 @@
+/target/
+/dist/
+/work/
+/.env
+/hris-config.json
+/hris-connection.json
+/memory.md
+/supabase/.temp/
+/supabase/.branches/
+*.pdb
+**/node_modules/
