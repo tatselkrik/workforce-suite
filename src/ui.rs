@@ -1,4 +1,5 @@
 use crate::{
+    account::{self, AccountAction, AccountProfile, DisplayPreferences, PersonalDetails},
     backend::{self, Command, ConnectionConfig, Update},
     branding,
     domain::*,
@@ -22,6 +23,7 @@ enum Page {
     Attendance,
     Leave,
     Settings,
+    Profile,
 }
 
 impl Page {
@@ -39,8 +41,22 @@ impl Page {
             Self::Attendance => "Attendance",
             Self::Leave => "Leave",
             Self::Settings => "Settings",
+            Self::Profile => "Profile",
         }
     }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ProfileSection {
+    Personal,
+    Security,
+    Sessions,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SessionChoice {
+    Others,
+    Everywhere,
 }
 
 pub struct HrisApp {
@@ -65,6 +81,18 @@ pub struct HrisApp {
     login_email: String,
     login_password: String,
     company_logo: Option<egui::TextureHandle>,
+    account: Option<AccountProfile>,
+    avatar: Option<egui::TextureHandle>,
+    personal_draft: PersonalDetails,
+    display_draft: DisplayPreferences,
+    profile_section: ProfileSection,
+    current_password: String,
+    new_password: String,
+    confirm_password: String,
+    new_email: String,
+    email_password: String,
+    show_passwords: bool,
+    session_confirmation: Option<SessionChoice>,
     #[cfg(feature = "qa-screenshot")]
     qa_frames: u32,
 }
@@ -126,6 +154,11 @@ impl HrisApp {
                 cc.egui_ctx
                     .load_texture("company-logo", image, egui::TextureOptions::LINEAR)
             });
+        let account = (data.mode == Mode::Demo).then(AccountProfile::demo);
+        let personal_draft = account
+            .as_ref()
+            .map(|a| a.details.clone())
+            .unwrap_or_default();
         let mut app = Self {
             attendance_date: data.company.today().to_string(),
             company_draft: data.company.clone(),
@@ -148,6 +181,18 @@ impl HrisApp {
             login_email: String::new(),
             login_password: String::new(),
             company_logo,
+            account,
+            avatar: None,
+            personal_draft,
+            display_draft: DisplayPreferences::default(),
+            profile_section: ProfileSection::Personal,
+            current_password: String::new(),
+            new_password: String::new(),
+            confirm_password: String::new(),
+            new_email: String::new(),
+            email_password: String::new(),
+            show_passwords: false,
+            session_confirmation: None,
             #[cfg(feature = "qa-screenshot")]
             qa_frames: 0,
         };
@@ -163,7 +208,41 @@ impl HrisApp {
                 Ok("attendance") => app.page = Page::Attendance,
                 Ok("leave") => app.page = Page::Leave,
                 Ok("settings") => app.page = Page::Settings,
+                Ok("profile") => app.page = Page::Profile,
                 _ => {}
+            }
+            if app.data.mode == Mode::Demo {
+                match std::env::var("HRIS_PREVIEW_PROFILE").as_deref() {
+                    Ok("security") => app.profile_section = ProfileSection::Security,
+                    Ok("sessions") => app.profile_section = ProfileSection::Sessions,
+                    _ => {}
+                }
+                if let Ok(scale) = std::env::var("HRIS_PREVIEW_SCALE") {
+                    if let Ok(scale) = scale.parse::<u16>() {
+                        if (100..=125).contains(&scale) {
+                            if let Some(profile) = app.account.as_mut() {
+                                profile.display.scale_percent = scale;
+                            }
+                            app.display_draft.scale_percent = scale;
+                            cc.egui_ctx.set_zoom_factor(scale as f32 / 100.0);
+                        }
+                    }
+                }
+                if let Ok(path) = std::env::var("HRIS_PREVIEW_AVATAR") {
+                    if let Ok(photo) = account::photo_from_file(std::path::Path::new(&path)) {
+                        let image = account::circular_photo(&photo).ok();
+                        if let Some(profile) = app.account.as_mut() {
+                            profile.photo = Some(photo);
+                        }
+                        app.avatar = image.map(|image| {
+                            cc.egui_ctx.load_texture(
+                                "profile-avatar",
+                                image,
+                                egui::TextureOptions::LINEAR,
+                            )
+                        });
+                    }
+                }
             }
             match std::env::var("HRIS_PREVIEW_FORM").as_deref() {
                 Ok("employee") => app.new_employee(),
@@ -194,12 +273,15 @@ impl HrisApp {
         }
     }
 
-    fn receive(&mut self) {
+    fn receive(&mut self, ctx: &egui::Context) {
         while let Ok(update) = self.updates.try_recv() {
             self.busy = false;
             match update.result {
                 Ok(data) => {
                     if self.data.mode != data.mode {
+                        self.clear_profile_secrets(ctx);
+                        self.session_confirmation = None;
+                        self.profile_section = ProfileSection::Personal;
                         self.page = Page::Overview;
                         self.search.clear();
                         self.department.clear();
@@ -222,8 +304,67 @@ impl HrisApp {
                 }
                 Err(error) => self.notice = Some((error, true)),
             }
+            if update.account != self.account {
+                let photo_changed = update.account.as_ref().and_then(|a| a.photo.as_ref())
+                    != self.account.as_ref().and_then(|a| a.photo.as_ref());
+                if photo_changed {
+                    self.avatar = update
+                        .account
+                        .as_ref()
+                        .and_then(|a| a.photo.as_ref())
+                        .and_then(|photo| account::circular_photo(photo).ok())
+                        .map(|image| {
+                            ctx.load_texture("profile-avatar", image, egui::TextureOptions::LINEAR)
+                        });
+                }
+                self.personal_draft = update
+                    .account
+                    .as_ref()
+                    .map(|a| a.details.clone())
+                    .unwrap_or_default();
+                self.display_draft = update
+                    .account
+                    .as_ref()
+                    .map(|a| a.display)
+                    .unwrap_or_default();
+                ctx.set_zoom_factor(self.display_draft.scale_percent as f32 / 100.0);
+                self.account = update.account;
+            }
             self.close_on_success = false;
         }
+    }
+
+    fn clear_profile_secrets(&mut self, ctx: &egui::Context) {
+        self.current_password.clear();
+        self.new_password.clear();
+        self.confirm_password.clear();
+        self.email_password.clear();
+        self.show_passwords = false;
+        clear_edit_history(
+            ctx,
+            &[
+                "profile-current-password",
+                "profile-new-password",
+                "profile-confirm-password",
+                "profile-email-password",
+            ],
+        );
+    }
+
+    fn navigate(&mut self, page: Page, ctx: &egui::Context) {
+        if self.page != page {
+            self.clear_profile_secrets(ctx);
+            self.session_confirmation = None;
+            self.page = page;
+        }
+    }
+
+    fn time_format(&self) -> &'static str {
+        self.account
+            .as_ref()
+            .map(|a| a.display)
+            .unwrap_or_default()
+            .time_format()
     }
 
     fn new_employee(&mut self) {
@@ -297,7 +438,7 @@ impl HrisApp {
                 .stroke(Stroke::NONE)
                 .corner_radius(8);
             if ui.add_sized([ui.available_width(), 42.0], button).clicked() {
-                self.page = page;
+                self.navigate(page, ui.ctx());
             }
         }
         ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
@@ -312,42 +453,27 @@ impl HrisApp {
                 .size(11.0)
                 .strong(),
             );
-            let profile = ui.add_sized(
-                [ui.available_width(), 44.0],
-                egui::Button::new(RichText::new("Profile").color(Color32::WHITE).size(14.0))
-                    .fill(Color32::from_rgb(35, 53, 70))
-                    .stroke(Stroke::NONE)
-                    .corner_radius(8),
-            );
-            let popup = egui::Popup::menu(&profile)
-                .id(egui::Id::unique("profile_menu"))
-                .align(egui::emath::RectAlign::TOP_START);
-            #[cfg(feature = "qa-screenshot")]
-            let popup = if matches!(
-                std::env::var("HRIS_PREVIEW_PROFILE").as_deref(),
-                Ok("open" | "sample-account")
-            ) {
-                popup.open(true)
+            let name = self
+                .account
+                .as_ref()
+                .map(|a| a.details.display_name())
+                .unwrap_or("Your account");
+            let role = if self.data.mode == Mode::Demo {
+                "Demo account"
             } else {
-                popup
+                "Administrator"
             };
-            popup.show(|ui| {
-                let profile_info = (self.data.mode == Mode::Supabase, self.login_email.as_str());
-                #[cfg(feature = "qa-screenshot")]
-                let profile_info =
-                    if std::env::var("HRIS_PREVIEW_PROFILE").as_deref() == Ok("sample-account") {
-                        (true, "preview@example.invalid")
-                    } else {
-                        profile_info
-                    };
-                if profile_contents(ui, profile_info.0, profile_info.1) {
-                    self.login_email.clear();
-                    self.login_password.clear();
-                    clear_login_history(ui.ctx());
-                    self.send(Command::SignOut);
-                    ui.close();
-                }
-            });
+            if profile_link(
+                ui,
+                self.avatar.as_ref(),
+                name,
+                role,
+                self.page == Page::Profile,
+            )
+            .clicked()
+            {
+                self.navigate(Page::Profile, ui.ctx());
+            }
             ui.separator();
         });
     }
@@ -392,8 +518,12 @@ impl HrisApp {
                 "Review requests and keep annual leave balances in view.",
             ),
             Page::Settings => (
-                "Company settings",
-                "Manage your company details and leave policy.",
+                "Settings",
+                "Manage company defaults and your display preferences.",
+            ),
+            Page::Profile => (
+                "Your profile",
+                "Manage your personal details, account security and sessions.",
             ),
         };
         ui.heading(RichText::new(title).strong());
@@ -516,7 +646,7 @@ impl HrisApp {
                             record
                                 .checked_in_at
                                 .with_timezone(&self.data.company.tz())
-                                .format("%H:%M")
+                                .format(self.time_format())
                                 .to_string(),
                         );
                         badge(
@@ -806,14 +936,14 @@ impl HrisApp {
                             ui.label(
                                 row.checked_in_at
                                     .with_timezone(&self.data.company.tz())
-                                    .format("%H:%M")
+                                    .format(self.time_format())
                                     .to_string(),
                             );
                             ui.label(
                                 row.checked_out_at
                                     .map(|t| {
                                         t.with_timezone(&self.data.company.tz())
-                                            .format("%H:%M")
+                                            .format(self.time_format())
                                             .to_string()
                                     })
                                     .unwrap_or_else(|| "—".into()),
@@ -968,6 +1098,310 @@ impl HrisApp {
                 }
             }
         });
+        ui.add_space(12.0);
+        card(ui, |ui| {
+            ui.label(RichText::new("Display preferences").size(18.0).strong());
+            ui.label(
+                RichText::new("These preferences apply to your account.")
+                    .color(MUTED)
+                    .size(12.0),
+            );
+            ui.horizontal(|ui| {
+                ui.label("Display scale");
+                ui.add(
+                    egui::Slider::new(&mut self.display_draft.scale_percent, 100..=125)
+                        .step_by(5.0)
+                        .suffix("%"),
+                );
+            });
+            ui.horizontal(|ui| {
+                ui.label("Time format");
+                ui.selectable_value(&mut self.display_draft.clock_24h, true, "24-hour");
+                ui.selectable_value(&mut self.display_draft.clock_24h, false, "12-hour");
+            });
+            ui.label(
+                RichText::new(if self.display_draft.clock_24h {
+                    "Example: 14:30"
+                } else {
+                    "Example: 02:30 PM"
+                })
+                .color(MUTED)
+                .size(12.0),
+            );
+            if primary(ui, "Save display preferences") {
+                self.send(Command::Account(AccountAction::SaveDisplay(
+                    self.display_draft,
+                )));
+            }
+        });
+    }
+
+    fn profile(&mut self, ui: &mut Ui) {
+        let Some(profile) = self.account.clone() else {
+            empty(ui, "Refresh to load your account.");
+            return;
+        };
+        let signed_in = self.data.mode == Mode::Supabase;
+        card(ui, |ui| {
+            ui.horizontal(|ui| {
+                avatar(ui,self.avatar.as_ref(),profile.details.display_name(),86.0);
+                ui.vertical(|ui| {
+                    ui.label(RichText::new(profile.details.display_name()).size(22.0).strong());
+                    ui.label(RichText::new(if signed_in { "Administrator" } else { "Demo account" }).color(MUTED));
+                    ui.horizontal_wrapped(|ui| {
+                        if ui.button("Change photo").clicked() {
+                            match account::choose_photo() {
+                                Ok(Some(path)) => self.send(Command::Account(AccountAction::UploadPhoto(path))),
+                                Ok(None) => {},
+                                Err(error) => self.notice = Some((error.to_string(),true)),
+                            }
+                        }
+                        if ui.add_enabled(profile.photo.is_some(),egui::Button::new("Remove photo")).clicked() {
+                            self.send(Command::Account(AccountAction::RemovePhoto));
+                        }
+                    });
+                    ui.label(RichText::new("PNG or JPEG, up to 5 MiB. Photos are centered and cropped to a circle.").color(MUTED).size(11.0));
+                });
+            });
+            if let Some(warning) = &profile.photo_warning {
+                ui.colored_label(Color32::from_rgb(160, 92, 26), warning);
+            }
+        });
+        ui.add_space(8.0);
+        let previous = self.profile_section;
+        ui.horizontal_wrapped(|ui| {
+            ui.selectable_value(
+                &mut self.profile_section,
+                ProfileSection::Personal,
+                "Personal details",
+            );
+            ui.selectable_value(
+                &mut self.profile_section,
+                ProfileSection::Security,
+                "Account & security",
+            );
+            ui.selectable_value(
+                &mut self.profile_section,
+                ProfileSection::Sessions,
+                "Sessions",
+            );
+        });
+        if previous != self.profile_section {
+            self.clear_profile_secrets(ui.ctx());
+        }
+        ui.add_space(8.0);
+        match self.profile_section {
+            ProfileSection::Personal => {
+                card(ui, |ui| {
+                    ui.label(RichText::new("Personal details").size(18.0).strong());
+                    profile_field(
+                        ui,
+                        "Full name",
+                        "profile-full-name",
+                        &mut self.personal_draft.full_name,
+                        "Your full name",
+                    );
+                    profile_field(
+                        ui,
+                        "Preferred name (optional)",
+                        "profile-preferred-name",
+                        &mut self.personal_draft.preferred_name,
+                        "Name shown in the app",
+                    );
+                    profile_field(
+                        ui,
+                        "Contact phone (optional)",
+                        "profile-contact-phone",
+                        &mut self.personal_draft.contact_phone,
+                        "Your contact number",
+                    );
+                    ui.horizontal(|ui| {
+                        if primary(ui, "Save personal details") {
+                            match self.personal_draft.validate() {
+                                Ok(()) => self.send(Command::Account(AccountAction::SaveDetails(
+                                    self.personal_draft.trimmed(),
+                                ))),
+                                Err(error) => self.notice = Some((error.to_string(), true)),
+                            }
+                        }
+                        if ui.button("Revert changes").clicked() {
+                            self.personal_draft = profile.details.clone();
+                        }
+                    });
+                });
+                ui.add_space(12.0);
+                card(ui, |ui| {
+                    ui.label(RichText::new("Account information").size(18.0).strong());
+                    ui.label(&profile.email);
+                    if signed_in {
+                        badge(
+                            ui,
+                            if profile.email_confirmed_at.is_some() {
+                                "Email verified"
+                            } else {
+                                "Email not verified"
+                            },
+                            profile.email_confirmed_at.is_some(),
+                        );
+                    }
+                    ui.label(
+                        RichText::new("Access: Administrator · Managed by your company")
+                            .color(MUTED)
+                            .size(12.0),
+                    );
+                    if let Some(created) = &profile.created_at {
+                        ui.label(
+                            RichText::new(format!("Account created {}", account_date(created)))
+                                .color(MUTED)
+                                .size(12.0),
+                        );
+                    }
+                    if ui.button("Manage account security").clicked() {
+                        self.profile_section = ProfileSection::Security;
+                    }
+                });
+            }
+            ProfileSection::Security => {
+                if !signed_in {
+                    ui.label(RichText::new("Sign in to an HRIS account to change account security. This demo never changes a real account.").color(MUTED));
+                }
+                ui.add_enabled_ui(signed_in, |ui| {
+                    card(ui, |ui| {
+                        ui.label(RichText::new("Change password").size(18.0).strong());
+                        ui.label(RichText::new("Use 12–128 characters. Your current password is required.").color(MUTED).size(12.0));
+                        password_field(ui,"Current password","profile-current-password",&mut self.current_password,self.show_passwords);
+                        password_field(ui,"New password","profile-new-password",&mut self.new_password,self.show_passwords);
+                        password_field(ui,"Confirm new password","profile-confirm-password",&mut self.confirm_password,self.show_passwords);
+                        ui.checkbox(&mut self.show_passwords,"Show passwords");
+                        if primary(ui,"Update password") {
+                            match account::validate_password_change(&self.current_password,&self.new_password,&self.confirm_password) {
+                                Ok(()) => {
+                                    let action = AccountAction::ChangePassword {
+                                        current: std::mem::take(&mut self.current_password),new:std::mem::take(&mut self.new_password),confirmation:std::mem::take(&mut self.confirm_password)
+                                    };
+                                    self.clear_profile_secrets(ui.ctx());
+                                    self.send(Command::Account(action));
+                                }
+                                Err(error) => self.notice = Some((error.to_string(),true)),
+                            }
+                        }
+                    });
+                    ui.add_space(12.0);
+                    card(ui, |ui| {
+                        ui.label(RichText::new("Account email").size(18.0).strong());
+                        ui.label(format!("Current email: {}",profile.email));
+                        if !profile.pending_email.is_empty() {
+                            ui.label(RichText::new(format!("Awaiting confirmation: {}",profile.pending_email)).color(TEAL));
+                        }
+                        profile_field(ui,"New email address","profile-new-email",&mut self.new_email,"Your new account email");
+                        password_field(ui,"Current password","profile-email-password",&mut self.email_password,self.show_passwords);
+                        ui.label(RichText::new("Confirm the links sent to your email addresses, then Refresh. Your current email remains active until confirmation.").color(MUTED).size(12.0));
+                        if primary(ui,"Request email change") {
+                            if let Err(error) = account::validate_email(&self.new_email) { self.notice = Some((error.to_string(),true)); }
+                            else if self.email_password.is_empty() { self.notice = Some(("Enter your current password.".into(),true)); }
+                            else {
+                                let action = AccountAction::ChangeEmail { current:std::mem::take(&mut self.email_password),new_email:std::mem::take(&mut self.new_email) };
+                                self.clear_profile_secrets(ui.ctx());
+                                self.send(Command::Account(action));
+                            }
+                        }
+                    });
+                });
+            }
+            ProfileSection::Sessions => {
+                card(ui, |ui| {
+                    ui.label(RichText::new("Your sessions").size(18.0).strong());
+                    ui.label(if signed_in {
+                        "You are signed in on this device."
+                    } else {
+                        "This is a local demo. There is no signed-in account."
+                    });
+                    if let Some(last) = &profile.last_sign_in_at {
+                        ui.label(
+                            RichText::new(format!(
+                                "Last sign-in: {}",
+                                account_timestamp(last, self.data.company.tz(), self.time_format())
+                            ))
+                            .color(MUTED),
+                        );
+                    }
+                    ui.label(
+                        RichText::new(
+                            "This app does not save your password or session when it closes.",
+                        )
+                        .color(MUTED)
+                        .size(12.0),
+                    );
+                    ui.add_space(10.0);
+                    ui.add_enabled_ui(signed_in, |ui| {
+                        if ui.button("Sign out other devices").clicked() { self.session_confirmation = Some(SessionChoice::Others); }
+                        ui.label(RichText::new("Keep this device signed in while revoking the other sessions.").color(MUTED).size(12.0));
+                        ui.add_space(8.0);
+                        if ui.button("Sign out everywhere").clicked() { self.session_confirmation = Some(SessionChoice::Everywhere); }
+                        ui.label(RichText::new("Includes this device. Other devices may retain access until their current access token expires.").color(MUTED).size(12.0));
+                        ui.separator();
+                        if primary(ui,"Sign out of this device") { self.sign_out(ui.ctx(),false); }
+                    });
+                });
+            }
+        }
+        if !self.busy {
+            if let Some(path) = ui.ctx().input(|input| {
+                input
+                    .raw
+                    .dropped_files
+                    .first()
+                    .map(|f| f.path().to_path_buf())
+            }) {
+                self.send(Command::Account(AccountAction::UploadPhoto(path)));
+            }
+        }
+    }
+
+    fn sign_out(&mut self, ctx: &egui::Context, everywhere: bool) {
+        self.clear_profile_secrets(ctx);
+        self.login_email.clear();
+        self.login_password.clear();
+        self.new_email.clear();
+        clear_login_history(ctx);
+        clear_edit_history(
+            ctx,
+            &[
+                "profile-full-name",
+                "profile-preferred-name",
+                "profile-contact-phone",
+                "profile-new-email",
+            ],
+        );
+        self.send(if everywhere {
+            Command::SignOutEverywhere
+        } else {
+            Command::SignOut
+        });
+    }
+
+    fn confirm_session_action(&mut self, ctx: &egui::Context) {
+        if let Some(choice) = self.session_confirmation {
+            let mut confirmed = false;
+            let mut cancel = false;
+            egui::Window::new("Confirm sign out").collapsible(false).resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER,Vec2::ZERO).show(ctx,|ui| {
+                    ui.set_max_width(390.0);
+                    ui.label(if choice == SessionChoice::Others { "Sign out other devices and keep this device signed in?" } else { "Sign out all devices, including this one?" });
+                    ui.label(RichText::new("Other devices may keep access until their current access token expires.").color(MUTED).size(12.0));
+                    ui.horizontal(|ui| { confirmed = primary(ui,"Confirm sign out"); cancel = ui.button("Cancel").clicked(); });
+                });
+            if cancel || confirmed {
+                self.session_confirmation = None;
+            }
+            if confirmed {
+                if choice == SessionChoice::Others {
+                    self.send(Command::Account(AccountAction::SignOutOthers));
+                } else {
+                    self.sign_out(ctx, true);
+                }
+            }
+        }
     }
 
     fn sign_in(&mut self, ui: &mut Ui) {
@@ -1119,8 +1553,8 @@ impl HrisApp {
 
 impl eframe::App for HrisApp {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
-        self.receive();
         let ctx = ui.ctx().clone();
+        self.receive(&ctx);
         if self.data.mode == Mode::SignedOut {
             egui::CentralPanel::default()
                 .frame(Frame::new().fill(BG).inner_margin(28))
@@ -1128,7 +1562,9 @@ impl eframe::App for HrisApp {
                     egui::ScrollArea::vertical().show(ui, |ui| self.sign_in(ui));
                 });
         } else {
-            let form_open = self.employee_form.is_some() || self.leave_form.is_some();
+            let form_open = self.employee_form.is_some()
+                || self.leave_form.is_some()
+                || self.session_confirmation.is_some();
             egui::Panel::left("sidebar")
                 .resizable(false)
                 .exact_size(220.0)
@@ -1139,22 +1575,31 @@ impl eframe::App for HrisApp {
             egui::CentralPanel::default()
                 .frame(Frame::new().fill(BG).inner_margin(28))
                 .show(ui, |ui| {
-                    egui::ScrollArea::vertical()
-                        .id_salt("main_scroll")
-                        .show(ui, |ui| {
-                            ui.add_enabled_ui(!form_open, |ui| {
-                                self.header(ui);
-                                ui.add_enabled_ui(!self.busy, |ui| match self.page {
-                                    Page::Overview => self.overview(ui),
-                                    Page::Employees => self.employees(ui),
-                                    Page::Attendance => self.attendance(ui),
-                                    Page::Leave => self.leave(ui),
-                                    Page::Settings => self.settings(ui),
-                                });
+                    let scroll =
+                        egui::ScrollArea::vertical().id_salt(("main_scroll", self.page as u8));
+                    #[cfg(feature = "qa-screenshot")]
+                    let scroll = if std::env::var("HRIS_PREVIEW_SCROLL").as_deref() == Ok("bottom")
+                    {
+                        scroll.stick_to_bottom(true)
+                    } else {
+                        scroll
+                    };
+                    scroll.show(ui, |ui| {
+                        ui.add_enabled_ui(!form_open, |ui| {
+                            self.header(ui);
+                            ui.add_enabled_ui(!self.busy, |ui| match self.page {
+                                Page::Overview => self.overview(ui),
+                                Page::Employees => self.employees(ui),
+                                Page::Attendance => self.attendance(ui),
+                                Page::Leave => self.leave(ui),
+                                Page::Settings => self.settings(ui),
+                                Page::Profile => self.profile(ui),
                             });
                         });
+                    });
                 });
             self.forms(&ctx);
+            self.confirm_session_action(&ctx);
         }
         #[cfg(feature = "qa-screenshot")]
         {
@@ -1187,8 +1632,12 @@ impl eframe::App for HrisApp {
 }
 
 fn clear_login_history(ctx: &egui::Context) {
-    for name in ["hris-login-email", "hris-login-password"] {
-        let id = egui::Id::unique(name);
+    clear_edit_history(ctx, &["hris-login-email", "hris-login-password"]);
+}
+
+fn clear_edit_history(ctx: &egui::Context, names: &[&str]) {
+    for name in names {
+        let id = egui::Id::unique(*name);
         if let Some(mut state) = egui::text_edit::TextEditState::load(ctx, id) {
             state.clear_undoer();
             state.store(ctx, id);
@@ -1226,32 +1675,122 @@ fn login_controls(ui: &mut Ui, email: &mut String, password: &mut String, enable
     enabled && submitted
 }
 
-fn profile_contents(ui: &mut Ui, signed_in: bool, email: &str) -> bool {
-    ui.set_min_width(200.0);
-    ui.set_max_width(280.0);
-    ui.label(
-        RichText::new(if signed_in {
-            "Administrator"
+fn profile_link(
+    ui: &mut Ui,
+    texture: Option<&egui::TextureHandle>,
+    name: &str,
+    role: &str,
+    selected: bool,
+) -> egui::Response {
+    let (rect, response) =
+        ui.allocate_exact_size(Vec2::new(ui.available_width(), 64.0), egui::Sense::click());
+    response.widget_info(|| {
+        egui::WidgetInfo::labeled(egui::Role::Button, ui.is_enabled(), "Open profile")
+    });
+    ui.painter().rect_filled(
+        rect,
+        8,
+        if selected {
+            TEAL
+        } else if response.hovered() {
+            Color32::from_rgb(45, 65, 81)
         } else {
-            "Demo profile"
-        })
-        .strong()
-        .size(16.0),
+            Color32::from_rgb(35, 53, 70)
+        },
     );
-    if signed_in {
-        if !email.trim().is_empty() {
-            ui.add(egui::Label::new(RichText::new(email.trim()).color(MUTED).size(12.0)).wrap());
-        }
-        ui.separator();
-        ui.button("Sign out").clicked()
-    } else {
-        ui.label(
-            RichText::new("Fictional sample data. Changes are not saved.")
-                .color(MUTED)
-                .size(12.0),
+    if response.has_focus() {
+        ui.painter().rect_stroke(
+            rect,
+            8,
+            Stroke::new(1.5, Color32::WHITE),
+            egui::StrokeKind::Inside,
         );
-        false
     }
+    let mut contents = ui.new_child(
+        egui::UiBuilder::new()
+            .max_rect(rect.shrink2(Vec2::new(8.0, 10.0)))
+            .layout(Layout::top_down(Align::Min)),
+    );
+    contents.horizontal(|ui| {
+        avatar(ui, texture, name, 40.0);
+        ui.vertical(|ui| {
+            ui.add(
+                egui::Label::new(
+                    RichText::new(name)
+                        .color(Color32::WHITE)
+                        .strong()
+                        .size(13.0),
+                )
+                .truncate(),
+            );
+            ui.label(
+                RichText::new(role)
+                    .color(Color32::from_rgb(175, 206, 208))
+                    .size(11.0),
+            );
+        });
+    });
+    response
+        .on_hover_text("Open profile")
+        .on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
+fn avatar(ui: &mut Ui, texture: Option<&egui::TextureHandle>, name: &str, size: f32) {
+    let (rect, _) = ui.allocate_exact_size(Vec2::splat(size), egui::Sense::hover());
+    ui.painter()
+        .circle_filled(rect.center(), size / 2.0, Color32::from_rgb(222, 242, 237));
+    if let Some(texture) = texture {
+        ui.painter().image(
+            texture.id(),
+            rect,
+            egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1.0, 1.0)),
+            Color32::WHITE,
+        );
+    } else {
+        ui.painter().text(
+            rect.center(),
+            egui::Align2::CENTER_CENTER,
+            branding::initials(name),
+            FontId::proportional(size * 0.34),
+            TEAL,
+        );
+    }
+}
+
+fn profile_field(ui: &mut Ui, label: &str, id: &str, value: &mut String, hint: &str) {
+    ui.label(RichText::new(label).size(13.0));
+    ui.add_sized(
+        [ui.available_width().min(620.0), 34.0],
+        egui::TextEdit::singleline(value)
+            .id(egui::Id::unique(id))
+            .hint_text(hint),
+    );
+}
+
+fn password_field(ui: &mut Ui, label: &str, id: &str, value: &mut String, show: bool) {
+    ui.label(RichText::new(label).size(13.0));
+    ui.add_sized(
+        [ui.available_width().min(620.0), 34.0],
+        egui::TextEdit::singleline(value)
+            .id(egui::Id::unique(id))
+            .password(!show),
+    );
+}
+
+fn account_date(value: &str) -> String {
+    chrono::DateTime::parse_from_rfc3339(value)
+        .map(|date| date.format("%b %d, %Y").to_string())
+        .unwrap_or_else(|_| "Unavailable".into())
+}
+
+fn account_timestamp(value: &str, timezone: chrono_tz::Tz, time_format: &str) -> String {
+    chrono::DateTime::parse_from_rfc3339(value)
+        .map(|date| {
+            date.with_timezone(&timezone)
+                .format(&format!("%b %d, %Y · {time_format}"))
+                .to_string()
+        })
+        .unwrap_or_else(|_| "Unavailable".into())
 }
 
 #[cfg(test)]
@@ -1311,6 +1850,67 @@ mod login_tests {
     #[test]
     fn enter_cannot_resubmit_while_sign_in_is_busy() {
         assert_eq!(enter_from("hris-login-password", false).0, 0);
+    }
+}
+
+#[cfg(test)]
+mod profile_navigation_tests {
+    use super::*;
+
+    #[test]
+    fn clicking_the_avatar_activates_the_account_control_with_or_without_a_photo() {
+        for with_photo in [false, true] {
+            let ctx = egui::Context::default();
+            let texture = with_photo.then(|| {
+                ctx.load_texture(
+                    "fixture",
+                    egui::ColorImage::filled([2, 2], Color32::WHITE),
+                    egui::TextureOptions::LINEAR,
+                )
+            });
+            let input = egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    Vec2::new(220.0, 200.0),
+                )),
+                ..Default::default()
+            };
+            let mut rect = egui::Rect::NOTHING;
+            let mut clicked = false;
+            let mut render = |input| {
+                let mut output = ctx.run_ui(input, |ui| {
+                    ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
+                        let response =
+                            profile_link(ui, texture.as_ref(), "Alex", "Administrator", false);
+                        rect = response.rect;
+                        clicked = response.clicked();
+                    });
+                });
+                output.textures_delta.clear();
+                (rect, clicked)
+            };
+            let (rect, _) = render(input.clone());
+            let pos = rect.min + Vec2::new(28.0, 32.0);
+            for pressed in [true, false] {
+                let mut pointer = input.clone();
+                pointer.events = vec![
+                    egui::Event::PointerMoved(pos),
+                    egui::Event::PointerButton {
+                        pos,
+                        button: egui::PointerButton::Primary,
+                        pressed,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ];
+                let (_, activated) = render(pointer);
+                if !pressed {
+                    assert!(
+                        activated,
+                        "The photo must remain a clickable account control"
+                    );
+                }
+            }
+        }
     }
 }
 

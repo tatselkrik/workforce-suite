@@ -1,3 +1,4 @@
+use crate::account::{self, AccountAction, AccountProfile, DisplayPreferences, PersonalDetails};
 use crate::domain::*;
 use anyhow::{Context, Result, bail, ensure};
 use chrono::Utc;
@@ -7,7 +8,7 @@ use reqwest::{
 };
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::{Value, json};
-use std::{path::Path, sync::mpsc, thread, time::Duration};
+use std::{io::Read, path::Path, sync::mpsc, thread, time::Duration};
 use uuid::Uuid;
 
 #[derive(Clone, Default, Serialize, Deserialize)]
@@ -74,9 +75,50 @@ impl ConnectionConfig {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 struct AuthUser {
     id: Uuid,
+    #[serde(default)]
+    email: String,
+    #[serde(default)]
+    new_email: String,
+    #[serde(default)]
+    email_confirmed_at: Option<String>,
+    #[serde(default)]
+    created_at: Option<String>,
+    #[serde(default)]
+    last_sign_in_at: Option<String>,
+    #[serde(default)]
+    user_metadata: Value,
+}
+
+impl AuthUser {
+    fn profile(&self) -> AccountProfile {
+        let details = self
+            .user_metadata
+            .get("hris_profile")
+            .cloned()
+            .and_then(|v| serde_json::from_value::<PersonalDetails>(v).ok())
+            .unwrap_or_default();
+        let display = self
+            .user_metadata
+            .get("hris_preferences")
+            .cloned()
+            .and_then(|v| serde_json::from_value::<DisplayPreferences>(v).ok())
+            .filter(|v| v.validate().is_ok())
+            .unwrap_or_default();
+        AccountProfile {
+            id: self.id,
+            email: self.email.clone(),
+            pending_email: self.new_email.clone(),
+            email_confirmed_at: self.email_confirmed_at.clone(),
+            created_at: self.created_at.clone(),
+            last_sign_in_at: self.last_sign_in_at.clone(),
+            details,
+            display,
+            ..Default::default()
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -133,6 +175,7 @@ pub struct CloudClient {
     config: ConnectionConfig,
     http: Client,
     session: AuthSession,
+    account: AccountProfile,
 }
 
 impl CloudClient {
@@ -171,9 +214,11 @@ impl CloudClient {
         let mut client = Self {
             config,
             http,
+            account: session.user.profile(),
             session,
         };
         let snapshot = client.snapshot()?;
+        client.refresh_account()?;
         Ok((client, snapshot))
     }
 
@@ -214,6 +259,208 @@ impl CloudClient {
             )
             .header("apikey", self.config.publishable_key.trim())
             .bearer_auth(&self.session.access_token))
+    }
+
+    fn account_request(&mut self, method: Method, path: &str) -> Result<RequestBuilder> {
+        self.ensure_session()?;
+        Ok(self
+            .http
+            .request(
+                method,
+                format!("{}{path}", self.config.url.trim().trim_end_matches('/')),
+            )
+            .header("apikey", self.config.publishable_key.trim())
+            .bearer_auth(&self.session.access_token))
+    }
+
+    pub fn account(&self) -> &AccountProfile {
+        &self.account
+    }
+
+    pub fn refresh_account(&mut self) -> Result<()> {
+        let user: AuthUser = decode(
+            self.account_request(Method::GET, "/auth/v1/user")?
+                .send()
+                .context("Could not refresh your account. Check your connection.")?,
+        )?;
+        self.accept_user(user)?;
+        match self.download_photo() {
+            Ok(photo) => {
+                self.account.photo = photo;
+                self.account.photo_warning = None;
+            }
+            Err(error) => {
+                self.account.photo_warning =
+                    Some(format!("Your photo could not be loaded. {error}"))
+            }
+        }
+        Ok(())
+    }
+
+    fn accept_user(&mut self, user: AuthUser) -> Result<()> {
+        ensure!(
+            user.id == self.session.user.id,
+            "The account response did not match your session. Sign in again."
+        );
+        let mut account = user.profile();
+        account.photo = self.account.photo.take();
+        account.photo_warning = self.account.photo_warning.take();
+        self.account = account;
+        self.session.user = user;
+        Ok(())
+    }
+
+    fn photo_path(&self) -> String {
+        format!("{}/avatar.png", self.session.user.id)
+    }
+
+    fn download_photo(&mut self) -> Result<Option<Vec<u8>>> {
+        let path = format!(
+            "/storage/v1/object/authenticated/profile-photos/{}",
+            self.photo_path()
+        );
+        let response = self
+            .account_request(Method::GET, &path)?
+            .header("Cache-Control", "no-cache")
+            .send()
+            .context("Check your connection and refresh.")?;
+        if !response.status().is_success() {
+            let status = response.status();
+            let error: Value = response.json().unwrap_or(Value::Null);
+            let code = error.get("code").and_then(Value::as_str).unwrap_or("");
+            let message = error.get("message").and_then(Value::as_str).unwrap_or("");
+            if matches!(code, "NoSuchKey" | "not_found")
+                || (status == StatusCode::NOT_FOUND && message == "Object not found")
+                || (error.get("error").and_then(Value::as_str) == Some("not_found")
+                    && message == "Object not found")
+            {
+                return Ok(None);
+            }
+            bail!("Your photo storage is unavailable. Contact your HRIS administrator.");
+        }
+        let mut bytes = Vec::new();
+        response
+            .take(account::MAX_PHOTO_BYTES as u64 + 1)
+            .read_to_end(&mut bytes)?;
+        ensure!(
+            bytes.len() <= account::MAX_PHOTO_BYTES,
+            "The stored photo exceeds the size limit."
+        );
+        Ok(Some(account::normalize_photo(&bytes)?))
+    }
+
+    fn update_user(&mut self, body: Value) -> Result<()> {
+        let response = self
+            .account_request(Method::PUT, "/auth/v1/user")?
+            .json(&body)
+            .send()
+            .context("Could not save your account change. Check your connection.")?;
+        let user: AuthUser = decode(response)?;
+        self.accept_user(user)
+    }
+
+    fn verify_current_password(&mut self, current: &str) -> Result<()> {
+        ensure!(
+            !current.is_empty() && current.len() <= 1024,
+            "Enter your current password."
+        );
+        ensure!(
+            !self.account.email.is_empty(),
+            "Refresh your account before changing security details."
+        );
+        let response = self
+            .http
+            .post(format!(
+                "{}/auth/v1/token",
+                self.config.url.trim().trim_end_matches('/')
+            ))
+            .query(&[("grant_type", "password")])
+            .header("apikey", self.config.publishable_key.trim())
+            .json(&json!({"email": self.account.email, "password": current}))
+            .send()
+            .context("Could not verify your current password. Check your connection.")?;
+        let mut verified: AuthSession =
+            decode(response).context("Your current password could not be verified. Try again.")?;
+        ensure!(
+            verified.user.id == self.session.user.id,
+            "Password verification returned another account. Sign in again."
+        );
+        if verified.expires_at == 0 {
+            verified.expires_at = Utc::now().timestamp() + verified.expires_in;
+        }
+        // A fresh signed-in session proves the current password even when the server's
+        // optional current_password enforcement is disabled. Tokens stay in this worker.
+        self.session = verified;
+        Ok(())
+    }
+
+    pub fn execute_account(&mut self, action: AccountAction) -> Result<String> {
+        match action {
+            AccountAction::SaveDetails(details) => {
+                details.validate()?;
+                self.update_user(json!({"data":{"hris_profile":details.trimmed()}}))?;
+                Ok("Personal details saved.".into())
+            }
+            AccountAction::SaveDisplay(display) => {
+                display.validate()?;
+                self.update_user(json!({"data":{"hris_preferences":display}}))?;
+                Ok("Display preferences saved.".into())
+            }
+            AccountAction::UploadPhoto(path) => {
+                let png = account::photo_from_file(&path)?;
+                let target = format!("/storage/v1/object/profile-photos/{}", self.photo_path());
+                let response = self
+                    .account_request(Method::POST, &target)?
+                    .header("Content-Type", "image/png")
+                    .header("x-upsert", "true")
+                    .header("Cache-Control", "max-age=0")
+                    .body(png.clone())
+                    .send()
+                    .context("Could not upload your photo. Check your connection.")?;
+                let _: Value = decode(response)?;
+                self.account.photo = Some(png);
+                self.account.photo_warning = None;
+                Ok("Profile photo updated.".into())
+            }
+            AccountAction::RemovePhoto => {
+                let path = self.photo_path();
+                let response = self
+                    .account_request(Method::DELETE, "/storage/v1/object/profile-photos")?
+                    .json(&json!({"prefixes":[path]}))
+                    .send()
+                    .context("Could not remove your photo. Check your connection.")?;
+                let _: Value = decode(response)?;
+                self.account.photo = None;
+                self.account.photo_warning = None;
+                Ok("Profile photo removed.".into())
+            }
+            AccountAction::ChangePassword {
+                current,
+                new,
+                confirmation,
+            } => {
+                account::validate_password_change(&current, &new, &confirmation)?;
+                self.verify_current_password(&current)?;
+                self.update_user(json!({"password":new,"current_password":current}))?;
+                Ok("Password changed. Use your new password the next time you sign in.".into())
+            }
+            AccountAction::ChangeEmail { current, new_email } => {
+                account::validate_email(&new_email)?;
+                ensure!(
+                    !new_email.trim().eq_ignore_ascii_case(&self.account.email),
+                    "That is already your account email."
+                );
+                self.verify_current_password(&current)?;
+                self.update_user(json!({"email":new_email.trim()}))?;
+                Ok(if self.account.pending_email.is_empty() { "Account email updated." } else {
+                    "Email change requested. Confirm the links sent to your email addresses, then Refresh."
+                }.into())
+            }
+            AccountAction::SignOutOthers => {
+                self.sign_out_scope("others")?;
+                Ok("Other sessions signed out. This device remains signed in. Existing access tokens expire according to the server's session policy.".into())
+            }
+        }
     }
 
     fn rows<T: DeserializeOwned>(&mut self, table: &str, company: Option<Uuid>) -> Result<Vec<T>> {
@@ -351,20 +598,25 @@ impl CloudClient {
     }
 
     pub fn sign_out(&mut self) -> Result<()> {
+        self.sign_out_scope("local")
+    }
+
+    fn sign_out_scope(&mut self, scope: &str) -> Result<()> {
+        self.ensure_session()?;
         let response = self
             .http
             .post(format!(
                 "{}/auth/v1/logout",
                 self.config.url.trim().trim_end_matches('/')
             ))
-            .query(&[("scope", "local")])
+            .query(&[("scope", scope)])
             .header("apikey", self.config.publishable_key.trim())
             .bearer_auth(&self.session.access_token)
             .send()
-            .context("Could not reach your company workspace to revoke this session.")?;
+            .context("Could not reach your company workspace to revoke the requested sessions.")?;
         ensure!(
             response.status().is_success(),
-            "The server could not revoke the session; the local session has still been cleared."
+            "The server could not revoke the requested sessions. Try again."
         );
         Ok(())
     }
@@ -414,6 +666,8 @@ pub enum Command {
     Change(Action),
     Refresh,
     SignOut,
+    SignOutEverywhere,
+    Account(AccountAction),
     Connect {
         config: ConnectionConfig,
         email: String,
@@ -424,6 +678,7 @@ pub enum Command {
 pub struct Update {
     pub result: std::result::Result<Snapshot, String>,
     pub message: String,
+    pub account: Option<AccountProfile>,
 }
 
 pub fn worker(
@@ -434,6 +689,7 @@ pub fn worker(
     let (events, updates) = mpsc::channel();
     thread::spawn(move || {
         let mut demo = initial;
+        let mut demo_account = demo.as_ref().map(|_| AccountProfile::demo());
         let mut cloud: Option<CloudClient> = None;
         let mut current = demo
             .as_ref()
@@ -454,9 +710,12 @@ pub fn worker(
                     }
                     Err(error) => Err(error),
                 },
-                Command::SignOut => {
+                Command::SignOut | Command::SignOutEverywhere => {
+                    let everywhere = matches!(command, Command::SignOutEverywhere);
                     if let Some(mut client) = cloud.take() {
-                        if let Err(error) = client.sign_out() {
+                        if let Err(error) =
+                            client.sign_out_scope(if everywhere { "global" } else { "local" })
+                        {
                             message = format!("Local session cleared. {error}");
                         }
                     }
@@ -466,13 +725,17 @@ pub fn worker(
                     Ok(match demo.as_mut() {
                         Some(store) => {
                             *store = DemoStore::new();
+                            demo_account = Some(AccountProfile::demo());
                             store.data.clone()
                         }
                         None => Snapshot::signed_out(),
                     })
                 }
                 Command::Refresh => match cloud.as_mut() {
-                    Some(client) => client.snapshot(),
+                    Some(client) => client.snapshot().and_then(|data| {
+                        client.refresh_account()?;
+                        Ok(data)
+                    }),
                     None => demo
                         .as_ref()
                         .map(|store| store.data.clone())
@@ -493,6 +756,19 @@ pub fn worker(
                             .and_then(|store| store.execute(action).map(|_| store.data.clone())),
                     }
                 }
+                Command::Account(action) => {
+                    let changed = match cloud.as_mut() {
+                        Some(client) => client.execute_account(action),
+                        None => demo_account
+                            .as_mut()
+                            .context("Sign in to HRIS to manage your profile.")
+                            .and_then(|account| execute_demo_account(account, action)),
+                    };
+                    changed.map(|text| {
+                        message = text;
+                        current.clone()
+                    })
+                }
             };
             if let Ok(data) = &result {
                 current = data.clone();
@@ -501,6 +777,10 @@ pub fn worker(
                 .send(Update {
                     result: result.map_err(|e| e.to_string()),
                     message,
+                    account: cloud
+                        .as_ref()
+                        .map(|client| client.account.clone())
+                        .or_else(|| demo_account.clone()),
                 })
                 .is_err()
             {
@@ -510,4 +790,25 @@ pub fn worker(
         }
     });
     (commands, updates)
+}
+
+fn execute_demo_account(profile: &mut AccountProfile, action: AccountAction) -> Result<String> {
+    match action {
+        AccountAction::SaveDetails(details) => {
+            details.validate()?;
+            profile.details = details.trimmed();
+        }
+        AccountAction::SaveDisplay(display) => {
+            display.validate()?;
+            profile.display = display;
+        }
+        AccountAction::UploadPhoto(path) => {
+            profile.photo = Some(account::photo_from_file(&path)?);
+        }
+        AccountAction::RemovePhoto => profile.photo = None,
+        _ => bail!(
+            "Account security changes require a signed-in HRIS account. Demo changes never reach a server."
+        ),
+    }
+    Ok("Updated for this demo session. Changes are not saved.".into())
 }

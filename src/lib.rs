@@ -1,3 +1,4 @@
+pub mod account;
 pub mod backend;
 pub mod domain;
 pub mod ui;

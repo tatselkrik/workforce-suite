@@ -21,7 +21,7 @@ fn auth_fixture(
     let address = listener.local_addr().unwrap();
     let requests = Arc::new(Mutex::new(Vec::new()));
     let observed = requests.clone();
-    let expected_requests = if companies.is_empty() { 2 } else { 5 };
+    let expected_requests = if companies.is_empty() { 2 } else { 7 };
     let user_id = companies
         .first()
         .map(|company| company.owner_id)
@@ -39,6 +39,7 @@ fn auth_fixture(
                 }
                 Err(e) => panic!("{e}"),
             };
+            stream.set_nonblocking(false).unwrap();
             stream
                 .set_read_timeout(Some(Duration::from_secs(3)))
                 .unwrap();
@@ -67,15 +68,23 @@ fn auth_fixture(
             }
             let request = String::from_utf8(bytes).unwrap();
             let first = request.lines().next().unwrap();
-            let body = if first.starts_with("POST /auth/v1/token?") {
-                json!({"access_token":"test-user-jwt","refresh_token":"test-refresh-token","expires_at":4102444800i64,"expires_in":3600,"user":{"id":user_id}}).to_string()
+            let user = json!({"id":user_id,"email":"demo@example.invalid","email_confirmed_at":"2026-01-01T00:00:00Z"});
+            let (status, body) = if first.starts_with("POST /auth/v1/token?") {
+                ("200 OK",json!({"access_token":"test-user-jwt","refresh_token":"test-refresh-token","expires_at":4102444800i64,"expires_in":3600,"user":user}).to_string())
+            } else if first.starts_with("GET /auth/v1/user ") {
+                ("200 OK", user.to_string())
+            } else if first.starts_with("GET /storage/v1/object/authenticated/") {
+                (
+                    "404 Not Found",
+                    json!({"code":"NoSuchKey","message":"Object not found"}).to_string(),
+                )
             } else if first.starts_with("GET /rest/v1/companies?") {
-                company_json.clone()
+                ("200 OK", company_json.clone())
             } else {
-                "[]".into()
+                ("200 OK", "[]".into())
             };
             observed.lock().unwrap().push(request);
-            write!(stream,"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body).unwrap();
+            write!(stream,"HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body).unwrap();
             count += 1;
         }
         assert_eq!(
@@ -166,6 +175,7 @@ fn company_worker_rejects_reads_and_writes_until_hris_sign_in() {
     for command in [
         Command::Refresh,
         Command::Change(Action::SaveCompany(Company::default())),
+        Command::Account(hris_desktop::account::AccountAction::RemovePhoto),
     ] {
         commands.send(command).unwrap();
         let update = updates.recv_timeout(Duration::from_secs(3)).unwrap();

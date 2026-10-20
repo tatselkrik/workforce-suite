@@ -39,6 +39,16 @@ try {
     grant usage on schema auth to authenticated;
     grant execute on function auth.uid() to authenticated;
     insert into auth.users values ('${uidA}'),('${uidB}');
+    -- Minimal managed-Storage contract for local policy tests; no S3 service is simulated.
+    create schema storage;
+    create table storage.buckets(id text primary key, name text, public boolean default false,
+      file_size_limit bigint, allowed_mime_types text[]);
+    create table storage.objects(id uuid primary key default gen_random_uuid(),
+      bucket_id text references storage.buckets(id), name text, owner_id text, metadata jsonb,
+      unique(bucket_id,name));
+    alter table storage.objects enable row level security;
+    grant usage on schema storage to authenticated,anon;
+    grant select,insert,update,delete on storage.objects to authenticated,anon;
   `);
   const folder=new URL('../../supabase/migrations/',import.meta.url);
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
@@ -55,6 +65,27 @@ try {
   const companyA=(await db.query(`insert into public.companies(owner_id,name,timezone) values ($1,'Demo Company A','Asia/Manila') returning *`,[uidA])).rows[0];
   await deny(`insert into public.companies(owner_id,name) values ($1,'Second installation company')`,[uidB],['23505']);
   eq((await db.query('select count(*)::int as n from public.companies')).rows[0].n,1,'Database permits exactly one company');
+  const photoPath=uidA+'/avatar.png';
+  await session(uidA);
+  await db.query(`insert into storage.objects(bucket_id,name,owner_id) values ('profile-photos',$1,$2)`,[photoPath,uidA]);
+  eq((await db.query('select * from storage.objects')).rows.length,1,'Owner can read own private photo');
+  eq((await db.query(`update storage.objects set metadata='{"version":2}' where name=$1 returning id`,[photoPath])).rows.length,1,'Photo replacement can update its own object');
+  await deny(`update storage.objects set owner_id=$1 where name=$2`,[uidB,photoPath],['42501']);
+  await deny(`update storage.objects set name=$1 where name=$2`,[uidB+'/avatar.png',photoPath],['42501']);
+  await deny(`insert into storage.objects(bucket_id,name,owner_id) values ('profile-photos',$1,$2)`,[uidA+'/other.png',uidA],['42501']);
+  await session(uidB);
+  eq((await db.query('select * from storage.objects')).rows.length,0,'Another account cannot read the photo');
+  eq((await db.query(`delete from storage.objects where name=$1 returning id`,[photoPath])).rows.length,0,'Another account cannot delete the photo');
+  await deny(`insert into storage.objects(bucket_id,name,owner_id) values ('profile-photos',$1,$2)`,[photoPath,uidB],['42501']);
+  await deny(`insert into storage.objects(bucket_id,name,owner_id) values ('profile-photos',$1,$2)`,[uidB+'/avatar.png',uidB],['42501']);
+  await session('', 'anon');
+  eq((await db.query('select * from storage.objects')).rows.length,0,'Anonymous reads cannot see private photos');
+  await deny(`insert into storage.objects(bucket_id,name,owner_id) values ('profile-photos',$1,$2)`,[photoPath,uidA],['42501']);
+  await session(uidA);
+  eq((await db.query(`delete from storage.objects where name=$1 returning id`,[photoPath])).rows.length,1,'Owner can remove own photo');
+  await db.exec('reset role');
+  const photoBucket=(await db.query(`select public,file_size_limit::int,allowed_mime_types from storage.buckets where id='profile-photos'`)).rows[0];
+  eq(photoBucket,{public:false,file_size_limit:2097152,allowed_mime_types:['image/png']},'Private bucket restricts size and MIME type');
   const unrelatedCompany='00000000-0000-0000-0000-000000000101';
   const unrelatedEmployee='00000000-0000-0000-0000-000000000102';
   await session(uidA);
