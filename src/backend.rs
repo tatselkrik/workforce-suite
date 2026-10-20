@@ -7,12 +7,7 @@ use reqwest::{
 };
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::{Value, json};
-use std::{
-    path::{Path, PathBuf},
-    sync::mpsc,
-    thread,
-    time::Duration,
-};
+use std::{path::Path, sync::mpsc, thread, time::Duration};
 use uuid::Uuid;
 
 #[derive(Clone, Default, Serialize, Deserialize)]
@@ -47,70 +42,35 @@ impl ConnectionConfig {
         Ok(())
     }
 
-    pub fn path() -> PathBuf {
-        let folder = std::env::var_os("HRIS_DATA_DIR")
-            .map(PathBuf::from)
-            .or_else(|| {
-                std::env::var_os("LOCALAPPDATA")
-                    .map(PathBuf::from)
-                    .map(|p| p.join(crate::APP_ID))
-            })
-            .or_else(|| {
-                std::env::var_os("XDG_CONFIG_HOME")
-                    .map(PathBuf::from)
-                    .map(|p| p.join(crate::APP_ID))
-            })
-            .or_else(|| {
-                std::env::var_os("HOME")
-                    .map(PathBuf::from)
-                    .map(|p| p.join(".config").join(crate::APP_ID))
-            })
-            .unwrap_or_else(|| PathBuf::from("."));
-        folder.join("hris-config.json")
-    }
-
     pub fn load() -> Result<Self> {
-        let company_path = std::env::current_exe().ok().and_then(|path| {
-            path.parent()
-                .map(|parent| parent.join("hris-connection.json"))
-        });
-        let mut config = Self::load_files(company_path.as_deref(), &Self::path())?;
-        if let Ok(value) = std::env::var("HRIS_SUPABASE_URL") {
-            config.url = value;
+        let exe = std::env::current_exe().context("Could not locate the HRIS installation.")?;
+        let folder = exe
+            .parent()
+            .context("Could not locate the HRIS installation folder.")?;
+        Self::load_profile(
+            &folder.join("hris-connection.json"),
+            folder.join(".hris-installation").exists(),
+        )
+    }
+
+    fn load_profile(path: &Path, installed: bool) -> Result<Self> {
+        // A deployment selects its company database. Device settings and environment
+        // variables must never silently redirect a company's installed application.
+        if !path.exists() {
+            ensure!(
+                !installed,
+                "This installation's company connection is missing. Contact your HRIS administrator."
+            );
+            return Ok(Self::default());
         }
-        if let Ok(value) = std::env::var("HRIS_SUPABASE_PUBLISHABLE_KEY") {
-            config.publishable_key = value;
-        }
+        let config: Self = serde_json::from_slice(
+            &std::fs::read(path).context("Could not read the installed company connection.")?,
+        )
+        .context("The installed company connection is invalid. Contact your HRIS administrator.")?;
+        config.validate().context(
+            "The installed company connection is invalid. Contact your HRIS administrator.",
+        )?;
         Ok(config)
-    }
-
-    fn load_files(company_path: Option<&Path>, device_path: &Path) -> Result<Self> {
-        // A packaged company profile takes precedence over settings left by another installation.
-        let path = company_path
-            .filter(|path| path.exists())
-            .or_else(|| device_path.exists().then_some(device_path));
-        match path {
-            Some(path) => {
-                let config: Self = serde_json::from_slice(
-                    &std::fs::read(path).context("Could not read connection settings.")?
-                ).context("Connection settings are invalid JSON. Correct the company profile or hris-config.json.")?;
-                config.validate()?;
-                Ok(config)
-            }
-            None => Ok(Self::default()),
-        }
-    }
-
-    pub fn save(&self) -> Result<()> {
-        self.validate()?;
-        let path = Self::path();
-        std::fs::create_dir_all(path.parent().unwrap())
-            .context("Could not create the settings folder.")?;
-        let temporary = path.with_extension("json.tmp");
-        std::fs::write(&temporary, serde_json::to_vec_pretty(self)?)
-            .context("Could not save connection settings.")?;
-        std::fs::rename(temporary, path).context("Could not replace connection settings.")?;
-        Ok(())
     }
 }
 
@@ -139,7 +99,7 @@ mod connection_file_tests {
     use super::*;
 
     #[test]
-    fn company_profile_overrides_another_installations_device_settings() {
+    fn company_profile_is_required_for_an_installed_app_and_invalid_profiles_fail_closed() {
         let folder = std::env::temp_dir().join(format!("hris-config-test-{}", Uuid::new_v4()));
         std::fs::create_dir(&folder).unwrap();
         let company = folder.join("hris-connection.json");
@@ -148,34 +108,23 @@ mod connection_file_tests {
             url: "https://company.example.invalid".into(),
             publishable_key: "sb_publishable_company_test_only".into(),
         };
-        let previous = ConnectionConfig {
-            url: "https://previous.example.invalid".into(),
-            ..configured.clone()
-        };
         std::fs::write(&company, serde_json::to_vec(&configured).unwrap()).unwrap();
-        std::fs::write(&device, serde_json::to_vec(&previous).unwrap()).unwrap();
+        std::fs::write(&device, br#"{"url":"https://another-company.example.invalid","publishable_key":"sb_publishable_previous_test_only"}"#).unwrap();
         assert_eq!(
-            ConnectionConfig::load_files(Some(&company), &device)
-                .unwrap()
-                .url,
+            ConnectionConfig::load_profile(&company, true).unwrap().url,
             configured.url
         );
         std::fs::write(&company, b"invalid JSON").unwrap();
-        assert!(ConnectionConfig::load_files(Some(&company), &device).is_err());
+        assert!(ConnectionConfig::load_profile(&company, true).is_err());
         std::fs::remove_file(&company).unwrap();
-        assert_eq!(
-            ConnectionConfig::load_files(Some(&company), &device)
-                .unwrap()
-                .url,
-            previous.url
-        );
-        std::fs::remove_file(&device).unwrap();
+        assert!(ConnectionConfig::load_profile(&company, true).is_err());
         assert!(
-            ConnectionConfig::load_files(Some(&company), &device)
+            ConnectionConfig::load_profile(&company, false)
                 .unwrap()
                 .url
                 .is_empty()
         );
+        std::fs::remove_file(&device).unwrap();
         std::fs::remove_dir(&folder).unwrap();
     }
 }
@@ -195,7 +144,7 @@ impl CloudClient {
         config.validate()?;
         ensure!(
             !email.trim().is_empty() && !password.is_empty(),
-            "Enter your Supabase account email and password."
+            "Enter your HRIS account email and password."
         );
         let http = Client::builder()
             .timeout(Duration::from_secs(20))
@@ -212,7 +161,9 @@ impl CloudClient {
             .header("apikey", config.publishable_key.trim())
             .json(&json!({"email": email.trim(), "password": password}))
             .send()
-            .context("Cannot reach Supabase. Check your connection and project URL.")?;
+            .context(
+                "Cannot reach your company's HRIS. Check your internet connection and try again.",
+            )?;
         let mut session: AuthSession = decode(response)?;
         if session.expires_at == 0 {
             session.expires_at = Utc::now().timestamp() + session.expires_in;
@@ -295,11 +246,11 @@ impl CloudClient {
         let mut companies: Vec<Company> = self.rows("companies", None)?;
         ensure!(
             !companies.is_empty(),
-            "This HR account is not assigned to this installation's company. Ask the project administrator to finish account setup."
+            "This HR account is not assigned to this installation's company. Ask your HRIS administrator to finish account setup."
         );
         ensure!(
             companies.len() == 1,
-            "This installation requires exactly one company. Apply all included database migrations."
+            "This installation requires exactly one company. Ask your HRIS administrator to finish setup."
         );
         let company = companies.remove(0);
         ensure!(
@@ -410,10 +361,10 @@ impl CloudClient {
             .header("apikey", self.config.publishable_key.trim())
             .bearer_auth(&self.session.access_token)
             .send()
-            .context("Could not contact Supabase to revoke this session.")?;
+            .context("Could not reach your company workspace to revoke this session.")?;
         ensure!(
             response.status().is_success(),
-            "Supabase could not revoke the session; local tokens have still been discarded."
+            "The server could not revoke the session; the local session has still been cleared."
         );
         Ok(())
     }
@@ -428,26 +379,41 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
             .or_else(|| value.get("error_code"))
             .and_then(Value::as_str)
             .unwrap_or("");
-        let message = match (status,code) {
-            (StatusCode::UNAUTHORIZED,_) => "Sign-in or session validation failed. Check your account and sign in again.".into(),
-            (_,"23505") => "That record already exists. Refresh before trying again.".into(),
-            (_,"23P01") => "These dates overlap an existing pending or approved leave request.".into(),
-            (_,"42501") => "This operation is not permitted for your company workspace.".into(),
-            (_,"PGRST205" | "42P01") => "HRIS tables were not found. Apply the included migration to the dedicated Supabase project.".into(),
-            _ => value.get("message").or_else(||value.get("msg")).and_then(Value::as_str)
-                .map(|s|s.chars().take(240).collect::<String>()).unwrap_or_else(||format!("Supabase returned HTTP {}.",status.as_u16())),
+        let message = match (status, code) {
+            (StatusCode::UNAUTHORIZED, _) => {
+                "Sign-in or session validation failed. Check your account and sign in again.".into()
+            }
+            (_, "23505") => "That record already exists. Refresh before trying again.".into(),
+            (_, "23P01") => {
+                "These dates overlap an existing pending or approved leave request.".into()
+            }
+            (_, "42501") => "This operation is not permitted for your company workspace.".into(),
+            (_, "PGRST205" | "42P01") => {
+                "Your company workspace is not ready. Contact your HRIS administrator.".into()
+            }
+            _ => value
+                .get("message")
+                .or_else(|| value.get("msg"))
+                .and_then(Value::as_str)
+                .map(|s| s.chars().take(240).collect::<String>())
+                .unwrap_or_else(|| {
+                    format!(
+                        "HRIS could not complete the request (HTTP {}).",
+                        status.as_u16()
+                    )
+                }),
         };
         bail!("{message}");
     }
-    response
-        .json()
-        .context("Supabase returned an unexpected response format.")
+    response.json().context(
+        "The HRIS server returned an unexpected response. Try again or contact your administrator.",
+    )
 }
 
 pub enum Command {
     Change(Action),
     Refresh,
-    Demo,
+    SignOut,
     Connect {
         config: ConnectionConfig,
         email: String,
@@ -461,7 +427,7 @@ pub struct Update {
 }
 
 pub fn worker(
-    initial: DemoStore,
+    initial: Option<DemoStore>,
     repaint: eframe::egui::Context,
 ) -> (mpsc::Sender<Command>, mpsc::Receiver<Update>) {
     let (commands, receiver) = mpsc::channel();
@@ -469,7 +435,10 @@ pub fn worker(
     thread::spawn(move || {
         let mut demo = initial;
         let mut cloud: Option<CloudClient> = None;
-        let mut current = demo.data.clone();
+        let mut current = demo
+            .as_ref()
+            .map(|store| store.data.clone())
+            .unwrap_or_else(Snapshot::signed_out);
         while let Ok(command) = receiver.recv() {
             let mut message = String::new();
             let result: Result<Snapshot> = match command {
@@ -480,39 +449,48 @@ pub fn worker(
                 } => match CloudClient::connect(config, email, password) {
                     Ok((client, data)) => {
                         cloud = Some(client);
-                        message = "Connected to Supabase.".into();
+                        message = "Signed in to your company workspace.".into();
                         Ok(data)
                     }
                     Err(error) => Err(error),
                 },
-                Command::Demo => {
+                Command::SignOut => {
                     if let Some(mut client) = cloud.take() {
                         if let Err(error) = client.sign_out() {
                             message = format!("Local session cleared. {error}");
                         }
                     }
-                    demo = DemoStore::new();
                     if message.is_empty() {
-                        message =
-                            "Demo workspace restored. Sample changes reset when the app closes."
-                                .into();
+                        message = "Signed out.".into();
                     }
-                    Ok(demo.data.clone())
+                    Ok(match demo.as_mut() {
+                        Some(store) => {
+                            *store = DemoStore::new();
+                            store.data.clone()
+                        }
+                        None => Snapshot::signed_out(),
+                    })
                 }
                 Command::Refresh => match cloud.as_mut() {
                     Some(client) => client.snapshot(),
-                    None => Ok(demo.data.clone()),
+                    None => demo
+                        .as_ref()
+                        .map(|store| store.data.clone())
+                        .context("Sign in to HRIS to access company records."),
                 },
                 Command::Change(action) => {
                     message = if cloud.is_some() {
-                        "Saved to Supabase."
+                        "Saved to your company workspace."
                     } else {
                         "Updated in the demo workspace."
                     }
                     .into();
                     match cloud.as_mut() {
                         Some(client) => client.execute(action, &current),
-                        None => demo.execute(action).map(|_| demo.data.clone()),
+                        None => demo
+                            .as_mut()
+                            .context("Sign in to HRIS to access company records.")
+                            .and_then(|store| store.execute(action).map(|_| store.data.clone())),
                     }
                 }
             };

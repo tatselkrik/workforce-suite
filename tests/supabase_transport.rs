@@ -1,6 +1,6 @@
 use hris_desktop::{
-    backend::{CloudClient, ConnectionConfig},
-    domain::Company,
+    backend::{self, CloudClient, Command, ConnectionConfig},
+    domain::{Action, Company, Mode},
 };
 use serde_json::json;
 use std::{
@@ -157,5 +157,70 @@ fn an_unassigned_account_cannot_create_a_company_or_load_employee_modules() {
         !requests
             .iter()
             .any(|request| request.starts_with("POST /rest/v1/companies"))
+    );
+}
+
+#[test]
+fn company_worker_rejects_reads_and_writes_until_hris_sign_in() {
+    let (commands, updates) = backend::worker(None, eframe::egui::Context::default());
+    for command in [
+        Command::Refresh,
+        Command::Change(Action::SaveCompany(Company::default())),
+    ] {
+        commands.send(command).unwrap();
+        let update = updates.recv_timeout(Duration::from_secs(3)).unwrap();
+        assert!(update.result.unwrap_err().contains("Sign in to HRIS"));
+    }
+    commands.send(Command::SignOut).unwrap();
+    let snapshot = updates
+        .recv_timeout(Duration::from_secs(3))
+        .unwrap()
+        .result
+        .unwrap();
+    assert_eq!(snapshot.mode, Mode::SignedOut);
+    assert_eq!(snapshot.company.name, "HRIS");
+    assert!(
+        snapshot.employees.is_empty()
+            && snapshot.attendance.is_empty()
+            && snapshot.leave.is_empty()
+    );
+}
+
+#[test]
+fn company_sign_out_clears_cloud_state_even_when_server_revocation_fails() {
+    let (config, server, _) = auth_fixture(vec![Company::default()]);
+    let (commands, updates) = backend::worker(None, eframe::egui::Context::default());
+    commands
+        .send(Command::Connect {
+            config,
+            email: "worker@example.invalid".into(),
+            password: "synthetic-test-password".into(),
+        })
+        .unwrap();
+    let connected = updates
+        .recv_timeout(Duration::from_secs(10))
+        .unwrap()
+        .result
+        .unwrap();
+    assert_eq!(connected.mode, Mode::Supabase);
+    server.join().unwrap(); // Closing the fixture makes the following revocation fail.
+    commands.send(Command::SignOut).unwrap();
+    let update = updates.recv_timeout(Duration::from_secs(10)).unwrap();
+    assert!(update.message.contains("Local session cleared"));
+    let signed_out = update.result.unwrap();
+    assert_eq!(signed_out.mode, Mode::SignedOut);
+    assert_eq!(signed_out.company.name, "HRIS");
+    assert!(
+        signed_out.employees.is_empty()
+            && signed_out.attendance.is_empty()
+            && signed_out.leave.is_empty()
+    );
+    commands.send(Command::Refresh).unwrap();
+    assert!(
+        updates
+            .recv_timeout(Duration::from_secs(3))
+            .unwrap()
+            .result
+            .is_err()
     );
 }

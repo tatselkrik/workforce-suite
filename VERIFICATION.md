@@ -1,6 +1,15 @@
 # Prototype verification — 2026-10-20
 
-## Supabase connection update
+## Company deployment flow — version 0.1.1
+
+- Company database selection is deployment configuration. The app reads only its packaged profile; remembered device settings and environment variables cannot select another project. Connection setup controls were removed from the interface.
+- Configured installations start on HRIS account sign-in with no company records or fictional demo data loaded. Successful authentication opens Overview. Sign-out clears company records and returns to sign-in, including when remote session revocation fails.
+- All 19 Rust tests passed: 14 domain/configuration checks, one deployment-profile test, two Auth/REST contract checks, and two worker access/sign-out regressions. Missing or malformed installed profiles block access instead of falling back to demo. Old device settings were present in the profile test and were ignored.
+- Native QA screenshots were generated and visually inspected for configured sign-in, malformed profile, missing installed profile and the separate demo Settings screen. Forms fit the window; no URL/key/remember controls appear. Error states expose no HR modules or sample records. Screenshots used generic test profiles.
+- The database schema, API authorization model and company data were not changed. The earlier 55 PostgreSQL assertions and actual live adapter checks below remain historical evidence for the unchanged database behavior; they were not repeated for this UI/deployment change.
+- Build/installation hashes, the candidate's exact source revision and final installed-screen evidence are recorded in its distribution manifest and installation report. Interactive live sign-in remains a local user action; no automated UI authentication or privileged client key was introduced.
+
+## Earlier Supabase connection update — version 0.1.0
 
 - All 17 Rust tests passed: 14 HR workflow/configuration tests, two local Auth/REST contract tests, and one company-profile precedence/fail-closed test. Formatting was applied with the pinned-compatible Rust 1.95.0 toolchain. Tests use fictional identities and credentials.
 - All 55 local PostgreSQL schema, permission, singleton-company, and workflow assertions passed against both checked-in migrations.
@@ -18,4 +27,16 @@ The hosted SQL tests use database roles and simulated request subjects; the addi
 
 The initial prototype separately passed inspection of Overview, Employees, Attendance, Leave, Settings, Add employee and Request leave, plus a normal optimized Windows startup/close check. Its original 15 integration tests and 52 local SQL assertions were superseded by the current expanded suites above. The original screenshot helper returned transparent pixels; the supported egui screenshot callback is used instead. Restricted local networking required the HTTP fixture test to run with normal loopback access. A cache hard-link warning fell back to file copying; it did not fail compilation.
 
-The updated Windows candidate remains a private, unsigned prototype at version 0.1.0. Optimized assembly, startup, artifact hashes and source-revision evidence belong to its distribution manifest. No remote GitHub CI run, public release, installer, signing, automatic update, other operating-system check or company production rollout has been verified. No unrelated hosted project was changed.
+## Earlier installed Windows check — version 0.1.0
+
+- A per-user NSIS 3.11 setup compiled without warnings and installed with exit code 0. It created desktop and Start menu shortcuts and a Windows Apps uninstall registration under `io.github.tatselkrik.hrisdesktop`.
+- All six installed payload files matched the prepared distribution by SHA256. The installed app executable is unchanged from the previous verified candidate: `1b75e99680955f7965e4025e0f1eb4c38aeca2eb9bd2fabe761aaf22004250bb`.
+- The Start menu shortcut launched the actual installed executable. Native computer-use inspection confirmed its Settings screen, configured profile and clearly labeled demo mode.
+- Through the installed native UI, a fictional demo employee was created, found by code, and edited. Attendance check-in and check-out passed. A second daily check-in produced the expected rejection and did not create a duplicate.
+- An annual leave request was submitted and approved through the native UI. The employee's balance changed from 15 to 14 days as expected.
+- The installed app closed normally and reopened from its desktop shortcut. Demo headcount reset from nine to eight; searching for the synthetic employee returned no matches. The app was left at Settings with empty sign-in fields.
+- The refreshed hosted baseline contained one company and zero employee, attendance or leave records. The native tests above stayed in the in-memory demo; no demo records were uploaded.
+- The uninstall/reinstall cycle passed. The uninstaller removed its named files, shortcuts and Apps registration while retaining a synthetic unknown file in the installation folder. Reinstallation completed with exit code 0 and restored all six payload files with their original hashes, both shortcuts and registration. The installed app was reopened afterward.
+- Interactive live sign-in and live UI persistence await a local sign-in by the user; actual Rust-adapter live persistence was previously verified as described above.
+
+The current Windows candidate remains a private, unsigned prototype. Optimized assembly, startup, artifact hashes and source-revision evidence belong to each version's distribution manifest. No remote GitHub CI run, public release, signing, automatic update, other operating-system check or company production rollout has been verified. No unrelated hosted project was changed. The original 0.1.0 distribution manifest predates its installation checks; the preceding section records those additional checks without changing that older binary.

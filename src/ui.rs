@@ -59,7 +59,8 @@ pub struct HrisApp {
     leave_form: Option<LeaveDraft>,
     close_on_success: bool,
     company_draft: Company,
-    connection: ConnectionConfig,
+    connection: Option<ConnectionConfig>,
+    deployment_error: Option<String>,
     login_email: String,
     login_password: String,
     #[cfg(feature = "qa-screenshot")]
@@ -104,26 +105,26 @@ pub fn configure_theme(ctx: &egui::Context) {
 impl HrisApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         configure_theme(&cc.egui_ctx);
-        let store = DemoStore::new();
-        let data = store.data.clone();
-        let (commands, updates) = backend::worker(store, cc.egui_ctx.clone());
-        let (connection, notice) = match ConnectionConfig::load() {
-            Ok(config) => (config, None),
-            Err(error) => (ConnectionConfig::default(), Some((error.to_string(), true))),
+        let (connection, deployment_error) = match ConnectionConfig::load() {
+            Ok(config) if config.url.is_empty() => (None, None),
+            Ok(config) => (Some(config), None),
+            Err(error) => (None, Some(error.to_string())),
         };
+        let demo = (connection.is_none() && deployment_error.is_none()).then(DemoStore::new);
+        let data = demo
+            .as_ref()
+            .map(|store| store.data.clone())
+            .unwrap_or_else(Snapshot::signed_out);
+        let (commands, updates) = backend::worker(demo, cc.egui_ctx.clone());
         let mut app = Self {
             attendance_date: data.company.today().to_string(),
             company_draft: data.company.clone(),
             data,
-            page: if connection.validate().is_ok() {
-                Page::Settings
-            } else {
-                Page::Overview
-            },
+            page: Page::Overview,
             commands,
             updates,
             busy: false,
-            notice,
+            notice: None,
             search: String::new(),
             employee_status: Some(EmployeeStatus::Active),
             department: String::new(),
@@ -133,6 +134,7 @@ impl HrisApp {
             leave_form: None,
             close_on_success: false,
             connection,
+            deployment_error,
             login_email: String::new(),
             login_password: String::new(),
             #[cfg(feature = "qa-screenshot")]
@@ -181,6 +183,17 @@ impl HrisApp {
             self.busy = false;
             match update.result {
                 Ok(data) => {
+                    if self.data.mode != data.mode {
+                        self.page = Page::Overview;
+                        self.search.clear();
+                        self.department.clear();
+                        self.employee_status = Some(EmployeeStatus::Active);
+                        self.leave_filter = None;
+                        self.attendance_date = data.company.today().to_string();
+                        self.check_in_employee = data.active().next().map(|employee| employee.id);
+                        self.employee_form = None;
+                        self.leave_form = None;
+                    }
                     self.company_draft = data.company.clone();
                     self.data = data;
                     if self.close_on_success {
@@ -290,7 +303,7 @@ impl HrisApp {
                 RichText::new(if self.data.mode == Mode::Demo {
                     "DEMO · SAMPLE DATA"
                 } else {
-                    "SUPABASE · CONNECTED"
+                    "COMPANY WORKSPACE · CONNECTED"
                 })
                 .color(Color32::from_rgb(115, 214, 197))
                 .size(11.0)
@@ -343,8 +356,8 @@ impl HrisApp {
                 "Review requests and keep annual leave balances in view.",
             ),
             Page::Settings => (
-                "Make this workspace yours",
-                "Set company defaults and connect your dedicated Supabase project.",
+                "Company settings",
+                "Manage your company details and leave policy.",
             ),
         };
         ui.heading(RichText::new(title).strong());
@@ -353,7 +366,7 @@ impl HrisApp {
         if self.data.mode == Mode::Demo {
             Frame::new().fill(Color32::from_rgb(232,243,240)).corner_radius(8).inner_margin(12).show(ui,|ui| {
                 ui.set_width(ui.available_width());
-                ui.label(RichText::new("Demo workspace · Fictional sample data. Changes reset when the app closes. Connect Supabase in Settings to save live records.").color(TEAL).size(12.0));
+                ui.label(RichText::new("Demo workspace · Fictional sample data. Changes reset when the app closes.").color(TEAL).size(12.0));
             });
         }
         if let Some((message, error)) = self.notice.clone() {
@@ -886,7 +899,7 @@ impl HrisApp {
     }
 
     fn settings(&mut self, ui: &mut Ui) {
-        self.connection_settings(ui);
+        self.account_settings(ui);
         ui.add_space(8.0);
         card(ui, |ui| {
             ui.label(RichText::new("Company defaults").size(18.0).strong());
@@ -928,66 +941,72 @@ impl HrisApp {
         );
     }
 
-    fn connection_settings(&mut self, ui: &mut Ui) {
+    fn sign_in(&mut self, ui: &mut Ui) {
+        ui.vertical_centered(|ui| {
+            ui.add_space(70.0);
+            ui.heading(RichText::new("HRIS Desktop").strong());
+            ui.label(RichText::new("Your company workspace").color(MUTED));
+            ui.add_space(24.0);
+            Frame::new().fill(Color32::WHITE).stroke(Stroke::new(1.0, LINE))
+                .corner_radius(12).inner_margin(28).show(ui, |ui| {
+                    ui.set_width(420.0);
+                    ui.with_layout(Layout::top_down(Align::Min), |ui| {
+                        if let Some(error) = &self.deployment_error {
+                            ui.heading("Company connection unavailable");
+                            ui.label(error);
+                            ui.label(RichText::new("Your HRIS administrator configures this installation. Reopen the app after they have corrected its connection.").color(MUTED));
+                            return;
+                        }
+                        ui.heading("Sign in");
+                        ui.label(RichText::new("Use your HRIS account to access company records.").color(MUTED));
+                        if let Some((message, error)) = &self.notice {
+                            ui.colored_label(if *error { Color32::from_rgb(160, 52, 38) } else { TEAL }, message);
+                        }
+                        ui.add_space(8.0);
+                        ui.add_enabled_ui(!self.busy, |ui| {
+                            field(ui, "Email", &mut self.login_email, "Your work email");
+                            ui.label("Password");
+                            ui.add_sized([ui.available_width(), 34.0],
+                                egui::TextEdit::singleline(&mut self.login_password).password(true).hint_text("Your HRIS password"));
+                            ui.add_space(8.0);
+                            if primary(ui, "Sign in") {
+                                if self.login_email.trim().is_empty() || self.login_password.is_empty() {
+                                    self.notice = Some(("Enter your email and password.".into(), true));
+                                } else if let Some(config) = &self.connection {
+                                    let command = Command::Connect {
+                                        config: config.clone(),
+                                        email: self.login_email.trim().into(),
+                                        password: std::mem::take(&mut self.login_password),
+                                    };
+                                    self.send(command);
+                                }
+                            }
+                        });
+                        if self.busy {
+                            ui.horizontal(|ui| { ui.spinner(); ui.label("Signing in…"); });
+                        }
+                    });
+                });
+        });
+    }
+
+    fn account_settings(&mut self, ui: &mut Ui) {
         card(ui, |ui| {
             ui.set_max_width(660.0);
-            ui.label(RichText::new("Company sign-in").size(18.0).strong());
+            ui.label(RichText::new("Account").size(18.0).strong());
             if self.data.mode == Mode::Supabase {
-                badge(ui, "Connected to your company's database", true);
-                ui.label(RichText::new("Records are saved in Supabase. Use Refresh to load changes made on another device.").color(MUTED));
-                if ui.button("Sign out & return to demo").clicked() {
+                badge(ui, "Signed in to your company workspace", true);
+                ui.label(
+                    RichText::new("Use Refresh to load changes made on another device.")
+                        .color(MUTED),
+                );
+                if ui.button("Sign out").clicked() {
+                    self.login_email.clear();
                     self.login_password.clear();
-                    self.send(Command::Demo);
+                    self.send(Command::SignOut);
                 }
             } else {
-                ui.label(RichText::new("Sign in with the HR account assigned to this company's database. Your Supabase dashboard account is separate from this HR login.").color(MUTED).size(12.0));
-                field(
-                    ui,
-                    "HR account email",
-                    &mut self.login_email,
-                    "Your Supabase Auth user",
-                );
-                ui.label("Password");
-                ui.add_sized(
-                    [ui.available_width().min(620.0), 34.0],
-                    egui::TextEdit::singleline(&mut self.login_password)
-                        .password(true)
-                        .hint_text("Enter password locally"),
-                );
-                ui.horizontal(|ui| {
-                    if primary(ui, "Sign in to Supabase") {
-                        if let Err(error) = self.connection.validate() {
-                            self.notice = Some((error.to_string(), true));
-                        } else {
-                            let password = std::mem::take(&mut self.login_password);
-                            self.send(Command::Connect {
-                                config: self.connection.clone(),
-                                email: self.login_email.trim().into(),
-                                password,
-                            });
-                        }
-                    }
-                });
-                ui.label(
-                    RichText::new(
-                        "Passwords and sessions stay in memory. Demo records are never uploaded.",
-                    )
-                    .color(MUTED)
-                    .size(11.0),
-                );
-                egui::CollapsingHeader::new("Connection details")
-                    .default_open(self.connection.validate().is_err())
-                    .show(ui, |ui| {
-                        field(ui, "Project URL", &mut self.connection.url, "https://your-project.supabase.co");
-                        field(ui, "Publishable key", &mut self.connection.publishable_key, "sb_publishable_…");
-                        if ui.button("Remember connection settings").clicked() {
-                            self.notice = Some(match self.connection.save() {
-                                Ok(()) => ("Project URL and publishable key saved on this device. A packaged company profile takes precedence on restart.".into(), false),
-                                Err(error) => (error.to_string(), true),
-                            });
-                        }
-                        ui.label(RichText::new("Use a publishable client key. Secret/service-role keys are not accepted.").color(MUTED).size(11.0));
-                    });
+                ui.label(RichText::new("Fictional demo workspace. No account is connected, and sample changes are not saved.").color(MUTED));
             }
         });
     }
@@ -1100,33 +1119,41 @@ impl eframe::App for HrisApp {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         self.receive();
         let ctx = ui.ctx().clone();
-        let form_open = self.employee_form.is_some() || self.leave_form.is_some();
-        egui::Panel::left("sidebar")
-            .resizable(false)
-            .exact_size(220.0)
-            .frame(Frame::new().fill(NAVY).inner_margin(20))
-            .show(ui, |ui| {
-                ui.add_enabled_ui(!self.busy && !form_open, |ui| self.sidebar(ui));
-            });
-        egui::CentralPanel::default()
-            .frame(Frame::new().fill(BG).inner_margin(28))
-            .show(ui, |ui| {
-                egui::ScrollArea::vertical()
-                    .id_salt("main_scroll")
-                    .show(ui, |ui| {
-                        ui.add_enabled_ui(!form_open, |ui| {
-                            self.header(ui);
-                            ui.add_enabled_ui(!self.busy, |ui| match self.page {
-                                Page::Overview => self.overview(ui),
-                                Page::Employees => self.employees(ui),
-                                Page::Attendance => self.attendance(ui),
-                                Page::Leave => self.leave(ui),
-                                Page::Settings => self.settings(ui),
+        if self.data.mode == Mode::SignedOut {
+            egui::CentralPanel::default()
+                .frame(Frame::new().fill(BG).inner_margin(28))
+                .show(ui, |ui| {
+                    egui::ScrollArea::vertical().show(ui, |ui| self.sign_in(ui));
+                });
+        } else {
+            let form_open = self.employee_form.is_some() || self.leave_form.is_some();
+            egui::Panel::left("sidebar")
+                .resizable(false)
+                .exact_size(220.0)
+                .frame(Frame::new().fill(NAVY).inner_margin(20))
+                .show(ui, |ui| {
+                    ui.add_enabled_ui(!self.busy && !form_open, |ui| self.sidebar(ui));
+                });
+            egui::CentralPanel::default()
+                .frame(Frame::new().fill(BG).inner_margin(28))
+                .show(ui, |ui| {
+                    egui::ScrollArea::vertical()
+                        .id_salt("main_scroll")
+                        .show(ui, |ui| {
+                            ui.add_enabled_ui(!form_open, |ui| {
+                                self.header(ui);
+                                ui.add_enabled_ui(!self.busy, |ui| match self.page {
+                                    Page::Overview => self.overview(ui),
+                                    Page::Employees => self.employees(ui),
+                                    Page::Attendance => self.attendance(ui),
+                                    Page::Leave => self.leave(ui),
+                                    Page::Settings => self.settings(ui),
+                                });
                             });
                         });
-                    });
-            });
-        self.forms(&ctx);
+                });
+            self.forms(&ctx);
+        }
         #[cfg(feature = "qa-screenshot")]
         {
             self.qa_frames += 1;

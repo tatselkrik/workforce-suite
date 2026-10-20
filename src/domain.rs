@@ -285,6 +285,7 @@ pub fn weekdays(start: NaiveDate, end: NaiveDate) -> u32 {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Mode {
+    SignedOut,
     Demo,
     Supabase,
 }
@@ -299,6 +300,20 @@ pub struct Snapshot {
 }
 
 impl Snapshot {
+    pub fn signed_out() -> Self {
+        Self {
+            company: Company {
+                id: Uuid::nil(),
+                name: "HRIS".into(),
+                ..Company::default()
+            },
+            employees: Vec::new(),
+            attendance: Vec::new(),
+            leave: Vec::new(),
+            mode: Mode::SignedOut,
+        }
+    }
+
     pub fn employee_name(&self, id: Uuid) -> &str {
         self.employees
             .iter()

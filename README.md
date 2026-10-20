@@ -1,6 +1,6 @@
 # HRIS Desktop
 
-A native Windows HRIS prototype written in Rust. Supabase provides the intended live database and authentication. The app opens in a clearly labeled **in-memory demo workspace** with fictional employees, so it can be tried before a Supabase project exists.
+A native Windows HRIS prototype written in Rust. Each company installation automatically uses its preconfigured, dedicated Supabase database. Users sign in to **HRIS**; they do not enter database URLs, keys, or select a company. A separate unconfigured source build opens a clearly labeled **in-memory demo workspace** with fictional employees.
 
 Application identifier: `io.github.tatselkrik.hrisdesktop`.
 
@@ -10,14 +10,18 @@ Application identifier: `io.github.tatselkrik.hrisdesktop`.
 - **Employee records:** add/edit employees, search and filter the directory, customize annual allowances, and archive employees while retaining history.
 - **Attendance:** record check-in/check-out, browse dates, reject duplicate daily check-ins and multiple open shifts. Live timestamps come from the database server and use the company time zone.
 - **Leave:** request annual, sick, or unpaid leave; approve or reject pending requests; prevent overlaps and annual leave over-allocation.
-- **Settings:** company name, IANA time zone, default leave allowance for new employees, and Supabase connection/sign-in.
+- **Settings:** company name, IANA time zone, default leave allowance for new employees, and account sign-out. Database configuration is handled during deployment.
 - **CI:** checked-in GitHub Actions workflow tests Rust behavior and database access rules and builds a Windows executable. It does not deploy a database or publish a release.
 
 The interface uses `egui`/`eframe`. The domain rules and Supabase Auth/REST adapter are also Rust. There is no browser UI, web server, or SQLite database in the application. Node.js is used only by the separate local PostgreSQL test harness.
 
 ## Try it
 
-Open the supplied **HRIS-Desktop.exe**. No Supabase account is needed for demo mode. Sample changes reset when the application closes or the workspace is reset.
+The private Windows setup installs version 0.1.1 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection profile, but no account password or session.
+
+Open **HRIS Desktop** and sign in with your assigned HRIS account. Its company database is already selected by the installation. Account login remains necessary to access HR records; database setup is not part of that login.
+
+An unconfigured source build can run demo mode without an account. Sample changes reset when the application closes. To try the employee workflows in either workspace:
 
 Suggested walkthrough:
 
@@ -37,27 +41,29 @@ cargo build --release --locked
 
 The executable is `target/release/hris-desktop.exe`. Run `cargo run --locked` during development. The current executable was built for Windows x64; other platforms have not been verified.
 
-## Supabase setup
+For a prepared private six-file Windows distribution bundle, build the per-user setup with NSIS 3.11:
+
+```powershell
+makensis /DAPP_BUNDLE=C:\absolute\bundle /DSETUP_OUTPUT=C:\absolute\HRIS-Desktop-Setup.exe tools/windows/installer.nsi
+```
+
+The installer refuses an unfamiliar existing installation directory or shortcuts. It uses the application's fixed identifier for its uninstall registration. Its uninstaller targets only the named installed files and retains local connection settings. Installation, file integrity, shortcuts, normal launch and an uninstall/reinstall cycle were tested locally. The uninstaller removed its own files, shortcuts and registration while preserving a synthetic unknown file in the installation folder; reinstallation restored the verified app.
+
+## Deployment setup (administrator only)
 
 The dedicated **HRIS** Supabase project is initialized in Singapore (`ap-southeast-1`) on the Free plan. Both migrations are applied, and one company is assigned to the confirmed administrator Auth account. The real Rust adapter successfully verified sign-in, employee storage, attendance, leave approval/balances, refresh and sign-out. Temporary test records were removed afterward.
 
 1. Use the assigned HR administrator account; its email is already confirmed. This Auth account is separate from the Supabase dashboard login.
-2. Extract the configured Windows package, keeping `hris-connection.json` beside `HRIS-Desktop.exe`. It contains only the project URL and publishable client key. The generic source includes `hris-connection.example.json` instead of a company-specific profile.
-3. Open the app. A configured installation opens **Settings**. Enter the assigned HR Auth user's email and password locally, then sign in. Passwords and sessions are never saved.
-4. Confirm **Supabase · Connected**, then update the placeholder **HRIS Company** name and policy defaults. The live database starts with no employees, attendance, or leave records. Demo employees are never uploaded.
+2. Package `hris-connection.json` beside `HRIS-Desktop.exe`. It contains only the project URL and publishable client key. The generic source includes `hris-connection.example.json` instead of a company-specific profile. The installer carries this profile automatically; users do not configure it.
+3. Open the installed app. It shows the normal **HRIS sign-in** screen. Enter the assigned account's email and password locally. Successful sign-in opens Overview and loads only that company's records. Passwords and sessions are never saved.
+4. Confirm **Company workspace · Connected**, then update the placeholder **HRIS Company** name and policy defaults in Settings. Demo employees are never uploaded.
 5. Add a test employee, refresh, restart the app, sign in again, and verify persistence before entering actual workplace data.
 
 For a separate company's deployment, use a separate dedicated Supabase project. Apply all files in `supabase/migrations/` in order, create and confirm its first HR Auth user, and run `supabase/bootstrap-company.sql` as the project administrator. Bootstrap requires exactly one Auth user and no existing company, so it cannot silently choose another account or replace existing configuration. The desktop client cannot create companies. Local migration versions match the hosted migration history; migration files were originally generated by the Supabase CLI.
 
-Only the project URL and publishable key can be remembered. They are stored in `%LOCALAPPDATA%/io.github.tatselkrik.hrisdesktop/hris-config.json` on Windows after **Remember connection settings** is selected. Passwords and access/refresh tokens are kept in memory, never in this file. Every launch starts in demo mode and requires a new live sign-in. Signing out attempts server-side session revocation and discards local tokens even if the network is unavailable.
+The packaged company profile is the only connection source. Old remembered device settings and `HRIS_SUPABASE_*` environment variables are ignored. No connection editing or company switcher appears in the application. An invalid profile, or a missing profile in an installed app, blocks startup instead of opening demo or selecting another database. For local development, place a private profile beside the development executable; omit it only when intentionally using the separate demo build.
 
-The packaged company profile takes precedence over remembered device settings, so a different installation's old settings cannot silently select another database. Invalid profiles produce an error instead of falling back. Development environment overrides are applied afterward.
-
-Optional environment overrides:
-
-- `HRIS_SUPABASE_URL`: project base URL.
-- `HRIS_SUPABASE_PUBLISHABLE_KEY`: publishable client key.
-- `HRIS_DATA_DIR`: folder for local connection settings, useful for isolated development.
+Passwords and access/refresh tokens stay in memory. Every company launch requires HRIS account sign-in. Signing out clears company records and returns to sign-in, attempts server-side session revocation, and discards local tokens even when the network is unavailable. It never opens demo mode in a company installation.
 
 The desktop client sends the publishable key in `apikey` and the signed-in user's access token in `Authorization: Bearer`. Row-level security restricts every HR table to the company's owning account. Immutable owner/company/employee identifiers are protected by column grants. Anonymous access and record deletion are denied. Company deletion and user provisioning remain administrative operations outside the app.
 
@@ -68,7 +74,7 @@ The desktop client sends the publishable key in `apikey` and the signed-in user'
 - Attendance supports one shift per employee per company date. Elapsed time includes breaks; payroll, overtime, schedule rules, and manual time corrections are outside this version.
 - Live mode requires internet access; there is no offline queue or local cache of employee data. Use Refresh to load changes from another device. Errors remain visible, and the app never silently falls back to demo after a failed live request.
 - UI and network requests run on separate threads. A failed write/refresh may require a manual Refresh before retrying; duplicate and state-transition rules protect against repeated submissions.
-- This prototype has no installer, signing, automatic updater, automatic database deployment, or production readiness certification.
+- The private Windows setup is unsigned. Automatic updates, automatic database deployment, and production readiness certification are not implemented.
 
 Company identity, time zone, and allowances are stored as configuration/data, separate from the UI and core rules. A later company rollout can extend these policies and add roles and deployment secrets without adding an administrative key to the executable.
 
@@ -90,6 +96,8 @@ npm test
 ```
 
 The database suite executes all migrations using PGlite/PostgreSQL, including `btree_gist`, and simulates Supabase's Auth identities and API roles. The hosted `tools/db-tests/hosted-smoke.sql` test separately exercised the real database's permissions and HR workflows before company initialization; all its fixtures were rolled back. The public Auth health endpoint returned 200, and unsigned-in REST reads returned 401 for all four HR tables. Rust HTTP tests cover the Auth/REST request contract and unassigned-account rejection against local fixtures. A separate live check used the real Rust adapter and confirmed administrator to create/reload a temporary employee, check in/out, request/approve leave, verify the balance, refresh, and revoke the session. Only that check's temporary records were subsequently removed. Interactive desktop sign-in and remote GitHub CI remain unverified.
+
+The earlier 0.1.0 installed Windows build passed native UI creation, search and editing of a fictional demo employee, check-in/check-out, duplicate check-in rejection, annual leave request/approval, and a balance change from 15 to 14 days. Normal close/relaunch reset the demo and removed the synthetic employee. The company deployment flow changed in 0.1.1; see `VERIFICATION.md` for its current evidence. Interactive live sign-in and live UI persistence still require verification.
 
 For native UI screenshots during development:
 
