@@ -10,8 +10,13 @@ export async function runAccessTests({db,eq,deny,session,employee,request,compan
   for(const id of [hr,manager,staff,peer,admin2]) {
     await db.query('insert into auth.users(id,email,email_confirmed_at) values($1,$2,now())',[id,emails.get(id)]);
   }
-  const save=(id,role,person=null,boss=null,active=true)=>db.query(
-    'select public.save_company_account($1,$2,$3,$4,$5,$6)',[id,emails.get(id),role,active,person,boss]);
+  const save=async(id,role,person=null,boss=null,active=true)=>{
+    if (boss && person) {
+      const managerPerson=(await db.query('select employee_id from public.company_members where user_id=$1',[boss])).rows[0].employee_id;
+      await db.query('update public.employees set reports_to=$1 where id=$2',[managerPerson,person]);
+    }
+    return db.query('select public.save_company_account($1,$2,$3,$4,$5,null)',[id,emails.get(id),role,active,person]);
+  };
   await session(owner);
   const hrPerson=await employee(company.id,'HR-ROLE');
   const managerPerson=await employee(company.id,'MANAGER-ROLE');
@@ -30,12 +35,14 @@ export async function runAccessTests({db,eq,deny,session,employee,request,compan
   await deny('select public.save_company_account($1,$2,$3,true,null,null)',[owner,emails.get(owner),'employee'],['23514']);
   await deny('select public.save_company_account($1,$2,$3,false,null,null)',[owner,emails.get(owner),'administrator'],['23514']);
   await deny('select public.save_company_account(null,$1,$2,true,null,null)',[emails.get(hr),'hr_generalist'],['23505']);
-  await deny('select public.save_company_account($1,$2,$3,true,null,null)',[staff,emails.get(staff),'employee'],['23514']);
-  await deny('select public.save_company_account($1,$2,$3,true,$4,null)',[peer,emails.get(peer),'employee',staffPerson.id],['23505']);
+  await save(staff,'employee');
+  eq((await db.query('select employee_id from public.company_members where user_id=$1',[staff])).rows[0].employee_id,staffPerson.id,'Existing employee identity is preserved automatically');
+  await deny('select public.save_company_account($1,$2,$3,true,$4,null)',[peer,emails.get(peer),'employee',staffPerson.id],['23514']);
   await deny('select public.save_company_account($1,$2,$3,true,$4,$1)',[manager,emails.get(manager),'manager',managerPerson.id],['23514']);
   await deny('select public.save_company_account($1,$2,$3,true,$4,$5)',[peer,emails.get(peer),'employee',peerPerson.id,staff],['23514']);
   await save(manager,'manager',managerPerson.id,hr);
-  await deny('select public.save_company_account($1,$2,$3,true,$4,$5)',[hr,emails.get(hr),'hr_generalist',hrPerson.id,manager],['23514']);
+  await deny('update public.employees set reports_to=$1 where id=$2',[managerPerson.id,hrPerson.id],['23514']);
+  await db.query('update public.employees set reports_to=null where id=$1',[managerPerson.id]);
   await save(manager,'manager',managerPerson.id);
   await deny('select public.save_company_account($1,$2,$3,true,$4,null)',[manager,emails.get(manager),'employee',managerPerson.id],['23514']);
 

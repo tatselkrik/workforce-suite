@@ -1,6 +1,7 @@
 use crate::access::{Access, AccessEvent, AdminAction, ManagedAccount};
 use crate::account::{self, AccountAction, AccountProfile, DisplayPreferences, PersonalDetails};
 use crate::domain::*;
+use crate::updater::{self, SignedRelease, UpdateConfig, UpdateState, VerifiedRelease};
 use anyhow::{Context, Result, bail, ensure};
 use chrono::Utc;
 use reqwest::{
@@ -200,6 +201,91 @@ impl std::fmt::Display for PortalAccount {
 impl std::error::Error for PortalAccount {}
 
 impl CloudClient {
+    pub fn check_update(&mut self, config: &UpdateConfig) -> Result<UpdateState> {
+        let mut response = self
+            .request(Method::POST, "rpc/desktop_update")?
+            .json(&json!({}))
+            .send()
+            .context(
+                "Could not check for updates. Check your internet connection and try again.",
+            )?;
+        if !response.status().is_success() {
+            let _: Value = decode(response)?;
+            unreachable!();
+        }
+        let mut bytes = Vec::new();
+        response.by_ref().take(16001).read_to_end(&mut bytes)?;
+        ensure!(
+            bytes.len() <= 16000,
+            "The update service returned an oversized response."
+        );
+        #[derive(Deserialize)]
+        struct Feed {
+            schema_version: String,
+            release: Option<SignedRelease>,
+        }
+        let feed: Feed =
+            serde_json::from_slice(&bytes).context("The update response was invalid.")?;
+        let signed = feed.release;
+        let Some(signed) = signed else {
+            return Ok(UpdateState::UpToDate);
+        };
+        let verified = signed.verify(config)?;
+        ensure!(
+            verified.release.requires_schema <= feed.schema_version,
+            "This update needs a database update first."
+        );
+        if updater::Version::parse(&verified.release.version)?
+            > updater::Version::parse(updater::VERSION)?
+        {
+            Ok(UpdateState::Available(verified))
+        } else {
+            Ok(UpdateState::UpToDate)
+        }
+    }
+
+    fn install_update(&mut self, update: &VerifiedRelease) -> Result<()> {
+        let config = UpdateConfig::load()?
+            .context("The installed update verification profile is missing.")?;
+        let update = update.signed.verify(&config)?;
+        ensure!(
+            updater::Version::parse(&update.release.version)?
+                > updater::Version::parse(updater::VERSION)?,
+            "This update is already installed."
+        );
+        let mut response = self
+            .account_request(
+                Method::GET,
+                &format!(
+                    "/storage/v1/object/authenticated/desktop-updates/{}",
+                    update.release.artifact
+                ),
+            )?
+            .timeout(Duration::from_secs(180))
+            .header("Cache-Control", "no-cache")
+            .send()
+            .context("The update could not be downloaded. The current app was kept open.")?;
+        if !response.status().is_success() {
+            let _: Value = decode(response)?;
+            unreachable!();
+        }
+        if let Some(length) = response.content_length() {
+            ensure!(
+                length == update.release.size,
+                "The update download size did not match."
+            );
+        }
+        let mut bytes = Vec::new();
+        response
+            .by_ref()
+            .take(updater::MAX_BYTES + 1)
+            .read_to_end(&mut bytes)?;
+        updater::verify_package(&update.release, &bytes)?;
+        updater::stage_and_launch(&update, &bytes)?;
+        let _ = self.sign_out_scope("local");
+        Ok(())
+    }
+
     pub fn connect(
         config: ConnectionConfig,
         email: String,
@@ -592,6 +678,25 @@ impl CloudClient {
 
     pub fn execute(&mut self, action: Action, current: &Snapshot) -> Result<Snapshot> {
         current.access.authorize(&action, current)?;
+        if let Action::SaveEmployeeRecord(draft, contacts) = &action {
+            let employee = draft.employee(current.company.id)?;
+            let contacts = contacts.normalized()?;
+            ensure!(
+                contacts.company_id == current.company.id,
+                "Choose an employee in this company."
+            );
+            let response = self.request(Method::POST, "rpc/save_employee_record")?
+                .json(&json!({"p_employee": {"id": draft.id, "company_id": current.company.id,
+                    "employee_code": employee.employee_code, "full_name": employee.full_name,
+                    "department": employee.department, "job_title": employee.job_title,
+                    "joined_on": employee.joined_on, "annual_leave_days": employee.annual_leave_days,
+                    "status": employee.status, "reports_to": employee.reports_to}, "p_contacts": contacts}))
+                .send().context("Could not save the employee record. Check your connection.")?;
+            let _: Uuid = decode(response)?;
+            return self
+                .snapshot()
+                .context("Employee saved, but refresh failed. Click Refresh before trying again.");
+        }
         if let Action::SaveEmployeeContacts(contacts) = &action {
             let contacts = contacts.normalized()?;
             ensure!(
@@ -642,12 +747,13 @@ impl CloudClient {
                 .context("Contacts saved, but refresh failed. Click Refresh before trying again.");
         }
         let (method, table, id, body) = match action {
+            Action::SaveEmployeeRecord(_, _) => unreachable!("Employee record saves return above"),
             Action::SaveEmployeeContacts(_) => unreachable!("Contact saves return above"),
             Action::SaveEmployee(draft) => {
                 let employee = draft.employee(current.company.id)?;
                 let mut body = json!({"employee_code": employee.employee_code, "full_name":employee.full_name,
                     "department":employee.department,"job_title":employee.job_title,"joined_on":employee.joined_on,
-                    "annual_leave_days":employee.annual_leave_days,"status":employee.status});
+                    "annual_leave_days":employee.annual_leave_days,"status":employee.status,"reports_to":employee.reports_to});
                 if let Some(id) = draft.id {
                     (Method::PATCH, "employees", Some(id), body)
                 } else {
@@ -736,7 +842,8 @@ impl CloudClient {
                 if draft.user_id.is_none() && draft.create_new {
                     let response = self.account_request(Method::POST, "/functions/v1/account-admin")?
                         .json(&json!({"operation":"create","email":draft.email.trim(),"password":draft.password,"active":draft.active,
-                            "role":draft.role,"employee_id":draft.employee_id,"manager_user_id":draft.manager_user_id})).send()?;
+                            "role":draft.role,"employee_id":draft.employee_id,"employee_name":draft.employee_id
+                            .and_then(|id| current.employees.iter().find(|e| e.id == id)).map(|e| e.full_name.as_str()).unwrap_or(&draft.employee_name)})).send()?;
                     let result: Value = decode(response)?;
                     if result.get("confirmation_sent").and_then(Value::as_bool) == Some(true) {
                         if draft.role.uses_desktop() {
@@ -842,6 +949,8 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
 }
 
 pub enum Command {
+    CheckUpdates,
+    InstallUpdate(VerifiedRelease),
     Change(Action),
     Refresh,
     SignOut,
@@ -859,6 +968,8 @@ pub struct Update {
     pub result: std::result::Result<Snapshot, String>,
     pub message: String,
     pub account: Option<AccountProfile>,
+    pub update_state: Option<UpdateState>,
+    pub background: bool,
 }
 
 pub fn worker(
@@ -871,6 +982,7 @@ pub fn worker(
         let mut demo = initial;
         let mut demo_account = demo.as_ref().map(|_| AccountProfile::demo());
         let mut cloud: Option<CloudClient> = None;
+        let mut next_update_check = std::time::Instant::now();
         let mut current = demo
             .as_ref()
             .map(|store| store.data.clone())
@@ -883,7 +995,36 @@ pub fn worker(
                 Err(mpsc::RecvTimeoutError::Disconnected) => break,
             };
             let mut message = String::new();
+            let mut update_state = None;
             let mut result: Result<Snapshot> = match command {
+                Command::CheckUpdates => {
+                    next_update_check = std::time::Instant::now() + Duration::from_secs(900);
+                    update_state = Some(match (cloud.as_mut(), UpdateConfig::load()) {
+                        (Some(client), Ok(Some(config))) => client
+                            .check_update(&config)
+                            .unwrap_or_else(|e| UpdateState::Failed(e.to_string())),
+                        (_, Err(e)) => UpdateState::Failed(e.to_string()),
+                        (None, _) => {
+                            UpdateState::Failed("Sign in to check your company's updates.".into())
+                        }
+                        _ => UpdateState::Failed(
+                            "Update verification has not been configured for this build.".into(),
+                        ),
+                    });
+                    Ok(current.clone())
+                }
+                Command::InstallUpdate(update) => {
+                    next_update_check = std::time::Instant::now() + Duration::from_secs(900);
+                    let install = cloud
+                        .as_mut()
+                        .context("Sign in before updating.")
+                        .and_then(|c| c.install_update(&update));
+                    update_state = Some(match install {
+                        Ok(()) => UpdateState::Restarting,
+                        Err(e) => UpdateState::Failed(e.to_string()),
+                    });
+                    Ok(current.clone())
+                }
                 Command::Connect {
                     config,
                     email,
@@ -897,6 +1038,8 @@ pub fn worker(
                     Err(error) => Err(error),
                 },
                 Command::SignOut | Command::SignOutEverywhere => {
+                    next_update_check = std::time::Instant::now();
+                    update_state = Some(UpdateState::Idle);
                     let everywhere = matches!(command, Command::SignOutEverywhere);
                     if let Some(mut client) = cloud.take() {
                         if let Err(error) =
@@ -996,12 +1139,36 @@ pub fn worker(
                         .as_ref()
                         .map(|client| client.account.clone())
                         .or_else(|| demo_account.clone()),
+                    update_state,
+                    background: false,
                 })
                 .is_err()
             {
                 break;
             }
             repaint.request_repaint();
+            // Publish HR results first; an automatic update check never clears busy state or drafts.
+            if std::time::Instant::now() >= next_update_check {
+                if let (Some(client), Ok(Some(config))) = (cloud.as_mut(), UpdateConfig::load()) {
+                    next_update_check = std::time::Instant::now() + Duration::from_secs(900);
+                    let state = client
+                        .check_update(&config)
+                        .unwrap_or_else(|e| UpdateState::Failed(e.to_string()));
+                    if events
+                        .send(Update {
+                            result: Ok(current.clone()),
+                            message: String::new(),
+                            account: None,
+                            update_state: Some(state),
+                            background: true,
+                        })
+                        .is_err()
+                    {
+                        break;
+                    }
+                    repaint.request_repaint();
+                }
+            }
         }
     });
     (commands, updates)
@@ -1038,39 +1205,59 @@ fn execute_demo_admin(store: &mut DemoStore, action: AdminAction) -> Result<Stri
                         && a.employee_id == draft.employee_id),
                 "This employee already has an active account."
             );
+            let person =
+                if let Some(existing) = store.data.accounts.iter().find(|a| a.user_id == user_id) {
+                    ensure!(
+                        draft.employee_id.is_none() || draft.employee_id == existing.employee_id,
+                        "This account already has an employee record. Edit it in Employees."
+                    );
+                    existing.employee_id
+                } else {
+                    draft.employee_id
+                };
+            let person = match person {
+                Some(id) => id,
+                None => {
+                    let name = if draft.employee_name.trim().is_empty() {
+                        draft
+                            .email
+                            .split('@')
+                            .next()
+                            .unwrap_or("New employee")
+                            .to_owned()
+                    } else {
+                        draft.employee_name.trim().to_owned()
+                    };
+                    let employee = EmployeeDraft {
+                        employee_code: format!(
+                            "EMP-{}",
+                            Uuid::new_v4().simple().to_string().get(..20).unwrap()
+                        ),
+                        full_name: name,
+                        annual_leave_days: store.data.company.annual_leave_days,
+                        ..Default::default()
+                    }
+                    .employee(store.data.company.id)?;
+                    let id = employee.id;
+                    store.data.employees.push(employee);
+                    id
+                }
+            };
+            ensure!(
+                !(draft.active && draft.role == crate::access::Role::Employee)
+                    || !store.data.active().any(|e| e.reports_to == Some(person)),
+                "Reassign direct reports before changing this supervisor to Employee access."
+            );
             let account = ManagedAccount {
                 user_id,
                 email: draft.email.trim().into(),
                 role: draft.role,
                 active: draft.active,
-                employee_id: draft.employee_id,
-                manager_user_id: draft.manager_user_id,
+                employee_id: Some(person),
+                manager_user_id: None,
                 email_confirmed: true,
                 is_owner: user_id == Uuid::nil(),
             };
-            let mut chain = draft.manager_user_id;
-            let mut seen = std::collections::HashSet::new();
-            while let Some(id) = chain {
-                ensure!(
-                    id != user_id && seen.insert(id),
-                    "Reporting relationships cannot contain a cycle."
-                );
-                chain = store
-                    .data
-                    .accounts
-                    .iter()
-                    .find(|a| a.user_id == id)
-                    .and_then(|a| a.manager_user_id);
-            }
-            ensure!(
-                !(draft.active && draft.role == crate::access::Role::Employee)
-                    || !store
-                        .data
-                        .accounts
-                        .iter()
-                        .any(|a| a.active && a.manager_user_id == Some(user_id)),
-                "Reassign this manager's direct reports before changing the role to Employee."
-            );
             if let Some(old) = store
                 .data
                 .accounts

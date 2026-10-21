@@ -45,6 +45,8 @@ jobs:
         run: npm test
       - name: Test privileged account provisioning
         run: node --test tests/account_admin_edge.test.mjs
+      - name: Test signed update publication
+        run: node --test tests/desktop_release_edge.test.mjs
 
 # No automatic database deployment, release publication, or signing is configured.
 # Choose a dedicated Supabase project and deployment approval policy first.

@@ -92,6 +92,7 @@ fn account_editor_requires_employee_links_and_rejects_self_reporting() {
     draft.manager_user_id = None;
     draft.role = Role::HrGeneralist;
     draft.employee_id = None;
+    draft.employee_name = "Synthetic Employee".into();
     assert!(draft.validate(&data).is_ok());
 }
 

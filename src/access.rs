@@ -91,6 +91,7 @@ impl Access {
         Self {
             company_id: Uuid::from_u128(1),
             role: Role::Administrator,
+            employee_id: Some(Uuid::from_u128(100)),
             ..Self::default()
         }
     }
@@ -104,7 +105,9 @@ impl Access {
     }
     pub fn authorize(&self, action: &Action, data: &Snapshot) -> Result<()> {
         let allowed = match action {
-            Action::SaveEmployee(_) | Action::SaveEmployeeContacts(_) => self.role.manages_hr(),
+            Action::SaveEmployee(_)
+            | Action::SaveEmployeeRecord(_, _)
+            | Action::SaveEmployeeContacts(_) => self.role.manages_hr(),
             Action::SaveCompany(_) => self.role.manages_accounts(),
             Action::CheckIn(id) => self.can_record(*id),
             Action::CheckOut(id) => data
@@ -162,6 +165,7 @@ pub struct AccountDraft {
     pub employee_id: Option<Uuid>,
     pub manager_user_id: Option<Uuid>,
     pub create_new: bool,
+    pub employee_name: String,
     pub password: String,
     pub confirmation: String,
 }
@@ -187,10 +191,12 @@ impl AccountDraft {
     }
     pub fn validate(&self, data: &Snapshot) -> Result<()> {
         account::validate_email(&self.email)?;
-        if self.active && matches!(self.role, Role::Employee | Role::Manager) {
+        if self.user_id.is_none() && self.employee_id.is_none() && self.create_new {
             ensure!(
-                self.employee_id.is_some(),
-                "Link an employee record for this role."
+                !self.employee_name.trim().is_empty()
+                    && self.employee_name.trim().chars().count() <= 120
+                    && !self.employee_name.chars().any(char::is_control),
+                "Enter the employee's name. Their employee record will be created automatically."
             );
         }
         if let Some(id) = self.employee_id {
@@ -201,25 +207,17 @@ impl AccountDraft {
                 "Choose an active employee in this company."
             );
             ensure!(
-                !self.active
-                    || !data.accounts.iter().any(|a| a.active
-                        && a.employee_id == Some(id)
-                        && Some(a.user_id) != self.user_id),
-                "This employee already has an active account. Edit or deactivate that account first."
-            );
-        }
-        if let Some(id) = self.manager_user_id {
-            ensure!(
-                Some(id) != self.user_id,
-                "An account cannot report to itself."
-            );
-            ensure!(
-                data.accounts
+                !data
+                    .accounts
                     .iter()
-                    .any(|a| a.user_id == id && a.active && a.role.can_manage_reports()),
-                "Choose an active Administrator, HR Generalist or Manager."
+                    .any(|a| a.employee_id == Some(id) && Some(a.user_id) != self.user_id),
+                "This employee already has an account. Edit that account instead."
             );
         }
+        ensure!(
+            self.manager_user_id.is_none(),
+            "Set Reports to in the employee record."
+        );
         if self.user_id.is_none() && self.create_new {
             ensure!(
                 (12..=128).contains(&self.password.chars().count()),

@@ -1,0 +1,21 @@
+# Private Windows updates
+
+Version 0.1.6 adds automatic checks after sign-in and every 15 minutes while open. The installed version appears at the top right. A compatible new release displays a banner with **Update now**; **Settings → App updates** also provides a manual check. Save or discard pending edits before updating. The confirmation explains that HRIS will close, install and reopen at sign-in. Downloads and company data require internet access.
+
+The first installation of 0.1.6 is a coordinated bootstrap: apply its migrations, deploy the functions, and run the company-specific setup. Older installations do not contain the updater. Later versions use the private channel. Ordinary employee accounts cannot use desktop update endpoints.
+
+## Release preparation
+
+1. Apply tested, checked-in migrations to the dedicated company database. Keep future changes compatible with clients still running during the update window. The feed offers only releases whose required schema is applied.
+2. Build and verify the exact source revision. Prepare a generic Windows bundle with the executable, BUILD.json, START-HERE.txt, VERIFICATION.md and SHA256SUMS.txt. Compile `tools/windows/installer.nsi` with `/DUPDATE_ONLY`, `/DAPP_BUNDLE=...` and `/DSETUP_OUTPUT=...`. This package must exclude connection profiles, branding and keys.
+3. Once per company release channel, run `node tools/updates/publisher.mjs init <private-folder>` on Windows. It generates a DPAPI-protected Ed25519 signing key and public `hris-updates.json`. Protect and back up the private signing material using the organization's approved key procedure. Losing it requires a trusted manual bootstrap to replace the verification key. Never commit or package the signing key.
+4. Include the public verification profile in the full company setup. Deploy `desktop-release/index.ts`, `handler.mjs` and a generated `verification-key.ts` exporting the same public key. The source placeholder intentionally cannot publish until configured. Deploy `account-admin` with the updated automatic-employee handler.
+5. Write plain-text release notes, then run `node tools/updates/publisher.mjs prepare <private-folder> <version> <generic-setup> <executable> <required-schema-version> <notes-file>`. Inspect the generated manifest and checksums. Version numbers and signed payloads are immutable; publish a new version for changed contents.
+6. POST the raw setup bytes to the project's `desktop-release` function with `Content-Type: application/octet-stream` and `X-HRIS-Manifest: <base64 of the signed-envelope JSON>`, using an administrator's current Auth bearer and the publishable client key. Keep these credentials in memory. The function independently validates Auth, administrator membership, signature, hashes and schema compatibility, uploads without overwrite, then enables the catalog record last. Repeating the exact same version/content is safe; conflicting content is rejected.
+7. Verify the authenticated update feed, private download hash and anonymous/Employee denials before announcing availability. Test the actual Windows installer and recovery, then retain release evidence. The local publisher is ready for a future protected CI job; this repository has no configured remote publishing workflow.
+
+## Trust and recovery
+
+The client verifies Ed25519 signatures, application/platform/version, schema compatibility, exact object path, bounded size and SHA-256 before running a package. A copied local helper waits for HRIS to exit and verifies again. It backs up the known application files, preserves the company connection/public key/logo, runs the per-user setup, checks the new executable and metadata, and restores previous application files if installation fails. Unknown installation files are left alone. A failed preflight leaves the installation available; an interrupted or unrecoverable Windows failure may require rerunning the company setup.
+
+Update state contains no saved password or session. Updating signs out this device and reopens the sign-in screen. The update manifest's Ed25519 signature is separate from Windows Authenticode; the private prototype executables have no Authenticode certificate. File recovery does not roll back a database migration. Migrations, backups and release compatibility remain deployment responsibilities.

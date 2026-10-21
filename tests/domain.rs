@@ -161,7 +161,7 @@ fn invalid_leave_ranges_and_cross_year_requests_are_rejected() {
 fn overlapping_pending_and_approved_leave_is_blocked_but_rejected_dates_are_reusable() {
     let mut store = DemoStore::new();
     store.data.leave.clear();
-    let employee = store.data.employees[0].id;
+    let employee = store.data.employees[2].id;
     let form = leave(employee, "2027-01-04", "2027-01-06");
     store.execute(Action::RequestLeave(form.clone())).unwrap();
     assert!(
@@ -185,7 +185,7 @@ fn overlapping_pending_and_approved_leave_is_blocked_but_rejected_dates_are_reus
 fn only_approved_annual_leave_consumes_the_balance() {
     let mut store = DemoStore::new();
     store.data.leave.clear();
-    let employee = store.data.employees[0].id;
+    let employee = store.data.employees[2].id;
     store
         .execute(Action::RequestLeave(leave(
             employee,
@@ -245,7 +245,7 @@ fn company_settings_validate_timezone_and_do_not_rewrite_existing_allowances() {
 fn approved_current_year_leave_prevents_lowering_the_allowance() {
     let mut store = DemoStore::new();
     store.data.leave.clear();
-    let employee = store.data.employees[0].id;
+    let employee = store.data.employees[2].id;
     let year = store.data.company.today().year();
     let monday = (1..=7)
         .map(|d| NaiveDate::from_ymd_opt(year, 1, d).unwrap())
@@ -262,7 +262,7 @@ fn approved_current_year_leave_prevents_lowering_the_allowance() {
     store
         .execute(Action::DecideLeave(id, LeaveStatus::Approved))
         .unwrap();
-    let mut form = EmployeeDraft::from(&store.data.employees[0]);
+    let mut form = EmployeeDraft::from(&store.data.employees[2]);
     form.annual_leave_days = 0;
     assert!(store.execute(Action::SaveEmployee(form)).is_err());
 }

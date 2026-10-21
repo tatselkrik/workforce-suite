@@ -71,17 +71,19 @@ export function createAccountHandler({ url, serviceKey, anonKey }, fetcher = fet
       }
       if (body.operation !== 'create') return answer(400, 'Choose a supported account operation.');
       const targetEmail = typeof body.email === 'string' ? body.email.trim() : '';
+      const employeeName = typeof body.employee_name === 'string' ? body.employee_name.trim() : '';
       if (!email(targetEmail) || !roles.has(body.role) || (body.active !== undefined && typeof body.active !== 'boolean') || typeof body.password !== 'string' ||
           [...body.password].length < 12 || [...body.password].length > 128 ||
           (body.employee_id != null && !uuid(body.employee_id)) ||
-          (body.manager_user_id != null && !uuid(body.manager_user_id)) ||
-          (body.active !== false && ['manager', 'employee'].includes(body.role) && !body.employee_id)) {
-        return answer(400, 'Enter a valid email, role, linked employee and a 12–128 character initial password.');
+          body.manager_user_id != null || [...employeeName].length > 120 || /[\u0000-\u001f\u007f]/u.test(employeeName) ||
+          (!body.employee_id && !employeeName)) {
+        return answer(400, 'Enter a valid email, role, employee name and a 12–128 character initial password.');
       }
       // Provisioning uses the server credential only here, after checking the live administrator membership.
       // Email ownership is not auto-confirmed. The client never receives this credential or a user's token.
       const created = await call('/auth/v1/admin/users', 'POST', {
         email: targetEmail, password: body.password, email_confirm: false,
+        user_metadata: { hris_profile: { full_name: employeeName || targetEmail.split('@')[0] } },
       }, true);
       if (!created.ok) {
         const failure = await created.json().catch(() => ({}));
@@ -96,7 +98,7 @@ export function createAccountHandler({ url, serviceKey, anonKey }, fetcher = fet
       // The caller's JWT, not the server key, authorizes the assignment. The RPC rechecks access under its lock.
       const saved = await call('/rest/v1/rpc/save_company_account', 'POST', {
         p_user_id: user.id, p_email: targetEmail, p_role: body.role, p_active: body.active !== false,
-        p_employee_id: body.employee_id || null, p_manager_user_id: body.manager_user_id || null,
+        p_employee_id: body.employee_id || null, p_manager_user_id: null,
       });
       if (!saved.ok) return answer(409, 'Account access could not be assigned. Refresh and check the employee and reporting manager.');
       assigned = true;

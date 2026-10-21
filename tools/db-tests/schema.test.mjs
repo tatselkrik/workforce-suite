@@ -32,6 +32,9 @@ try {
   await db.exec(`
     create role anon nologin;
     create role authenticated nologin;
+    create role service_role nologin bypassrls;
+    create schema supabase_migrations;
+    create table supabase_migrations.schema_migrations(version text primary key);
     create schema auth;
     create table auth.users(id uuid primary key, email text unique, email_confirmed_at timestamptz,
       raw_user_meta_data jsonb default '{}'::jsonb);
@@ -54,6 +57,7 @@ try {
   const folder=new URL('../../supabase/migrations/',import.meta.url);
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
     await db.exec(await readFile(new URL(filename,folder),'utf8'));
+    await db.query('insert into supabase_migrations.schema_migrations(version) values($1)',[filename.split('_')[0]]);
   }
   eq((await db.query(`select count(*)::int as n from pg_class where relname in ('companies','employees','attendance','leave_requests') and relrowsecurity`)).rows[0].n,4,'RLS enabled on every HR table');
   eq((await db.query(`select count(*)::int as n from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosecdef`)).rows[0].n,0,'Exposed RPCs use invoker security; protected definer helpers stay private');
@@ -159,6 +163,8 @@ try {
   await runAccessTests({db,eq,deny,session,employee,request,company:companyA,owner:uidA,unassigned:uidB});
   const {runContactTests}=await import('./contacts.test.mjs');
   await runContactTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
+  const {runRefinementTests}=await import('./refinements.test.mjs');
+  await runRefinementTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL schema, authorization, and workflow assertions.`);
 } finally {
   await db.close();

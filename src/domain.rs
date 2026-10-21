@@ -77,7 +77,9 @@ pub struct Employee {
     pub full_name: String,
     pub department: String,
     pub job_title: String,
-    pub joined_on: NaiveDate,
+    pub joined_on: Option<NaiveDate>,
+    #[serde(default)]
+    pub reports_to: Option<Uuid>,
     pub annual_leave_days: u32,
     pub status: EmployeeStatus,
 }
@@ -90,6 +92,7 @@ pub struct EmployeeDraft {
     pub department: String,
     pub job_title: String,
     pub joined_on: String,
+    pub reports_to: Option<Uuid>,
     pub annual_leave_days: u32,
     pub status: EmployeeStatus,
 }
@@ -102,7 +105,8 @@ impl From<&Employee> for EmployeeDraft {
             full_name: e.full_name.clone(),
             department: e.department.clone(),
             job_title: e.job_title.clone(),
-            joined_on: e.joined_on.to_string(),
+            joined_on: e.joined_on.map(|d| d.to_string()).unwrap_or_default(),
+            reports_to: e.reports_to,
             annual_leave_days: e.annual_leave_days,
             status: e.status,
         }
@@ -127,8 +131,6 @@ impl EmployeeDraft {
             self.full_name.trim().chars().count() <= 120,
             "Employee name is too long."
         );
-        ensure!(!self.department.trim().is_empty(), "Enter a department.");
-        ensure!(!self.job_title.trim().is_empty(), "Enter a job title.");
         ensure!(
             self.department.chars().count() <= 80 && self.job_title.chars().count() <= 100,
             "Department or job title is too long."
@@ -144,7 +146,12 @@ impl EmployeeDraft {
             full_name: self.full_name.trim().into(),
             department: self.department.trim().into(),
             job_title: self.job_title.trim().into(),
-            joined_on: parse_date(&self.joined_on)?,
+            joined_on: if self.joined_on.trim().is_empty() {
+                None
+            } else {
+                Some(parse_date(&self.joined_on)?)
+            },
+            reports_to: self.reports_to,
             annual_leave_days: self.annual_leave_days,
             status: self.status,
         })
@@ -353,6 +360,7 @@ impl Snapshot {
 #[derive(Clone, Debug)]
 pub enum Action {
     SaveEmployee(EmployeeDraft),
+    SaveEmployeeRecord(EmployeeDraft, crate::contacts::EmployeeContacts),
     SaveEmployeeContacts(crate::contacts::EmployeeContacts),
     CheckIn(Uuid),
     CheckOut(Uuid),
@@ -372,6 +380,42 @@ impl Default for DemoStore {
 }
 
 impl DemoStore {
+    fn validate_reporting(&self, employee: &Employee) -> Result<()> {
+        if let Some(manager) = employee.reports_to {
+            ensure!(
+                manager != employee.id,
+                "An employee cannot report to themselves."
+            );
+            ensure!(
+                self.data.active().any(|e| e.id == manager),
+                "Choose an active employee as the reporting manager."
+            );
+            let mut chain = Some(manager);
+            let mut visited = std::collections::HashSet::new();
+            while let Some(id) = chain {
+                ensure!(
+                    id != employee.id && visited.insert(id),
+                    "Reporting relationships cannot contain a cycle."
+                );
+                chain = self
+                    .data
+                    .employees
+                    .iter()
+                    .find(|e| e.id == id)
+                    .and_then(|e| e.reports_to);
+            }
+        }
+        ensure!(
+            employee.status != EmployeeStatus::Archived
+                || !self
+                    .data
+                    .active()
+                    .any(|e| e.reports_to == Some(employee.id)),
+            "Reassign direct reports before archiving this employee."
+        );
+        Ok(())
+    }
+
     pub fn new() -> Self {
         let company = Company::default();
         let today = company.today();
@@ -395,7 +439,8 @@ impl DemoStore {
                 full_name: (*name).into(),
                 department: (*department).into(),
                 job_title: (*title).into(),
-                joined_on: today - chrono::Duration::days(180 + 23 * i as i64),
+                joined_on: Some(today - chrono::Duration::days(180 + 23 * i as i64)),
+                reports_to: (i == 1).then_some(Uuid::from_u128(103)),
                 annual_leave_days: 15,
                 status: if i == 7 {
                     EmployeeStatus::Archived
@@ -470,7 +515,7 @@ impl DemoStore {
                         email: "administrator@example.invalid".into(),
                         role: crate::access::Role::Administrator,
                         active: true,
-                        employee_id: None,
+                        employee_id: Some(Uuid::from_u128(100)),
                         manager_user_id: None,
                         email_confirmed: true,
                         is_owner: true,
@@ -480,7 +525,7 @@ impl DemoStore {
                         email: "hr@example.invalid".into(),
                         role: crate::access::Role::HrGeneralist,
                         active: true,
-                        employee_id: Some(Uuid::from_u128(100)),
+                        employee_id: Some(Uuid::from_u128(106)),
                         manager_user_id: None,
                         email_confirmed: true,
                         is_owner: false,
@@ -514,6 +559,36 @@ impl DemoStore {
     pub fn execute(&mut self, action: Action) -> Result<()> {
         self.data.access.authorize(&action, &self.data)?;
         match action {
+            Action::SaveEmployeeRecord(draft, contacts) => {
+                let contacts = contacts.normalized()?;
+                ensure!(
+                    contacts.company_id == self.data.company.id,
+                    "Choose an employee in this company."
+                );
+                let before = self.data.clone();
+                let id = draft.id.unwrap_or_else(Uuid::new_v4);
+                let employee_draft = draft;
+                if employee_draft.id.is_none() {
+                    let mut employee = employee_draft.employee(self.data.company.id)?;
+                    employee.id = id;
+                    self.validate_reporting(&employee)?;
+                    ensure!(
+                        !self.data.employees.iter().any(|e| e
+                            .employee_code
+                            .eq_ignore_ascii_case(&employee.employee_code)),
+                        "That employee code is already in use."
+                    );
+                    self.data.employees.push(employee);
+                } else if let Err(error) = self.execute(Action::SaveEmployee(employee_draft)) {
+                    return Err(error);
+                }
+                let mut contacts = contacts;
+                contacts.employee_id = id;
+                if let Err(error) = self.execute(Action::SaveEmployeeContacts(contacts)) {
+                    self.data = before;
+                    return Err(error);
+                }
+            }
             Action::SaveEmployeeContacts(contacts) => {
                 let mut contacts = contacts.normalized()?;
                 ensure!(
@@ -539,6 +614,7 @@ impl DemoStore {
             }
             Action::SaveEmployee(draft) => {
                 let employee = draft.employee(self.data.company.id)?;
+                self.validate_reporting(&employee)?;
                 ensure!(
                     employee.status != EmployeeStatus::Archived
                         || !self

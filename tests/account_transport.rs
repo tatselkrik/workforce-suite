@@ -317,6 +317,125 @@ fn employee_contacts_save_and_reload_separately_with_scoped_updates_and_zero_row
 }
 
 #[test]
+fn unified_employee_save_uses_one_transaction_rpc_instead_of_separate_partial_writes() {
+    use hris_desktop::{
+        contacts::EmployeeContacts,
+        domain::{Action, EmployeeDraft},
+    };
+    let company = Company::default();
+    let person = DemoStore::new().data.employees[2].clone();
+    let mut initial = baseline(&company);
+    initial[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
+    initial.push(reply(
+        "POST /rest/v1/rpc/save_employee_record ",
+        200,
+        json!(person.id),
+    ));
+    let mut after = baseline(&company);
+    after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
+    initial.extend(after.into_iter().skip(1).take(8));
+    let (config, server, requests) = fixture(initial);
+    let (mut client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    let mut employee = EmployeeDraft::from(&person);
+    employee.joined_on.clear();
+    employee.department.clear();
+    let mut contacts = EmployeeContacts::empty(company.id, person.id);
+    contacts.phone = " 000 000 0000 ".into();
+    client
+        .execute(Action::SaveEmployeeRecord(employee, contacts), &data)
+        .unwrap();
+    server.join().unwrap();
+    let requests = requests.lock().unwrap();
+    let rpc = requests
+        .iter()
+        .find(|r| {
+            r.line
+                .starts_with("POST /rest/v1/rpc/save_employee_record ")
+        })
+        .unwrap();
+    assert_eq!(rpc.json()["p_employee"]["id"], person.id.to_string());
+    assert!(rpc.json()["p_employee"]["joined_on"].is_null());
+    assert_eq!(rpc.json()["p_contacts"]["phone"], "000 000 0000");
+    assert!(
+        !requests
+            .iter()
+            .any(|r| r.line.starts_with("PATCH /rest/v1/employees")
+                || r.line.starts_with("POST /rest/v1/employee_contacts"))
+    );
+}
+
+#[test]
+fn update_checks_verify_signatures_and_schema_before_offering_a_new_version() {
+    use base64::{Engine, engine::general_purpose::STANDARD};
+    use ed25519_dalek::{Signer, SigningKey};
+    use hris_desktop::updater::{Release, SignedRelease, UpdateConfig, UpdateState, digest};
+    let company = Company::default();
+    let key = SigningKey::from_bytes(&[61; 32]);
+    let config_key = UpdateConfig {
+        public_key: STANDARD.encode(key.verifying_key().as_bytes()),
+    };
+    let release = Release {
+        application_id: hris_desktop::APP_ID.into(),
+        version: "0.1.7".into(),
+        platform: "windows-x64".into(),
+        requires_schema: "20261021054356".into(),
+        artifact: "0.1.7/HRIS-Desktop-Update-0.1.7.exe".into(),
+        sha256: digest(b"MZfixture"),
+        executable_sha256: "a".repeat(64),
+        size: 9,
+        notes: "Synthetic update".into(),
+    };
+    let payload = serde_json::to_vec(&release).unwrap();
+    let signed = SignedRelease {
+        payload: STANDARD.encode(&payload),
+        signature: STANDARD.encode(key.sign(&payload).to_bytes()),
+    };
+    let mut replies = baseline(&company);
+    replies.push(reply(
+        "POST /rest/v1/rpc/desktop_update ",
+        200,
+        json!({"schema_version":"20261021054356","release":signed}),
+    ));
+    let mut bad = signed.clone();
+    bad.signature = STANDARD.encode([0; 64]);
+    replies.push(reply(
+        "POST /rest/v1/rpc/desktop_update ",
+        200,
+        json!({"schema_version":"20261021054356","release":bad}),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/desktop_update ",
+        200,
+        json!({"schema_version":"20000101000000","release":signed}),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/desktop_update ",
+        200,
+        json!({"schema_version":"20261021054356","release":null}),
+    ));
+    let (config, server, requests) = fixture(replies);
+    let mut client = connect(config);
+    assert!(matches!(
+        client.check_update(&config_key).unwrap(),
+        UpdateState::Available(_)
+    ));
+    assert!(client.check_update(&config_key).is_err());
+    assert!(client.check_update(&config_key).is_err());
+    assert!(matches!(
+        client.check_update(&config_key).unwrap(),
+        UpdateState::UpToDate
+    ));
+    server.join().unwrap();
+    let requests = requests.lock().unwrap();
+    assert!(!requests.iter().any(|r| r.line.contains("desktop-updates/")));
+}
+
+#[test]
 fn account_provisioning_preserves_disabled_access_and_sends_password_only_to_the_function() {
     let company = Company::default();
     let mut replies = baseline(&company);
@@ -335,6 +454,7 @@ fn account_provisioning_preserves_disabled_access_and_sends_password_only_to_the
     .unwrap();
     let mut draft = AccountDraft::new();
     draft.email = "employee@example.invalid".into();
+    draft.employee_name = "Synthetic Employee".into();
     draft.active = false;
     draft.password = "synthetic initial passphrase".into();
     draft.confirmation = draft.password.clone();
@@ -416,6 +536,7 @@ fn personal_details_preferences_and_private_photo_roundtrip_use_only_the_signed_
         .execute_account(AccountAction::SaveDisplay(DisplayPreferences {
             scale_percent: 115,
             clock_24h: false,
+            ..Default::default()
         }))
         .unwrap();
     let input = std::env::temp_dir().join(format!("hris-profile-{}.png", uuid::Uuid::new_v4()));

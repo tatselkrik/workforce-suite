@@ -1,6 +1,6 @@
 [package]
 name = "hris-desktop"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2024"
 rust-version = "1.95"
 description = "Native Rust HRIS prototype with a Supabase data adapter"
@@ -22,9 +22,12 @@ serde = { version = "=1.0.228", features = ["derive"] }
 serde_json = "=1.0.149"
 uuid = { version = "=1.23.0", features = ["v4", "serde"] }
 image = { version = "=0.25.10", default-features = false, features = ["png", "jpeg"] }
+base64 = "=0.22.1"
+sha2 = "=0.10.9"
+ed25519-dalek = "=3.0.0"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "=0.61.2", features = ["Win32_UI_Shell", "Win32_UI_Controls_Dialogs", "Win32_UI_Input_KeyboardAndMouse"] }
+windows-sys = { version = "=0.61.2", features = ["Win32_UI_Shell", "Win32_UI_Controls_Dialogs", "Win32_UI_Input_KeyboardAndMouse", "Win32_System_Threading"] }
 
 [profile.release]
 lto = "thin"

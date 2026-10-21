@@ -1,4 +1,12 @@
-# Employee contacts deployment — 0.1.5
+# Employee records and signed updates — 0.1.6
+
+The employee/reporting and private-update migrations are deployed to the dedicated prototype, followed by account-admin v2 and desktop-release v1. The local migration names match the hosted versions. Existing memberships received employee records; unknown hire dates, departments and titles remain unset. New accounts automatically receive an employee unless an existing unused record is selected. The public update key is pinned in the publisher function and packaged verification profile. Signing material stays private and DPAPI-protected.
+
+This database change allows an unset hire date; 0.1.5 cannot read those records. Coordinate the first 0.1.6 company setup with applying the migrations while the old app is closed. Keep future schema updates compatible with installed clients during rollout. File recovery is not database rollback. See [publishing and recovery](UPDATES.md) for the immutable signed update channel and bootstrap procedure.
+
+The checked-in rollback-only hosted refinement suite passed automatic identities, atomic employee/contact saves, reporting cycles/direct reports without login, contact privacy, access revocation and update schema/permissions. Local checks passed 53 Rust tests, 194 PostgreSQL assertions and 30 handler tests. The separately invoked Windows integration passed real silent installation, configuration/branding preservation and failed-setup restoration in isolated installations. Exact release publication, download integrity, installation and startup evidence belongs in the private versioned distribution report. No public push or remote CI is implied.
+
+## Historical employee contacts deployment — 0.1.5
 
 Status: the additive contact migration is deployed and hosted permission checks passed. Kirk authorized direct SQL changes/testing in this dedicated prototype and retention of labeled synthetic fixtures. This authorization does not extend to unrelated projects or a future company's production rollout.
 

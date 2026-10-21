@@ -59,6 +59,33 @@ impl PersonalDetails {
 pub struct DisplayPreferences {
     pub scale_percent: u16,
     pub clock_24h: bool,
+    pub theme: ThemeChoice,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ThemeChoice {
+    #[default]
+    Light,
+    Dark,
+    System,
+}
+
+impl ThemeChoice {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Light => "Light",
+            Self::Dark => "Dark",
+            Self::System => "Use system setting",
+        }
+    }
+    pub fn preference(self) -> eframe::egui::ThemePreference {
+        match self {
+            Self::Light => eframe::egui::ThemePreference::Light,
+            Self::Dark => eframe::egui::ThemePreference::Dark,
+            Self::System => eframe::egui::ThemePreference::System,
+        }
+    }
 }
 
 impl Default for DisplayPreferences {
@@ -66,6 +93,7 @@ impl Default for DisplayPreferences {
         Self {
             scale_percent: 100,
             clock_24h: true,
+            theme: ThemeChoice::Light,
         }
     }
 }
@@ -340,7 +368,8 @@ mod tests {
         assert!(
             DisplayPreferences {
                 scale_percent: 200,
-                clock_24h: true
+                clock_24h: true,
+                ..Default::default()
             }
             .validate()
             .is_err()

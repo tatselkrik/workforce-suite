@@ -7,12 +7,13 @@ Application identifier: `io.github.tatselkrik.hrisdesktop`.
 ## What works
 
 - **Overview:** active headcount, today's attendance, pending requests, and approved time away.
-- **Employee records:** add/edit employees, search and filter the directory, customize annual allowances, and archive employees while retaining history.
-- **Private contacts:** Employees → Contacts opens personal phone, personal email, home address and an emergency contact with primary/alternate phones. Administrators and HR manage these records; other staff can view only their own linked details. See [contact permissions](docs/EMPLOYEE-CONTACTS.md).
+- **Employee records:** click a name or Edit to open one record with Employment, Contact details and Emergency contact tabs. Save changes writes these together. Manage reporting relationships, optional hire dates, allowances and archived records.
+- **Private contacts:** personal phone, personal email, home address and an emergency contact with primary/alternate phones. Administrators and HR manage these records; other staff can view only their own employee details. See [contact permissions](docs/EMPLOYEE-CONTACTS.md).
 - **Attendance:** record check-in/check-out, browse dates, reject duplicate daily check-ins and multiple open shifts. Live timestamps come from the database server and use the company time zone.
 - **Leave:** request annual, sick, or unpaid leave; approve or reject pending requests; prevent overlaps and annual leave over-allocation.
-- **Account Manager:** administrators create or link accounts, assign Administrator, HR Generalist, Manager or Employee access, link employee records and reporting managers, deactivate access and review access changes. Other roles cannot open this tab. See [account permissions](docs/ACCOUNT-MANAGER.md).
-- **Settings:** company name, IANA time zone and default leave allowance, plus account display scale and 12/24-hour time preferences. Database configuration is handled during deployment.
+- **Account Manager:** administrators assign Administrator, HR Generalist, Manager or Employee access, deactivate access and review access changes. Every account receives an employee record automatically unless an existing unused employee is selected. Other roles cannot open this tab. See [account permissions](docs/ACCOUNT-MANAGER.md).
+- **Settings:** company defaults, account display scale, 12/24-hour time and Light/Dark/System themes. Database configuration is handled during deployment.
+- **App updates:** the top right shows the installed version. Signed private updates are checked after sign-in and every 15 minutes; a banner offers Update now. Settings also provides a manual check. See [update deployment](docs/UPDATES.md).
 - **Profile:** personal details, preferred name and optional contact phone; upload/change/remove a private photo; verified and pending account email; password and email changes after current-password verification; and sign-out controls for this device, other devices or everywhere.
 - **Company sidebar:** a transparent deployment logo above the company name, followed by Overview, Employees, Attendance, Leave, administrator-only Account Manager and Settings. The circular photo or initials at the bottom left opens the full Profile page in the main content area.
 - **CI:** checked-in GitHub Actions workflow tests Rust behavior and database access rules and builds a Windows executable. It does not deploy a database or publish a release.
@@ -21,7 +22,7 @@ The interface uses `egui`/`eframe`. The domain rules and Supabase Auth/REST adap
 
 ## Try it
 
-The private Windows setup installs version 0.1.5 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection profile, but no account password or session.
+The private Windows setup installs version 0.1.6 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection and update-verification profiles, but no account password or session.
 
 Open **HRIS Desktop** and sign in with an assigned Administrator, HR Generalist or Manager account. Ordinary Employee accounts are reserved for a future mobile-friendly portal and cannot sign into this desktop app. Its company database is already selected by the installation. Account login remains necessary to access HR records; database setup is not part of that login.
 
@@ -31,7 +32,7 @@ An unconfigured source build can run demo mode without an account. Sample change
 
 Suggested walkthrough:
 
-1. Open **Employees**, add an employee, and edit their department or allowance.
+1. Open **Employees**, click an employee or add one, edit employment/contact details, and choose **Save changes**. Set **Reports to** here.
 2. Open **Attendance**, select that employee, record a check-in, then check out.
 3. Open **Leave**, submit a weekday request for that employee, and approve it.
 4. Return to **Employees** to see the updated annual balance.
@@ -86,7 +87,7 @@ The desktop client sends the publishable key in `apikey` and the signed-in user'
 - Attendance supports one shift per employee per company date. Elapsed time includes breaks; payroll, overtime, schedule rules, and manual time corrections are outside this version. The visible Biometric integration card is deliberately disabled.
 - Live mode requires internet access; there is no offline queue or local cache of employee data. Use Refresh to load changes from another device. Errors remain visible, and the app never silently falls back to demo after a failed live request.
 - UI and network requests run on separate threads. A failed write/refresh may require a manual Refresh before retrying; duplicate and state-transition rules protect against repeated submissions.
-- The private Windows setup is unsigned. Automatic updates, automatic database deployment, and production readiness certification are not implemented.
+- The Windows executables have no Authenticode certificate. Update manifests are separately signed with Ed25519 and verified before installation. Database migrations remain an operator action; this is not a production readiness certification.
 
 Company identity, time zone, and allowances are stored as configuration/data, separate from the UI and core rules. A later company rollout can extend these policies without adding an administrative key to the executable. See [the staged HRIS roadmap](docs/ROADMAP.md) for the remaining employee, attendance, leave, payroll, recruitment, development and reporting modules.
 

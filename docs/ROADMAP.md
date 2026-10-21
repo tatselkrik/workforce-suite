@@ -6,13 +6,13 @@ Broader product benchmarks combine many of these modules: [BambooHR](https://www
 
 ## Stage 1 — Accounts and permissions
 
-Current work: administrator-only Account Manager, above Settings. Initial roles are Administrator, HR Generalist, Manager and Employee. Administrators create or link accounts, assign employee records/reporting managers, enable or disable access, and view access changes. Protected database memberships enforce permissions. Manager review is one step for direct reports; nobody approves their own leave. Multi-step approval chains remain future work.
+Implemented: administrator-only Account Manager, above Settings. Initial roles are Administrator, HR Generalist, Manager and Employee. Every account receives an employee record; administrators assign roles, enable or disable access, and view access changes. Protected database memberships enforce permissions. Manager review is one step for employee direct reports; nobody approves their own leave. Multi-step approval chains remain future work.
 
 Employee accounts are prepared for the portal and cannot sign into the desktop. Build the mobile-friendly portal separately for employee record access, attendance, leave requests, profile/security and notifications, using the same protected company membership scopes. A portal implementation is not part of this first desktop module.
 
 ## Stage 2 — Employee records and organization
 
-The first update adds private contact and emergency details (see [contact permissions](EMPLOYEE-CONTACTS.md)). Next add employment types, locations, contracts, attachments, employment history and digital 201 files. Then extend reporting relationships to employee records without accounts and provide organization charts. Give sensitive documents their own access and retention rules.
+Implemented: one employee editor with private contact/emergency details and reporting relationships, including employees without accounts (see [contact permissions](EMPLOYEE-CONTACTS.md)). Next add employment types, locations, contracts, attachments, employment history, digital 201 files and organization charts. Give sensitive documents their own access and retention rules.
 
 ## Stage 3 — Leave policies and approvals
 

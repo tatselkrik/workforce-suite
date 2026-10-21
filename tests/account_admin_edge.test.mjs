@@ -34,7 +34,8 @@ test('new account is unconfirmed; protected assignment uses caller JWT and no cr
   for(const secret of [config.serviceKey,create.password,'synthetic-user-token'])assert.ok(!text.includes(secret));
   assert.equal(requests.length,5);
   assert.equal(requests[2].url,config.url+'/auth/v1/admin/users');
-  assert.deepEqual(requests[2].json,{email:create.email,password:create.password,email_confirm:false});
+  assert.deepEqual(requests[2].json,{email:create.email,password:create.password,email_confirm:false,
+    user_metadata:{hris_profile:{full_name:'person'}}});
   assert.equal(requests[2].headers.Authorization,'Bearer '+config.serviceKey);
   for(const index of [0,1,3,4]) {
     assert.equal(requests[index].headers.Authorization,'Bearer synthetic-user-token');
@@ -50,7 +51,7 @@ test('new account is unconfirmed; protected assignment uses caller JWT and no cr
 
 test('new disabled account retains disabled access without requiring an employee link',async()=>{
   const {handler,requests}=fixture(authenticated({body:{id:user}},{body:user},{body:{}}));
-  const response=await handler(req({...create,active:false,employee_id:null}));
+  const response=await handler(req({...create,active:false,employee_id:null,employee_name:'Synthetic Employee'}));
   assert.equal(response.status,201);
   assert.equal(requests[3].json.p_active,false);
   assert.equal(requests[3].json.p_employee_id,null);

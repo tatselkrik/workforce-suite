@@ -42,11 +42,11 @@ export async function runContactTests({db,eq,deny,session,employee,company,owner
   eq(await count(),[person(staff)],'Portal employee database scope reads own private contacts only');
   eq((await db.query("update public.employee_contacts set phone='000 000 0002' returning employee_id")).rows.length,0,'Employee cannot edit HR-managed contacts');
   await session(owner);
-  await db.query('select public.save_company_account($1,$2,$3,false,$4,$5)',[staff,'staff@example.invalid','employee',person(staff),manager]);
+  await db.query('select public.save_company_account($1,$2,$3,false,$4,$5)',[staff,'staff@example.invalid','employee',person(staff),null]);
   await session(staff);
   eq(await count(),[],'Disabled membership loses contacts despite existing token');
   await session(owner);
-  await db.query('select public.save_company_account($1,$2,$3,true,$4,$5)',[staff,'staff@example.invalid','employee',person(staff),manager]);
+  await db.query('select public.save_company_account($1,$2,$3,true,$4,$5)',[staff,'staff@example.invalid','employee',person(staff),null]);
   eq((await db.query(`update public.employee_contacts set phone='',personal_email='',address='',emergency_name='',
     emergency_relationship='',emergency_phone='',emergency_alternate_phone='' where employee_id=$1 returning phone`,[person(staff)])).rows[0].phone,'','Optional details can be cleared together');
   const archived=await employee(company.id,'CONTACTS-ARCHIVED',15,'archived');

@@ -1,6 +1,7 @@
 /target/
 /dist/
 /work/
+/deployment-private/
 /.env
 /hris-config.json
 /hris-connection.json

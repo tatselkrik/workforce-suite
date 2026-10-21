@@ -1,6 +1,18 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() -> eframe::Result {
+    if std::env::args().nth(1).as_deref() == Some("--apply-update") {
+        if let Some(path) = std::env::args_os().nth(2) {
+            if let Err(error) = hris_desktop::updater::apply_plan(std::path::Path::new(&path)) {
+                // No credentials are in an update plan or its local failure diagnostics.
+                eprintln!("HRIS update failed: {error}");
+                std::process::exit(1);
+            }
+        } else {
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
     #[cfg(target_os = "windows")]
     {
         let app_id: Vec<u16> = hris_desktop::APP_ID.encode_utf16().chain(Some(0)).collect();

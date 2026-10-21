@@ -20,11 +20,11 @@ OutFile "${SETUP_OUTPUT}"
 InstallDir "$LOCALAPPDATA\Programs\HRIS Desktop"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
-VIProductVersion "0.1.5.0"
+VIProductVersion "0.1.6.0"
 VIAddVersionKey /LANG=1033 "ProductName" "HRIS Desktop"
-VIAddVersionKey /LANG=1033 "ProductVersion" "0.1.5"
+VIAddVersionKey /LANG=1033 "ProductVersion" "0.1.6"
 VIAddVersionKey /LANG=1033 "FileDescription" "HRIS Desktop private prototype setup"
-VIAddVersionKey /LANG=1033 "FileVersion" "0.1.5.0"
+VIAddVersionKey /LANG=1033 "FileVersion" "0.1.6.0"
 VIAddVersionKey /LANG=1033 "LegalCopyright" ""
 
 !define MUI_ABORTWARNING
@@ -32,12 +32,19 @@ VIAddVersionKey /LANG=1033 "LegalCopyright" ""
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_RUN "$INSTDIR\HRIS-Desktop.exe"
 !insertmacro MUI_PAGE_FINISH
+!ifndef UPDATE_ONLY
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
+!endif
 !insertmacro MUI_LANGUAGE "English"
 
 Function .onInit
   SetShellVarContext current
+  !ifdef UPDATE_ONLY
+    IfFileExists "$INSTDIR\.hris-installation" +3
+    SetErrorLevel 2
+    Quit
+  !endif
   ${IfNot} ${RunningX64}
     MessageBox MB_OK|MB_ICONSTOP "This build requires 64-bit Windows."
     Abort
@@ -62,12 +69,25 @@ FunctionEnd
 Section "HRIS Desktop"
   SetShellVarContext current
   SetOutPath "$INSTDIR"
+  SetOverwrite try
+  ClearErrors
   File "${APP_BUNDLE}\HRIS-Desktop.exe"
+  !ifndef UPDATE_ONLY
   File "${APP_BUNDLE}\hris-connection.json"
+  File "${APP_BUNDLE}\hris-updates.json"
+  !endif
   File "${APP_BUNDLE}\START-HERE.txt"
   File "${APP_BUNDLE}\VERIFICATION.md"
   File "${APP_BUNDLE}\BUILD.json"
   File "${APP_BUNDLE}\SHA256SUMS.txt"
+  IfErrors setup_failed
+  !ifdef UPDATE_ONLY
+    ReadRegStr $0 HKCU "${UNINSTALL_KEY}" "InstallLocation"
+    StrCmp $0 "$INSTDIR" 0 update_done
+    WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "0.1.6"
+    update_done:
+    Goto setup_done
+  !else
   !if /FileExists "${APP_BUNDLE}\company-logo.png"
     File "${APP_BUNDLE}\company-logo.png"
   !endif
@@ -78,7 +98,7 @@ Section "HRIS Desktop"
   CreateShortCut "$SMPROGRAMS\HRIS Desktop.lnk" "$INSTDIR\HRIS-Desktop.exe" "" "$INSTDIR\HRIS-Desktop.exe" 0
   CreateShortCut "$DESKTOP\HRIS Desktop.lnk" "$INSTDIR\HRIS-Desktop.exe" "" "$INSTDIR\HRIS-Desktop.exe" 0
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayName" "HRIS Desktop"
-  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "0.1.5"
+  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "0.1.6"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\HRIS-Desktop.exe"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "UninstallString" '$\"$INSTDIR\Uninstall.exe$\"'
@@ -86,8 +106,15 @@ Section "HRIS Desktop"
   WriteRegDWORD HKCU "${UNINSTALL_KEY}" "NoModify" 1
   WriteRegDWORD HKCU "${UNINSTALL_KEY}" "NoRepair" 1
   WriteRegDWORD HKCU "${UNINSTALL_KEY}" "EstimatedSize" 11100
+  !endif
+  Goto setup_done
+setup_failed:
+  SetErrorLevel 2
+  Quit
+setup_done:
 SectionEnd
 
+!ifndef UPDATE_ONLY
 Function un.onInit
   SetShellVarContext current
   FileOpen $0 "$INSTDIR\.hris-installation" r
@@ -111,6 +138,7 @@ Section "Uninstall"
     Abort
   ${EndIf}
   Delete "$INSTDIR\hris-connection.json"
+  Delete "$INSTDIR\hris-updates.json"
   Delete "$INSTDIR\START-HERE.txt"
   Delete "$INSTDIR\VERIFICATION.md"
   Delete "$INSTDIR\BUILD.json"
@@ -123,3 +151,5 @@ Section "Uninstall"
   DeleteRegKey HKCU "${UNINSTALL_KEY}"
   RMDir "$INSTDIR"
 SectionEnd
+
+!endif
