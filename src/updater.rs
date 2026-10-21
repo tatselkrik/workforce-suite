@@ -522,6 +522,18 @@ pub enum UpdateState {
     Restarting,
 }
 
+impl UpdateState {
+    pub fn accept(&mut self, incoming: Self) {
+        // Keep a verified offer visible across later transient failures and routine refreshes.
+        if matches!(self, Self::Available(_))
+            && matches!(incoming, Self::Failed(_) | Self::UpToDate)
+        {
+            return;
+        }
+        *self = incoming;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -568,6 +580,17 @@ mod tests {
         ] {
             assert!(Version::parse(bad).is_err());
         }
+    }
+    #[test]
+    fn verified_update_offer_survives_failed_checks_until_sign_out_or_restart() {
+        let (config, signed, _) = sample();
+        let mut state = UpdateState::Available(signed.verify(&config).unwrap());
+        state.accept(UpdateState::Failed("Transient connection failure".into()));
+        assert!(matches!(state, UpdateState::Available(_)));
+        state.accept(UpdateState::UpToDate);
+        assert!(matches!(state, UpdateState::Available(_)));
+        state.accept(UpdateState::Idle);
+        assert!(matches!(state, UpdateState::Idle));
     }
     #[test]
     fn signed_manifest_and_download_must_both_match() {

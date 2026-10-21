@@ -72,6 +72,13 @@ export function createAccountHandler({ url, serviceKey, anonKey }, fetcher = fet
       if (body.operation !== 'create') return answer(400, 'Choose a supported account operation.');
       const targetEmail = typeof body.email === 'string' ? body.email.trim() : '';
       const employeeName = typeof body.employee_name === 'string' ? body.employee_name.trim() : '';
+      const combined = body.employee !== undefined;
+      if (combined && (!body.employee || typeof body.employee!=='object' || Array.isArray(body.employee) ||
+          !uuid(body.employee.company_id) || (body.employee.id!=null && !uuid(body.employee.id)) ||
+          typeof body.employee.full_name!=='string' || body.employee.full_name.trim()!==employeeName ||
+          !body.contacts || typeof body.contacts!=='object' || Array.isArray(body.contacts))) {
+        return answer(400,'Enter valid employment and contact details.');
+      }
       if (!email(targetEmail) || !roles.has(body.role) || (body.active !== undefined && typeof body.active !== 'boolean') || typeof body.password !== 'string' ||
           [...body.password].length < 12 || [...body.password].length > 128 ||
           (body.employee_id != null && !uuid(body.employee_id)) ||
@@ -88,7 +95,7 @@ export function createAccountHandler({ url, serviceKey, anonKey }, fetcher = fet
       if (!created.ok) {
         const failure = await created.json().catch(() => ({}));
         if (['email_exists', 'user_already_exists'].includes(failure.error_code) || created.status === 409) {
-          return answer(409, 'An account already exists for this email. Choose Existing account.');
+          return answer(409, 'This email already has sign-in access. Open that employee to manage their staff role.');
         }
         return answer(400, 'The account could not be created. Check the email and password policy.');
       }
@@ -96,11 +103,14 @@ export function createAccountHandler({ url, serviceKey, anonKey }, fetcher = fet
       if (!uuid(user.id)) return answer(502, 'The account service returned an unexpected response.');
       createdUser = user.id;
       // The caller's JWT, not the server key, authorizes the assignment. The RPC rechecks access under its lock.
-      const saved = await call('/rest/v1/rpc/save_company_account', 'POST', {
+      const saved = combined ? await call('/rest/v1/rpc/save_staff_account','POST',{
+        p_user_id:user.id,p_email:targetEmail,p_role:body.role,p_active:body.active!==false,
+        p_employee:body.employee,p_contacts:body.contacts,
+      }) : await call('/rest/v1/rpc/save_company_account', 'POST', {
         p_user_id: user.id, p_email: targetEmail, p_role: body.role, p_active: body.active !== false,
         p_employee_id: body.employee_id || null, p_manager_user_id: null,
       });
-      if (!saved.ok) return answer(409, 'Account access could not be assigned. Refresh and check the employee and reporting manager.');
+      if (!saved.ok) return answer(409, 'The employee and staff role could not be saved. Refresh and check the details before retrying.');
       assigned = true;
       const sent = await call('/auth/v1/resend', 'POST', { type: 'signup', email: targetEmail });
       return answer(201, sent.ok ? 'Account created. Confirm the email before signing in.' :

@@ -1,4 +1,12 @@
-# Employee records and signed updates — 0.1.6
+# Employee-first staff access, Profile and shared company logo — 0.1.7
+
+The additive `20261021075507_employee_profile_and_company_logo.sql` migration and account-admin v3 are deployed to the dedicated prototype. desktop-release v1 remains compatible. It adds own-contact editing, atomic staff/employee/contact saves, a private company-logo bucket/revision and a protected own-supervisor name projection. Older 0.1.6 clients remain readable; coordinate final 0.1.7 packaging with these schema/function changes. No company-selection or connection setup is added to the desktop.
+
+Kirk's standing authorization covers SQL changes/testing on this dedicated prototype now and in future work unless revoked. Labeled synthetic accounts may remain for repeat testing. This authority does not identify another database or authorize a future company's production changes. Managed Storage object operations use its API; hosted SQL treats object metadata as read-only.
+
+The updated desktop has one employee editor for staff and ordinary employees. Account Manager is a staff-only view; Profile mirrors Employment and edits only the person's own contacts. Automatic update checks run only after successful sign-in, with a persistent verified offer. See `VERIFICATION.md` and the private versioned distribution report for actual checks and installation evidence; no public push/remote CI is implied.
+
+# Historical employee records and signed updates — 0.1.6
 
 The employee/reporting and private-update migrations are deployed to the dedicated prototype, followed by account-admin v2 and desktop-release v1. The local migration names match the hosted versions. Existing memberships received employee records; unknown hire dates, departments and titles remain unset. New accounts automatically receive an employee unless an existing unused record is selected. The public update key is pinned in the publisher function and packaged verification profile. Signing material stays private and DPAPI-protected.
 

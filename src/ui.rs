@@ -54,7 +54,9 @@ impl Page {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ProfileSection {
-    Personal,
+    Employment,
+    Contacts,
+    Emergency,
     Security,
     Sessions,
 }
@@ -64,6 +66,7 @@ enum ContactSection {
     Employment,
     Contact,
     Emergency,
+    Access,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -109,7 +112,8 @@ pub struct HrisApp {
     show_passwords: bool,
     session_confirmation: Option<SessionChoice>,
     account_form: Option<AccountDraft>,
-    account_editor_focus: bool,
+    show_disabled_staff: bool,
+    profile_contacts_draft: Option<EmployeeContacts>,
     update_state: UpdateState,
     update_confirmation: bool,
     #[cfg(feature = "qa-screenshot")]
@@ -272,7 +276,7 @@ impl HrisApp {
             avatar: None,
             personal_draft,
             display_draft: DisplayPreferences::default(),
-            profile_section: ProfileSection::Personal,
+            profile_section: ProfileSection::Employment,
             current_password: String::new(),
             new_password: String::new(),
             confirm_password: String::new(),
@@ -281,7 +285,8 @@ impl HrisApp {
             show_passwords: false,
             session_confirmation: None,
             account_form: None,
-            account_editor_focus: false,
+            show_disabled_staff: false,
+            profile_contacts_draft: None,
             update_state: UpdateState::Idle,
             update_confirmation: false,
             #[cfg(feature = "qa-screenshot")]
@@ -348,10 +353,21 @@ impl HrisApp {
                         app.notice = Some((crate::access::EMPLOYEE_PORTAL_NOTICE.into(), true));
                     }
                 }
-                if std::env::var("HRIS_PREVIEW_FORM").as_deref() == Ok("account") {
-                    app.account_form = Some(AccountDraft::new());
+                if matches!(
+                    std::env::var("HRIS_PREVIEW_FORM").as_deref(),
+                    Ok("account" | "staff-access")
+                ) {
+                    app.new_employee();
+                    let mut draft = AccountDraft::new();
+                    draft.role = Role::HrGeneralist;
+                    app.account_form = Some(draft);
+                    if let Some(employee) = app.employee_form.as_mut() {
+                        employee.full_name = "Synthetic Staff Preview".into();
+                    }
                 }
                 match std::env::var("HRIS_PREVIEW_PROFILE").as_deref() {
+                    Ok("contacts") => app.profile_section = ProfileSection::Contacts,
+                    Ok("emergency") => app.profile_section = ProfileSection::Emergency,
                     Ok("security") => app.profile_section = ProfileSection::Security,
                     Ok("sessions") => app.profile_section = ProfileSection::Sessions,
                     _ => {}
@@ -360,10 +376,10 @@ impl HrisApp {
                     app.update_state = UpdateState::Available(updater::VerifiedRelease {
                         release: updater::Release {
                             application_id: crate::APP_ID.into(),
-                            version: "0.1.7".into(),
+                            version: "0.1.8".into(),
                             platform: "windows-x64".into(),
                             requires_schema: "20261021054356".into(),
-                            artifact: "0.1.7/HRIS-Desktop-Update-0.1.7.exe".into(),
+                            artifact: "0.1.8/HRIS-Desktop-Update-0.1.8.exe".into(),
                             sha256: "0".repeat(64),
                             executable_sha256: "0".repeat(64),
                             size: 1,
@@ -383,6 +399,19 @@ impl HrisApp {
                     };
                     if let Some(profile) = app.account.as_mut() {
                         profile.display.theme = app.display_draft.theme;
+                    }
+                }
+                if let Ok(path) = std::env::var("HRIS_PREVIEW_COMPANY_LOGO") {
+                    if let Ok(png) = branding::logo_from_file(std::path::Path::new(&path)) {
+                        app.company_logo = branding::circular_logo(&png).ok().map(|image| {
+                            cc.egui_ctx.load_texture(
+                                "company-logo",
+                                image,
+                                egui::TextureOptions::LINEAR,
+                            )
+                        });
+                        app.data.logo_png = Some(png);
+                        app.data.company.logo_version = Some(Uuid::from_u128(900));
                     }
                 }
                 if let Ok(scale) = std::env::var("HRIS_PREVIEW_SCALE") {
@@ -422,7 +451,34 @@ impl HrisApp {
                     }
                 }
                 Ok("leave") => app.new_leave(),
+                Ok("staff-existing") => {
+                    if let Some(access) = app
+                        .data
+                        .accounts
+                        .iter()
+                        .find(|a| a.role == Role::HrGeneralist)
+                        .cloned()
+                    {
+                        if let Some(id) = access.employee_id {
+                            app.open_employee(id);
+                            app.account_form = Some(AccountDraft::from_account(&access));
+                            app.contacts_section = ContactSection::Access;
+                        }
+                    }
+                }
+                Ok("staff-access") => {
+                    app.contacts_section = ContactSection::Access;
+                }
                 _ => {}
+            }
+            if std::env::var("HRIS_PREVIEW_PAGE").as_deref() == Ok("sign-in") {
+                app.data = Snapshot::signed_out();
+                app.account = None;
+                app.connection = Some(ConnectionConfig {
+                    url: "https://preview.example.invalid".into(),
+                    publishable_key: "sb_publishable_preview_fixture_only".into(),
+                });
+                app.deployment_error = None;
             }
         }
         // Keep the same constructor in production and screenshot builds.
@@ -463,7 +519,7 @@ impl HrisApp {
                 if matches!(state, UpdateState::Restarting) {
                     ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                 }
-                self.update_state = state;
+                self.update_state.accept(state);
             }
             if update.background {
                 continue;
@@ -484,7 +540,7 @@ impl HrisApp {
                     if self.data.mode != data.mode {
                         self.clear_profile_secrets(ctx);
                         self.session_confirmation = None;
-                        self.profile_section = ProfileSection::Personal;
+                        self.profile_section = ProfileSection::Employment;
                         self.page = Page::Overview;
                         self.search.clear();
                         self.department.clear();
@@ -496,8 +552,26 @@ impl HrisApp {
                         self.contacts_form = None;
                         self.leave_form = None;
                     }
+                    sync_profile_contacts(&self.data, &data, &mut self.profile_contacts_draft);
+                    if self.data.logo_png != data.logo_png || self.data.mode != data.mode {
+                        self.company_logo = data
+                            .logo_png
+                            .as_ref()
+                            .and_then(|png| branding::circular_logo(png).ok())
+                            .map(|image| {
+                                ctx.load_texture(
+                                    "company-logo",
+                                    image,
+                                    egui::TextureOptions::LINEAR,
+                                )
+                            });
+                    }
                     if self.data.company != data.company {
-                        self.company_draft = data.company.clone();
+                        if company_fields_equal(&self.company_draft, &self.data.company) {
+                            self.company_draft = data.company.clone();
+                        } else {
+                            self.company_draft.logo_version = data.company.logo_version;
+                        }
                     }
                     self.data = data;
                     if !self.data.active().any(|e| {
@@ -601,6 +675,7 @@ impl HrisApp {
     }
 
     fn open_employee(&mut self, id: Uuid) {
+        self.account_form = None;
         let Some(employee) = self.data.employees.iter().find(|e| e.id == id) else {
             return;
         };
@@ -630,6 +705,7 @@ impl HrisApp {
         let mut contacts = self.contacts_form.take().unwrap_or_else(|| {
             EmployeeContacts::empty(self.data.company.id, draft.id.unwrap_or_default())
         });
+        let mut access = self.account_form.take();
         let editable = self.data.access.role.manages_hr();
         let private_visible = editable
             || draft
@@ -639,7 +715,7 @@ impl HrisApp {
         let mut save = false;
         card(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
-                close = ui.button("< Back to employees").clicked();
+                close = ui.button("< Back").clicked();
                 ui.label(
                     RichText::new(if draft.full_name.is_empty() {
                         "New employee"
@@ -668,74 +744,66 @@ impl HrisApp {
                         "Emergency contact",
                     );
                 }
+                if self.data.access.role.manages_accounts() {
+                    ui.selectable_value(
+                        &mut self.contacts_section,
+                        ContactSection::Access,
+                        "Staff role & sign-in",
+                    );
+                }
             });
             ui.separator();
             ui.set_max_width(ui.available_width().min(680.0));
             let body_height =
                 (ui.available_height() - if editable { 90.0 } else { 130.0 }).max(80.0);
-            let body_scroll = egui::ScrollArea::vertical()
+            let scroll = egui::ScrollArea::vertical()
                 .id_salt("employee_record_body")
                 .max_height(body_height);
             #[cfg(feature = "qa-screenshot")]
-            let body_scroll = body_scroll
+            let scroll = scroll
                 .animated(false)
                 .stick_to_bottom(std::env::var("HRIS_PREVIEW_SCROLL").as_deref() == Ok("bottom"));
-            body_scroll.show(ui,|ui| {
-            ui.add_enabled_ui(editable && !self.busy, |ui| {
-                match self.contacts_section {
-                    ContactSection::Employment => {
-                        field(ui, "Employee code", &mut draft.employee_code, "EMP-001");
-                        field(ui, "Full name", &mut draft.full_name, "Employee name");
-                        field(ui, "Department", &mut draft.department, "Not set");
-                        field(ui, "Job title", &mut draft.job_title, "Not set");
-                        field(ui, "Date joined (optional)", &mut draft.joined_on, "YYYY-MM-DD; leave blank if not set");
-                        ui.label("Reports to");
-                        egui::ComboBox::from_id_salt("employee_reports_to")
-                            .selected_text(draft.reports_to.map(|id| self.data.employee_name(id)).unwrap_or("No assigned manager"))
-                            .show_ui(ui, |ui| {
-                                ui.selectable_value(&mut draft.reports_to, None, "No assigned manager");
-                                for employee in self.data.active().filter(|e| Some(e.id) != draft.id) {
-                                    ui.selectable_value(&mut draft.reports_to, Some(employee.id), &employee.full_name);
-                                }
-                            });
-                        ui.horizontal(|ui| { ui.label("Annual leave allowance"); ui.add(egui::DragValue::new(&mut draft.annual_leave_days).range(0..=366).suffix(" days")); });
-                        egui::ComboBox::from_id_salt("employee_record_status").selected_text(draft.status.label()).show_ui(ui, |ui| {
-                            ui.selectable_value(&mut draft.status, EmployeeStatus::Active, "Active");
-                            ui.selectable_value(&mut draft.status, EmployeeStatus::Archived, "Archived");
-                        });
+            scroll.show(ui,|ui| {
+                ui.add_enabled_ui(editable && !self.busy,|ui|match self.contacts_section {
+                    ContactSection::Employment=>employment_fields(ui,&mut draft,&self.data),
+                    ContactSection::Contact if private_visible=>contact_fields(ui,&mut contacts,false),
+                    ContactSection::Emergency if private_visible=>contact_fields(ui,&mut contacts,true),
+                    ContactSection::Access if self.data.access.role.manages_accounts()=>{
+                        if access.is_none() {
+                            if let Some(existing)=self.data.accounts.iter().find(|a|a.employee_id==draft.id && draft.id.is_some()) {
+                                access=Some(AccountDraft::from_account(existing));
+                            }
+                        }
+                        if let Some(access)=access.as_mut() {staff_access_fields(ui,access,&self.data);}
+                        else {
+                            ui.label("No staff role is assigned. This employee does not use the desktop app.");
+                            ui.label("Assign a staff role here when this person needs desktop access.");
+                            if ui.button("Assign staff role").clicked() {
+                                let mut added=AccountDraft::new();added.role=Role::HrGeneralist;added.employee_id=draft.id;access=Some(added);
+                            }
+                        }
                     }
-                    ContactSection::Contact if private_visible => {
-                        field(ui, "Phone", &mut contacts.phone, "+63 …");
-                        field(ui, "Personal email", &mut contacts.personal_email, "Optional email address");
-                        ui.label("Home address");
-                        ui.add(egui::TextEdit::multiline(&mut contacts.address).desired_width(f32::INFINITY).desired_rows(3).hint_text("Optional address; up to 500 characters"));
-                        ui.label("Personal email is part of the HR record. It does not change account sign-in.");
-                    }
-                    ContactSection::Emergency if private_visible => {
-                        field(ui, "Contact name", &mut contacts.emergency_name, "Full name");
-                        field(ui, "Relationship", &mut contacts.emergency_relationship, "e.g. Parent, spouse, sibling");
-                        field(ui, "Primary phone", &mut contacts.emergency_phone, "+63 …");
-                        field(ui, "Alternate phone", &mut contacts.emergency_alternate_phone, "Optional second number");
-                        ui.label("Enter name, relationship and primary phone together, or leave all emergency fields blank.");
-                    }
-                    _ => {}
-                }
-            });
+                    _=>{}
+                });
             });
             ui.add_space(12.0);
             ui.horizontal_wrapped(|ui| {
                 if editable {
-                    save = primary(ui, "Save changes");
+                    save = primary(
+                        ui,
+                        if access.is_some() {
+                            "Save employee & role"
+                        } else {
+                            "Save changes"
+                        },
+                    );
                 }
                 close |= ui
                     .button(if editable { "Cancel" } else { "Close record" })
                     .clicked();
             });
             if !editable {
-                ui.label("Read only. Ask HR to update this employee record.");
-            }
-            if !private_visible {
-                ui.label("Personal and emergency contacts are restricted to HR and the employee's own account.");
+                ui.label("Employment is managed by HR. Update your own contact and emergency details in Profile.");
             }
         });
         if save {
@@ -743,12 +811,37 @@ impl HrisApp {
                 .employee(self.data.company.id)
                 .and_then(|_| contacts.normalized())
             {
-                Ok(contacts) => {
-                    self.close_on_success = true;
-                    self.send(Command::Change(Action::SaveEmployeeRecord(
-                        draft.clone(),
-                        contacts,
-                    )));
+                Ok(normalized) => {
+                    contacts = normalized.clone();
+                    if let Some(mut role) = access.take() {
+                        role.employee_name = draft.full_name.trim().into();
+                        role.employee_id = draft.id;
+                        match role.validate(&self.data) {
+                            Ok(()) => {
+                                access = Some(public_access_draft(&role));
+                                clear_edit_history(
+                                    ui.ctx(),
+                                    &["account-initial-password", "account-initial-confirm"],
+                                );
+                                self.close_on_success = true;
+                                self.send(Command::Admin(AdminAction::SaveStaff(
+                                    role,
+                                    draft.clone(),
+                                    normalized,
+                                )));
+                            }
+                            Err(error) => {
+                                self.notice = Some((error.to_string(), true));
+                                access = Some(role);
+                            }
+                        }
+                    } else {
+                        self.close_on_success = true;
+                        self.send(Command::Change(Action::SaveEmployeeRecord(
+                            draft.clone(),
+                            normalized,
+                        )));
+                    }
                 }
                 Err(error) => self.notice = Some((error.to_string(), true)),
             }
@@ -756,6 +849,12 @@ impl HrisApp {
         if !close || self.busy {
             self.employee_form = Some(draft);
             self.contacts_form = Some(contacts);
+            self.account_form = access;
+        } else {
+            clear_edit_history(
+                ui.ctx(),
+                &["account-initial-password", "account-initial-confirm"],
+            );
         }
     }
 
@@ -780,27 +879,12 @@ impl HrisApp {
     fn sidebar(&mut self, ui: &mut Ui) {
         ui.add_space(12.0);
         ui.vertical_centered(|ui| {
-            if let Some(logo) = &self.company_logo {
-                ui.add(
-                    egui::Image::new(logo)
-                        .fit_to_exact_size(Vec2::new(112.0, 72.0))
-                        .maintain_aspect_ratio(true),
-                );
-            } else {
-                let (rect, _) = ui.allocate_exact_size(Vec2::splat(72.0), egui::Sense::hover());
-                ui.painter().circle_stroke(
-                    rect.center(),
-                    32.0,
-                    Stroke::new(1.5, Color32::from_rgb(115, 214, 197)),
-                );
-                ui.painter().text(
-                    rect.center(),
-                    egui::Align2::CENTER_CENTER,
-                    branding::initials(&self.data.company.name),
-                    FontId::proportional(25.0),
-                    Color32::from_rgb(222, 242, 237),
-                );
-            }
+            company_logo(
+                ui,
+                self.company_logo.as_ref(),
+                &self.data.company.name,
+                72.0,
+            );
             ui.add_space(10.0);
             ui.add(
                 egui::Label::new(
@@ -860,9 +944,10 @@ impl HrisApp {
                 .strong(),
             );
             let name = self
-                .account
-                .as_ref()
-                .map(|a| a.details.display_name())
+                .data
+                .own_employee()
+                .map(|e| e.full_name.as_str())
+                .or_else(|| self.account.as_ref().map(|a| a.details.display_name()))
                 .unwrap_or("Your account");
             let role = if self.data.mode == Mode::Demo {
                 "Demo account"
@@ -953,7 +1038,8 @@ impl HrisApp {
                 "Manage your personal details, account security and sessions.",
             ),
         };
-        let employee_open = self.page == Page::Employees && self.employee_form.is_some();
+        let employee_open =
+            matches!(self.page, Page::Employees | Page::Accounts) && self.employee_form.is_some();
         if !employee_open {
             ui.heading(RichText::new(title).strong());
             ui.label(RichText::new(subtitle).color(muted(ui)));
@@ -1004,6 +1090,19 @@ impl HrisApp {
         self.employee_form.is_some()
             || self.leave_form.is_some()
             || self.account_form.is_some()
+            || !company_fields_equal(&self.company_draft, &self.data.company)
+            || self.profile_contacts_draft.as_ref().is_some_and(|draft| {
+                self.data.access.employee_id.is_some_and(|id| {
+                    !same_contacts(
+                        draft,
+                        &self
+                            .data
+                            .own_contacts()
+                            .cloned()
+                            .unwrap_or_else(|| EmployeeContacts::empty(self.data.company.id, id)),
+                    )
+                })
+            })
             || self.account.as_ref().is_some_and(|a| {
                 a.details != self.personal_draft || a.display != self.display_draft
             })
@@ -1623,227 +1722,74 @@ impl HrisApp {
         if !self.data.access.role.manages_accounts() {
             return;
         }
+        let staff: Vec<_> = self
+            .data
+            .accounts
+            .iter()
+            .filter(|a| a.role.uses_desktop())
+            .cloned()
+            .collect();
+        let enabled = staff.iter().filter(|a| a.active).count();
         ui.horizontal_wrapped(|ui| {
-            ui.label(
-                RichText::new(format!("{} company account(s)", self.data.accounts.len()))
-                    .color(muted(ui)),
+            ui.label(format!("{enabled} active staff role(s)"));
+            if primary(ui, "+ Add staff employee") {
+                self.new_employee();
+                let mut access = AccountDraft::new();
+                access.role = Role::HrGeneralist;
+                self.account_form = Some(access);
+                self.contacts_section = ContactSection::Employment;
+            }
+            ui.checkbox(
+                &mut self.show_disabled_staff,
+                format!("Show disabled ({})", staff.len() - enabled),
             );
-            if primary(ui, "+ Add account") {
-                self.account_form = Some(AccountDraft::new());
-                self.account_editor_focus = true;
-            }
         });
-        if self.account_editor_focus && self.account_form.is_some() {
-            ui.scroll_to_cursor(Some(Align::Min));
-            self.account_editor_focus = false;
-        }
-        if let Some(mut draft) = self.account_form.take() {
-            let editing = draft.user_id.is_some();
-            let protected = draft.user_id.is_some_and(|id| {
-                id == self.data.company.owner_id || id == self.data.access.user_id
-            });
-            let mut save = false;
-            let mut cancel = false;
-            card(ui, |ui| {
-                ui.label(
-                    RichText::new(if editing {
-                        "Edit account access"
-                    } else {
-                        "Add company account"
-                    })
-                    .size(18.0)
-                    .strong(),
-                );
-                if editing {
-                    ui.label(&draft.email);
-                } else {
-                    let before = draft.create_new;
-                    ui.horizontal_wrapped(|ui| {
-                        ui.selectable_value(&mut draft.create_new, true, "New account");
-                        ui.selectable_value(&mut draft.create_new, false, "Existing account");
-                    });
-                    if before != draft.create_new {
-                        draft.password.clear();
-                        draft.confirmation.clear();
-                        clear_edit_history(
-                            ui.ctx(),
-                            &["account-initial-password", "account-initial-confirm"],
-                        );
-                    }
-                    field(ui, "Email address", &mut draft.email, "Work email");
-                }
-                ui.add_enabled_ui(!protected, |ui| {
-                    ui.label("Role");
-                    egui::ComboBox::from_id_salt("account_role")
-                        .selected_text(draft.role.label())
-                        .show_ui(ui, |ui| {
-                            for role in Role::ALL {
-                                ui.selectable_value(&mut draft.role, role, role.label());
-                            }
-                        });
-                    ui.checkbox(&mut draft.active, "Account access enabled");
-                });
-                ui.label(
-                    RichText::new(draft.role.description())
-                        .color(muted(ui))
-                        .size(12.0),
-                );
-                if protected {
-                    ui.label(
-                        RichText::new("You cannot disable or demote this account here.")
-                            .color(muted(ui))
-                            .size(12.0),
-                    );
-                }
-                if editing {
-                    ui.label(format!(
-                        "Employee: {}",
-                        draft
-                            .employee_id
-                            .map(|id| self.data.employee_name(id))
-                            .unwrap_or("Created automatically")
-                    ));
-                    ui.label("Edit employment details and Reports to in Employees.");
-                } else {
-                    ui.label("Employee record");
-                    egui::ComboBox::from_id_salt("account_employee")
-                        .selected_text(
-                            draft
-                                .employee_id
-                                .map(|id| self.data.employee_name(id))
-                                .unwrap_or("Create employee automatically"),
-                        )
-                        .show_ui(ui, |ui| {
-                            ui.selectable_value(
-                                &mut draft.employee_id,
-                                None,
-                                "Create employee automatically",
-                            );
-                            for employee in self.data.active().filter(|e| {
-                                !self
-                                    .data
-                                    .accounts
-                                    .iter()
-                                    .any(|a| a.employee_id == Some(e.id))
-                            }) {
-                                ui.selectable_value(
-                                    &mut draft.employee_id,
-                                    Some(employee.id),
-                                    &employee.full_name,
-                                );
-                            }
-                        });
-                    if draft.employee_id.is_none() && draft.create_new {
-                        field(ui, "Employee name", &mut draft.employee_name, "Full name");
-                    }
-                    ui.label("Every account has an employee record. It is created automatically unless you select an existing employee.");
-                }
-                if !editing && draft.create_new {
-                    password_field(
-                        ui,
-                        "Initial password",
-                        "account-initial-password",
-                        &mut draft.password,
-                        false,
-                    );
-                    password_field(
-                        ui,
-                        "Confirm initial password",
-                        "account-initial-confirm",
-                        &mut draft.confirmation,
-                        false,
-                    );
-                    ui.label(RichText::new("Use 12–128 characters. Share the initial password privately. The user must confirm their email, then can change the password in Profile.").color(muted(ui)).size(12.0));
-                }
-                ui.horizontal_wrapped(|ui| {
-                    save = primary(
-                        ui,
-                        if !editing && draft.create_new {
-                            "Create account & send confirmation"
-                        } else {
-                            "Save account access"
-                        },
-                    );
-                    cancel = ui.button("Cancel").clicked();
-                });
-            });
-            #[cfg(feature = "qa-screenshot")]
-            if std::env::var("HRIS_PREVIEW_SCROLL").as_deref() == Ok("account_actions") {
-                ui.scroll_to_cursor(Some(Align::Max));
-            }
-            if save {
-                match draft.validate(&self.data) {
-                    Ok(()) => {
-                        let keep = AccountDraft {
-                            user_id: draft.user_id,
-                            email: draft.email.clone(),
-                            role: draft.role,
-                            active: draft.active,
-                            employee_id: draft.employee_id,
-                            manager_user_id: draft.manager_user_id,
-                            create_new: draft.create_new,
-                            ..Default::default()
-                        };
-                        clear_edit_history(
-                            ui.ctx(),
-                            &["account-initial-password", "account-initial-confirm"],
-                        );
-                        self.close_on_success = true;
-                        self.send(Command::Admin(AdminAction::Save(draft)));
-                        draft = keep;
-                    }
-                    Err(error) => self.notice = Some((error.to_string(), true)),
-                }
-            }
-            if !cancel {
-                self.account_form = Some(draft);
-            } else {
-                clear_edit_history(
-                    ui.ctx(),
-                    &["account-initial-password", "account-initial-confirm"],
-                );
-            }
-            ui.add_space(12.0);
-        }
-        for account in self.data.accounts.clone() {
+        ui.label(RichText::new("Staff are employees with desktop roles. Open a person to manage their employment, contacts and access together.").color(muted(ui)));
+        for access in staff
+            .into_iter()
+            .filter(|a| a.active || self.show_disabled_staff)
+            .collect::<Vec<_>>()
+        {
+            let Some(employee) = access
+                .employee_id
+                .and_then(|id| self.data.employees.iter().find(|e| e.id == id))
+                .cloned()
+            else {
+                continue;
+            };
             card(ui, |ui| {
                 ui.horizontal_wrapped(|ui| {
-                    ui.label(RichText::new(&account.email).strong());
-                    badge(ui, account.role.label(), true);
+                    if ui
+                        .link(RichText::new(&employee.full_name).strong())
+                        .clicked()
+                    {
+                        self.open_employee(employee.id);
+                        self.account_form = Some(AccountDraft::from_account(&access));
+                    }
+                    badge(ui, &employee.employee_code, true);
+                    badge(ui, access.role.label(), access.active);
                     badge(
                         ui,
-                        if account.active {
-                            "Enabled"
-                        } else {
-                            "Disabled"
-                        },
-                        account.active,
+                        if access.active { "Enabled" } else { "Disabled" },
+                        access.active,
                     );
-                    if account.is_owner {
-                        badge(ui, "Installation administrator", true);
-                    }
-                    if !account.email_confirmed {
-                        badge(ui, "Email confirmation pending", false);
-                    }
-                    if !account.role.uses_desktop() {
-                        badge(ui, "Portal (planned)", false);
-                    }
                 });
-                if let Some(id) = account.employee_id {
-                    ui.label(format!("Employee: {}", self.data.employee_name(id)));
+                ui.label(format!("Sign-in: {}", access.email));
+                if !access.email_confirmed {
+                    ui.label(RichText::new("Email confirmation pending").color(muted(ui)));
                 }
                 ui.horizontal_wrapped(|ui| {
-                    if ui.button("Edit access").clicked() {
-                        self.account_form = Some(AccountDraft::from_account(&account));
-                        self.account_editor_focus = true;
+                    if ui.button("Edit employee").clicked() {
+                        self.open_employee(employee.id);
+                        self.account_form = Some(AccountDraft::from_account(&access));
                     }
-                    if !account.email_confirmed
-                        && account.active
+                    if !access.email_confirmed
+                        && access.active
                         && self.data.mode == Mode::Supabase
                         && ui.button("Send confirmation").clicked()
                     {
                         self.send(Command::Admin(AdminAction::ResendConfirmation(
-                            account.user_id,
+                            access.user_id,
                         )));
                     }
                 });
@@ -1851,29 +1797,73 @@ impl HrisApp {
             ui.add_space(8.0);
         }
         ui.collapsing("Role permissions", |ui| {
-            for role in Role::ALL {
+            for role in Role::ALL.into_iter().filter(|r| r.uses_desktop()) {
                 ui.label(RichText::new(role.label()).strong());
                 ui.label(role.description());
                 ui.add_space(4.0);
             }
         });
-        ui.collapsing("Recent access changes",|ui|{
-            if self.data.access_events.is_empty() {empty(ui,"No access changes to show.");}
+        ui.collapsing("Recent access changes", |ui| {
             for event in &self.data.access_events {
-                let account=self.data.accounts.iter().find(|a|a.user_id==event.user_id).map(|a|a.email.as_str()).unwrap_or("Account");
-                let actor=self.data.accounts.iter().find(|a|a.user_id==event.actor_id).map(|a|a.email.as_str()).unwrap_or("Administrator");
-                ui.label(format!("{} · {} · {} · by {}",account_timestamp(&event.created_at,self.data.company.tz(),self.time_format()),
-                    if event.action=="account_added" {"Account added"}else{"Access changed"},account,actor));
+                let person = self
+                    .data
+                    .accounts
+                    .iter()
+                    .find(|a| a.user_id == event.user_id)
+                    .and_then(|a| a.employee_id)
+                    .map(|id| self.data.employee_name(id))
+                    .unwrap_or("Employee");
+                ui.label(format!(
+                    "{} · {} · {}",
+                    account_timestamp(
+                        &event.created_at,
+                        self.data.company.tz(),
+                        self.time_format()
+                    ),
+                    if event.action == "account_added" {
+                        "Role assigned"
+                    } else {
+                        "Access changed"
+                    },
+                    person
+                ));
             }
-            ui.label(RichText::new("Shows the 50 most recent account-access changes. Passwords are never included.").color(muted(ui)).size(12.0));
+            ui.label(
+                RichText::new(
+                    "Shows the 50 most recent access changes. Passwords are never included.",
+                )
+                .color(muted(ui))
+                .small(),
+            );
         });
     }
 
     fn settings(&mut self, ui: &mut Ui) {
         if self.data.access.role.manages_accounts() {
             card(ui, |ui| {
+                ui.set_max_width(ui.available_width().min(630.0));
                 ui.label(RichText::new("Company defaults").size(18.0).strong());
-                ui.set_max_width(630.0);
+                ui.horizontal_wrapped(|ui| {
+                    company_logo(ui,self.company_logo.as_ref(),&self.data.company.name,76.0);
+                    ui.vertical(|ui| {
+                        ui.set_max_width(ui.available_width().min(360.0));
+                        if ui.button("Upload company logo").clicked() {
+                            match account::choose_image("Choose a company logo") {
+                                Ok(Some(path))=>self.send(Command::Change(Action::UploadCompanyLogo(path))),
+                                Ok(None)=>{},Err(error)=>self.notice=Some((error.to_string(),true)),
+                            }
+                        }
+                        if ui.add_enabled(self.data.company.logo_version.is_some(),egui::Button::new("Remove company logo")).clicked() {
+                            self.send(Command::Change(Action::RemoveCompanyLogo));
+                        }
+                        ui.label(RichText::new("PNG or JPEG, up to 5 MiB and 2048 × 2048. Transparency is preserved; the full logo fits inside a circle.").color(muted(ui)).small());
+                    });
+                });
+                if let Some(warning) = &self.data.logo_warning {
+                    ui.colored_label(ui.visuals().error_fg_color, warning);
+                }
+                ui.separator();
+                ui.set_max_width(ui.available_width().min(630.0));
                 field(
                     ui,
                     "Company name",
@@ -1955,7 +1945,7 @@ impl HrisApp {
         card(ui, |ui| {
             ui.label(RichText::new("App updates").size(18.0).strong());
             ui.label(format!("HRIS Desktop {}", updater::VERSION));
-            ui.label("Updates are checked automatically after sign-in and every 15 minutes while the app is open.");
+            ui.label("Updates are checked automatically after a successful sign-in. An available update stays visible until you update or sign out.");
             match &self.update_state {
                 UpdateState::UpToDate => {
                     ui.label("You have the latest compatible version.");
@@ -1973,7 +1963,13 @@ impl HrisApp {
                     ui.label("Sign in to check this company's update channel.");
                 }
             }
-            if ui.button("Check for updates").clicked() {
+            if ui
+                .add_enabled(
+                    self.data.mode == Mode::Supabase,
+                    egui::Button::new("Check for updates"),
+                )
+                .clicked()
+            {
                 self.send(Command::CheckUpdates);
             }
         });
@@ -1985,11 +1981,16 @@ impl HrisApp {
             return;
         };
         let signed_in = self.data.mode == Mode::Supabase;
+        let employee_name = self
+            .data
+            .own_employee()
+            .map(|e| e.full_name.clone())
+            .unwrap_or_else(|| profile.details.display_name().into());
         card(ui, |ui| {
             ui.horizontal(|ui| {
-                avatar(ui,self.avatar.as_ref(),profile.details.display_name(),86.0);
+                avatar(ui,self.avatar.as_ref(),&employee_name,86.0);
                 ui.vertical(|ui| {
-                    ui.label(RichText::new(profile.details.display_name()).size(22.0).strong());
+                    ui.label(RichText::new(&employee_name).size(22.0).strong());
                     ui.label(RichText::new(if signed_in { self.data.access.role.label() } else { "Demo account" }).color(muted(ui)));
                     ui.horizontal_wrapped(|ui| {
                         if ui.button("Change photo").clicked() {
@@ -2015,8 +2016,18 @@ impl HrisApp {
         ui.horizontal_wrapped(|ui| {
             ui.selectable_value(
                 &mut self.profile_section,
-                ProfileSection::Personal,
-                "Personal details",
+                ProfileSection::Employment,
+                "Employment",
+            );
+            ui.selectable_value(
+                &mut self.profile_section,
+                ProfileSection::Contacts,
+                "Contact details",
+            );
+            ui.selectable_value(
+                &mut self.profile_section,
+                ProfileSection::Emergency,
+                "Emergency contact",
             );
             ui.selectable_value(
                 &mut self.profile_section,
@@ -2034,78 +2045,68 @@ impl HrisApp {
         }
         ui.add_space(8.0);
         match self.profile_section {
-            ProfileSection::Personal => {
+            ProfileSection::Employment => {
                 card(ui, |ui| {
-                    ui.label(RichText::new("Personal details").size(18.0).strong());
-                    profile_field(
-                        ui,
-                        "Full name",
-                        "profile-full-name",
-                        &mut self.personal_draft.full_name,
-                        "Your full name",
-                    );
-                    profile_field(
-                        ui,
-                        "Preferred name (optional)",
-                        "profile-preferred-name",
-                        &mut self.personal_draft.preferred_name,
-                        "Name shown in the app",
-                    );
-                    profile_field(
-                        ui,
-                        "Contact phone (optional)",
-                        "profile-contact-phone",
-                        &mut self.personal_draft.contact_phone,
-                        "Your contact number",
-                    );
-                    ui.horizontal(|ui| {
-                        if primary(ui, "Save personal details") {
-                            match self.personal_draft.validate() {
-                                Ok(()) => self.send(Command::Account(AccountAction::SaveDetails(
-                                    self.personal_draft.trimmed(),
-                                ))),
-                                Err(error) => self.notice = Some((error.to_string(), true)),
-                            }
-                        }
-                        if ui.button("Revert changes").clicked() {
-                            self.personal_draft = profile.details.clone();
-                        }
-                    });
+                    ui.label(RichText::new("Employment").size(18.0).strong());
+                    ui.label(RichText::new("Managed by HR. These are the same details shown in your employee record.").color(muted(ui)));
+                    if let Some(employee) = self.data.own_employee() {
+                        employment_summary(ui, employee, &self.data);
+                    } else {
+                        empty(ui, "Refresh to load your employment details.");
+                    }
                 });
                 ui.add_space(12.0);
                 card(ui, |ui| {
-                    ui.label(RichText::new("Account information").size(18.0).strong());
+                    ui.label(RichText::new("Sign-in account").strong());
                     ui.label(&profile.email);
-                    if signed_in {
-                        badge(
-                            ui,
-                            if profile.email_confirmed_at.is_some() {
-                                "Email verified"
-                            } else {
-                                "Email not verified"
-                            },
-                            profile.email_confirmed_at.is_some(),
-                        );
-                    }
-                    ui.label(
-                        RichText::new(format!(
-                            "Access: {} · Managed by your company",
-                            self.data.access.role.label()
-                        ))
-                        .color(muted(ui))
-                        .size(12.0),
-                    );
-                    if let Some(created) = &profile.created_at {
-                        ui.label(
-                            RichText::new(format!("Account created {}", account_date(created)))
-                                .color(muted(ui))
-                                .size(12.0),
-                        );
-                    }
+                    ui.label(format!("Staff role: {}", self.data.access.role.label()));
                     if ui.button("Manage account security").clicked() {
                         self.profile_section = ProfileSection::Security;
                     }
                 });
+            }
+            ProfileSection::Contacts | ProfileSection::Emergency => {
+                let Some(person) = self.data.access.employee_id else {
+                    empty(ui, "Refresh to load your employee record.");
+                    return;
+                };
+                let mut contacts = self.profile_contacts_draft.take().unwrap_or_else(|| {
+                    self.data
+                        .own_contacts()
+                        .cloned()
+                        .unwrap_or_else(|| EmployeeContacts::empty(self.data.company.id, person))
+                });
+                card(ui, |ui| {
+                    let emergency = self.profile_section == ProfileSection::Emergency;
+                    ui.label(
+                        RichText::new(if emergency {
+                            "Emergency contact"
+                        } else {
+                            "Contact details"
+                        })
+                        .size(18.0)
+                        .strong(),
+                    );
+                    ui.label(RichText::new("Changes update your employee record. Both contact tabs are saved together.").color(muted(ui)));
+                    contact_fields(ui, &mut contacts, emergency);
+                    ui.horizontal_wrapped(|ui| {
+                        if primary(ui, "Save my contact details") {
+                            match contacts.normalized() {
+                                Ok(saved) => {
+                                    contacts = saved.clone();
+                                    self.send(Command::Change(Action::SaveOwnContacts(saved)));
+                                }
+                                Err(error) => self.notice = Some((error.to_string(), true)),
+                            }
+                        }
+                        if ui.button("Revert changes").clicked() {
+                            contacts = self.data.own_contacts().cloned().unwrap_or_else(|| {
+                                EmployeeContacts::empty(self.data.company.id, person)
+                            });
+                        }
+                    });
+                });
+                self.profile_contacts_draft = Some(contacts);
             }
             ProfileSection::Security => {
                 if !signed_in {
@@ -2251,52 +2252,52 @@ impl HrisApp {
     }
 
     fn sign_in(&mut self, ui: &mut Ui) {
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+        sign_in_layout(ui, |ui| {
+            if let Some(error) = &self.deployment_error {
+                ui.heading("Company connection unavailable");
+                ui.label(error);
+                ui.label(RichText::new("Your HRIS administrator configures this installation. Reopen the app after they have corrected its connection.").color(muted(ui)));
+                return;
+            }
+            ui.heading("Sign in");
             ui.label(
-                RichText::new(format!("v{}", updater::VERSION))
-                    .small()
-                    .color(muted(ui)),
+                RichText::new("Use your HRIS account to access company records.").color(muted(ui)),
             );
-        });
-        ui.vertical_centered(|ui| {
-            ui.add_space(70.0);
-            ui.heading(RichText::new("HRIS Desktop").strong());
-            ui.label(RichText::new("Your company workspace").color(muted(ui)));
-            ui.add_space(24.0);
-            Frame::new().fill(Color32::WHITE).stroke(Stroke::new(1.0, ui.visuals().widgets.noninteractive.bg_stroke.color))
-                .corner_radius(12).inner_margin(28).show(ui, |ui| {
-                    ui.set_width(420.0);
-                    ui.with_layout(Layout::top_down(Align::Min), |ui| {
-                        if let Some(error) = &self.deployment_error {
-                            ui.heading("Company connection unavailable");
-                            ui.label(error);
-                            ui.label(RichText::new("Your HRIS administrator configures this installation. Reopen the app after they have corrected its connection.").color(muted(ui)));
-                            return;
-                        }
-                        ui.heading("Sign in");
-                        ui.label(RichText::new("Use your HRIS account to access company records.").color(muted(ui)));
-                        if let Some((message, error)) = &self.notice {
-                            ui.colored_label(if *error { Color32::from_rgb(160, 52, 38) } else { TEAL }, message);
-                        }
-                        ui.add_space(8.0);
-                        if login_controls(ui, &mut self.login_email, &mut self.login_password, !self.busy) {
-                                if self.login_email.trim().is_empty() || self.login_password.is_empty() {
-                                    self.notice = Some(("Enter your email and password.".into(), true));
-                                } else if let Some(config) = &self.connection {
-                                    let command = Command::Connect {
-                                        config: config.clone(),
-                                        email: self.login_email.trim().into(),
-                                        password: std::mem::take(&mut self.login_password),
-                                    };
-                                    clear_login_history(ui.ctx());
-                                    self.send(command);
-                                }
-                        }
-                        if self.busy {
-                            ui.horizontal(|ui| { ui.spinner(); ui.label("Signing in…"); });
-                        }
-                    });
+            if let Some((message, error)) = &self.notice {
+                ui.colored_label(
+                    if *error {
+                        Color32::from_rgb(160, 52, 38)
+                    } else {
+                        TEAL
+                    },
+                    message,
+                );
+            }
+            ui.add_space(8.0);
+            if login_controls(
+                ui,
+                &mut self.login_email,
+                &mut self.login_password,
+                !self.busy,
+            ) {
+                if self.login_email.trim().is_empty() || self.login_password.is_empty() {
+                    self.notice = Some(("Enter your email and password.".into(), true));
+                } else if let Some(config) = &self.connection {
+                    let command = Command::Connect {
+                        config: config.clone(),
+                        email: self.login_email.trim().into(),
+                        password: std::mem::take(&mut self.login_password),
+                    };
+                    clear_login_history(ui.ctx());
+                    self.send(command);
+                }
+            }
+            if self.busy {
+                ui.horizontal(|ui| {
+                    ui.spinner();
+                    ui.label("Signing in…");
                 });
+            }
         });
     }
 
@@ -2376,7 +2377,9 @@ impl eframe::App for HrisApp {
             egui::CentralPanel::default()
                 .frame(Frame::new().fill(ui.visuals().panel_fill).inner_margin(28))
                 .show(ui, |ui| {
-                    if self.page == Page::Employees && self.employee_form.is_some() {
+                    if matches!(self.page, Page::Employees | Page::Accounts)
+                        && self.employee_form.is_some()
+                    {
                         ui.add_enabled_ui(!form_open, |ui| {
                             self.header(ui);
                             ui.add_enabled_ui(!self.busy, |ui| self.employee_record(ui));
@@ -2445,6 +2448,306 @@ impl eframe::App for HrisApp {
         }
         ctx.request_repaint_after(std::time::Duration::from_secs(20));
     }
+}
+
+fn same_contacts(a: &EmployeeContacts, b: &EmployeeContacts) -> bool {
+    let mut a = a.clone();
+    let mut b = b.clone();
+    a.updated_at = None;
+    b.updated_at = None;
+    a == b
+}
+
+fn sync_profile_contacts(
+    previous: &Snapshot,
+    next: &Snapshot,
+    draft: &mut Option<EmployeeContacts>,
+) {
+    if next.mode == Mode::SignedOut || previous.access.employee_id != next.access.employee_id {
+        *draft = None;
+        return;
+    }
+    let Some(id) = next.access.employee_id else {
+        *draft = None;
+        return;
+    };
+    let old = previous
+        .own_contacts()
+        .cloned()
+        .unwrap_or_else(|| EmployeeContacts::empty(previous.company.id, id));
+    let new = next
+        .own_contacts()
+        .cloned()
+        .unwrap_or_else(|| EmployeeContacts::empty(next.company.id, id));
+    if draft
+        .as_ref()
+        .is_some_and(|draft| same_contacts(draft, &old) || same_contacts(draft, &new))
+    {
+        *draft = Some(new);
+    }
+}
+
+fn company_fields_equal(a: &Company, b: &Company) -> bool {
+    a.name == b.name && a.timezone == b.timezone && a.annual_leave_days == b.annual_leave_days
+}
+
+fn company_logo(ui: &mut Ui, texture: Option<&egui::TextureHandle>, name: &str, size: f32) {
+    let (rect, _) = ui.allocate_exact_size(Vec2::splat(size), egui::Sense::hover());
+    ui.painter()
+        .circle_stroke(rect.center(), size / 2.0 - 2.0, Stroke::new(1.5, TEAL));
+    if let Some(texture) = texture {
+        ui.painter().image(
+            texture.id(),
+            rect,
+            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+            Color32::WHITE,
+        );
+    } else {
+        ui.painter().text(
+            rect.center(),
+            egui::Align2::CENTER_CENTER,
+            branding::initials(name),
+            FontId::proportional(size * 0.34),
+            if ui.visuals().dark_mode {
+                Color32::from_rgb(222, 242, 237)
+            } else {
+                TEAL
+            },
+        );
+    }
+}
+
+fn employment_fields(ui: &mut Ui, draft: &mut EmployeeDraft, data: &Snapshot) {
+    field(ui, "Employee code", &mut draft.employee_code, "EMP-001");
+    field(ui, "Full name", &mut draft.full_name, "Employee name");
+    field(ui, "Department", &mut draft.department, "Not set");
+    field(ui, "Job title", &mut draft.job_title, "Not set");
+    field(
+        ui,
+        "Date joined (optional)",
+        &mut draft.joined_on,
+        "YYYY-MM-DD; leave blank if not set",
+    );
+    ui.label("Reports to");
+    egui::ComboBox::from_id_salt("employee_reports_to")
+        .selected_text(
+            draft
+                .reports_to
+                .map(|id| data.employee_name(id))
+                .unwrap_or("No assigned manager"),
+        )
+        .show_ui(ui, |ui| {
+            ui.selectable_value(&mut draft.reports_to, None, "No assigned manager");
+            for employee in data.active().filter(|e| Some(e.id) != draft.id) {
+                ui.selectable_value(
+                    &mut draft.reports_to,
+                    Some(employee.id),
+                    &employee.full_name,
+                );
+            }
+        });
+    ui.horizontal_wrapped(|ui| {
+        ui.label("Annual leave allowance");
+        ui.add(
+            egui::DragValue::new(&mut draft.annual_leave_days)
+                .range(0..=366)
+                .suffix(" days"),
+        );
+    });
+    egui::ComboBox::from_id_salt("employee_record_status")
+        .selected_text(draft.status.label())
+        .show_ui(ui, |ui| {
+            ui.selectable_value(&mut draft.status, EmployeeStatus::Active, "Active");
+            ui.selectable_value(&mut draft.status, EmployeeStatus::Archived, "Archived");
+        });
+}
+
+fn employment_summary(ui: &mut Ui, employee: &Employee, data: &Snapshot) {
+    let value = |v: &str| {
+        if v.trim().is_empty() {
+            "Not set".to_owned()
+        } else {
+            v.to_owned()
+        }
+    };
+    let fields = [
+        ("Employee code", employee.employee_code.clone()),
+        ("Full name", employee.full_name.clone()),
+        ("Department", value(&employee.department)),
+        ("Job title", value(&employee.job_title)),
+        (
+            "Date joined",
+            employee
+                .joined_on
+                .map(|d| d.to_string())
+                .unwrap_or("Not set".into()),
+        ),
+        (
+            "Reports to",
+            employee
+                .reports_to
+                .map(|id| data.employee_name(id).into())
+                .unwrap_or("No assigned manager".into()),
+        ),
+        (
+            "Annual leave allowance",
+            format!("{} days", employee.annual_leave_days),
+        ),
+        ("Status", employee.status.label().into()),
+    ];
+    egui::Grid::new("profile_employment")
+        .num_columns(2)
+        .spacing([24.0, 14.0])
+        .show(ui, |ui| {
+            for (name, value) in fields {
+                ui.label(RichText::new(name).color(muted(ui)));
+                ui.add(egui::Label::new(value).wrap());
+                ui.end_row();
+            }
+        });
+}
+
+fn contact_fields(ui: &mut Ui, contacts: &mut EmployeeContacts, emergency: bool) {
+    if emergency {
+        field(
+            ui,
+            "Contact name",
+            &mut contacts.emergency_name,
+            "Full name",
+        );
+        field(
+            ui,
+            "Relationship",
+            &mut contacts.emergency_relationship,
+            "e.g. Parent, spouse, sibling",
+        );
+        field(ui, "Primary phone", &mut contacts.emergency_phone, "+63 …");
+        field(
+            ui,
+            "Alternate phone",
+            &mut contacts.emergency_alternate_phone,
+            "Optional second number",
+        );
+        ui.label("Enter name, relationship and primary phone together, or leave all emergency fields blank.");
+    } else {
+        field(ui, "Phone", &mut contacts.phone, "+63 …");
+        field(
+            ui,
+            "Personal email",
+            &mut contacts.personal_email,
+            "Optional email address",
+        );
+        ui.label("Home address");
+        ui.add(
+            egui::TextEdit::multiline(&mut contacts.address)
+                .desired_width(f32::INFINITY)
+                .desired_rows(3)
+                .hint_text("Optional address; up to 500 characters"),
+        );
+        ui.label("Personal email does not change your sign-in email.");
+    }
+}
+
+fn staff_access_fields(ui: &mut Ui, draft: &mut AccountDraft, data: &Snapshot) {
+    let editing = draft.user_id.is_some();
+    let protected = draft
+        .user_id
+        .is_some_and(|id| id == data.company.owner_id || id == data.access.user_id);
+    ui.label(RichText::new("Staff role & sign-in").strong());
+    if editing {
+        ui.label(format!("Sign-in email: {}", draft.email));
+    } else {
+        field(ui, "Sign-in email", &mut draft.email, "Work email");
+    }
+    ui.add_enabled_ui(!protected, |ui| {
+        ui.label("Desktop role");
+        let label = |role: Role| {
+            if role == Role::Employee {
+                "No staff role (employee portal)"
+            } else {
+                role.label()
+            }
+        };
+        egui::ComboBox::from_id_salt("staff_role")
+            .selected_text(label(draft.role))
+            .show_ui(ui, |ui| {
+                for role in Role::ALL {
+                    ui.selectable_value(&mut draft.role, role, label(role));
+                }
+            });
+        ui.checkbox(&mut draft.active, "Sign-in access enabled");
+    });
+    if protected {
+        ui.label("Your administrator role is protected. Employment details are managed in the other tabs.");
+    }
+    ui.label(RichText::new(draft.role.description()).color(muted(ui)));
+    if !editing {
+        password_field(
+            ui,
+            "Initial password",
+            "account-initial-password",
+            &mut draft.password,
+            false,
+        );
+        password_field(
+            ui,
+            "Confirm initial password",
+            "account-initial-confirm",
+            &mut draft.confirmation,
+            false,
+        );
+        ui.label("Use 12–128 characters. Share privately. Email confirmation is required before sign-in.");
+    }
+    ui.label(
+        "This role applies to this employee. Employment and contact details are saved together.",
+    );
+}
+
+fn public_access_draft(draft: &AccountDraft) -> AccountDraft {
+    AccountDraft {
+        user_id: draft.user_id,
+        email: draft.email.clone(),
+        role: draft.role,
+        active: draft.active,
+        employee_id: draft.employee_id,
+        manager_user_id: None,
+        create_new: draft.create_new,
+        employee_name: draft.employee_name.clone(),
+        ..Default::default()
+    }
+}
+
+fn sign_in_layout(ui: &mut Ui, contents: impl FnOnce(&mut Ui)) -> egui::Rect {
+    ui.horizontal(|ui| {
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.label(
+                RichText::new(format!("v{}", updater::VERSION))
+                    .small()
+                    .color(muted(ui)),
+            );
+        });
+    });
+    ui.vertical_centered(|ui| {
+        ui.add_space(24.0);
+        ui.heading(RichText::new("HRIS Desktop").strong());
+        ui.label(RichText::new("Your company workspace").color(muted(ui)));
+        ui.add_space(20.0);
+        Frame::new()
+            .fill(ui.visuals().window_fill)
+            .stroke(Stroke::new(
+                1.0,
+                ui.visuals().widgets.noninteractive.bg_stroke.color,
+            ))
+            .corner_radius(12)
+            .inner_margin(28)
+            .show(ui, |ui| {
+                ui.set_width(ui.available_width().min(420.0));
+                ui.with_layout(Layout::top_down(Align::Min), contents);
+            })
+            .response
+            .rect
+    })
+    .inner
 }
 
 fn sync_account_drafts(
@@ -2610,12 +2913,6 @@ fn password_field(ui: &mut Ui, label: &str, id: &str, value: &mut String, show: 
             .id(egui::Id::unique(id))
             .password(!show),
     );
-}
-
-fn account_date(value: &str) -> String {
-    chrono::DateTime::parse_from_rfc3339(value)
-        .map(|date| date.format("%b %d, %Y").to_string())
-        .unwrap_or_else(|_| "Unavailable".into())
 }
 
 fn account_timestamp(value: &str, timezone: chrono_tz::Tz, time_format: &str) -> String {
@@ -2877,4 +3174,74 @@ fn employee_picker(ui: &mut Ui, id: &str, data: &Snapshot, selected: &mut Option
                 );
             }
         });
+}
+
+#[cfg(test)]
+mod identity_ui_tests {
+    use super::*;
+
+    #[test]
+    fn sign_in_form_stays_near_the_top_and_fits_the_minimum_and_enlarged_viewports() {
+        for size in [Vec2::new(1000.0, 720.0), Vec2::new(800.0, 576.0)] {
+            let ctx = egui::Context::default();
+            configure_theme(&ctx);
+            let mut email = String::new();
+            let mut password = String::new();
+            for _ in 0..2 {
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, size)),
+                        ..Default::default()
+                    },
+                    |ui| {
+                        egui::CentralPanel::default()
+                            .frame(Frame::new().inner_margin(28))
+                            .show(ui, |ui| {
+                                let output = egui::ScrollArea::vertical().show(ui, |ui| {
+                                    sign_in_layout(ui, |ui| {
+                                        login_controls(ui, &mut email, &mut password, true);
+                                    })
+                                });
+                                assert!(
+                                    output.inner.top() < size.y * 0.4,
+                                    "Form moved to the bottom: {:?}",
+                                    output.inner
+                                );
+                                assert!(
+                                    output.inner.bottom() < size.y - 28.0,
+                                    "Form exceeds viewport: {:?}",
+                                    output.inner
+                                );
+                                assert!(
+                                    output.content_size.y <= output.inner_rect.height() + 1.0,
+                                    "Unexpected sign-in scrollbar: {:?}",
+                                    output.content_size
+                                );
+                            });
+                    },
+                );
+                output.textures_delta.clear();
+            }
+        }
+    }
+
+    #[test]
+    fn own_contact_drafts_survive_refresh_and_accept_the_saved_canonical_record() {
+        let mut previous = DemoStore::new().data;
+        let own = previous.access.employee_id.unwrap();
+        let mut edited = EmployeeContacts::empty(previous.company.id, own);
+        edited.phone = "000 000 0000".into();
+        let mut draft = Some(edited.clone());
+        let mut next = previous.clone();
+        next.company.name = "Updated fictional company".into();
+        sync_profile_contacts(&previous, &next, &mut draft);
+        assert_eq!(draft.as_ref().unwrap().phone, edited.phone);
+        edited.updated_at = Some(chrono::Utc::now());
+        next.contacts.push(edited.clone());
+        sync_profile_contacts(&previous, &next, &mut draft);
+        assert_eq!(draft, Some(edited));
+        previous = next;
+        sync_profile_contacts(&previous, &Snapshot::signed_out(), &mut draft);
+        assert!(draft.is_none());
+    }
 }

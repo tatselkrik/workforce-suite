@@ -160,6 +160,150 @@ fn connect(config: ConnectionConfig) -> CloudClient {
 }
 
 #[test]
+fn editing_staff_saves_the_same_employee_contacts_and_role_in_one_rpc() {
+    use hris_desktop::{contacts::EmployeeContacts, domain::EmployeeDraft};
+    let company = Company::default();
+    let person = DemoStore::new().data.employees[2].clone();
+    let mut replies = baseline(&company);
+    replies[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
+    replies.push(reply(
+        "POST /rest/v1/rpc/save_staff_account ",
+        200,
+        json!(person.id),
+    ));
+    let mut after = baseline(&company);
+    after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
+    replies.extend(after.into_iter().skip(1).take(8));
+    let (config, server, requests) = fixture(replies);
+    let (mut client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    let mut contacts = EmployeeContacts::empty(company.id, person.id);
+    contacts.phone = "000 000 0000".into();
+    client
+        .execute_admin(
+            AdminAction::SaveStaff(
+                AccountDraft {
+                    user_id: Some(uuid::Uuid::from_u128(88)),
+                    email: "staff@example.invalid".into(),
+                    role: Role::HrGeneralist,
+                    active: true,
+                    employee_id: Some(person.id),
+                    ..Default::default()
+                },
+                EmployeeDraft::from(&person),
+                contacts,
+            ),
+            &data,
+        )
+        .unwrap();
+    server.join().unwrap();
+    let requests = requests.lock().unwrap();
+    let saved = requests
+        .iter()
+        .find(|r| r.line.starts_with("POST /rest/v1/rpc/save_staff_account "))
+        .unwrap();
+    assert_eq!(saved.json()["p_employee"]["id"], person.id.to_string());
+    assert_eq!(saved.json()["p_contacts"]["phone"], "000 000 0000");
+    assert_eq!(saved.json()["p_role"], "hr_generalist");
+    assert!(
+        !requests
+            .iter()
+            .any(|r| r.line.starts_with("POST /rest/v1/employees")
+                || r.line.starts_with("POST /rest/v1/rpc/save_company_account"))
+    );
+}
+
+#[test]
+fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cache() {
+    use hris_desktop::domain::Action;
+    let company = Company::default();
+    let mut revised = company.clone();
+    revised.logo_version = Some(uuid::Uuid::from_u128(77));
+    let mut encoded = Cursor::new(Vec::new());
+    image::RgbaImage::from_pixel(4, 2, image::Rgba([20, 40, 60, 128]))
+        .write_to(&mut encoded, image::ImageFormat::Png)
+        .unwrap();
+    let png = encoded.into_inner();
+    let file = std::env::temp_dir().join(format!("hris-logo-http-{}.png", uuid::Uuid::new_v4()));
+    std::fs::write(&file, &png).unwrap();
+    let mut replies = baseline(&company);
+    replies.push(reply(
+        "POST /storage/v1/object/company-branding/",
+        200,
+        json!({"Key":"synthetic"}),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/set_company_logo ",
+        200,
+        json!(revised.logo_version),
+    ));
+    let mut after = baseline(&revised);
+    after.remove(0);
+    after.truncate(8);
+    replies.extend(after);
+    replies.push(Reply {
+        prefix: "GET /storage/v1/object/authenticated/company-branding/".into(),
+        status: 200,
+        body: png,
+        mime: "image/png",
+    });
+    replies.extend(baseline(&revised).into_iter().skip(1).take(8));
+    replies.push(reply(
+        "DELETE /storage/v1/object/company-branding ",
+        200,
+        json!([]),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/set_company_logo ",
+        200,
+        Value::Null,
+    ));
+    replies.extend(baseline(&company).into_iter().skip(1).take(8));
+    let (config, server, requests) = fixture(replies);
+    let (mut client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    let saved = client
+        .execute(Action::UploadCompanyLogo(file.clone()), &data)
+        .unwrap();
+    assert!(saved.logo_png.is_some());
+    assert_eq!(saved.company.logo_version, revised.logo_version);
+    let cached = client.snapshot().unwrap();
+    assert_eq!(cached.logo_png, saved.logo_png);
+    let removed = client.execute(Action::RemoveCompanyLogo, &cached).unwrap();
+    assert!(removed.logo_png.is_none());
+    server.join().unwrap();
+    std::fs::remove_file(file).unwrap();
+    let requests = requests.lock().unwrap();
+    assert_eq!(
+        requests
+            .iter()
+            .filter(|r| r
+                .line
+                .starts_with("GET /storage/v1/object/authenticated/company-branding/"))
+            .count(),
+        1
+    );
+    let upload = requests
+        .iter()
+        .find(|r| {
+            r.line
+                .starts_with("POST /storage/v1/object/company-branding/")
+        })
+        .unwrap();
+    assert!(upload.headers.to_lowercase().contains("x-upsert: true"));
+    assert!(upload.headers.contains("Bearer profile-jwt"));
+    assert!(!upload.body.is_empty());
+}
+
+#[test]
 fn employee_desktop_sign_in_is_rejected_before_loading_hr_data_and_revokes_its_session() {
     let company = Company::default();
     let mut replies = baseline(&company);
@@ -379,12 +523,14 @@ fn update_checks_verify_signatures_and_schema_before_offering_a_new_version() {
     let config_key = UpdateConfig {
         public_key: STANDARD.encode(key.verifying_key().as_bytes()),
     };
+    let current = hris_desktop::updater::Version::parse(hris_desktop::updater::VERSION).unwrap();
+    let next = format!("{}.{}.{}", current.0, current.1, current.2 + 1);
     let release = Release {
         application_id: hris_desktop::APP_ID.into(),
-        version: "0.1.7".into(),
+        version: next.clone(),
         platform: "windows-x64".into(),
         requires_schema: "20261021054356".into(),
-        artifact: "0.1.7/HRIS-Desktop-Update-0.1.7.exe".into(),
+        artifact: format!("{next}/HRIS-Desktop-Update-{next}.exe"),
         sha256: digest(b"MZfixture"),
         executable_sha256: "a".repeat(64),
         size: 9,

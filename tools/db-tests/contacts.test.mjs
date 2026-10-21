@@ -36,11 +36,11 @@ export async function runContactTests({db,eq,deny,session,employee,company,owner
     'Updated fictional address','HR can edit another employee contact record');
   await session(manager);
   eq(await count(),[person(manager)],'Manager reads only own private contacts, excluding direct report');
-  eq((await db.query("update public.employee_contacts set address='Forbidden' returning employee_id")).rows.length,0,'Manager cannot edit own or team contacts');
-  await deny('insert into public.employee_contacts(company_id,employee_id) values($1,$2)',[company.id,person(manager)],['42501']);
+  eq((await db.query("update public.employee_contacts set address='Updated own fictional address' returning employee_id")).rows.map(r=>r.employee_id),[person(manager)],'Manager updates only own contacts, excluding team');
+  await deny('insert into public.employee_contacts(company_id,employee_id) values($1,$2)',[company.id,person(manager)],['23505']);
   await session(staff);
   eq(await count(),[person(staff)],'Portal employee database scope reads own private contacts only');
-  eq((await db.query("update public.employee_contacts set phone='000 000 0002' returning employee_id")).rows.length,0,'Employee cannot edit HR-managed contacts');
+  eq((await db.query("update public.employee_contacts set phone='000 000 0002' returning employee_id")).rows.map(r=>r.employee_id),[person(staff)],'Portal employee can update only own contacts');
   await session(owner);
   await db.query('select public.save_company_account($1,$2,$3,false,$4,$5)',[staff,'staff@example.invalid','employee',person(staff),null]);
   await session(staff);

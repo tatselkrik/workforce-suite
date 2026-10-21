@@ -1,6 +1,6 @@
 # Private Windows updates
 
-Version 0.1.6 adds automatic checks after sign-in and every 15 minutes while open. The installed version appears at the top right. A compatible new release displays a banner with **Update now**; **Settings → App updates** also provides a manual check. Save or discard pending edits before updating. The confirmation explains that HRIS will close, install and reopen at sign-in. Downloads and company data require internet access.
+Version 0.1.7 checks automatically only after successful sign-in. It does not check while signed out or on the idle HR refresh timer. The installed version appears at the top right. A compatible new release displays a persistent banner with **Update now**; **Settings → App updates** also provides a manual check. An available verified offer remains visible across navigation and later transient/manual check failures. Signing out clears it. Save or discard pending edits, including Profile contacts and company settings, before updating. The confirmation explains that HRIS will close, install and reopen at sign-in. Downloads and company data require internet access.
 
 The first installation of 0.1.6 is a coordinated bootstrap: apply its migrations, deploy the functions, and run the company-specific setup. Older installations do not contain the updater. Later versions use the private channel. Ordinary employee accounts cannot use desktop update endpoints.
 

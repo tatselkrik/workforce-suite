@@ -25,6 +25,22 @@ function fixture(replies) {
 }
 const authenticated=(...tail)=>[{body:identity},{body:access},...tail];
 
+test('staff creation saves one complete employee and its role using the caller transaction',async()=>{
+  const employee={id:null,company_id:owner,employee_code:'QA-STAFF',full_name:'Synthetic Staff',department:'QA',job_title:'Test',joined_on:null,annual_leave_days:15,status:'active',reports_to:null};
+  const contacts={phone:'000 000 0000',emergency_name:'Synthetic Contact',emergency_relationship:'Sibling',emergency_phone:'000 000 0001'};
+  const {handler,requests}=fixture(authenticated({body:{id:user}},{body:person},{body:{}}));
+  const response=await handler(req({...create,employee_id:null,employee_name:'Synthetic Staff',employee,contacts,role:'hr_generalist'}));
+  assert.equal(response.status,201);assert.equal(requests[3].url,config.url+'/rest/v1/rpc/save_staff_account');
+  assert.deepEqual(requests[3].json,{p_user_id:user,p_email:create.email,p_role:'hr_generalist',p_active:true,p_employee:employee,p_contacts:contacts});
+  assert.equal(requests[3].headers.Authorization,'Bearer synthetic-user-token');
+});
+
+test('invalid combined staff details fail before privileged Auth creation',async()=>{
+  const {handler,requests}=fixture(authenticated());
+  assert.equal((await handler(req({...create,employee_name:'Synthetic Staff',employee:[],contacts:{}}))).status,400);
+  assert.equal(requests.length,2);
+});
+
 test('new account is unconfirmed; protected assignment uses caller JWT and no credentials leave the response',async()=>{
   const {handler,requests}=fixture(authenticated({body:{id:user}},{body:user},{body:{}}));
   const response=await handler(req());

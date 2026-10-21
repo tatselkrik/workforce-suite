@@ -11,6 +11,8 @@ pub struct Company {
     pub name: String,
     pub timezone: String,
     pub annual_leave_days: u32,
+    #[serde(default)]
+    pub logo_version: Option<Uuid>,
 }
 
 impl Default for Company {
@@ -21,6 +23,7 @@ impl Default for Company {
             name: "Northstar Company".into(),
             timezone: "Asia/Manila".into(),
             annual_leave_days: 15,
+            logo_version: None,
         }
     }
 }
@@ -300,6 +303,8 @@ pub enum Mode {
 #[derive(Clone, Debug)]
 pub struct Snapshot {
     pub company: Company,
+    pub logo_png: Option<Vec<u8>>,
+    pub logo_warning: Option<String>,
     pub employees: Vec<Employee>,
     pub contacts: Vec<crate::contacts::EmployeeContacts>,
     pub attendance: Vec<Attendance>,
@@ -319,6 +324,8 @@ impl Snapshot {
                 ..Company::default()
             },
             employees: Vec::new(),
+            logo_png: None,
+            logo_warning: None,
             contacts: Vec::new(),
             attendance: Vec::new(),
             leave: Vec::new(),
@@ -334,7 +341,24 @@ impl Snapshot {
             .iter()
             .find(|e| e.id == id)
             .map(|e| e.full_name.as_str())
+            .or_else(|| {
+                self.own_employee()
+                    .filter(|e| e.reports_to == Some(id))
+                    .and(self.access.reports_to_name.as_deref())
+            })
             .unwrap_or("Unknown employee")
+    }
+
+    pub fn own_employee(&self) -> Option<&Employee> {
+        self.access
+            .employee_id
+            .and_then(|id| self.employees.iter().find(|e| e.id == id))
+    }
+
+    pub fn own_contacts(&self) -> Option<&crate::contacts::EmployeeContacts> {
+        self.access
+            .employee_id
+            .and_then(|id| self.contacts.iter().find(|c| c.employee_id == id))
     }
 
     pub fn annual_used(&self, id: Uuid, year: i32) -> u32 {
@@ -362,6 +386,9 @@ pub enum Action {
     SaveEmployee(EmployeeDraft),
     SaveEmployeeRecord(EmployeeDraft, crate::contacts::EmployeeContacts),
     SaveEmployeeContacts(crate::contacts::EmployeeContacts),
+    SaveOwnContacts(crate::contacts::EmployeeContacts),
+    UploadCompanyLogo(std::path::PathBuf),
+    RemoveCompanyLogo,
     CheckIn(Uuid),
     CheckOut(Uuid),
     RequestLeave(LeaveDraft),
@@ -492,6 +519,8 @@ impl DemoStore {
         Self {
             data: Snapshot {
                 company,
+                logo_png: None,
+                logo_warning: None,
                 employees,
                 contacts: vec![crate::contacts::EmployeeContacts {
                     phone: "000 000 0000".into(),
@@ -589,7 +618,7 @@ impl DemoStore {
                     return Err(error);
                 }
             }
-            Action::SaveEmployeeContacts(contacts) => {
+            Action::SaveEmployeeContacts(contacts) | Action::SaveOwnContacts(contacts) => {
                 let mut contacts = contacts.normalized()?;
                 ensure!(
                     contacts.company_id == self.data.company.id
@@ -622,7 +651,7 @@ impl DemoStore {
                             .accounts
                             .iter()
                             .any(|a| a.active && a.employee_id == Some(employee.id)),
-                    "An active account is linked to this employee. Deactivate or unlink it first."
+                    "Disable this employee's sign-in access before archiving their record."
                 );
                 ensure!(
                     !self.data.employees.iter().any(|e| e.id != employee.id
@@ -745,6 +774,16 @@ impl DemoStore {
                     .find(|r| r.id == id)
                     .unwrap()
                     .status = status;
+            }
+            Action::UploadCompanyLogo(path) => {
+                self.data.logo_png = Some(crate::branding::logo_from_file(&path)?);
+                self.data.company.logo_version = Some(Uuid::new_v4());
+                self.data.logo_warning = None;
+            }
+            Action::RemoveCompanyLogo => {
+                self.data.logo_png = None;
+                self.data.company.logo_version = None;
+                self.data.logo_warning = None;
             }
             Action::SaveCompany(mut company) => {
                 company.validate()?;

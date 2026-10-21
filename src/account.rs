@@ -266,13 +266,18 @@ pub fn circular_photo(bytes: &[u8]) -> Result<ColorImage> {
 
 #[cfg(windows)]
 pub fn choose_photo() -> Result<Option<PathBuf>> {
+    choose_image("Choose a profile photo")
+}
+
+#[cfg(windows)]
+pub fn choose_image(title: &str) -> Result<Option<PathBuf>> {
     use std::{ffi::OsString, os::windows::ffi::OsStringExt};
     use windows_sys::Win32::UI::{Controls::Dialogs::*, Input::KeyboardAndMouse::GetActiveWindow};
     let mut filename = vec![0u16; 32768];
     let filter: Vec<u16> = "Photos (PNG, JPEG)\0*.png;*.jpg;*.jpeg\0\0"
         .encode_utf16()
         .collect();
-    let title: Vec<u16> = "Choose a profile photo\0".encode_utf16().collect();
+    let title: Vec<u16> = format!("{title}\0").encode_utf16().collect();
     // SAFETY: the UI thread owns this dialog; all buffers outlive the synchronous call.
     let mut dialog: OPENFILENAMEW = unsafe { std::mem::zeroed() };
     dialog.lStructSize = std::mem::size_of::<OPENFILENAMEW>() as u32;
@@ -306,6 +311,11 @@ pub fn choose_photo() -> Result<Option<PathBuf>> {
 #[cfg(not(windows))]
 pub fn choose_photo() -> Result<Option<PathBuf>> {
     anyhow::bail!("Drag a PNG or JPEG onto the Profile page to choose your photo.")
+}
+
+#[cfg(not(windows))]
+pub fn choose_image(_: &str) -> Result<Option<PathBuf>> {
+    anyhow::bail!("Image selection currently supports Windows only.")
 }
 
 #[cfg(test)]

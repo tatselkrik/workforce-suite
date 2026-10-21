@@ -178,6 +178,7 @@ pub struct CloudClient {
     http: Client,
     session: AuthSession,
     account: AccountProfile,
+    logo_cache: Option<(Uuid, Vec<u8>)>,
 }
 
 #[derive(Debug)]
@@ -201,6 +202,55 @@ impl std::fmt::Display for PortalAccount {
 impl std::error::Error for PortalAccount {}
 
 impl CloudClient {
+    fn company_logo(&mut self, company: &Company) -> (Option<Vec<u8>>, Option<String>) {
+        let Some(version) = company.logo_version else {
+            self.logo_cache = None;
+            return (None, None);
+        };
+        if let Some((cached, bytes)) = &self.logo_cache {
+            if *cached == version {
+                return (Some(bytes.clone()), None);
+            }
+        }
+        let fetched = (|| {
+            let mut response = self
+                .account_request(
+                    Method::GET,
+                    &format!(
+                        "/storage/v1/object/authenticated/company-branding/{}/logo.png",
+                        company.id
+                    ),
+                )?
+                .header("Cache-Control", "no-cache")
+                .send()?;
+            if !response.status().is_success() {
+                let _: Value = decode(response)?;
+                unreachable!();
+            }
+            let mut png = Vec::new();
+            response
+                .by_ref()
+                .take(2 * 1024 * 1024 + 1)
+                .read_to_end(&mut png)?;
+            ensure!(
+                png.len() <= 2 * 1024 * 1024,
+                "The company logo is too large."
+            );
+            let png = crate::branding::normalize_logo(&png)?;
+            Ok::<_, anyhow::Error>(png)
+        })();
+        match fetched {
+            Ok(png) => {
+                self.logo_cache = Some((version, png.clone()));
+                (Some(png), None)
+            }
+            Err(_) => (
+                None,
+                Some("The company logo could not be loaded. Refresh to retry.".into()),
+            ),
+        }
+    }
+
     pub fn check_update(&mut self, config: &UpdateConfig) -> Result<UpdateState> {
         let mut response = self
             .request(Method::POST, "rpc/desktop_update")?
@@ -323,6 +373,7 @@ impl CloudClient {
             http,
             account: session.user.profile(),
             session,
+            logo_cache: None,
         };
         let snapshot = client.snapshot()?;
         client.refresh_account()?;
@@ -663,8 +714,11 @@ impl CloudClient {
         } else {
             (Vec::new(), Vec::new())
         };
+        let (logo_png, logo_warning) = self.company_logo(&company);
         Ok(Snapshot {
             company,
+            logo_png,
+            logo_warning,
             employees,
             contacts,
             attendance,
@@ -678,6 +732,42 @@ impl CloudClient {
 
     pub fn execute(&mut self, action: Action, current: &Snapshot) -> Result<Snapshot> {
         current.access.authorize(&action, current)?;
+        if matches!(
+            &action,
+            Action::UploadCompanyLogo(_) | Action::RemoveCompanyLogo
+        ) {
+            let path = format!("{}/logo.png", current.company.id);
+            let present = if let Action::UploadCompanyLogo(file) = &action {
+                let png = crate::branding::logo_from_file(file)?;
+                let response = self
+                    .account_request(
+                        Method::POST,
+                        &format!("/storage/v1/object/company-branding/{path}"),
+                    )?
+                    .header("Content-Type", "image/png")
+                    .header("x-upsert", "true")
+                    .header("Cache-Control", "max-age=0")
+                    .body(png)
+                    .send()
+                    .context("Could not upload the company logo.")?;
+                let _: Value = decode(response)?;
+                true
+            } else {
+                let response = self
+                    .account_request(Method::DELETE, "/storage/v1/object/company-branding")?
+                    .json(&json!({"prefixes":[path]}))
+                    .send()?;
+                let _: Value = decode(response)?;
+                false
+            };
+            let response = self
+                .request(Method::POST, "rpc/set_company_logo")?
+                .json(&json!({"p_present":present}))
+                .send()?;
+            let _:Option<Uuid>=decode(response).context("The logo file changed, but its company setting could not be saved. Refresh and retry.")?;
+            self.logo_cache = None;
+            return self.snapshot();
+        }
         if let Action::SaveEmployeeRecord(draft, contacts) = &action {
             let employee = draft.employee(current.company.id)?;
             let contacts = contacts.normalized()?;
@@ -697,7 +787,8 @@ impl CloudClient {
                 .snapshot()
                 .context("Employee saved, but refresh failed. Click Refresh before trying again.");
         }
-        if let Action::SaveEmployeeContacts(contacts) = &action {
+        if let Action::SaveEmployeeContacts(contacts) | Action::SaveOwnContacts(contacts) = &action
+        {
             let contacts = contacts.normalized()?;
             ensure!(
                 contacts.company_id == current.company.id
@@ -748,7 +839,12 @@ impl CloudClient {
         }
         let (method, table, id, body) = match action {
             Action::SaveEmployeeRecord(_, _) => unreachable!("Employee record saves return above"),
-            Action::SaveEmployeeContacts(_) => unreachable!("Contact saves return above"),
+            Action::SaveEmployeeContacts(_) | Action::SaveOwnContacts(_) => {
+                unreachable!("Contact saves return above")
+            }
+            Action::UploadCompanyLogo(_) | Action::RemoveCompanyLogo => {
+                unreachable!("Logo saves return above")
+            }
             Action::SaveEmployee(draft) => {
                 let employee = draft.employee(current.company.id)?;
                 let mut body = json!({"employee_code": employee.employee_code, "full_name":employee.full_name,
@@ -835,6 +931,35 @@ impl CloudClient {
             "Only administrators can manage accounts."
         );
         let message = match action {
+            AdminAction::SaveStaff(mut draft, employee, contacts) => {
+                draft.employee_name = employee.full_name.trim().into();
+                draft.employee_id = employee.id;
+                draft.validate(current)?;
+                let mut person = serde_json::to_value(employee.employee(current.company.id)?)?;
+                person["id"] = json!(employee.id);
+                let contacts = contacts.normalized()?;
+                ensure!(
+                    contacts.company_id == current.company.id,
+                    "Choose an employee in this company."
+                );
+                if draft.user_id.is_none() && draft.create_new {
+                    let response=self.account_request(Method::POST,"/functions/v1/account-admin")?
+                        .json(&json!({"operation":"create","email":draft.email.trim(),"password":draft.password,
+                            "active":draft.active,"role":draft.role,"employee_name":employee.full_name.trim(),"employee":person,"contacts":contacts})).send()?;
+                    let result: Value = decode(response)?;
+                    if result["confirmation_sent"] == true {
+                        "Employee and staff role saved. Confirm the email before signing in."
+                    } else {
+                        "Employee and staff role saved. Confirmation delivery is pending; use Send confirmation to retry."
+                    }
+                } else {
+                    let response=self.request(Method::POST,"rpc/save_staff_account")?
+                        .json(&json!({"p_user_id":draft.user_id,"p_email":draft.email.trim(),"p_role":draft.role,
+                            "p_active":draft.active,"p_employee":person,"p_contacts":contacts})).send()?;
+                    let _: Uuid = decode(response)?;
+                    "Employee details and staff access saved."
+                }
+            }
             AdminAction::Save(draft) => {
                 draft.validate(current)?;
                 let body = json!({"p_user_id":draft.user_id,"p_email":draft.email.trim(),"p_role":draft.role,
@@ -982,7 +1107,6 @@ pub fn worker(
         let mut demo = initial;
         let mut demo_account = demo.as_ref().map(|_| AccountProfile::demo());
         let mut cloud: Option<CloudClient> = None;
-        let mut next_update_check = std::time::Instant::now();
         let mut current = demo
             .as_ref()
             .map(|store| store.data.clone())
@@ -996,9 +1120,9 @@ pub fn worker(
             };
             let mut message = String::new();
             let mut update_state = None;
+            let mut check_after_sign_in = false;
             let mut result: Result<Snapshot> = match command {
                 Command::CheckUpdates => {
-                    next_update_check = std::time::Instant::now() + Duration::from_secs(900);
                     update_state = Some(match (cloud.as_mut(), UpdateConfig::load()) {
                         (Some(client), Ok(Some(config))) => client
                             .check_update(&config)
@@ -1014,7 +1138,6 @@ pub fn worker(
                     Ok(current.clone())
                 }
                 Command::InstallUpdate(update) => {
-                    next_update_check = std::time::Instant::now() + Duration::from_secs(900);
                     let install = cloud
                         .as_mut()
                         .context("Sign in before updating.")
@@ -1032,13 +1155,14 @@ pub fn worker(
                 } => match CloudClient::connect(config, email, password) {
                     Ok((client, data)) => {
                         cloud = Some(client);
+                        check_after_sign_in = true;
+                        update_state = Some(UpdateState::Idle);
                         message = "Signed in to your company workspace.".into();
                         Ok(data)
                     }
                     Err(error) => Err(error),
                 },
                 Command::SignOut | Command::SignOutEverywhere => {
-                    next_update_check = std::time::Instant::now();
                     update_state = Some(UpdateState::Idle);
                     let everywhere = matches!(command, Command::SignOutEverywhere);
                     if let Some(mut client) = cloud.take() {
@@ -1148,9 +1272,8 @@ pub fn worker(
             }
             repaint.request_repaint();
             // Publish HR results first; an automatic update check never clears busy state or drafts.
-            if std::time::Instant::now() >= next_update_check {
+            if check_after_sign_in {
                 if let (Some(client), Ok(Some(config))) = (cloud.as_mut(), UpdateConfig::load()) {
-                    next_update_check = std::time::Instant::now() + Duration::from_secs(900);
                     let state = client
                         .check_update(&config)
                         .unwrap_or_else(|e| UpdateState::Failed(e.to_string()));
@@ -1180,6 +1303,25 @@ fn execute_demo_admin(store: &mut DemoStore, action: AdminAction) -> Result<Stri
         "Only administrators can manage accounts."
     );
     match action {
+        AdminAction::SaveStaff(mut draft, employee, contacts) => {
+            let before = store.data.clone();
+            let result = (|| {
+                draft.employee_name = employee.full_name.trim().into();
+                let code = employee.employee_code.trim().to_uppercase();
+                store.execute(Action::SaveEmployeeRecord(employee, contacts))?;
+                draft.employee_id = store
+                    .data
+                    .employees
+                    .iter()
+                    .find(|e| e.employee_code == code)
+                    .map(|e| e.id);
+                execute_demo_admin(store, AdminAction::Save(draft))
+            })();
+            if result.is_err() {
+                store.data = before;
+            }
+            result
+        }
         AdminAction::Save(draft) => {
             draft.validate(&store.data)?;
             let user_id = draft.user_id.unwrap_or_else(Uuid::new_v4);
@@ -1287,6 +1429,41 @@ fn execute_demo_admin(store: &mut DemoStore, action: AdminAction) -> Result<Stri
             Ok("Demo account access updated in memory. No account or email was created.".into())
         }
         AdminAction::ResendConfirmation(_) => anyhow::bail!("Demo accounts do not send email."),
+    }
+}
+
+#[cfg(test)]
+mod staff_record_tests {
+    use super::*;
+    #[test]
+    fn failed_staff_access_rolls_back_the_new_employee_and_contacts_in_demo() {
+        let mut store = DemoStore::new();
+        let count = store.data.employees.len();
+        let accounts = store.data.accounts.len();
+        let contacts_count = store.data.contacts.len();
+        let employee = EmployeeDraft {
+            employee_code: "STAFF-ROLLBACK".into(),
+            full_name: "Synthetic Staff".into(),
+            annual_leave_days: 15,
+            ..Default::default()
+        };
+        let contacts = crate::contacts::EmployeeContacts::empty(store.data.company.id, Uuid::nil());
+        let invalid = crate::access::AccountDraft {
+            email: "invalid".into(),
+            employee_name: "Synthetic Staff".into(),
+            role: crate::access::Role::HrGeneralist,
+            ..Default::default()
+        };
+        assert!(
+            execute_demo_admin(
+                &mut store,
+                AdminAction::SaveStaff(invalid, employee, contacts)
+            )
+            .is_err()
+        );
+        assert_eq!(store.data.employees.len(), count);
+        assert_eq!(store.data.accounts.len(), accounts);
+        assert_eq!(store.data.contacts.len(), contacts_count);
     }
 }
 

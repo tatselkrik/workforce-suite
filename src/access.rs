@@ -80,6 +80,8 @@ pub struct Access {
     pub role: Role,
     pub employee_id: Option<Uuid>,
     pub direct_reports: Vec<Uuid>,
+    #[serde(default)]
+    pub reports_to_name: Option<String>,
 }
 
 impl Access {
@@ -108,7 +110,13 @@ impl Access {
             Action::SaveEmployee(_)
             | Action::SaveEmployeeRecord(_, _)
             | Action::SaveEmployeeContacts(_) => self.role.manages_hr(),
-            Action::SaveCompany(_) => self.role.manages_accounts(),
+            Action::SaveOwnContacts(contacts) => {
+                self.employee_id == Some(contacts.employee_id)
+                    && contacts.company_id == self.company_id
+            }
+            Action::SaveCompany(_) | Action::UploadCompanyLogo(_) | Action::RemoveCompanyLogo => {
+                self.role.manages_accounts()
+            }
             Action::CheckIn(id) => self.can_record(*id),
             Action::CheckOut(id) => data
                 .attendance
@@ -234,5 +242,10 @@ impl AccountDraft {
 
 pub enum AdminAction {
     Save(AccountDraft),
+    SaveStaff(
+        AccountDraft,
+        crate::domain::EmployeeDraft,
+        crate::contacts::EmployeeContacts,
+    ),
     ResendConfirmation(Uuid),
 }

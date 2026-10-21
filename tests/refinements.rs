@@ -1,8 +1,49 @@
 use hris_desktop::{
+    access::Role,
     account::{DisplayPreferences, ThemeChoice},
     contacts::EmployeeContacts,
     domain::*,
 };
+
+#[test]
+fn own_contacts_are_editable_without_permission_to_change_employment_or_another_person() {
+    let mut store = DemoStore::new();
+    let own = store.data.employees[2].id;
+    store.data.access.role = Role::Manager;
+    store.data.access.employee_id = Some(own);
+    let mut contacts = EmployeeContacts::empty(store.data.company.id, own);
+    contacts.phone = "000 000 0000".into();
+    store
+        .execute(Action::SaveOwnContacts(contacts.clone()))
+        .unwrap();
+    assert_eq!(store.data.own_contacts().unwrap().phone, "000 000 0000");
+    let employment = EmployeeDraft::from(store.data.own_employee().unwrap());
+    assert!(
+        store
+            .execute(Action::SaveEmployeeRecord(employment, contacts.clone()))
+            .is_err()
+    );
+    contacts.employee_id = store.data.employees[4].id;
+    assert!(store.execute(Action::SaveOwnContacts(contacts)).is_err());
+}
+
+#[test]
+fn profile_reports_to_name_does_not_require_loading_a_supervisors_employment_record() {
+    let mut data = DemoStore::new().data;
+    let own = data.access.employee_id.unwrap();
+    let manager = uuid::Uuid::from_u128(9001);
+    data.employees
+        .iter_mut()
+        .find(|e| e.id == own)
+        .unwrap()
+        .reports_to = Some(manager);
+    data.access.reports_to_name = Some("Synthetic Supervisor".into());
+    assert_eq!(data.employee_name(manager), "Synthetic Supervisor");
+    assert_eq!(
+        data.employee_name(uuid::Uuid::from_u128(9002)),
+        "Unknown employee"
+    );
+}
 
 #[test]
 fn employee_record_saves_employment_and_contacts_together_and_keeps_invalid_edits_out() {
