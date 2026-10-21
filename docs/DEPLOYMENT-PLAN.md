@@ -1,10 +1,10 @@
 # Account Manager deployment review — 0.1.4
 
-Status: locally verified candidate, awaiting explicit hosted deployment approval. Keep installed 0.1.3 until the hosted changes and checks are complete.
+Status: explicitly approved and deployed on 2026-10-21; hosted role/provisioning checks passed and temporary test data was removed. The private installation report records the subsequent guarded Windows update.
 
-## Requested hosted changes
+## Approved hosted changes
 
-Apply `supabase/migrations/20261021012241_account_manager_roles.sql` only to the existing dedicated HRIS project. Its version is provisional until the migration tool assigns the hosted version.
+Applied `supabase/migrations/20261021021602_account_manager_roles.sql` only to the existing dedicated HRIS project. Its filename matches the server-assigned version.
 
 - Add protected company memberships and account-access history; backfill the existing owner as an active Administrator.
 - Add narrow private authorization helpers and invoker-only public access/account RPCs.
@@ -12,7 +12,7 @@ Apply `supabase/migrations/20261021012241_account_manager_roles.sql` only to the
 - Preserve the original owner and prevent client-written memberships, self-demotion, self-approval, duplicate active employee links and reporting cycles. Serialize employee links/archiving and leave-budget decisions.
 - Extend private own-photo policies to active members. No public photo bucket or server credential is introduced.
 
-Deploy `supabase/functions/account-admin/index.ts` with `handler.mjs` as the new `account-admin` function in the same project. It validates each bearer with Auth, checks current Administrator membership, creates unconfirmed Auth identities using its hosted server credential and assigns access using the caller's JWT. It sends confirmation requests and preserves pending accounts if delivery fails. No existing function will be replaced according to the current preflight.
+Deployed `supabase/functions/account-admin/index.ts` with `handler.mjs` as the new `account-admin` function, active version 1, in the same project. It validates each bearer with Auth, checks current Administrator membership, creates unconfirmed Auth identities using its hosted server credential and assigns access using the caller's JWT. It sends confirmation requests and preserves pending accounts if delivery fails. No existing function was replaced.
 
 The change affects live access rules and adds privileged server-side account provisioning. It does not delete existing HR data, change the company connection, change the administrator password/email, switch the Free plan or touch another company's project. The migration is transactional. The preflight found one company, one confirmed owner and no HR records; recheck that state at deployment time.
 
@@ -29,4 +29,4 @@ The original owner remains compatible with 0.1.3, which can be retained or resto
 
 40 Rust tests, 126 local PostgreSQL assertions and 22 provisioning-handler tests passed. Formatting, optimized Windows build and native minimum-size/125% visual checks passed. Tests are local and use fictional identities; hosted Account Manager workflows have not run.
 
-Automatic approval review rejected the migration because live schema/RLS changes need explicit deployment confirmation. No migration, function deployment or installation has occurred for this update. The default localhost confirmation redirect and company mail-delivery configuration still need a usable deployment flow before workplace rollout. No public release, push or remote CI result is claimed.
+The migration, active function, rollback-only hosted role suite and real account-provisioning checks passed after explicit approval. The original owner remains active. Signup delivery/confirmation, HR restrictions, disabled-token/private-photo access, actual Manager desktop admission and Employee rejection passed; guarded cleanup restored the original counts. See `VERIFICATION.md` for evidence and test limits. The default localhost confirmation redirect and company mail-delivery configuration still need a usable deployment flow before workplace rollout. No public release, push or remote CI result is claimed.
