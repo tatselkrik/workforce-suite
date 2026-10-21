@@ -159,6 +159,8 @@ fn baseline(company: &Company) -> Vec<Reply> {
             )),
         ),
         reply("GET /rest/v1/employment_history?", 200, json!([])),
+        reply("GET /rest/v1/employee_documents?", 200, json!([])),
+        reply("GET /rest/v1/employee_document_events?", 200, json!([])),
         reply("GET /auth/v1/user ", 200, user(company)),
         reply(
             "GET /storage/v1/object/authenticated/profile-photos/",
@@ -166,6 +168,341 @@ fn baseline(company: &Company) -> Vec<Reply> {
             json!({"code":"NoSuchKey","message":"Object not found"}),
         ),
     ]
+}
+
+struct DocumentFixture {
+    store: hris_desktop::domain::DemoStore,
+    draft: hris_desktop::documents::DocumentDraft,
+    folder: std::path::PathBuf,
+    bytes: Vec<u8>,
+}
+impl DocumentFixture {
+    fn new() -> Self {
+        let store = hris_desktop::domain::DemoStore::new();
+        let folder =
+            std::env::temp_dir().join(format!("hris-document-http-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir(&folder).unwrap();
+        let bytes = b"%PDF-1.4\n1 0 obj <</Type /Catalog>> endobj\n%%EOF\n".to_vec();
+        let file = folder.join("Synthetic document.pdf");
+        std::fs::write(&file, &bytes).unwrap();
+        let mut draft = hris_desktop::documents::DocumentDraft::new(store.data.employees[1].id);
+        draft.title = "Synthetic file".into();
+        draft.file = Some(file);
+        Self {
+            store,
+            draft,
+            folder,
+            bytes,
+        }
+    }
+    fn baseline(
+        &self,
+        docs: Vec<hris_desktop::documents::EmployeeDocument>,
+        events: Vec<hris_desktop::documents::DocumentEvent>,
+    ) -> Vec<Reply> {
+        let mut replies = baseline(&self.store.data.company);
+        replies[3] = reply(
+            "GET /rest/v1/employees?",
+            200,
+            json!([self.store.data.employees[1]]),
+        );
+        replies[13] = reply("GET /rest/v1/employee_documents?", 200, json!(docs));
+        replies[14] = reply("GET /rest/v1/employee_document_events?", 200, json!(events));
+        replies
+    }
+    fn uploaded(&mut self) -> hris_desktop::documents::EmployeeDocument {
+        hris_desktop::documents::execute_demo(
+            &mut self.store.data,
+            &mut std::collections::HashMap::new(),
+            hris_desktop::documents::DocumentAction::Upload(self.draft.clone()),
+        )
+        .unwrap();
+        self.store.data.documents[0].clone()
+    }
+}
+impl Drop for DocumentFixture {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.folder);
+    }
+}
+
+#[test]
+fn employee_document_upload_reserves_private_path_finalizes_and_reloads_protected_history() {
+    use hris_desktop::documents::*;
+    for upload_status in [200, 409] {
+        let mut f = DocumentFixture::new();
+        let ready = f.uploaded();
+        let mut pending = ready.clone();
+        pending.state = DocumentState::Pending;
+        pending.revision = 0;
+        let mut replies = f.baseline(vec![], vec![]);
+        replies.push(reply(
+            "POST /rest/v1/rpc/save_employee_document ",
+            200,
+            json!(pending),
+        ));
+        replies.push(reply(
+            "POST /storage/v1/object/employee-documents/",
+            upload_status,
+            json!({}),
+        ));
+        replies.push(reply(
+            "POST /rest/v1/rpc/save_employee_document ",
+            200,
+            json!(ready),
+        ));
+        replies.extend(
+            f.baseline(vec![ready.clone()], f.store.data.document_events.clone())
+                .into_iter()
+                .skip(1)
+                .take(14),
+        );
+        let (config, server, requests) = fixture(replies);
+        let (mut client, current) = CloudClient::connect(
+            config,
+            "person@example.invalid".into(),
+            "synthetic passphrase".into(),
+        )
+        .unwrap();
+        let (after, _) = client
+            .execute_document(DocumentAction::Upload(f.draft.clone()), &current)
+            .unwrap();
+        assert_eq!(after.documents, vec![ready]);
+        assert_eq!(after.document_events.len(), 1);
+        server.join().unwrap();
+        let requests = requests.lock().unwrap();
+        let operations: Vec<_> = requests
+            .iter()
+            .filter(|r| r.line.contains("/rpc/save_employee_document "))
+            .map(|r| r.json())
+            .collect();
+        assert_eq!(operations[0]["p_operation"], "reserve");
+        assert_eq!(operations[1]["p_operation"], "finalize");
+        assert!(operations[0]["p_document"].get("created_by").is_none());
+        assert!(operations[0]["p_document"].get("state").is_none());
+        let upload = requests
+            .iter()
+            .find(|r| r.line.starts_with("POST /storage/v1/object/"))
+            .unwrap();
+        assert_eq!(upload.body, f.bytes);
+        assert!(upload.headers.contains("profile-jwt"));
+        assert!(
+            upload
+                .headers
+                .to_lowercase()
+                .contains("content-type: application/pdf")
+        );
+        assert!(!upload.headers.to_lowercase().contains("x-upsert"));
+        assert!(
+            !requests
+                .iter()
+                .any(|r| r.line.starts_with("DELETE /storage/"))
+        );
+    }
+}
+
+#[test]
+fn an_unconfirmed_upload_is_retained_for_retry_and_never_reported_as_filed() {
+    use hris_desktop::documents::*;
+    let mut f = DocumentFixture::new();
+    let mut pending = f.uploaded();
+    pending.state = DocumentState::Pending;
+    pending.revision = 0;
+    let mut replies = f.baseline(vec![], vec![]);
+    replies.push(reply(
+        "POST /rest/v1/rpc/save_employee_document ",
+        200,
+        json!(pending),
+    ));
+    replies.push(reply(
+        "POST /storage/v1/object/employee-documents/",
+        500,
+        json!({"message":"Upload interrupted"}),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/save_employee_document ",
+        400,
+        json!({"code":"23514","message":"Incomplete upload"}),
+    ));
+    let (config, server, requests) = fixture(replies);
+    let (mut client, current) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    let error = client
+        .execute_document(DocumentAction::Upload(f.draft.clone()), &current)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("not confirmed"));
+    assert!(current.documents.is_empty());
+    server.join().unwrap();
+    assert!(
+        !requests
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|r| r.line.starts_with("DELETE /storage/"))
+    );
+}
+
+#[test]
+fn a_mismatched_upload_reservation_sends_no_document_bytes() {
+    use hris_desktop::documents::*;
+    let mut f = DocumentFixture::new();
+    let mut wrong = f.uploaded();
+    wrong.id = uuid::Uuid::new_v4();
+    wrong.object_name = object_name(
+        wrong.company_id,
+        wrong.employee_id,
+        wrong.id,
+        &wrong.mime_type,
+    )
+    .unwrap();
+    wrong.state = DocumentState::Pending;
+    let mut replies = f.baseline(vec![], vec![]);
+    replies.push(reply(
+        "POST /rest/v1/rpc/save_employee_document ",
+        200,
+        json!(wrong),
+    ));
+    let (config, server, requests) = fixture(replies);
+    let (mut client, current) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert!(
+        client
+            .execute_document(DocumentAction::Upload(f.draft.clone()), &current)
+            .is_err()
+    );
+    server.join().unwrap();
+    assert!(
+        !requests
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|r| r.line.starts_with("POST /storage/"))
+    );
+}
+
+#[test]
+fn private_document_download_verifies_bytes_before_writing_a_user_selected_copy() {
+    use hris_desktop::documents::*;
+    for tampered in [false, true] {
+        let mut f = DocumentFixture::new();
+        let ready = f.uploaded();
+        let mut replies = f.baseline(vec![ready.clone()], vec![]);
+        replies.push(Reply {
+            prefix: "GET /storage/v1/object/authenticated/employee-documents/".into(),
+            status: 200,
+            body: if tampered {
+                b"tampered file".to_vec()
+            } else {
+                f.bytes.clone()
+            },
+            mime: "application/pdf",
+        });
+        if !tampered {
+            replies.extend(
+                f.baseline(vec![ready.clone()], vec![])
+                    .into_iter()
+                    .skip(1)
+                    .take(14),
+            );
+        }
+        let (config, server, requests) = fixture(replies);
+        let (mut client, current) = CloudClient::connect(
+            config,
+            "person@example.invalid".into(),
+            "synthetic passphrase".into(),
+        )
+        .unwrap();
+        let destination = f.folder.join("download.pdf");
+        let result = client.execute_document(
+            DocumentAction::Download {
+                id: ready.id,
+                destination: destination.clone(),
+            },
+            &current,
+        );
+        assert_eq!(result.is_ok(), !tampered);
+        assert_eq!(destination.exists(), !tampered);
+        if !tampered {
+            assert_eq!(std::fs::read(destination).unwrap(), f.bytes);
+        }
+        server.join().unwrap();
+        let requests = requests.lock().unwrap();
+        let download = requests
+            .iter()
+            .find(|r| r.line.contains("/authenticated/employee-documents/"))
+            .unwrap();
+        assert!(download.headers.contains("profile-jwt"));
+        assert!(
+            download
+                .headers
+                .to_lowercase()
+                .contains("cache-control: no-cache")
+        );
+    }
+}
+
+#[test]
+fn archiving_documents_uses_revisioned_rpc_and_reloads_retained_files() {
+    use hris_desktop::documents::*;
+    let mut f = DocumentFixture::new();
+    let doc = f.uploaded();
+    let mut archived = doc.clone();
+    archived.archived = true;
+    archived.revision += 1;
+    let mut replies = f.baseline(vec![doc.clone()], vec![]);
+    replies.push(reply(
+        "POST /rest/v1/rpc/save_employee_document ",
+        200,
+        json!(archived),
+    ));
+    replies.extend(
+        f.baseline(vec![archived.clone()], vec![])
+            .into_iter()
+            .skip(1)
+            .take(14),
+    );
+    let (config, server, requests) = fixture(replies);
+    let (mut client, current) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    let (after, _) = client
+        .execute_document(
+            DocumentAction::Archive {
+                id: doc.id,
+                revision: doc.revision,
+                archived: true,
+            },
+            &current,
+        )
+        .unwrap();
+    assert_eq!(after.documents, vec![archived]);
+    server.join().unwrap();
+    let requests = requests.lock().unwrap();
+    let request = requests
+        .iter()
+        .find(|r| r.line.contains("/rpc/save_employee_document "))
+        .unwrap();
+    assert_eq!(
+        request.json(),
+        json!({"p_operation":"archive","p_document":{"id":doc.id,"revision":1}})
+    );
+    assert!(
+        !requests
+            .iter()
+            .any(|r| r.line.starts_with("DELETE /storage/"))
+    );
 }
 
 #[test]
@@ -205,7 +542,7 @@ fn employment_history_is_reloaded_with_company_scope_and_never_supplied_by_the_w
     let mut after = baseline(&company);
     after[3] = reply("GET /rest/v1/employees?", 200, json!([saved]));
     after[12] = reply("GET /rest/v1/employment_history?", 200, json!(events));
-    replies.extend(after.into_iter().skip(1).take(12));
+    replies.extend(after.into_iter().skip(1).take(14));
     let (config, server, requests) = fixture(replies);
     let (mut client, current) = CloudClient::connect(
         config,
@@ -294,7 +631,7 @@ fn attendance_correction_uses_the_guarded_rpc_and_reloads_immutable_history() {
     after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
     after[5] = reply("GET /rest/v1/attendance?", 200, json!([row]));
     after[6] = reply("GET /rest/v1/attendance_corrections?", 200, json!([event]));
-    replies.extend(after.into_iter().skip(1).take(12));
+    replies.extend(after.into_iter().skip(1).take(14));
     let (config, server, requests) = fixture(replies);
     let (mut client, current) = CloudClient::connect(
         config,
@@ -358,7 +695,7 @@ fn employment_options_use_guarded_rpc_and_reload_inactive_labels_without_changin
     revised[0].revision = 1;
     revised[0].name = "Main office renamed".into();
     after[11] = reply("GET /rest/v1/work_locations?", 200, json!(revised));
-    replies.extend(after.into_iter().skip(1).take(12));
+    replies.extend(after.into_iter().skip(1).take(14));
     let (config, server, requests) = fixture(replies);
     let (mut client, current) = CloudClient::connect(
         config,
@@ -447,7 +784,7 @@ fn editing_staff_saves_the_same_employee_contacts_and_role_in_one_rpc() {
     ));
     let mut after = baseline(&company);
     after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
-    replies.extend(after.into_iter().skip(1).take(12));
+    replies.extend(after.into_iter().skip(1).take(14));
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -525,7 +862,7 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
     ));
     let mut after = baseline(&revised);
     after.remove(0);
-    after.truncate(12);
+    after.truncate(14);
     replies.extend(after);
     replies.push(Reply {
         prefix: "GET /storage/v1/object/authenticated/company-branding/".into(),
@@ -533,7 +870,7 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
         body: png,
         mime: "image/png",
     });
-    replies.extend(baseline(&revised).into_iter().skip(1).take(12));
+    replies.extend(baseline(&revised).into_iter().skip(1).take(14));
     replies.push(reply(
         "DELETE /storage/v1/object/company-branding ",
         200,
@@ -544,7 +881,7 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
         200,
         Value::Null,
     ));
-    replies.extend(baseline(&company).into_iter().skip(1).take(12));
+    replies.extend(baseline(&company).into_iter().skip(1).take(14));
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -631,6 +968,10 @@ fn manager_desktop_sign_in_does_not_request_administrator_account_data() {
     replies.drain(8..10);
     replies.remove(6); // Correction reasons are HR-only, including their loading path.
     replies.retain(|r| !r.prefix.contains("/employment_history?"));
+    replies.retain(|r| {
+        !r.prefix.contains("/employee_documents?")
+            && !r.prefix.contains("/employee_document_events?")
+    });
     let (config, server, requests) = fixture(replies);
     let (client, data) = CloudClient::connect(
         config,
@@ -676,7 +1017,7 @@ fn employee_contacts_save_and_reload_separately_with_scoped_updates_and_zero_row
         snapshot_replies(vec![normalized.clone()])
             .into_iter()
             .skip(1)
-            .take(12),
+            .take(14),
     );
     let mut updated = normalized.clone();
     updated.address = "Updated fictional address".into();
@@ -689,7 +1030,7 @@ fn employee_contacts_save_and_reload_separately_with_scoped_updates_and_zero_row
         snapshot_replies(vec![updated.clone()])
             .into_iter()
             .skip(1)
-            .take(12),
+            .take(14),
     );
     replies.push(reply("PATCH /rest/v1/employee_contacts?", 200, json!([])));
     let (config, server, observed) = fixture(replies);
@@ -761,7 +1102,7 @@ fn unified_employee_save_uses_one_transaction_rpc_instead_of_separate_partial_wr
     ));
     let mut after = baseline(&company);
     after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
-    initial.extend(after.into_iter().skip(1).take(12));
+    initial.extend(after.into_iter().skip(1).take(14));
     let (config, server, requests) = fixture(initial);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -874,7 +1215,7 @@ fn account_provisioning_preserves_disabled_access_and_sends_password_only_to_the
         201,
         json!({"confirmation_sent":false}),
     ));
-    replies.extend(baseline(&company).into_iter().skip(1).take(12));
+    replies.extend(baseline(&company).into_iter().skip(1).take(14));
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -894,21 +1235,18 @@ fn account_provisioning_preserves_disabled_access_and_sends_password_only_to_the
     assert!(message.contains("planned portal"));
     server.join().unwrap();
     let requests = requests.lock().unwrap();
-    let body = requests[15].json();
+    let body = requests[17].json();
     assert_eq!(body["active"], false);
     assert_eq!(body["role"], "employee");
     assert!(body["employee_id"].is_null());
     assert_eq!(body["password"], "synthetic initial passphrase");
     assert!(!body.to_string().contains("confirmation"));
-    assert!(requests[15].headers.contains("profile-jwt"));
+    assert!(requests[17].headers.contains("profile-jwt"));
     assert!(
         requests
             .iter()
-            .enumerate()
-            .filter(|(i, _)| *i != 15)
-            .all(
-                |(_, r)| !String::from_utf8_lossy(&r.body).contains("synthetic initial passphrase")
-            )
+            .filter(|r| !r.line.starts_with("POST /functions/v1/account-admin "))
+            .all(|r| !String::from_utf8_lossy(&r.body).contains("synthetic initial passphrase"))
     );
 }
 fn photo() -> Vec<u8> {
@@ -987,21 +1325,21 @@ fn personal_details_preferences_and_private_photo_roundtrip_use_only_the_signed_
     server.join().unwrap();
     let requests = requests.lock().unwrap();
     assert_eq!(
-        requests[15].json(),
+        requests[17].json(),
         json!({"data":{"hris_profile":{"full_name":"Alex Morgan","preferred_name":"Morgan","contact_phone":""}}})
     );
-    assert!(requests[16].json().get("app_metadata").is_none());
+    assert!(requests[18].json().get("app_metadata").is_none());
     assert!(
-        requests[17]
+        requests[19]
             .headers
             .to_lowercase()
             .contains("x-upsert: true")
     );
     assert_eq!(
-        image::load_from_memory(&requests[17].body).unwrap().width(),
+        image::load_from_memory(&requests[19].body).unwrap().width(),
         256
     );
-    assert_eq!(requests[20].json(), json!({"prefixes":[path]}));
+    assert_eq!(requests[22].json(), json!({"prefixes":[path]}));
     for request in &requests[1..] {
         assert!(
             request
@@ -1120,21 +1458,21 @@ fn password_and_email_changes_reauthenticate_and_keep_email_pending_until_confir
     server.join().unwrap();
     let requests = requests.lock().unwrap();
     assert_eq!(
-        requests[16].json(),
+        requests[18].json(),
         json!({"password":"new synthetic passphrase","current_password":"old synthetic passphrase"})
     );
     assert!(
-        requests[16]
+        requests[18]
             .headers
             .to_lowercase()
             .contains("authorization: bearer fresh-password-jwt")
     );
     assert_eq!(
-        requests[18].json(),
+        requests[20].json(),
         json!({"email":"updated@example.invalid"})
     );
     assert!(
-        requests[18]
+        requests[20]
             .headers
             .to_lowercase()
             .contains("authorization: bearer fresh-email-jwt")

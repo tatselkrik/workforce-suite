@@ -1,5 +1,6 @@
 use crate::access::{Access, AccessEvent, AdminAction, ManagedAccount};
 use crate::account::{self, AccountAction, AccountProfile, DisplayPreferences, PersonalDetails};
+use crate::documents::{self, DocumentAction, DocumentState, EmployeeDocument};
 use crate::domain::*;
 use crate::updater::{self, SignedRelease, UpdateConfig, UpdateState, VerifiedRelease};
 use anyhow::{Context, Result, bail, ensure};
@@ -736,6 +737,14 @@ impl CloudClient {
         } else {
             Vec::new()
         };
+        let (documents, document_events) = if access.role.manages_hr() {
+            (
+                self.rows("employee_documents", Some(company.id))?,
+                self.rows("employee_document_events", Some(company.id))?,
+            )
+        } else {
+            (Vec::new(), Vec::new())
+        };
         let (logo_png, logo_warning) = self.company_logo(&company);
         Ok(Snapshot {
             company,
@@ -753,7 +762,135 @@ impl CloudClient {
             employment_types,
             work_locations,
             employment_history,
+            documents,
+            document_events,
         })
+    }
+
+    fn document_write(&mut self, operation: &str, payload: Value) -> Result<EmployeeDocument> {
+        decode(self.request(Method::POST, "rpc/save_employee_document")?
+            .json(&json!({"p_operation":operation,"p_document":payload})).send()
+            .context("Could not save the document. Check your connection and Refresh before retrying.")?)
+    }
+
+    pub fn execute_document(
+        &mut self,
+        action: DocumentAction,
+        current: &Snapshot,
+    ) -> Result<(Snapshot, String)> {
+        let message = match action {
+            DocumentAction::Upload(draft) => {
+                let prepared = documents::prepare_upload(&draft, current)?;
+                let reserved = self.document_write("reserve", prepared.payload.clone())?;
+                reserved.validate_file_record()?;
+                ensure!(
+                    reserved.id == draft.id
+                        && reserved.company_id == current.company.id
+                        && reserved.employee_id == draft.employee_id
+                        && reserved.details == draft.details()?
+                        && reserved.byte_size == prepared.bytes.len()
+                        && reserved.mime_type == prepared.mime
+                        && reserved.sha256 == prepared.payload["sha256"].as_str().unwrap_or(""),
+                    "The upload reservation did not match the selected document. No file was sent."
+                );
+                if reserved.state == DocumentState::Pending {
+                    // A retry may encounter the already-uploaded immutable object. Finalization
+                    // validates Storage's actual size/type/owner before making the record visible.
+                    let uploaded = self
+                        .account_request(
+                            Method::POST,
+                            &format!(
+                                "/storage/v1/object/employee-documents/{}",
+                                reserved.object_name
+                            ),
+                        )?
+                        .header("Content-Type", prepared.mime)
+                        .header("Cache-Control", "max-age=0")
+                        .body(prepared.bytes)
+                        .send();
+                    drop(uploaded);
+                    self.document_write("finalize",json!({"id":reserved.id}))
+                        .context("The upload was not confirmed. Refresh to check it, retry the same file, or discard the incomplete upload.")?;
+                } else {
+                    ensure!(
+                        reserved.state == DocumentState::Ready,
+                        "This upload has been discarded. Start a new upload."
+                    );
+                }
+                "Document filed. Its original file is retained; details can be edited separately."
+                    .into()
+            }
+            DocumentAction::Edit(draft) => {
+                let doc = documents::record(current, draft.id)?;
+                ensure!(
+                    doc.employee_id == draft.employee_id && draft.original.is_some(),
+                    "Reopen this document before editing it."
+                );
+                self.document_write("edit", draft.payload()?)?;
+                "Document details saved. The original file is unchanged.".into()
+            }
+            DocumentAction::Archive {
+                id,
+                revision,
+                archived,
+            } => {
+                documents::record(current, id)?;
+                self.document_write(
+                    if archived { "archive" } else { "restore" },
+                    json!({"id":id,"revision":revision}),
+                )?;
+                if archived {
+                    "Document archived. Its file and history are retained."
+                } else {
+                    "Document restored."
+                }
+                .into()
+            }
+            DocumentAction::Discard { id } => {
+                documents::record(current, id)?;
+                let discarded = self.document_write("discard", json!({"id":id}))?;
+                discarded.validate_file_record()?;
+                let response = self.account_request(Method::DELETE,"/storage/v1/object/employee-documents")?
+                    .json(&json!({"prefixes":[discarded.object_name]})).send()
+                    .context("Upload discarded, but unused-file cleanup failed. Refresh and retry Clean up upload.")?;
+                let _: Value = decode(response).context("Upload discarded, but unused-file cleanup failed. Refresh and retry Clean up upload.")?;
+                "Incomplete upload discarded and unused file cleaned up.".into()
+            }
+            DocumentAction::Download { id, destination } => {
+                let doc = documents::record(current, id)?;
+                doc.validate_file_record()?;
+                ensure!(
+                    doc.state == DocumentState::Ready,
+                    "This upload is not yet filed."
+                );
+                let mut response = self
+                    .account_request(
+                        Method::GET,
+                        &format!(
+                            "/storage/v1/object/authenticated/employee-documents/{}",
+                            doc.object_name
+                        ),
+                    )?
+                    .header("Cache-Control", "no-cache")
+                    .send()
+                    .context("Could not download the private document.")?;
+                if !response.status().is_success() {
+                    let _: Value = decode(response)?;
+                    unreachable!();
+                }
+                let mut bytes = Vec::new();
+                response
+                    .by_ref()
+                    .take(documents::MAX_FILE_BYTES as u64 + 1)
+                    .read_to_end(&mut bytes)?;
+                documents::save_download(doc, &bytes, &destination)?;
+                "Document downloaded to the file you selected.".into()
+            }
+        };
+        let data = self.snapshot().context(
+            "Document operation completed, but refresh failed. Click Refresh before retrying.",
+        )?;
+        Ok((data, message))
     }
 
     pub fn execute(&mut self, action: Action, current: &Snapshot) -> Result<Snapshot> {
@@ -1136,6 +1273,7 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
 }
 
 pub enum Command {
+    Document(DocumentAction),
     CheckUpdates,
     InstallUpdate(VerifiedRelease),
     Change(Action),
@@ -1167,6 +1305,7 @@ pub fn worker(
     let (events, updates) = mpsc::channel();
     thread::spawn(move || {
         let mut demo = initial;
+        let mut demo_documents = std::collections::HashMap::new();
         let mut demo_account = demo.as_ref().map(|_| AccountProfile::demo());
         let mut cloud: Option<CloudClient> = None;
         let mut current = demo
@@ -1225,6 +1364,7 @@ pub fn worker(
                     Err(error) => Err(error),
                 },
                 Command::SignOut | Command::SignOutEverywhere => {
+                    demo_documents.clear();
                     update_state = Some(UpdateState::Idle);
                     let everywhere = matches!(command, Command::SignOutEverywhere);
                     if let Some(mut client) = cloud.take() {
@@ -1270,6 +1410,26 @@ pub fn worker(
                             .context("Sign in to HRIS to access company records.")
                             .and_then(|store| store.execute(action).map(|_| store.data.clone())),
                     }
+                }
+                Command::Document(action) => {
+                    let changed = match cloud.as_mut() {
+                        Some(client) => client.execute_document(action, &current),
+                        None => demo
+                            .as_mut()
+                            .context("Sign in to HRIS to manage employee documents.")
+                            .and_then(|store| {
+                                documents::execute_demo(
+                                    &mut store.data,
+                                    &mut demo_documents,
+                                    action,
+                                )
+                                .map(|text| (store.data.clone(), text))
+                            }),
+                    };
+                    changed.map(|(data, text)| {
+                        message = text;
+                        data
+                    })
                 }
                 Command::Account(action) => {
                     let changed = match cloud.as_mut() {

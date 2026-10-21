@@ -21,7 +21,7 @@ fn auth_fixture(
     let address = listener.local_addr().unwrap();
     let requests = Arc::new(Mutex::new(Vec::new()));
     let observed = requests.clone();
-    let expected_requests = if companies.is_empty() { 2 } else { 15 };
+    let expected_requests = if companies.is_empty() { 2 } else { 17 };
     let user_id = companies
         .first()
         .map(|company| company.owner_id)
@@ -184,6 +184,9 @@ fn company_worker_rejects_reads_and_writes_until_hris_sign_in() {
         Command::Refresh,
         Command::Change(Action::SaveCompany(Company::default())),
         Command::Account(hris_desktop::account::AccountAction::RemovePhoto),
+        Command::Document(hris_desktop::documents::DocumentAction::Discard {
+            id: uuid::Uuid::new_v4(),
+        }),
     ] {
         commands.send(command).unwrap();
         let update = updates.recv_timeout(Duration::from_secs(3)).unwrap();

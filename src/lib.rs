@@ -4,6 +4,7 @@ pub mod attendance;
 pub mod backend;
 pub mod contacts;
 pub mod corrections;
+pub mod documents;
 pub mod domain;
 pub mod employment;
 pub mod history;

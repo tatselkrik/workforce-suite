@@ -183,6 +183,8 @@ try {
   await runEmploymentTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
   const {runHistoryTests}=await import('./history.test.mjs');
   await runHistoryTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
+  const {runDocumentTests}=await import('./documents.test.mjs');
+  await runDocumentTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL schema, authorization, and workflow assertions.`);
 } finally {
   await db.close();

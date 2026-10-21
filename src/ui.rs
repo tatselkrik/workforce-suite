@@ -5,6 +5,7 @@ use crate::{
     branding,
     contacts::EmployeeContacts,
     corrections::CorrectionDraft,
+    documents::{self, DocumentAction, DocumentCategory, DocumentDraft, DocumentState},
     domain::*,
     employment::{EmploymentFilter, EmploymentKind, EmploymentOptionDraft},
     updater::{self, UpdateState},
@@ -70,6 +71,7 @@ enum ContactSection {
     Emergency,
     Access,
     History,
+    Documents,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -91,6 +93,12 @@ pub struct HrisApp {
     employment_type_filter: EmploymentFilter,
     work_location_filter: EmploymentFilter,
     employment_option_form: Option<EmploymentOptionDraft>,
+    document_form: Option<DocumentDraft>,
+    document_category: Option<DocumentCategory>,
+    document_search: String,
+    show_archived_documents: bool,
+    show_discarded_documents: bool,
+    close_document_on_success: bool,
     attendance_date: NaiveDate,
     calendar_month: NaiveDate,
     check_in_employee: Option<Uuid>,
@@ -295,6 +303,12 @@ impl HrisApp {
             employment_type_filter: EmploymentFilter::All,
             work_location_filter: EmploymentFilter::All,
             employment_option_form: None,
+            document_form: None,
+            document_category: None,
+            document_search: String::new(),
+            show_archived_documents: false,
+            show_discarded_documents: false,
+            close_document_on_success: false,
             check_in_employee: None,
             leave_filter: None,
             employee_form: None,
@@ -627,6 +641,138 @@ impl HrisApp {
                     app.employment_option_form = Some(draft);
                 }
                 Ok(
+                    "documents"
+                    | "documents-archived"
+                    | "documents-empty"
+                    | "documents-upload"
+                    | "documents-contract"
+                    | "documents-edit"
+                    | "documents-error"
+                    | "documents-manager"
+                    | "documents-docx"
+                    | "documents-docx-file",
+                ) => {
+                    let preview = std::env::var("HRIS_PREVIEW_FORM").unwrap_or_default();
+                    let person = if preview == "documents-manager" {
+                        app.data.access.employee_id.unwrap_or(Uuid::from_u128(101))
+                    } else {
+                        Uuid::from_u128(101)
+                    };
+                    let today = app.data.company.today();
+                    if preview != "documents-empty" {
+                        for i in 0..4 {
+                            let id = Uuid::from_u128(6000 + i);
+                            let archived = i == 2;
+                            let details=documents::DocumentDetails {
+                                title:match i{0=>"Sample employment contract and terms for regional client services",1=>"Sample training certificate",2=>"Previous sample contract",_=>"Interrupted sample upload"}.into(),
+                                category:if i==1 {DocumentCategory::Certificate}else{DocumentCategory::Contract},
+                                notes:if i==0 {"Fictional preview only. Original signed scan retained; metadata changes do not replace the file."}else{"Fictional preview only."}.into(),
+                                issued_on:Some(today-chrono::Duration::days(60)),expires_on:Some(today+chrono::Duration::days(if i==1 {-1}else{14})),
+                                contract_start:if i==1{None}else{Some(today-chrono::Duration::days(30))},contract_end:if i==1{None}else{Some(today+chrono::Duration::days(14))},
+                            };
+                            let doc = documents::EmployeeDocument {
+                                id,
+                                company_id: app.data.company.id,
+                                employee_id: person,
+                                details,
+                                original_filename: format!(
+                                    "Fictional sample {}.{}",
+                                    i + 1,
+                                    if preview == "documents-docx-file" && i == 0 {
+                                        "docx"
+                                    } else {
+                                        "pdf"
+                                    }
+                                ),
+                                mime_type: if preview == "documents-docx-file" && i == 0 {
+                                    documents::DOCX_MIME
+                                } else {
+                                    "application/pdf"
+                                }
+                                .into(),
+                                byte_size: 120000,
+                                sha256: "a".repeat(64),
+                                object_name: documents::object_name(
+                                    app.data.company.id,
+                                    person,
+                                    id,
+                                    if preview == "documents-docx-file" && i == 0 {
+                                        documents::DOCX_MIME
+                                    } else {
+                                        "application/pdf"
+                                    },
+                                )
+                                .unwrap(),
+                                state: if i == 3 {
+                                    DocumentState::Pending
+                                } else {
+                                    DocumentState::Ready
+                                },
+                                archived,
+                                revision: if archived { 2 } else { 1 },
+                                created_by: app.data.access.user_id,
+                                created_by_name: "Alex Rivera".into(),
+                                created_at: chrono::Utc::now() - chrono::Duration::days(i as i64),
+                                updated_at: chrono::Utc::now(),
+                            };
+                            if i < 3 {
+                                app.data.document_events.push(documents::DocumentEvent {
+                                    id: Uuid::new_v4(),
+                                    sequence: i as i64 + 1,
+                                    company_id: doc.company_id,
+                                    employee_id: person,
+                                    document_id: id,
+                                    kind: "uploaded".into(),
+                                    actor_id: doc.created_by,
+                                    actor_name: doc.created_by_name.clone(),
+                                    actor_role: Role::Administrator,
+                                    before_record: None,
+                                    after_record: doc.clone(),
+                                    recorded_at: doc.created_at,
+                                });
+                            }
+                            app.data.documents.push(doc);
+                        }
+                    }
+                    app.open_employee(person);
+                    if app.data.access.role.manages_hr() {
+                        app.contacts_section = ContactSection::Documents;
+                    }
+                    if preview == "documents-archived" {
+                        app.show_archived_documents = true;
+                    }
+                    if matches!(
+                        preview.as_str(),
+                        "documents-upload"
+                            | "documents-contract"
+                            | "documents-error"
+                            | "documents-docx"
+                    ) {
+                        let mut draft = DocumentDraft::new(person);
+                        if preview != "documents-upload" {
+                            draft.title = "Fictional employment contract".into();
+                            draft.category = DocumentCategory::Contract;
+                            draft.contract_start = today.to_string();
+                            draft.contract_end = (today + chrono::Duration::days(365)).to_string();
+                            draft.file = Some(std::path::PathBuf::from("Fictional contract.pdf"));
+                            if preview == "documents-docx" {
+                                draft.file =
+                                    Some(std::path::PathBuf::from("Fictional contract.docx"));
+                            }
+                        }
+                        if preview == "documents-error" {
+                            app.notice = Some((
+                                "This document changed. Refresh and reopen it before saving."
+                                    .into(),
+                                true,
+                            ));
+                        }
+                        app.document_form = Some(draft);
+                    } else if preview == "documents-edit" {
+                        app.document_form = Some(DocumentDraft::existing(&app.data.documents[0]));
+                    }
+                }
+                Ok(
                     "history-baseline" | "history-updated" | "history-created" | "history-archived"
                     | "history-long" | "history-empty" | "history-manager",
                 ) => {
@@ -755,6 +901,7 @@ impl HrisApp {
             match update.result {
                 Ok(data) => {
                     if self.data.access != data.access {
+                        self.document_form = None;
                         self.account_form = None;
                         self.employee_form = None;
                         self.contacts_form = None;
@@ -768,6 +915,7 @@ impl HrisApp {
                         );
                     }
                     if self.data.mode != data.mode {
+                        self.document_form = None;
                         self.clear_profile_secrets(ctx);
                         self.session_confirmation = None;
                         self.profile_section = ProfileSection::Employment;
@@ -842,6 +990,7 @@ impl HrisApp {
                             .map(|e| e.id);
                     }
                     if self.close_on_success {
+                        self.document_form = None;
                         self.employee_form = None;
                         self.contacts_form = None;
                         self.leave_form = None;
@@ -849,6 +998,9 @@ impl HrisApp {
                         self.employment_option_form = None;
                         self.correction_history = None;
                         self.account_form = None;
+                    }
+                    if self.close_document_on_success {
+                        self.document_form = None;
                     }
                     if !update.message.is_empty() {
                         self.notice = Some((update.message, false));
@@ -880,6 +1032,7 @@ impl HrisApp {
                 self.account = update.account;
             }
             self.close_on_success = false;
+            self.close_document_on_success = false;
             if self.page == Page::Accounts && !self.data.access.role.manages_accounts() {
                 self.page = Page::Overview;
             }
@@ -936,6 +1089,11 @@ impl HrisApp {
     }
 
     fn open_employee(&mut self, id: Uuid) {
+        self.document_form = None;
+        self.document_search.clear();
+        self.document_category = None;
+        self.show_archived_documents = false;
+        self.show_discarded_documents = false;
         self.account_form = None;
         let Some(employee) = self.data.employees.iter().find(|e| e.id == id) else {
             return;
@@ -1015,6 +1173,11 @@ impl HrisApp {
                 if editable && draft.id.is_some() {
                     ui.selectable_value(
                         &mut self.contacts_section,
+                        ContactSection::Documents,
+                        "Documents / 201 files",
+                    );
+                    ui.selectable_value(
+                        &mut self.contacts_section,
                         ContactSection::History,
                         "History",
                     );
@@ -1022,7 +1185,10 @@ impl HrisApp {
             });
             ui.separator();
             ui.set_max_width(ui.available_width().min(
-                if self.contacts_section == ContactSection::History {
+                if matches!(
+                    self.contacts_section,
+                    ContactSection::History | ContactSection::Documents
+                ) {
                     920.0
                 } else {
                     680.0
@@ -1045,6 +1211,9 @@ impl HrisApp {
                     ContactSection::History if editable=>{
                         if let Some(id)=draft.id { employment_history(ui,&self.data,id,self.time_format()); }
                     }
+                    ContactSection::Documents if editable=>{
+                        if let Some(id)=draft.id { self.employee_documents(ui,id); }
+                    }
                     ContactSection::Access if self.data.access.role.manages_accounts()=>{
                         if access.is_none() {
                             if let Some(existing)=self.data.accounts.iter().find(|a|a.employee_id==draft.id && draft.id.is_some()) {
@@ -1065,18 +1234,26 @@ impl HrisApp {
             });
             ui.add_space(12.0);
             ui.horizontal_wrapped(|ui| {
-                if editable {
+                if editable && self.document_form.is_none() {
                     save = primary(
                         ui,
                         if access.is_some() {
                             "Save employee & role"
+                        } else if self.contacts_section == ContactSection::Documents {
+                            "Save employee changes"
                         } else {
                             "Save changes"
                         },
                     );
                 }
                 close |= ui
-                    .button(if editable { "Cancel" } else { "Close record" })
+                    .button(
+                        if editable && self.contacts_section != ContactSection::Documents {
+                            "Cancel"
+                        } else {
+                            "Close record"
+                        },
+                    )
                     .clicked();
             });
             if !editable {
@@ -1128,6 +1305,7 @@ impl HrisApp {
             self.contacts_form = Some(contacts);
             self.account_form = access;
         } else {
+            self.document_form = None;
             clear_edit_history(
                 ui.ctx(),
                 &["account-initial-password", "account-initial-confirm"],
@@ -1365,6 +1543,7 @@ impl HrisApp {
 
     fn has_unsaved_edits(&self) -> bool {
         self.employee_form.is_some()
+            || self.document_form.is_some()
             || self.employment_option_form.is_some()
             || self.correction_form.is_some()
             || self.leave_form.is_some()
@@ -2837,6 +3016,381 @@ impl HrisApp {
         }
     }
 
+    fn employee_documents(&mut self, ui: &mut Ui, employee: Uuid) {
+        if documents::authorize(&self.data, employee).is_err() {
+            return;
+        }
+        ui.label(
+            RichText::new("Employee documents / 201 files")
+                .size(18.0)
+                .strong(),
+        );
+        ui.label("Private HR/Admin files. Documents save separately from employee changes.");
+        ui.horizontal_wrapped(|ui| {
+            if primary(ui, "+ Upload document") {
+                self.document_form = Some(DocumentDraft::new(employee));
+                self.notice = None;
+            }
+            ui.checkbox(&mut self.show_archived_documents, "Show archived");
+            ui.checkbox(&mut self.show_discarded_documents, "Show discarded uploads");
+        });
+        ui.horizontal_wrapped(|ui| {
+            ui.add(
+                egui::TextEdit::singleline(&mut self.document_search)
+                    .hint_text("Search document title or filename")
+                    .desired_width(250.0),
+            );
+            egui::ComboBox::from_id_salt("document_category_filter")
+                .selected_text(
+                    self.document_category
+                        .map_or("All categories", DocumentCategory::label),
+                )
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.document_category, None, "All categories");
+                    for category in DocumentCategory::ALL {
+                        ui.selectable_value(
+                            &mut self.document_category,
+                            Some(category),
+                            category.label(),
+                        );
+                    }
+                });
+        });
+        let query = self.document_search.trim().to_lowercase();
+        let rows: Vec<_> = documents::records(&self.data, employee)
+            .into_iter()
+            .filter(|d| {
+                (self.show_archived_documents || !d.archived)
+                    && (self.show_discarded_documents || d.state != DocumentState::Discarded)
+                    && self
+                        .document_category
+                        .is_none_or(|kind| kind == d.details.category)
+                    && (query.is_empty()
+                        || format!("{} {}", d.details.title, d.original_filename)
+                            .to_lowercase()
+                            .contains(&query))
+            })
+            .cloned()
+            .collect();
+        if rows.is_empty() {
+            empty(
+                ui,
+                "No documents match this view. Upload a contract, scan, certificate or other attachment.",
+            );
+        }
+        for doc in rows {
+            ui.separator();
+            let _title = ui.add(
+                egui::Label::new(RichText::new(&doc.details.title).strong().size(16.0)).wrap(),
+            );
+            #[cfg(feature = "qa-screenshot")]
+            if matches!(
+                (
+                    std::env::var("HRIS_PREVIEW_SCROLL").as_deref(),
+                    doc.id.as_u128()
+                ),
+                (Ok("document-file"), 6000) | (Ok("document-archived"), 6002)
+            ) {
+                _title.scroll_to_me(Some(Align::Min));
+            }
+            ui.horizontal_wrapped(|ui| {
+                ui.label(doc.details.category.label());
+                badge(
+                    ui,
+                    doc.status(self.data.company.today()),
+                    doc.state == DocumentState::Ready
+                        && !doc.archived
+                        && doc
+                            .details
+                            .expires_on
+                            .is_none_or(|d| d >= self.data.company.today()),
+                );
+            });
+            ui.add(
+                egui::Label::new(format!(
+                    "{} · {} · {:.1} KiB",
+                    doc.original_filename,
+                    match doc.mime_type.as_str() {
+                        "application/pdf" => "PDF",
+                        documents::DOCX_MIME => "DOCX",
+                        "image/png" => "PNG",
+                        "image/jpeg" => "JPEG",
+                        _ => "Document",
+                    },
+                    doc.byte_size as f64 / 1024.0
+                ))
+                .wrap(),
+            );
+            ui.label(format!(
+                "Uploaded by {} · {}",
+                doc.created_by_name,
+                account_timestamp(
+                    &doc.created_at.to_rfc3339(),
+                    self.data.company.tz(),
+                    self.time_format()
+                )
+            ));
+            let date = |value: Option<NaiveDate>| {
+                value
+                    .map(|d| d.to_string())
+                    .unwrap_or_else(|| "Not set".into())
+            };
+            if doc.details.issued_on.is_some() || doc.details.expires_on.is_some() {
+                ui.label(format!(
+                    "Issued: {} · Expires: {}",
+                    date(doc.details.issued_on),
+                    date(doc.details.expires_on)
+                ));
+            }
+            if doc.details.category == DocumentCategory::Contract {
+                ui.label(format!(
+                    "Contract start: {} · End: {}",
+                    date(doc.details.contract_start),
+                    date(doc.details.contract_end)
+                ));
+            }
+            if !doc.details.notes.is_empty() {
+                ui.add(egui::Label::new(&doc.details.notes).wrap());
+            }
+            let _actions = ui.horizontal_wrapped(|ui| {
+                if doc.state == DocumentState::Ready {
+                    if ui.button("Edit details").clicked() {
+                        self.document_form = Some(DocumentDraft::existing(&doc));
+                        self.notice = None;
+                    }
+                    if ui.button("Download").clicked() {
+                        match documents::choose_file(Some(&doc.original_filename)) {
+                            Ok(Some(destination)) => {
+                                self.send(Command::Document(DocumentAction::Download {
+                                    id: doc.id,
+                                    destination,
+                                }))
+                            }
+                            Ok(None) => {}
+                            Err(error) => self.notice = Some((error.to_string(), true)),
+                        }
+                    }
+                    if ui
+                        .button(if doc.archived { "Restore" } else { "Archive" })
+                        .clicked()
+                    {
+                        self.send(Command::Document(DocumentAction::Archive {
+                            id: doc.id,
+                            revision: doc.revision,
+                            archived: !doc.archived,
+                        }));
+                    }
+                } else {
+                    if doc.state == DocumentState::Pending
+                        && doc.created_by == self.data.access.user_id
+                        && ui.button("Retry upload").clicked()
+                    {
+                        self.document_form = Some(DocumentDraft::existing(&doc));
+                        self.notice = None;
+                    }
+                    if ui
+                        .button(if doc.state == DocumentState::Pending {
+                            "Discard incomplete upload"
+                        } else {
+                            "Clean up upload"
+                        })
+                        .clicked()
+                    {
+                        self.send(Command::Document(DocumentAction::Discard { id: doc.id }));
+                    }
+                }
+            });
+            #[cfg(feature = "qa-screenshot")]
+            if std::env::var("HRIS_PREVIEW_SCROLL").as_deref() == Ok("document-actions")
+                && doc.id.as_u128() == 6000
+            {
+                _actions.response.scroll_to_me(Some(Align::Min));
+            }
+            if doc.state == DocumentState::Pending {
+                ui.label("This file is not yet filed. Retry with the exact same file, or discard this incomplete upload.");
+            }
+            if doc.state == DocumentState::Discarded {
+                ui.label("This upload is permanently discarded. Clean up upload retries removal of any unused file.");
+            }
+            let mut events: Vec<_> = self
+                .data
+                .document_events
+                .iter()
+                .filter(|e| e.company_id == self.data.company.id && e.document_id == doc.id)
+                .collect();
+            events.sort_by_key(|e| std::cmp::Reverse(e.sequence));
+            if !events.is_empty() {
+                let history =
+                    egui::CollapsingHeader::new(format!("Document history ({})", events.len()))
+                        .id_salt(("document_history", doc.id));
+                #[cfg(feature = "qa-screenshot")]
+                let history = history.default_open(
+                    std::env::var("HRIS_PREVIEW_SCROLL").as_deref() == Ok("document-history")
+                        && doc.id.as_u128() == 6000,
+                );
+                history.show(ui, |ui| {
+                    for event in events {
+                        ui.separator();
+                        let kind = match event.kind.as_str() {
+                            "uploaded" => "Filed",
+                            "details_updated" => "Details updated",
+                            "archived" => "Archived",
+                            "restored" => "Restored",
+                            _ => "Saved",
+                        };
+                        ui.add(
+                            egui::Label::new(format!(
+                                "{} · {} · {} ({})",
+                                kind,
+                                account_timestamp(
+                                    &event.recorded_at.to_rfc3339(),
+                                    self.data.company.tz(),
+                                    self.time_format()
+                                ),
+                                event.actor_name,
+                                event.actor_role.label()
+                            ))
+                            .wrap(),
+                        );
+                        let fields = |record: &documents::EmployeeDocument| {
+                            vec![
+                                ("Title", record.details.title.clone()),
+                                ("Category", record.details.category.label().to_owned()),
+                                ("Notes", record.details.notes.clone()),
+                                ("Issued", date(record.details.issued_on)),
+                                ("Expires", date(record.details.expires_on)),
+                                ("Contract start", date(record.details.contract_start)),
+                                ("Contract end", date(record.details.contract_end)),
+                                (
+                                    "Archived",
+                                    if record.archived { "Yes" } else { "No" }.into(),
+                                ),
+                            ]
+                        };
+                        let before = event.before_record.as_ref().map(&fields);
+                        for (i, (name, after)) in
+                            fields(&event.after_record).into_iter().enumerate()
+                        {
+                            if let Some(old) = before.as_ref() {
+                                if old[i].1 != after {
+                                    ui.add(
+                                        egui::Label::new(format!(
+                                            "{name}: {} → {after}",
+                                            if old[i].1.is_empty() {
+                                                "Not set"
+                                            } else {
+                                                &old[i].1
+                                            }
+                                        ))
+                                        .wrap(),
+                                    );
+                                }
+                            } else if name == "Title" || name == "Category" {
+                                ui.add(egui::Label::new(format!("{name}: {after}")).wrap());
+                            }
+                        }
+                    }
+                    #[cfg(feature = "qa-screenshot")]
+                    if std::env::var("HRIS_PREVIEW_SCROLL").as_deref() == Ok("document-history")
+                        && doc.id.as_u128() == 6000
+                    {
+                        ui.scroll_to_cursor(Some(Align::BOTTOM));
+                    }
+                });
+            }
+        }
+        ui.add_space(10.0);
+        ui.label("PDF, DOCX, PNG and JPEG up to 10 MiB. Archive retains the original file and its history. To replace a file, upload another document and archive the old one.");
+    }
+
+    fn document_dialog(&mut self, ctx: &egui::Context) {
+        let Some(mut draft) = self.document_form.take() else {
+            return;
+        };
+        if documents::authorize(&self.data, draft.employee_id).is_err() {
+            return;
+        }
+        let editing = draft
+            .original
+            .as_ref()
+            .is_some_and(|d| d.state == DocumentState::Ready);
+        let retrying = draft
+            .original
+            .as_ref()
+            .is_some_and(|d| d.state == DocumentState::Pending);
+        let mut open = true;
+        let mut save = false;
+        let mut cancel = false;
+        egui::Window::new(if editing{"Edit document details"}else if retrying{"Retry document upload"}else{"Upload employee document"})
+            .id(egui::Id::unique("employee_document_dialog")).open(&mut open).collapsible(false).resizable(false)
+            .default_width(520.0).anchor(egui::Align2::CENTER_CENTER,[0.0,0.0]).show(ctx,|ui| {
+                ui.add_enabled_ui(!self.busy,|ui| {
+                    egui::ScrollArea::vertical().id_salt("document_form_body").max_height((ctx.content_rect().height()-260.0).max(130.0)).show(ui,|ui| {
+                        ui.label(RichText::new(self.data.employee_name(draft.employee_id)).size(18.0).strong());
+                        if editing {
+                            ui.add(egui::Label::new(format!("Original file: {}",draft.original.as_ref().unwrap().original_filename)).wrap());
+                            ui.label("The file is retained unchanged. These fields describe the document.");
+                        } else {
+                            if ui.button("Choose PDF, DOCX, PNG or JPEG…").clicked() {
+                                match documents::choose_file(None) {
+                                    Ok(Some(path))=>{
+                                        if draft.title.trim().is_empty() {draft.title=path.file_stem().and_then(|s|s.to_str()).unwrap_or("").chars().take(120).collect();}
+                                        draft.file=Some(path);
+                                    },
+                                    Ok(None)=>{},Err(error)=>self.notice=Some((error.to_string(),true)),
+                                }
+                            }
+                            ui.add(egui::Label::new(draft.file.as_ref().and_then(|p|p.file_name()).map(|s|s.to_string_lossy().into_owned()).unwrap_or_else(||"No file selected · up to 10 MiB".into())).wrap());
+                            if retrying {ui.label("Choose the exact original file and retain its reserved details. Discard the incomplete upload to start over with different details.");}
+                        }
+                        field(ui,"Document title *",&mut draft.title,"Contract, certificate, HR form…");
+                        ui.label("Category");
+                        let previous=draft.category;
+                        egui::ComboBox::from_id_salt("document_category").selected_text(draft.category.label()).show_ui(ui,|ui| {
+                            for category in DocumentCategory::ALL {ui.selectable_value(&mut draft.category,category,category.label());}
+                        });
+                        if previous!=draft.category && draft.category!=DocumentCategory::Contract {draft.contract_start.clear();draft.contract_end.clear();}
+                        field(ui,"Issue date (optional)",&mut draft.issued_on,"YYYY-MM-DD");
+                        field(ui,"Expiry date (optional)",&mut draft.expires_on,"YYYY-MM-DD");
+                        if draft.category==DocumentCategory::Contract {
+                            field(ui,"Contract start (optional)",&mut draft.contract_start,"YYYY-MM-DD");
+                            field(ui,"Contract end (optional)",&mut draft.contract_end,"YYYY-MM-DD");
+                        }
+                        ui.label("Notes (optional)");
+                        ui.add_sized([ui.available_width(),70.0],egui::TextEdit::multiline(&mut draft.notes).hint_text("Describe this document. Up to 1,000 characters."));
+                        ui.label("Saves independently from Employment and Contact details. Dates are for reference; automated expiry alerts come later.");
+                        #[cfg(feature="qa-screenshot")]
+                        if std::env::var("HRIS_PREVIEW_SCROLL").as_deref()==Ok("bottom"){ui.scroll_to_cursor(Some(Align::BOTTOM));}
+                    });
+                    if let Some((message,true))=&self.notice {ui.add(egui::Label::new(RichText::new(message).color(ui.visuals().error_fg_color)).wrap());}
+                    ui.add_space(8.0);
+                    ui.horizontal(|ui| {save=primary(ui,if editing{"Save document details"}else if retrying{"Retry upload"}else{"Upload document"});cancel=ui.button("Cancel").clicked();});
+                });
+            });
+        if save {
+            match draft.details().and_then(|_| {
+                anyhow::ensure!(
+                    editing || draft.file.is_some(),
+                    "Choose a document to upload."
+                );
+                Ok(())
+            }) {
+                Ok(()) => {
+                    self.close_document_on_success = true;
+                    self.send(Command::Document(if editing {
+                        DocumentAction::Edit(draft.clone())
+                    } else {
+                        DocumentAction::Upload(draft.clone())
+                    }));
+                }
+                Err(error) => self.notice = Some((error.to_string(), true)),
+            }
+        }
+        if (open && !cancel) || self.busy {
+            self.document_form = Some(draft);
+        }
+    }
+
     fn open_correction(&mut self, employee: Uuid, day: NaiveDate) {
         let original = self
             .data
@@ -2992,6 +3546,7 @@ impl HrisApp {
     }
 
     fn forms(&mut self, ctx: &egui::Context) {
+        self.document_dialog(ctx);
         self.employment_option_dialog(ctx);
         self.attendance_forms(ctx);
         if let Some(mut draft) = self.leave_form.take() {
@@ -3071,6 +3626,7 @@ impl eframe::App for HrisApp {
                 });
         } else {
             let form_open = self.leave_form.is_some()
+                || self.document_form.is_some()
                 || self.employment_option_form.is_some()
                 || self.correction_form.is_some()
                 || self.correction_history.is_some()

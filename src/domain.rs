@@ -329,6 +329,8 @@ pub struct Snapshot {
     pub employment_types: Vec<crate::employment::EmploymentOption>,
     pub work_locations: Vec<crate::employment::EmploymentOption>,
     pub employment_history: Vec<crate::history::EmploymentEvent>,
+    pub documents: Vec<crate::documents::EmployeeDocument>,
+    pub document_events: Vec<crate::documents::DocumentEvent>,
 }
 
 impl Snapshot {
@@ -353,6 +355,8 @@ impl Snapshot {
             employment_types: Vec::new(),
             work_locations: Vec::new(),
             employment_history: Vec::new(),
+            documents: Vec::new(),
+            document_events: Vec::new(),
         }
     }
 
@@ -609,6 +613,8 @@ impl DemoStore {
                 access_events: Vec::new(),
                 corrections: Vec::new(),
                 employment_history: Vec::new(),
+                documents: Vec::new(),
+                document_events: Vec::new(),
                 employment_types: crate::employment::demo_choices(
                     crate::employment::EmploymentKind::EmploymentType,
                     Uuid::from_u128(1),

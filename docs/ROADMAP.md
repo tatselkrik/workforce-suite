@@ -12,7 +12,7 @@ Employee accounts are prepared for the portal and cannot sign into the desktop. 
 
 ## Stage 2 — Employee records and organization
 
-Implemented: one employee editor with private contact/emergency details and reporting relationships, including employees without accounts (see [contact permissions](EMPLOYEE-CONTACTS.md)). Configurable employment types/work locations, employee assignments, read-only Profile fields and employee filters are implemented. Automatic HR-only employment history with starting snapshots and immutable before/after events is implemented (see [employment history](EMPLOYMENT-HISTORY.md)). Next add contracts, attachments/digital 201 files, then organization charts. Give sensitive documents their own access and retention rules.
+Implemented: one employee editor with private contact/emergency details and reporting relationships, including employees without accounts (see [contact permissions](EMPLOYEE-CONTACTS.md)). Configurable employment types/work locations, employee assignments, read-only Profile fields and employee filters are implemented. Automatic HR-only employment history with starting snapshots and immutable before/after events is implemented (see [employment history](EMPLOYMENT-HISTORY.md)). Private contracts, attachments/digital 201 files with metadata, original downloads, retention and history are implemented (see [employee documents](EMPLOYEE-DOCUMENTS.md)). Next add organization charts. Effective-date employment actions, e-signing and document approval workflows remain future work.
 
 ## Stage 3 — Leave policies and approvals
 
