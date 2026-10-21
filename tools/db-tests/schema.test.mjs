@@ -169,6 +169,8 @@ try {
   await runProfileTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   const {runCorrectionTests}=await import('./corrections.test.mjs');
   await runCorrectionTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
+  const {runEmploymentTests}=await import('./employment.test.mjs');
+  await runEmploymentTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL schema, authorization, and workflow assertions.`);
 } finally {
   await db.close();

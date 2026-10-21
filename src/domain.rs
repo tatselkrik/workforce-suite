@@ -83,6 +83,10 @@ pub struct Employee {
     pub joined_on: Option<NaiveDate>,
     #[serde(default)]
     pub reports_to: Option<Uuid>,
+    #[serde(default)]
+    pub employment_type_id: Option<Uuid>,
+    #[serde(default)]
+    pub work_location_id: Option<Uuid>,
     pub annual_leave_days: u32,
     pub status: EmployeeStatus,
 }
@@ -96,6 +100,8 @@ pub struct EmployeeDraft {
     pub job_title: String,
     pub joined_on: String,
     pub reports_to: Option<Uuid>,
+    pub employment_type_id: Option<Uuid>,
+    pub work_location_id: Option<Uuid>,
     pub annual_leave_days: u32,
     pub status: EmployeeStatus,
 }
@@ -110,6 +116,8 @@ impl From<&Employee> for EmployeeDraft {
             job_title: e.job_title.clone(),
             joined_on: e.joined_on.map(|d| d.to_string()).unwrap_or_default(),
             reports_to: e.reports_to,
+            employment_type_id: e.employment_type_id,
+            work_location_id: e.work_location_id,
             annual_leave_days: e.annual_leave_days,
             status: e.status,
         }
@@ -155,6 +163,8 @@ impl EmployeeDraft {
                 Some(parse_date(&self.joined_on)?)
             },
             reports_to: self.reports_to,
+            employment_type_id: self.employment_type_id,
+            work_location_id: self.work_location_id,
             annual_leave_days: self.annual_leave_days,
             status: self.status,
         })
@@ -316,6 +326,8 @@ pub struct Snapshot {
     pub accounts: Vec<crate::access::ManagedAccount>,
     pub access_events: Vec<crate::access::AccessEvent>,
     pub corrections: Vec<crate::corrections::CorrectionEvent>,
+    pub employment_types: Vec<crate::employment::EmploymentOption>,
+    pub work_locations: Vec<crate::employment::EmploymentOption>,
 }
 
 impl Snapshot {
@@ -337,6 +349,8 @@ impl Snapshot {
             accounts: Vec::new(),
             access_events: Vec::new(),
             corrections: Vec::new(),
+            employment_types: Vec::new(),
+            work_locations: Vec::new(),
         }
     }
 
@@ -399,6 +413,7 @@ pub enum Action {
     RequestLeave(LeaveDraft),
     DecideLeave(Uuid, LeaveStatus),
     SaveCompany(Company),
+    SaveEmploymentOption(crate::employment::EmploymentOptionDraft),
 }
 
 pub struct DemoStore {
@@ -413,6 +428,7 @@ impl Default for DemoStore {
 
 impl DemoStore {
     fn validate_reporting(&self, employee: &Employee) -> Result<()> {
+        crate::employment::validate_assignments(&self.data, employee)?;
         if let Some(manager) = employee.reports_to {
             ensure!(
                 manager != employee.id,
@@ -473,6 +489,8 @@ impl DemoStore {
                 job_title: (*title).into(),
                 joined_on: Some(today - chrono::Duration::days(180 + 23 * i as i64)),
                 reports_to: (i == 1).then_some(Uuid::from_u128(103)),
+                employment_type_id: (i != 6).then_some(Uuid::from_u128(1000 + (i % 3) as u128)),
+                work_location_id: (i != 6).then_some(Uuid::from_u128(2000 + (i % 2) as u128)),
                 annual_leave_days: 15,
                 status: if i == 7 {
                     EmployeeStatus::Archived
@@ -588,6 +606,14 @@ impl DemoStore {
                 ],
                 access_events: Vec::new(),
                 corrections: Vec::new(),
+                employment_types: crate::employment::demo_choices(
+                    crate::employment::EmploymentKind::EmploymentType,
+                    Uuid::from_u128(1),
+                ),
+                work_locations: crate::employment::demo_choices(
+                    crate::employment::EmploymentKind::WorkLocation,
+                    Uuid::from_u128(1),
+                ),
             },
         }
     }
@@ -595,6 +621,28 @@ impl DemoStore {
     pub fn execute(&mut self, action: Action) -> Result<()> {
         self.data.access.authorize(&action, &self.data)?;
         match action {
+            Action::SaveEmploymentOption(draft) => {
+                let option = draft.option(&self.data)?;
+                let choices = match draft.kind {
+                    crate::employment::EmploymentKind::EmploymentType => {
+                        &mut self.data.employment_types
+                    }
+                    crate::employment::EmploymentKind::WorkLocation => {
+                        &mut self.data.work_locations
+                    }
+                };
+                if let Some(existing) = choices.iter_mut().find(|c| c.id == option.id) {
+                    *existing = option;
+                } else {
+                    choices.push(option);
+                }
+                choices.sort_by(|a, b| {
+                    a.name
+                        .to_lowercase()
+                        .cmp(&b.name.to_lowercase())
+                        .then(a.id.cmp(&b.id))
+                });
+            }
             Action::CorrectAttendance(change) => {
                 change.validate(&self.data, Utc::now())?;
                 let before_record = self

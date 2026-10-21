@@ -6,6 +6,7 @@ use crate::{
     contacts::EmployeeContacts,
     corrections::CorrectionDraft,
     domain::*,
+    employment::{EmploymentFilter, EmploymentKind, EmploymentOptionDraft},
     updater::{self, UpdateState},
 };
 use chrono::{Datelike, Duration, Months, NaiveDate};
@@ -86,6 +87,9 @@ pub struct HrisApp {
     search: String,
     employee_status: Option<EmployeeStatus>,
     department: String,
+    employment_type_filter: EmploymentFilter,
+    work_location_filter: EmploymentFilter,
+    employment_option_form: Option<EmploymentOptionDraft>,
     attendance_date: NaiveDate,
     calendar_month: NaiveDate,
     check_in_employee: Option<Uuid>,
@@ -287,6 +291,9 @@ impl HrisApp {
             search: String::new(),
             employee_status: Some(EmployeeStatus::Active),
             department: String::new(),
+            employment_type_filter: EmploymentFilter::All,
+            work_location_filter: EmploymentFilter::All,
+            employment_option_form: None,
             check_in_employee: None,
             leave_filter: None,
             employee_form: None,
@@ -585,6 +592,41 @@ impl HrisApp {
                     app.correction_form = Some(draft);
                 }
             }
+            match std::env::var("HRIS_PREVIEW_FORM").as_deref() {
+                Ok("employment-inactive" | "employment-filter") => {
+                    app.data.employment_types[0].active = false;
+                    app.data.work_locations[0].active = false;
+                    if std::env::var("HRIS_PREVIEW_FORM").as_deref() == Ok("employment-filter") {
+                        app.employment_type_filter =
+                            EmploymentFilter::Choice(app.data.employment_types[0].id);
+                        app.work_location_filter =
+                            EmploymentFilter::Choice(app.data.work_locations[0].id);
+                    } else {
+                        app.open_employee(Uuid::from_u128(100));
+                    }
+                }
+                Ok("employment-long") => {
+                    app.data.employment_types[0].name="Company-defined specialist employment classification for regional service staff".into();
+                    app.data.work_locations[0].name="Regional service and administration office for the northern operations district".into();
+                    if app.page == Page::Employees {
+                        app.open_employee(Uuid::from_u128(100));
+                    }
+                }
+                Ok("choice-new") => {
+                    app.employment_option_form =
+                        Some(EmploymentOptionDraft::new(EmploymentKind::EmploymentType))
+                }
+                Ok("employment-new") => app.new_employee(),
+                Ok("choice-inactive") => {
+                    let mut draft = EmploymentOptionDraft::existing(
+                        EmploymentKind::WorkLocation,
+                        &app.data.work_locations[0],
+                    );
+                    draft.active = false;
+                    app.employment_option_form = Some(draft);
+                }
+                _ => {}
+            }
             if std::env::var("HRIS_PREVIEW_PAGE").as_deref() == Ok("sign-in") {
                 app.login_branding = branding::LoginBranding {
                     company_name: app.data.company.name.clone(),
@@ -652,6 +694,7 @@ impl HrisApp {
                         self.contacts_form = None;
                         self.leave_form = None;
                         self.correction_form = None;
+                        self.employment_option_form = None;
                         self.correction_history = None;
                         clear_edit_history(
                             ctx,
@@ -665,6 +708,8 @@ impl HrisApp {
                         self.page = Page::Overview;
                         self.search.clear();
                         self.department.clear();
+                        self.employment_type_filter = EmploymentFilter::All;
+                        self.work_location_filter = EmploymentFilter::All;
                         self.employee_status = Some(EmployeeStatus::Active);
                         self.leave_filter = None;
                         self.attendance_date = data.company.today();
@@ -674,6 +719,7 @@ impl HrisApp {
                         self.contacts_form = None;
                         self.leave_form = None;
                         self.correction_form = None;
+                        self.employment_option_form = None;
                         self.correction_history = None;
                     }
                     if data.mode == Mode::Supabase && data.logo_warning.is_none() {
@@ -734,6 +780,7 @@ impl HrisApp {
                         self.contacts_form = None;
                         self.leave_form = None;
                         self.correction_form = None;
+                        self.employment_option_form = None;
                         self.correction_history = None;
                         self.account_form = None;
                     }
@@ -1236,6 +1283,7 @@ impl HrisApp {
 
     fn has_unsaved_edits(&self) -> bool {
         self.employee_form.is_some()
+            || self.employment_option_form.is_some()
             || self.correction_form.is_some()
             || self.leave_form.is_some()
             || self.account_form.is_some()
@@ -1480,7 +1528,7 @@ impl HrisApp {
             self.employee_record(ui);
             return;
         }
-        ui.horizontal(|ui| {
+        ui.horizontal_wrapped(|ui| {
             ui.add_sized(
                 [250.0, 36.0],
                 egui::TextEdit::singleline(&mut self.search)
@@ -1526,6 +1574,27 @@ impl HrisApp {
                     }
                 });
         });
+        ui.horizontal_wrapped(|ui| {
+            employment_filter(
+                ui,
+                EmploymentKind::EmploymentType,
+                &self.data,
+                &mut self.employment_type_filter,
+            );
+            employment_filter(
+                ui,
+                EmploymentKind::WorkLocation,
+                &self.data,
+                &mut self.work_location_filter,
+            );
+            if ui.button("Clear filters").clicked() {
+                self.search.clear();
+                self.department.clear();
+                self.employee_status = Some(EmployeeStatus::Active);
+                self.employment_type_filter = EmploymentFilter::All;
+                self.work_location_filter = EmploymentFilter::All;
+            }
+        });
         ui.horizontal(|ui| {
             ui.label(
                 RichText::new(format!("{} employees total", self.data.employees.len()))
@@ -1545,10 +1614,18 @@ impl HrisApp {
             .filter(|e| {
                 self.employee_status.is_none_or(|s| s == e.status)
                     && (self.department.is_empty() || self.department == e.department)
+                    && self.employment_type_filter.matches(e.employment_type_id)
+                    && self.work_location_filter.matches(e.work_location_id)
                     && (query.is_empty()
                         || format!(
-                            "{} {} {} {}",
-                            e.full_name, e.employee_code, e.department, e.job_title
+                            "{} {} {} {} {} {}",
+                            e.full_name,
+                            e.employee_code,
+                            e.department,
+                            e.job_title,
+                            EmploymentKind::EmploymentType
+                                .display(&self.data, e.employment_type_id),
+                            EmploymentKind::WorkLocation.display(&self.data, e.work_location_id)
                         )
                         .to_lowercase()
                         .contains(&query))
@@ -1569,6 +1646,8 @@ impl HrisApp {
                                     "CODE",
                                     "EMPLOYEE",
                                     "DEPARTMENT",
+                                    "EMPLOYMENT TYPE",
+                                    "WORK LOCATION",
                                     "JOINED",
                                     "ANNUAL BALANCE",
                                     "STATUS",
@@ -1596,6 +1675,14 @@ impl HrisApp {
                                     );
                                 });
                                 ui.label(&employee.department);
+                                ui.label(
+                                    EmploymentKind::EmploymentType
+                                        .display(&self.data, employee.employment_type_id),
+                                );
+                                ui.label(
+                                    EmploymentKind::WorkLocation
+                                        .display(&self.data, employee.work_location_id),
+                                );
                                 ui.label(
                                     employee
                                         .joined_on
@@ -2162,6 +2249,22 @@ impl HrisApp {
                 });
             });
             ui.add_space(12.0);
+            let _section = ui.scope(|ui| self.employment_options_settings(ui));
+            #[cfg(feature = "qa-screenshot")]
+            if matches!(
+                std::env::var("HRIS_PREVIEW_FORM").as_deref(),
+                Ok("employment-setup" | "employment-setup-bottom")
+            ) {
+                let align = if std::env::var("HRIS_PREVIEW_FORM").as_deref()
+                    == Ok("employment-setup-bottom")
+                {
+                    Align::BOTTOM
+                } else {
+                    Align::TOP
+                };
+                ui.scroll_to_rect(_section.response.rect, Some(align));
+            }
+            ui.add_space(12.0);
         }
         card(ui, |ui| {
             ui.label(RichText::new("Display preferences").size(18.0).strong());
@@ -2570,6 +2673,88 @@ impl HrisApp {
         });
     }
 
+    fn employment_options_settings(&mut self, ui: &mut Ui) {
+        card(ui, |ui| {
+            ui.label(RichText::new("Employment setup").size(18.0).strong());
+            ui.label("Manage the choices HR can assign in employee records. Existing assignments remain when a choice is disabled.");
+            for kind in EmploymentKind::ALL {
+                ui.add_space(8.0);
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(RichText::new(kind.plural()).strong());
+                    if ui
+                        .button(format!("+ Add {}", kind.label().to_lowercase()))
+                        .clicked()
+                    {
+                        self.employment_option_form = Some(EmploymentOptionDraft::new(kind));
+                        self.notice = None;
+                    }
+                });
+                egui::Grid::new(("employment_options", kind.table()))
+                    .striped(true)
+                    .spacing([18.0, 10.0])
+                    .show(ui, |ui| {
+                        for option in kind.choices(&self.data) {
+                            ui.vertical(|ui| {
+                                ui.set_width(220.0);
+                                ui.label(&option.name);
+                            });
+                            badge(
+                                ui,
+                                if option.active {
+                                    "Available"
+                                } else {
+                                    "Inactive"
+                                },
+                                option.active,
+                            );
+                            if ui.button("Edit").clicked() {
+                                self.employment_option_form =
+                                    Some(EmploymentOptionDraft::existing(kind, option));
+                                self.notice = None;
+                            }
+                            ui.end_row();
+                        }
+                    });
+                if kind.choices(&self.data).is_empty() {
+                    ui.label("No choices yet. Add one to make it available in employee records.");
+                }
+            }
+        });
+    }
+
+    fn employment_option_dialog(&mut self, ctx: &egui::Context) {
+        if let Some(mut draft) = self.employment_option_form.take() {
+            let mut open = true;
+            let mut save = false;
+            let mut cancel = false;
+            egui::Window::new(format!("{} {}",if draft.id.is_some(){"Edit"}else{"Add"},draft.kind.label().to_lowercase()))
+                .open(&mut open).collapsible(false).resizable(false).default_width(440.0)
+                .anchor(egui::Align2::CENTER_CENTER,[0.0,0.0]).show(ctx,|ui| {
+                    ui.add_enabled_ui(!self.busy,|ui| {
+                        field(ui,"Name",&mut draft.name,"Company-specific name");
+                        ui.checkbox(&mut draft.active,"Available for new assignments");
+                        ui.label("Disabling keeps this choice on existing employee records and in filters. It can be enabled again here.");
+                        if draft.id.is_some() { ui.label(RichText::new("Renaming updates the displayed label on existing assignments.").color(muted(ui)).small()); }
+                        if let Some((text,true))=&self.notice {ui.colored_label(ui.visuals().error_fg_color,text);}
+                        ui.add_space(8.0);
+                        ui.horizontal(|ui|{save=primary(ui,"Save choice");cancel=ui.button("Cancel").clicked();});
+                    });
+                });
+            if save {
+                match draft.option(&self.data) {
+                    Ok(_) => {
+                        self.close_on_success = true;
+                        self.send(Command::Change(Action::SaveEmploymentOption(draft.clone())));
+                    }
+                    Err(error) => self.notice = Some((error.to_string(), true)),
+                }
+            }
+            if (open && !cancel) || self.busy {
+                self.employment_option_form = Some(draft);
+            }
+        }
+    }
+
     fn open_correction(&mut self, employee: Uuid, day: NaiveDate) {
         let original = self
             .data
@@ -2725,6 +2910,7 @@ impl HrisApp {
     }
 
     fn forms(&mut self, ctx: &egui::Context) {
+        self.employment_option_dialog(ctx);
         self.attendance_forms(ctx);
         if let Some(mut draft) = self.leave_form.take() {
             let mut open = true;
@@ -2803,6 +2989,7 @@ impl eframe::App for HrisApp {
                 });
         } else {
             let form_open = self.leave_form.is_some()
+                || self.employment_option_form.is_some()
                 || self.correction_form.is_some()
                 || self.correction_history.is_some()
                 || self.session_confirmation.is_some()
@@ -2960,11 +3147,111 @@ fn company_logo(ui: &mut Ui, texture: Option<&egui::TextureHandle>, name: &str, 
     }
 }
 
+fn employment_assignment(
+    ui: &mut Ui,
+    kind: EmploymentKind,
+    data: &Snapshot,
+    selected: &mut Option<Uuid>,
+    employee: Option<Uuid>,
+) {
+    ui.label(kind.label());
+    let existing = employee
+        .and_then(|id| data.employees.iter().find(|e| e.id == id))
+        .and_then(|e| kind.assignment(e));
+    egui::ComboBox::from_id_salt(("employment_assignment", kind.table()))
+        .width(250.0)
+        .truncate()
+        .selected_text(kind.display(data, *selected))
+        .show_ui(ui, |ui| {
+            ui.selectable_value(selected, None, "Not set");
+            for option in kind
+                .choices(data)
+                .iter()
+                .filter(|c| c.active || Some(c.id) == existing)
+            {
+                ui.selectable_value(
+                    selected,
+                    Some(option.id),
+                    format!(
+                        "{}{}",
+                        option.name,
+                        if option.active {
+                            ""
+                        } else {
+                            " (inactive; existing assignment)"
+                        }
+                    ),
+                );
+            }
+        });
+    if kind.choices(data).iter().all(|c| !c.active) {
+        ui.label(
+            RichText::new(
+                "An Administrator can add or enable choices in Settings > Employment setup.",
+            )
+            .color(muted(ui))
+            .small(),
+        );
+    }
+}
+
+fn employment_filter(
+    ui: &mut Ui,
+    kind: EmploymentKind,
+    data: &Snapshot,
+    selected: &mut EmploymentFilter,
+) {
+    let label = match *selected {
+        EmploymentFilter::All => format!("All {}", kind.plural().to_lowercase()),
+        EmploymentFilter::NotSet => format!("{}: not set", kind.label()),
+        EmploymentFilter::Choice(id) => kind.display(data, Some(id)),
+    };
+    egui::ComboBox::from_id_salt(("employment_filter", kind.table()))
+        .width(210.0)
+        .truncate()
+        .selected_text(label)
+        .show_ui(ui, |ui| {
+            ui.selectable_value(
+                selected,
+                EmploymentFilter::All,
+                format!("All {}", kind.plural().to_lowercase()),
+            );
+            ui.selectable_value(selected, EmploymentFilter::NotSet, "Not set");
+            for option in kind.choices(data) {
+                ui.selectable_value(
+                    selected,
+                    EmploymentFilter::Choice(option.id),
+                    kind.display(data, Some(option.id)),
+                );
+            }
+        });
+}
+
 fn employment_fields(ui: &mut Ui, draft: &mut EmployeeDraft, data: &Snapshot) {
     field(ui, "Employee code", &mut draft.employee_code, "EMP-001");
     field(ui, "Full name", &mut draft.full_name, "Employee name");
     field(ui, "Department", &mut draft.department, "Not set");
     field(ui, "Job title", &mut draft.job_title, "Not set");
+    let _choices = ui.scope(|ui| {
+        employment_assignment(
+            ui,
+            EmploymentKind::EmploymentType,
+            data,
+            &mut draft.employment_type_id,
+            draft.id,
+        );
+        employment_assignment(
+            ui,
+            EmploymentKind::WorkLocation,
+            data,
+            &mut draft.work_location_id,
+            draft.id,
+        );
+    });
+    #[cfg(feature = "qa-screenshot")]
+    if std::env::var("HRIS_PREVIEW_FORM").is_ok_and(|v| v.starts_with("employment-")) {
+        ui.scroll_to_rect(_choices.response.rect, Some(Align::Center));
+    }
     field(
         ui,
         "Date joined (optional)",
@@ -3019,6 +3306,14 @@ fn employment_summary(ui: &mut Ui, employee: &Employee, data: &Snapshot) {
         ("Department", value(&employee.department)),
         ("Job title", value(&employee.job_title)),
         (
+            "Employment type",
+            EmploymentKind::EmploymentType.display(data, employee.employment_type_id),
+        ),
+        (
+            "Work location",
+            EmploymentKind::WorkLocation.display(data, employee.work_location_id),
+        ),
+        (
             "Date joined",
             employee
                 .joined_on
@@ -3040,6 +3335,7 @@ fn employment_summary(ui: &mut Ui, employee: &Employee, data: &Snapshot) {
     ];
     egui::Grid::new("profile_employment")
         .num_columns(2)
+        .max_col_width((ui.available_width() - 180.0).clamp(160.0, 340.0))
         .spacing([24.0, 14.0])
         .show(ui, |ui| {
             for (name, value) in fields {

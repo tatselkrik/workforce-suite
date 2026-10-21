@@ -26,7 +26,7 @@ function fixture(replies) {
 const authenticated=(...tail)=>[{body:identity},{body:access},...tail];
 
 test('staff creation saves one complete employee and its role using the caller transaction',async()=>{
-  const employee={id:null,company_id:owner,employee_code:'QA-STAFF',full_name:'Synthetic Staff',department:'QA',job_title:'Test',joined_on:null,annual_leave_days:15,status:'active',reports_to:null};
+  const employee={id:null,company_id:owner,employee_code:'QA-STAFF',full_name:'Synthetic Staff',department:'QA',job_title:'Test',joined_on:null,annual_leave_days:15,status:'active',reports_to:null,employment_type_id:person,work_location_id:user};
   const contacts={phone:'000 000 0000',emergency_name:'Synthetic Contact',emergency_relationship:'Sibling',emergency_phone:'000 000 0001'};
   const {handler,requests}=fixture(authenticated({body:{id:user}},{body:person},{body:{}}));
   const response=await handler(req({...create,employee_id:null,employee_name:'Synthetic Staff',employee,contacts,role:'hr_generalist'}));

@@ -12,7 +12,7 @@ Employee accounts are prepared for the portal and cannot sign into the desktop. 
 
 ## Stage 2 — Employee records and organization
 
-Implemented: one employee editor with private contact/emergency details and reporting relationships, including employees without accounts (see [contact permissions](EMPLOYEE-CONTACTS.md)). Next add employment types, locations, contracts, attachments, employment history, digital 201 files and organization charts. Give sensitive documents their own access and retention rules.
+Implemented: one employee editor with private contact/emergency details and reporting relationships, including employees without accounts (see [contact permissions](EMPLOYEE-CONTACTS.md)). Configurable employment types/work locations, employee assignments, read-only Profile fields and employee filters are implemented. Next add contracts, attachments, employment history, digital 201 files and organization charts. Give sensitive documents their own access and retention rules.
 
 ## Stage 3 — Leave policies and approvals
 
@@ -20,7 +20,7 @@ Add company holiday calendars, custom workweeks, half-days, configurable leave t
 
 ## Stage 4 — Attendance rules
 
-Add shift schedules, breaks, lateness, undertime, overtime and correction requests with approval history. Biometric integration is visible but disabled in this prototype. Actual device support requires choosing a device/protocol and verifying it against physical hardware.
+Direct HR attendance corrections with required reasons and before/after history are implemented. Add shift schedules, breaks, lateness, undertime, overtime and employee correction requests with approval history. Biometric integration is visible but disabled in this prototype. Actual device support requires choosing a device/protocol and verifying it against physical hardware.
 
 ## Stage 5 — Reports and data exchange
 

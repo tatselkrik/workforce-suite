@@ -142,6 +142,22 @@ fn baseline(company: &Company) -> Vec<Reply> {
         reply("GET /rest/v1/leave_requests?", 200, json!([])),
         reply("POST /rest/v1/rpc/list_company_accounts ", 200, json!([])),
         reply("GET /rest/v1/account_access_events?", 200, json!([])),
+        reply(
+            "GET /rest/v1/employment_types?",
+            200,
+            json!(hris_desktop::employment::demo_choices(
+                hris_desktop::employment::EmploymentKind::EmploymentType,
+                company.id
+            )),
+        ),
+        reply(
+            "GET /rest/v1/work_locations?",
+            200,
+            json!(hris_desktop::employment::demo_choices(
+                hris_desktop::employment::EmploymentKind::WorkLocation,
+                company.id
+            )),
+        ),
         reply("GET /auth/v1/user ", 200, user(company)),
         reply(
             "GET /storage/v1/object/authenticated/profile-photos/",
@@ -193,7 +209,7 @@ fn attendance_correction_uses_the_guarded_rpc_and_reloads_immutable_history() {
     after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
     after[5] = reply("GET /rest/v1/attendance?", 200, json!([row]));
     after[6] = reply("GET /rest/v1/attendance_corrections?", 200, json!([event]));
-    replies.extend(after.into_iter().skip(1).take(9));
+    replies.extend(after.into_iter().skip(1).take(11));
     let (config, server, requests) = fixture(replies);
     let (mut client, current) = CloudClient::connect(
         config,
@@ -234,6 +250,68 @@ fn connect(config: ConnectionConfig) -> CloudClient {
     )
     .unwrap()
     .0
+}
+
+#[test]
+fn employment_options_use_guarded_rpc_and_reload_inactive_labels_without_changing_people() {
+    use hris_desktop::{
+        domain::Action,
+        employment::{EmploymentKind, EmploymentOptionDraft},
+    };
+    let company = Company::default();
+    let mut replies = baseline(&company);
+    let options = hris_desktop::employment::demo_choices(EmploymentKind::WorkLocation, company.id);
+    let option = options[0].clone();
+    replies.push(reply(
+        "POST /rest/v1/rpc/save_employment_option ",
+        200,
+        json!(option.id),
+    ));
+    let mut after = baseline(&company);
+    let mut revised = options.clone();
+    revised[0].active = false;
+    revised[0].revision = 1;
+    revised[0].name = "Main office renamed".into();
+    after[11] = reply("GET /rest/v1/work_locations?", 200, json!(revised));
+    replies.extend(after.into_iter().skip(1).take(11));
+    let (config, server, requests) = fixture(replies);
+    let (mut client, current) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    let mut draft = EmploymentOptionDraft::existing(EmploymentKind::WorkLocation, &option);
+    draft.active = false;
+    draft.name = "Main office renamed".into();
+    let next = client
+        .execute(Action::SaveEmploymentOption(draft), &current)
+        .unwrap();
+    assert_eq!(next.employees, current.employees);
+    assert_eq!(next.contacts, current.contacts);
+    assert_eq!(
+        EmploymentKind::WorkLocation.display(&next, Some(option.id)),
+        "Main office renamed (inactive)"
+    );
+    server.join().unwrap();
+    let requests = requests.lock().unwrap();
+    let request = requests
+        .iter()
+        .find(|r| {
+            r.line
+                .starts_with("POST /rest/v1/rpc/save_employment_option ")
+        })
+        .unwrap();
+    assert_eq!(
+        request.json(),
+        json!({"p_kind":"work_location","p_option":{"id":option.id,"name":"Main office renamed","active":false,"expected_revision":0}})
+    );
+    assert!(request.headers.contains("profile-jwt"));
+    assert!(
+        !requests
+            .iter()
+            .any(|r| r.line.starts_with("PATCH /rest/v1/work_locations"))
+    );
 }
 
 #[test]
@@ -284,7 +362,7 @@ fn editing_staff_saves_the_same_employee_contacts_and_role_in_one_rpc() {
     ));
     let mut after = baseline(&company);
     after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
-    replies.extend(after.into_iter().skip(1).take(9));
+    replies.extend(after.into_iter().skip(1).take(11));
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -318,6 +396,14 @@ fn editing_staff_saves_the_same_employee_contacts_and_role_in_one_rpc() {
         .find(|r| r.line.starts_with("POST /rest/v1/rpc/save_staff_account "))
         .unwrap();
     assert_eq!(saved.json()["p_employee"]["id"], person.id.to_string());
+    assert_eq!(
+        saved.json()["p_employee"]["employment_type_id"],
+        json!(person.employment_type_id)
+    );
+    assert_eq!(
+        saved.json()["p_employee"]["work_location_id"],
+        json!(person.work_location_id)
+    );
     assert_eq!(saved.json()["p_contacts"]["phone"], "000 000 0000");
     assert_eq!(saved.json()["p_role"], "hr_generalist");
     assert!(
@@ -354,7 +440,7 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
     ));
     let mut after = baseline(&revised);
     after.remove(0);
-    after.truncate(9);
+    after.truncate(11);
     replies.extend(after);
     replies.push(Reply {
         prefix: "GET /storage/v1/object/authenticated/company-branding/".into(),
@@ -362,7 +448,7 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
         body: png,
         mime: "image/png",
     });
-    replies.extend(baseline(&revised).into_iter().skip(1).take(9));
+    replies.extend(baseline(&revised).into_iter().skip(1).take(11));
     replies.push(reply(
         "DELETE /storage/v1/object/company-branding ",
         200,
@@ -373,7 +459,7 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
         200,
         Value::Null,
     ));
-    replies.extend(baseline(&company).into_iter().skip(1).take(9));
+    replies.extend(baseline(&company).into_iter().skip(1).take(11));
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -504,7 +590,7 @@ fn employee_contacts_save_and_reload_separately_with_scoped_updates_and_zero_row
         snapshot_replies(vec![normalized.clone()])
             .into_iter()
             .skip(1)
-            .take(9),
+            .take(11),
     );
     let mut updated = normalized.clone();
     updated.address = "Updated fictional address".into();
@@ -517,7 +603,7 @@ fn employee_contacts_save_and_reload_separately_with_scoped_updates_and_zero_row
         snapshot_replies(vec![updated.clone()])
             .into_iter()
             .skip(1)
-            .take(9),
+            .take(11),
     );
     replies.push(reply("PATCH /rest/v1/employee_contacts?", 200, json!([])));
     let (config, server, observed) = fixture(replies);
@@ -589,7 +675,7 @@ fn unified_employee_save_uses_one_transaction_rpc_instead_of_separate_partial_wr
     ));
     let mut after = baseline(&company);
     after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
-    initial.extend(after.into_iter().skip(1).take(9));
+    initial.extend(after.into_iter().skip(1).take(11));
     let (config, server, requests) = fixture(initial);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -702,7 +788,7 @@ fn account_provisioning_preserves_disabled_access_and_sends_password_only_to_the
         201,
         json!({"confirmation_sent":false}),
     ));
-    replies.extend(baseline(&company).into_iter().skip(1).take(9));
+    replies.extend(baseline(&company).into_iter().skip(1).take(11));
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -722,18 +808,18 @@ fn account_provisioning_preserves_disabled_access_and_sends_password_only_to_the
     assert!(message.contains("planned portal"));
     server.join().unwrap();
     let requests = requests.lock().unwrap();
-    let body = requests[12].json();
+    let body = requests[14].json();
     assert_eq!(body["active"], false);
     assert_eq!(body["role"], "employee");
     assert!(body["employee_id"].is_null());
     assert_eq!(body["password"], "synthetic initial passphrase");
     assert!(!body.to_string().contains("confirmation"));
-    assert!(requests[12].headers.contains("profile-jwt"));
+    assert!(requests[14].headers.contains("profile-jwt"));
     assert!(
         requests
             .iter()
             .enumerate()
-            .filter(|(i, _)| *i != 12)
+            .filter(|(i, _)| *i != 14)
             .all(
                 |(_, r)| !String::from_utf8_lossy(&r.body).contains("synthetic initial passphrase")
             )
@@ -815,21 +901,21 @@ fn personal_details_preferences_and_private_photo_roundtrip_use_only_the_signed_
     server.join().unwrap();
     let requests = requests.lock().unwrap();
     assert_eq!(
-        requests[12].json(),
+        requests[14].json(),
         json!({"data":{"hris_profile":{"full_name":"Alex Morgan","preferred_name":"Morgan","contact_phone":""}}})
     );
-    assert!(requests[13].json().get("app_metadata").is_none());
+    assert!(requests[15].json().get("app_metadata").is_none());
     assert!(
-        requests[14]
+        requests[16]
             .headers
             .to_lowercase()
             .contains("x-upsert: true")
     );
     assert_eq!(
-        image::load_from_memory(&requests[14].body).unwrap().width(),
+        image::load_from_memory(&requests[16].body).unwrap().width(),
         256
     );
-    assert_eq!(requests[17].json(), json!({"prefixes":[path]}));
+    assert_eq!(requests[19].json(), json!({"prefixes":[path]}));
     for request in &requests[1..] {
         assert!(
             request
@@ -948,21 +1034,21 @@ fn password_and_email_changes_reauthenticate_and_keep_email_pending_until_confir
     server.join().unwrap();
     let requests = requests.lock().unwrap();
     assert_eq!(
-        requests[13].json(),
+        requests[15].json(),
         json!({"password":"new synthetic passphrase","current_password":"old synthetic passphrase"})
     );
     assert!(
-        requests[13]
+        requests[15]
             .headers
             .to_lowercase()
             .contains("authorization: bearer fresh-password-jwt")
     );
     assert_eq!(
-        requests[15].json(),
+        requests[17].json(),
         json!({"email":"updated@example.invalid"})
     );
     assert!(
-        requests[15]
+        requests[17]
             .headers
             .to_lowercase()
             .contains("authorization: bearer fresh-email-jwt")

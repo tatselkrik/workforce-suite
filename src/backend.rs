@@ -719,6 +719,18 @@ impl CloudClient {
         } else {
             (Vec::new(), Vec::new())
         };
+        let mut employment_types: Vec<crate::employment::EmploymentOption> =
+            self.rows("employment_types", Some(company.id))?;
+        let mut work_locations: Vec<crate::employment::EmploymentOption> =
+            self.rows("work_locations", Some(company.id))?;
+        for choices in [&mut employment_types, &mut work_locations] {
+            choices.sort_by(|a, b| {
+                a.name
+                    .to_lowercase()
+                    .cmp(&b.name.to_lowercase())
+                    .then(a.id.cmp(&b.id))
+            });
+        }
         let (logo_png, logo_warning) = self.company_logo(&company);
         Ok(Snapshot {
             company,
@@ -733,6 +745,8 @@ impl CloudClient {
             accounts,
             access_events,
             corrections,
+            employment_types,
+            work_locations,
         })
     }
 
@@ -782,8 +796,19 @@ impl CloudClient {
             let _: Uuid = decode(response)?;
             return self.snapshot().context("Attendance correction saved, but refresh failed. Click Refresh before trying again.");
         }
+        if let Action::SaveEmploymentOption(draft) = &action {
+            draft.option(current)?;
+            let response=self.request(Method::POST,"rpc/save_employment_option")?
+                .json(&json!({"p_kind":draft.kind,"p_option":draft.payload()})).send()
+                .context("Could not save the employment choice. Check your connection and refresh before retrying.")?;
+            let _: Uuid = decode(response)?;
+            return self.snapshot().context(
+                "Employment choice saved, but refresh failed. Click Refresh before trying again.",
+            );
+        }
         if let Action::SaveEmployeeRecord(draft, contacts) = &action {
             let employee = draft.employee(current.company.id)?;
+            crate::employment::validate_assignments(current, &employee)?;
             let contacts = contacts.normalized()?;
             ensure!(
                 contacts.company_id == current.company.id,
@@ -794,7 +819,8 @@ impl CloudClient {
                     "employee_code": employee.employee_code, "full_name": employee.full_name,
                     "department": employee.department, "job_title": employee.job_title,
                     "joined_on": employee.joined_on, "annual_leave_days": employee.annual_leave_days,
-                    "status": employee.status, "reports_to": employee.reports_to}, "p_contacts": contacts}))
+                    "status": employee.status, "reports_to": employee.reports_to,"employment_type_id":employee.employment_type_id,
+                    "work_location_id":employee.work_location_id}, "p_contacts": contacts}))
                 .send().context("Could not save the employee record. Check your connection.")?;
             let _: Uuid = decode(response)?;
             return self
@@ -852,6 +878,7 @@ impl CloudClient {
                 .context("Contacts saved, but refresh failed. Click Refresh before trying again.");
         }
         let (method, table, id, body) = match action {
+            Action::SaveEmploymentOption(_) => unreachable!("Employment choices return above"),
             Action::CorrectAttendance(_) => unreachable!("Corrections return above"),
             Action::SaveEmployeeRecord(_, _) => unreachable!("Employee record saves return above"),
             Action::SaveEmployeeContacts(_) | Action::SaveOwnContacts(_) => {
@@ -862,9 +889,11 @@ impl CloudClient {
             }
             Action::SaveEmployee(draft) => {
                 let employee = draft.employee(current.company.id)?;
+                crate::employment::validate_assignments(current, &employee)?;
                 let mut body = json!({"employee_code": employee.employee_code, "full_name":employee.full_name,
                     "department":employee.department,"job_title":employee.job_title,"joined_on":employee.joined_on,
-                    "annual_leave_days":employee.annual_leave_days,"status":employee.status,"reports_to":employee.reports_to});
+                    "annual_leave_days":employee.annual_leave_days,"status":employee.status,"reports_to":employee.reports_to,
+                    "employment_type_id":employee.employment_type_id,"work_location_id":employee.work_location_id});
                 if let Some(id) = draft.id {
                     (Method::PATCH, "employees", Some(id), body)
                 } else {
@@ -950,7 +979,9 @@ impl CloudClient {
                 draft.employee_name = employee.full_name.trim().into();
                 draft.employee_id = employee.id;
                 draft.validate(current)?;
-                let mut person = serde_json::to_value(employee.employee(current.company.id)?)?;
+                let record = employee.employee(current.company.id)?;
+                crate::employment::validate_assignments(current, &record)?;
+                let mut person = serde_json::to_value(record)?;
                 person["id"] = json!(employee.id);
                 let contacts = contacts.normalized()?;
                 ensure!(
