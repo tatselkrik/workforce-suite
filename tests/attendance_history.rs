@@ -37,6 +37,7 @@ fn historical_roster_separates_missing_and_approved_leave_and_retains_archived_r
     let day = date("2024-02-29");
     for employee in [&data.employees[0], &data.employees[3]] {
         data.attendance.push(Attendance {
+            revision: 0,
             id: Uuid::new_v4(),
             company_id: data.company.id,
             employee_id: employee.id,

@@ -138,6 +138,7 @@ fn baseline(company: &Company) -> Vec<Reply> {
         reply("GET /rest/v1/employees?", 200, json!([])),
         reply("GET /rest/v1/employee_contacts?", 200, json!([])),
         reply("GET /rest/v1/attendance?", 200, json!([])),
+        reply("GET /rest/v1/attendance_corrections?", 200, json!([])),
         reply("GET /rest/v1/leave_requests?", 200, json!([])),
         reply("POST /rest/v1/rpc/list_company_accounts ", 200, json!([])),
         reply("GET /rest/v1/account_access_events?", 200, json!([])),
@@ -149,6 +150,82 @@ fn baseline(company: &Company) -> Vec<Reply> {
         ),
     ]
 }
+
+#[test]
+fn attendance_correction_uses_the_guarded_rpc_and_reloads_immutable_history() {
+    use hris_desktop::{
+        corrections::CorrectionDraft,
+        domain::{Action, DemoStore},
+    };
+    let mut data = DemoStore::new().data;
+    data.attendance.clear();
+    let company = data.company.clone();
+    let person = data.employees[0].clone();
+    let day = company.today().pred_opt().unwrap();
+    let mut draft = CorrectionDraft::new(person.id, day, None, &data);
+    draft.checked_in = "08:00".into();
+    draft.checked_out = "17:00".into();
+    draft.reason = "Synthetic verified correction".into();
+    let change = draft.change(&data, chrono::Utc::now()).unwrap();
+    let row = change.record.clone();
+    let event = hris_desktop::corrections::CorrectionEvent {
+        id: uuid::Uuid::new_v4(),
+        company_id: company.id,
+        attendance_id: row.id,
+        employee_id: person.id,
+        work_date: day,
+        actor_id: company.owner_id,
+        actor_name: "Synthetic HR".into(),
+        actor_role: Role::Administrator,
+        reason: change.reason.clone(),
+        before_record: None,
+        after_record: row.clone(),
+        created_at: chrono::Utc::now(),
+    };
+    let mut replies = baseline(&company);
+    replies[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
+    replies.push(reply(
+        "POST /rest/v1/rpc/correct_attendance ",
+        200,
+        json!(row.id),
+    ));
+    let mut after = baseline(&company);
+    after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
+    after[5] = reply("GET /rest/v1/attendance?", 200, json!([row]));
+    after[6] = reply("GET /rest/v1/attendance_corrections?", 200, json!([event]));
+    replies.extend(after.into_iter().skip(1).take(9));
+    let (config, server, requests) = fixture(replies);
+    let (mut client, current) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    let refreshed = client
+        .execute(Action::CorrectAttendance(change), &current)
+        .unwrap();
+    assert_eq!(refreshed.corrections.len(), 1);
+    assert_eq!(
+        refreshed.corrections[0].reason,
+        "Synthetic verified correction"
+    );
+    assert_eq!(refreshed.attendance[0].work_date, day);
+    server.join().unwrap();
+    let requests = requests.lock().unwrap();
+    let body = requests
+        .iter()
+        .find(|r| r.line.starts_with("POST /rest/v1/rpc/correct_attendance "))
+        .unwrap()
+        .json();
+    assert!(body["p_change"]["attendance_id"].is_null());
+    assert!(body["p_change"]["expected_revision"].is_null());
+    assert!(body["p_change"].get("actor_id").is_none());
+    assert!(
+        !requests
+            .iter()
+            .any(|r| r.line.starts_with("PATCH /rest/v1/attendance"))
+    );
+}
 fn connect(config: ConnectionConfig) -> CloudClient {
     CloudClient::connect(
         config,
@@ -157,6 +234,40 @@ fn connect(config: ConnectionConfig) -> CloudClient {
     )
     .unwrap()
     .0
+}
+
+#[test]
+fn a_server_attendance_overlap_is_not_misreported_as_a_leave_overlap() {
+    use hris_desktop::{
+        corrections::CorrectionDraft,
+        domain::{Action, DemoStore},
+    };
+    let mut data = DemoStore::new().data;
+    data.attendance.clear();
+    let person = data.employees[0].clone();
+    let company = data.company.clone();
+    let day = company.today().pred_opt().unwrap();
+    let mut draft = CorrectionDraft::new(person.id, day, None, &data);
+    draft.checked_in = "08:00".into();
+    draft.checked_out = "17:00".into();
+    draft.reason = "Synthetic overlap check".into();
+    let change = draft.change(&data, chrono::Utc::now()).unwrap();
+    let mut replies = baseline(&company);
+    replies[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
+    replies.push(reply("POST /rest/v1/rpc/correct_attendance ",400,json!({"code":"23P01","message":"These times overlap another attendance record. Review both shifts before saving."})));
+    let (config, server, _) = fixture(replies);
+    let (mut client, current) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    let error = client
+        .execute(Action::CorrectAttendance(change), &current)
+        .unwrap_err()
+        .to_string();
+    assert!(error.contains("attendance record") && !error.contains("leave"));
+    server.join().unwrap();
 }
 
 #[test]
@@ -173,7 +284,7 @@ fn editing_staff_saves_the_same_employee_contacts_and_role_in_one_rpc() {
     ));
     let mut after = baseline(&company);
     after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
-    replies.extend(after.into_iter().skip(1).take(8));
+    replies.extend(after.into_iter().skip(1).take(9));
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -243,7 +354,7 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
     ));
     let mut after = baseline(&revised);
     after.remove(0);
-    after.truncate(8);
+    after.truncate(9);
     replies.extend(after);
     replies.push(Reply {
         prefix: "GET /storage/v1/object/authenticated/company-branding/".into(),
@@ -251,7 +362,7 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
         body: png,
         mime: "image/png",
     });
-    replies.extend(baseline(&revised).into_iter().skip(1).take(8));
+    replies.extend(baseline(&revised).into_iter().skip(1).take(9));
     replies.push(reply(
         "DELETE /storage/v1/object/company-branding ",
         200,
@@ -262,7 +373,7 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
         200,
         Value::Null,
     ));
-    replies.extend(baseline(&company).into_iter().skip(1).take(8));
+    replies.extend(baseline(&company).into_iter().skip(1).take(9));
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -346,7 +457,8 @@ fn manager_desktop_sign_in_does_not_request_administrator_account_data() {
         200,
         json!({"company_id":company.id,"user_id":company.owner_id,"role":"manager","employee_id":uuid::Uuid::new_v4(),"direct_reports":[]}),
     );
-    replies.drain(7..9);
+    replies.drain(8..10);
+    replies.remove(6); // Correction reasons are HR-only, including their loading path.
     let (config, server, requests) = fixture(replies);
     let (client, data) = CloudClient::connect(
         config,
@@ -392,7 +504,7 @@ fn employee_contacts_save_and_reload_separately_with_scoped_updates_and_zero_row
         snapshot_replies(vec![normalized.clone()])
             .into_iter()
             .skip(1)
-            .take(8),
+            .take(9),
     );
     let mut updated = normalized.clone();
     updated.address = "Updated fictional address".into();
@@ -405,7 +517,7 @@ fn employee_contacts_save_and_reload_separately_with_scoped_updates_and_zero_row
         snapshot_replies(vec![updated.clone()])
             .into_iter()
             .skip(1)
-            .take(8),
+            .take(9),
     );
     replies.push(reply("PATCH /rest/v1/employee_contacts?", 200, json!([])));
     let (config, server, observed) = fixture(replies);
@@ -477,7 +589,7 @@ fn unified_employee_save_uses_one_transaction_rpc_instead_of_separate_partial_wr
     ));
     let mut after = baseline(&company);
     after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
-    initial.extend(after.into_iter().skip(1).take(8));
+    initial.extend(after.into_iter().skip(1).take(9));
     let (config, server, requests) = fixture(initial);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -590,7 +702,7 @@ fn account_provisioning_preserves_disabled_access_and_sends_password_only_to_the
         201,
         json!({"confirmation_sent":false}),
     ));
-    replies.extend(baseline(&company).into_iter().skip(1).take(8));
+    replies.extend(baseline(&company).into_iter().skip(1).take(9));
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -610,18 +722,18 @@ fn account_provisioning_preserves_disabled_access_and_sends_password_only_to_the
     assert!(message.contains("planned portal"));
     server.join().unwrap();
     let requests = requests.lock().unwrap();
-    let body = requests[11].json();
+    let body = requests[12].json();
     assert_eq!(body["active"], false);
     assert_eq!(body["role"], "employee");
     assert!(body["employee_id"].is_null());
     assert_eq!(body["password"], "synthetic initial passphrase");
     assert!(!body.to_string().contains("confirmation"));
-    assert!(requests[11].headers.contains("profile-jwt"));
+    assert!(requests[12].headers.contains("profile-jwt"));
     assert!(
         requests
             .iter()
             .enumerate()
-            .filter(|(i, _)| *i != 11)
+            .filter(|(i, _)| *i != 12)
             .all(
                 |(_, r)| !String::from_utf8_lossy(&r.body).contains("synthetic initial passphrase")
             )
@@ -703,21 +815,21 @@ fn personal_details_preferences_and_private_photo_roundtrip_use_only_the_signed_
     server.join().unwrap();
     let requests = requests.lock().unwrap();
     assert_eq!(
-        requests[11].json(),
+        requests[12].json(),
         json!({"data":{"hris_profile":{"full_name":"Alex Morgan","preferred_name":"Morgan","contact_phone":""}}})
     );
-    assert!(requests[12].json().get("app_metadata").is_none());
+    assert!(requests[13].json().get("app_metadata").is_none());
     assert!(
-        requests[13]
+        requests[14]
             .headers
             .to_lowercase()
             .contains("x-upsert: true")
     );
     assert_eq!(
-        image::load_from_memory(&requests[13].body).unwrap().width(),
+        image::load_from_memory(&requests[14].body).unwrap().width(),
         256
     );
-    assert_eq!(requests[16].json(), json!({"prefixes":[path]}));
+    assert_eq!(requests[17].json(), json!({"prefixes":[path]}));
     for request in &requests[1..] {
         assert!(
             request
@@ -836,21 +948,21 @@ fn password_and_email_changes_reauthenticate_and_keep_email_pending_until_confir
     server.join().unwrap();
     let requests = requests.lock().unwrap();
     assert_eq!(
-        requests[12].json(),
+        requests[13].json(),
         json!({"password":"new synthetic passphrase","current_password":"old synthetic passphrase"})
     );
     assert!(
-        requests[12]
+        requests[13]
             .headers
             .to_lowercase()
             .contains("authorization: bearer fresh-password-jwt")
     );
     assert_eq!(
-        requests[14].json(),
+        requests[15].json(),
         json!({"email":"updated@example.invalid"})
     );
     assert!(
-        requests[14]
+        requests[15]
             .headers
             .to_lowercase()
             .contains("authorization: bearer fresh-email-jwt")

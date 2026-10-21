@@ -4,6 +4,7 @@ use crate::{
     backend::{self, Command, ConnectionConfig, Update},
     branding,
     contacts::EmployeeContacts,
+    corrections::CorrectionDraft,
     domain::*,
     updater::{self, UpdateState},
 };
@@ -93,6 +94,8 @@ pub struct HrisApp {
     contacts_form: Option<EmployeeContacts>,
     contacts_section: ContactSection,
     leave_form: Option<LeaveDraft>,
+    correction_form: Option<CorrectionDraft>,
+    correction_history: Option<Uuid>,
     close_on_success: bool,
     company_draft: Company,
     connection: Option<ConnectionConfig>,
@@ -290,6 +293,8 @@ impl HrisApp {
             contacts_form: None,
             contacts_section: ContactSection::Contact,
             leave_form: None,
+            correction_form: None,
+            correction_history: None,
             close_on_success: false,
             connection,
             deployment_error,
@@ -530,6 +535,56 @@ impl HrisApp {
                     });
                 }
             }
+            if matches!(
+                std::env::var("HRIS_PREVIEW_FORM").as_deref(),
+                Ok("correction-new"
+                    | "correction-edit"
+                    | "correction-history"
+                    | "correction-error")
+            ) {
+                let day = app.data.company.today() - Duration::days(2);
+                let employee = app.data.employees[0].id;
+                app.data.attendance.clear();
+                app.attendance_date = day;
+                app.calendar_month = month_start(day);
+                let mut draft = CorrectionDraft::new(employee, day, None, &app.data);
+                draft.checked_in = "08:00".into();
+                draft.checked_out = "17:00".into();
+                draft.reason =
+                    "Fictional QA: missed check-in verified against the shift log.".into();
+                if std::env::var("HRIS_PREVIEW_FORM").as_deref() != Ok("correction-new") {
+                    let mut store = DemoStore {
+                        data: app.data.clone(),
+                    };
+                    if let Ok(change) = draft.change(&store.data, chrono::Utc::now()) {
+                        let _ = store.execute(Action::CorrectAttendance(change));
+                        app.data = store.data;
+                    }
+                    app.open_correction(employee, day);
+                    if let Some(edit) = &mut app.correction_form {
+                        edit.checked_in = "08:15".into();
+                        edit.reason = "Fictional QA: supervisor confirmed the arrival time.".into();
+                    }
+                    if std::env::var("HRIS_PREVIEW_FORM").as_deref() == Ok("correction-history") {
+                        if let Some(edit) = app.correction_form.take() {
+                            let mut store = DemoStore {
+                                data: app.data.clone(),
+                            };
+                            if let Ok(change) = edit.change(&store.data, chrono::Utc::now()) {
+                                let _ = store.execute(Action::CorrectAttendance(change));
+                                app.data = store.data;
+                            }
+                            app.correction_history = app.data.attendance.first().map(|a| a.id);
+                        }
+                    } else if std::env::var("HRIS_PREVIEW_FORM").as_deref()
+                        == Ok("correction-error")
+                    {
+                        app.notice=Some(("Someone changed this attendance record. Refresh, reopen it and review their changes.".into(),true));
+                    }
+                } else {
+                    app.correction_form = Some(draft);
+                }
+            }
             if std::env::var("HRIS_PREVIEW_PAGE").as_deref() == Ok("sign-in") {
                 app.login_branding = branding::LoginBranding {
                     company_name: app.data.company.name.clone(),
@@ -596,6 +651,8 @@ impl HrisApp {
                         self.employee_form = None;
                         self.contacts_form = None;
                         self.leave_form = None;
+                        self.correction_form = None;
+                        self.correction_history = None;
                         clear_edit_history(
                             ctx,
                             &["account-initial-password", "account-initial-confirm"],
@@ -616,6 +673,8 @@ impl HrisApp {
                         self.employee_form = None;
                         self.contacts_form = None;
                         self.leave_form = None;
+                        self.correction_form = None;
+                        self.correction_history = None;
                     }
                     if data.mode == Mode::Supabase && data.logo_warning.is_none() {
                         let next = branding::LoginBranding {
@@ -674,6 +733,8 @@ impl HrisApp {
                         self.employee_form = None;
                         self.contacts_form = None;
                         self.leave_form = None;
+                        self.correction_form = None;
+                        self.correction_history = None;
                         self.account_form = None;
                     }
                     if !update.message.is_empty() {
@@ -1175,6 +1236,7 @@ impl HrisApp {
 
     fn has_unsaved_edits(&self) -> bool {
         self.employee_form.is_some()
+            || self.correction_form.is_some()
             || self.leave_form.is_some()
             || self.account_form.is_some()
             || !company_fields_equal(&self.company_draft, &self.data.company)
@@ -1609,12 +1671,43 @@ impl HrisApp {
         card(ui, |ui| {
             ui.label(RichText::new("Record a check-in").strong());
             ui.horizontal_wrapped(|ui| {
-                employee_picker(
-                    ui,
-                    "checkin_employee",
-                    &self.data,
-                    &mut self.check_in_employee,
-                );
+                if date < today && self.data.access.role.manages_hr() {
+                    egui::ComboBox::from_id_salt("past_attendance_employee")
+                        .width(250.0)
+                        .selected_text(
+                            self.check_in_employee
+                                .map(|id| self.data.employee_name(id))
+                                .unwrap_or("Choose employee"),
+                        )
+                        .show_ui(ui, |ui| {
+                            for e in &self.data.employees {
+                                if e.joined_on.is_none_or(|d| d <= date) {
+                                    let label = format!(
+                                        "{} · {}{}",
+                                        e.employee_code,
+                                        e.full_name,
+                                        if e.status == EmployeeStatus::Archived {
+                                            " (archived)"
+                                        } else {
+                                            ""
+                                        }
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.check_in_employee,
+                                        Some(e.id),
+                                        label,
+                                    );
+                                }
+                            }
+                        });
+                } else {
+                    employee_picker(
+                        ui,
+                        "checkin_employee",
+                        &self.data,
+                        &mut self.check_in_employee,
+                    );
+                }
                 ui.add_enabled_ui(date == today && self.check_in_employee.is_some(), |ui| {
                     if primary(ui, "Check in") {
                         if let Some(id) = self.check_in_employee {
@@ -1622,8 +1715,25 @@ impl HrisApp {
                         }
                     }
                 });
+                if self.data.access.role.manages_hr() {
+                    if ui
+                        .add_enabled(
+                            date <= today && self.check_in_employee.is_some(),
+                            egui::Button::new(if date < today {
+                                "Record past attendance"
+                            } else {
+                                "Record with reason"
+                            }),
+                        )
+                        .clicked()
+                    {
+                        if let Some(id) = self.check_in_employee {
+                            self.open_correction(id, date);
+                        }
+                    }
+                }
             });
-            ui.label(RichText::new("Check-ins use today's company date. Live timestamps come from the database server.").color(muted(ui)).size(12.0));
+            ui.label(RichText::new(if self.data.access.role.manages_hr() { "Check in records the current server time. Past entries and changed times require a reason and are kept in correction history." } else { "Check in records the current server time. Ask HR to resolve missing or incorrect attendance." }).color(muted(ui)).size(12.0));
         });
         ui.add_space(8.0);
         let rows = crate::attendance::daily_roster(&self.data, date);
@@ -1695,15 +1805,29 @@ impl HrisApp {
                                     },
                                     true,
                                 );
-                                if record.checked_out_at.is_none()
-                                    && self.data.access.can_record(record.employee_id)
-                                {
-                                    if ui.button("Check out").clicked() {
-                                        self.send(Command::Change(Action::CheckOut(record.id)));
+                                ui.horizontal(|ui| {
+                                    if record.checked_out_at.is_none()
+                                        && self.data.access.can_record(record.employee_id)
+                                    {
+                                        if ui.button("Check out now").on_hover_text("Records the current server time. Use Correct for a missed past check-out.").clicked() {
+                                            self.send(Command::Change(Action::CheckOut(record.id)));
+                                        }
                                     }
-                                } else {
-                                    ui.label("—");
-                                }
+                                    if self.data.access.role.manages_hr() {
+                                        if ui.button("Correct").clicked() {
+                                            self.open_correction(record.employee_id, date);
+                                        }
+                                        let count = self
+                                            .data
+                                            .corrections
+                                            .iter()
+                                            .filter(|c| c.attendance_id == record.id)
+                                            .count();
+                                        if ui.button(format!("History ({count})")).clicked() {
+                                            self.correction_history = Some(record.id);
+                                        }
+                                    }
+                                });
                             } else {
                                 for _ in 0..3 {
                                     ui.label("—");
@@ -1717,7 +1841,11 @@ impl HrisApp {
                                     },
                                     false,
                                 );
-                                ui.label("—");
+                                if self.data.access.role.manages_hr()
+                                    && ui.button("Record").clicked()
+                                {
+                                    self.open_correction(row.employee.id, date);
+                                }
                             }
                             ui.end_row();
                         }
@@ -2442,7 +2570,162 @@ impl HrisApp {
         });
     }
 
+    fn open_correction(&mut self, employee: Uuid, day: NaiveDate) {
+        let original = self
+            .data
+            .attendance
+            .iter()
+            .find(|a| a.employee_id == employee && a.work_date == day)
+            .cloned();
+        self.correction_form = Some(CorrectionDraft::new(employee, day, original, &self.data));
+        self.notice = None;
+    }
+
+    fn attendance_forms(&mut self, ctx: &egui::Context) {
+        if let Some(mut draft) = self.correction_form.take() {
+            let mut open = true;
+            let mut save = false;
+            let mut cancel = false;
+            let title = if draft.original.is_some() {
+                "Correct attendance"
+            } else {
+                "Record attendance with reason"
+            };
+            let height = (ctx.content_rect().height() - 110.0).max(260.0);
+            let error_height = if matches!(self.notice, Some((_, true))) {
+                72.0
+            } else {
+                0.0
+            };
+            egui::Window::new(title).open(&mut open).collapsible(false).resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]).default_width(530.0)
+                .show(ctx, |ui| {
+                    ui.add_enabled_ui(!self.busy, |ui| {
+                        egui::ScrollArea::vertical().id_salt("correction_fields").max_height(height - 60.0 - error_height).show(ui, |ui| {
+                            ui.label(RichText::new(self.data.employee_name(draft.employee_id)).strong().size(18.0));
+                            ui.label(format!("{} · {}", draft.work_date.format("%A, %b %d, %Y"), self.data.company.timezone));
+                            if let Some(before) = &draft.original {
+                                ui.add_space(6.0);
+                                ui.label(RichText::new("Currently recorded").strong());
+                                ui.label(attendance_times(before, &self.data));
+                            }
+                            ui.add_space(8.0);
+                            field(ui, "Check-in time *", &mut draft.checked_in, "24-hour time, e.g. 08:30");
+                            field(ui, "Check-out date", &mut draft.checked_out_date, "YYYY-MM-DD (supports overnight shifts)");
+                            field(ui, "Check-out time", &mut draft.checked_out, "24-hour time, or leave empty if still open");
+                            if draft.checked_out.trim().is_empty() {
+                                ui.label(RichText::new("An open shift prevents another check-in until it is closed. Use Correct to enter a missed check-out.").color(muted(ui)).small());
+                            }
+                            ui.add_space(6.0);
+                            ui.label("Reason for this entry or correction *");
+                            ui.add_sized([ui.available_width(), 72.0], egui::TextEdit::multiline(&mut draft.reason).hint_text("Explain the missed check-in or disputed time. Avoid sensitive personal details."));
+                            ui.label(RichText::new(format!("{} / 500 characters", draft.reason.trim().chars().count())).color(muted(ui)).small());
+                            ui.label("HR corrections apply immediately. History keeps the reason, previous times and who saved the change.");
+                            #[cfg(feature = "qa-screenshot")]
+                            if std::env::var("HRIS_PREVIEW_SCROLL").as_deref() == Ok("bottom") { ui.scroll_to_cursor(Some(Align::BOTTOM)); }
+                        });
+                        if let Some((text, true)) = &self.notice { ui.colored_label(ui.visuals().error_fg_color, text); }
+                        ui.add_space(8.0);
+                        ui.horizontal(|ui| {
+                            save = primary(ui, "Save correction");
+                            cancel = ui.button("Cancel").clicked();
+                        });
+                    });
+                });
+            if save {
+                match draft.change(&self.data, chrono::Utc::now()) {
+                    Ok(change) => {
+                        self.close_on_success = true;
+                        self.send(Command::Change(Action::CorrectAttendance(change)));
+                    }
+                    Err(error) => self.notice = Some((error.to_string(), true)),
+                }
+            }
+            if (open && !cancel) || self.busy {
+                self.correction_form = Some(draft);
+            }
+        }
+        if let Some(id) = self.correction_history {
+            let mut open = true;
+            let mut close = false;
+            egui::Window::new("Attendance correction history")
+                .open(&mut open)
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+                .default_width(550.0)
+                .show(ctx, |ui| {
+                    if let Some(record) = self.data.attendance.iter().find(|a| a.id == id) {
+                        ui.label(
+                            RichText::new(self.data.employee_name(record.employee_id))
+                                .size(18.0)
+                                .strong(),
+                        );
+                        ui.label(format!(
+                            "{} · {}",
+                            record.work_date, self.data.company.timezone
+                        ));
+                        ui.label(format!("Current: {}", attendance_times(record, &self.data)));
+                    }
+                    egui::ScrollArea::vertical()
+                        .id_salt("correction_history")
+                        .max_height((ctx.content_rect().height() - 240.0).max(180.0))
+                        .show(ui, |ui| {
+                            let mut events: Vec<_> = self
+                                .data
+                                .corrections
+                                .iter()
+                                .filter(|c| c.attendance_id == id)
+                                .collect();
+                            events.sort_by(|a, b| {
+                                b.created_at.cmp(&a.created_at).then(b.id.cmp(&a.id))
+                            });
+                            if events.is_empty() {
+                                ui.label("No HR corrections have been made to this record.");
+                            }
+                            for event in events {
+                                ui.separator();
+                                ui.label(
+                                    RichText::new(format!(
+                                        "{} · {}",
+                                        event
+                                            .created_at
+                                            .with_timezone(&self.data.company.tz())
+                                            .format("%b %d, %Y %H:%M:%S"),
+                                        event.actor_name
+                                    ))
+                                    .strong(),
+                                );
+                                ui.label(
+                                    RichText::new(event.actor_role.label())
+                                        .color(muted(ui))
+                                        .small(),
+                                );
+                                ui.label(format!("Reason: {}", event.reason));
+                                ui.label(format!(
+                                    "Before: {}",
+                                    event
+                                        .before_record
+                                        .as_ref()
+                                        .map(|a| attendance_times(a, &self.data))
+                                        .unwrap_or_else(|| "No attendance record".into())
+                                ));
+                                ui.label(format!(
+                                    "After: {}",
+                                    attendance_times(&event.after_record, &self.data)
+                                ));
+                            }
+                        });
+                    close = ui.button("Close").clicked();
+                });
+            if !open || close {
+                self.correction_history = None;
+            }
+        }
+    }
+
     fn forms(&mut self, ctx: &egui::Context) {
+        self.attendance_forms(ctx);
         if let Some(mut draft) = self.leave_form.take() {
             let mut open = true;
             let mut save = false;
@@ -2479,6 +2762,23 @@ impl HrisApp {
     }
 }
 
+fn attendance_times(record: &Attendance, data: &Snapshot) -> String {
+    format!(
+        "{} to {}",
+        record
+            .checked_in_at
+            .with_timezone(&data.company.tz())
+            .format("%b %d, %Y %H:%M:%S"),
+        record
+            .checked_out_at
+            .map(|t| t
+                .with_timezone(&data.company.tz())
+                .format("%b %d, %Y %H:%M:%S")
+                .to_string())
+            .unwrap_or_else(|| "Open shift".into())
+    )
+}
+
 impl eframe::App for HrisApp {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
@@ -2503,6 +2803,8 @@ impl eframe::App for HrisApp {
                 });
         } else {
             let form_open = self.leave_form.is_some()
+                || self.correction_form.is_some()
+                || self.correction_history.is_some()
                 || self.session_confirmation.is_some()
                 || self.update_confirmation;
             egui::Panel::left("sidebar")

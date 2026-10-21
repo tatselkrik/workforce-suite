@@ -3,6 +3,7 @@ pub mod account;
 pub mod attendance;
 pub mod backend;
 pub mod contacts;
+pub mod corrections;
 pub mod domain;
 pub mod ui;
 pub mod updater;

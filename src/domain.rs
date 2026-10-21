@@ -169,6 +169,8 @@ pub struct Attendance {
     pub work_date: NaiveDate,
     pub checked_in_at: DateTime<Utc>,
     pub checked_out_at: Option<DateTime<Utc>>,
+    #[serde(default)]
+    pub revision: i64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -313,6 +315,7 @@ pub struct Snapshot {
     pub access: crate::access::Access,
     pub accounts: Vec<crate::access::ManagedAccount>,
     pub access_events: Vec<crate::access::AccessEvent>,
+    pub corrections: Vec<crate::corrections::CorrectionEvent>,
 }
 
 impl Snapshot {
@@ -333,6 +336,7 @@ impl Snapshot {
             access: crate::access::Access::default(),
             accounts: Vec::new(),
             access_events: Vec::new(),
+            corrections: Vec::new(),
         }
     }
 
@@ -391,6 +395,7 @@ pub enum Action {
     RemoveCompanyLogo,
     CheckIn(Uuid),
     CheckOut(Uuid),
+    CorrectAttendance(crate::corrections::CorrectionChange),
     RequestLeave(LeaveDraft),
     DecideLeave(Uuid, LeaveStatus),
     SaveCompany(Company),
@@ -482,6 +487,7 @@ impl DemoStore {
             .take(5)
             .enumerate()
             .map(|(i, e)| Attendance {
+                revision: 0,
                 id: Uuid::from_u128(200 + i as u128),
                 company_id: company.id,
                 employee_id: e.id,
@@ -581,6 +587,7 @@ impl DemoStore {
                     },
                 ],
                 access_events: Vec::new(),
+                corrections: Vec::new(),
             },
         }
     }
@@ -588,6 +595,46 @@ impl DemoStore {
     pub fn execute(&mut self, action: Action) -> Result<()> {
         self.data.access.authorize(&action, &self.data)?;
         match action {
+            Action::CorrectAttendance(change) => {
+                change.validate(&self.data, Utc::now())?;
+                let before_record = self
+                    .data
+                    .attendance
+                    .iter()
+                    .find(|a| a.id == change.record.id)
+                    .cloned();
+                let actor_name = self
+                    .data
+                    .own_employee()
+                    .map(|e| e.full_name.clone())
+                    .unwrap_or_else(|| "HR staff".into());
+                self.data
+                    .corrections
+                    .push(crate::corrections::CorrectionEvent {
+                        id: Uuid::new_v4(),
+                        company_id: self.data.company.id,
+                        attendance_id: change.record.id,
+                        employee_id: change.record.employee_id,
+                        work_date: change.record.work_date,
+                        actor_id: self.data.access.user_id,
+                        actor_name,
+                        actor_role: self.data.access.role,
+                        reason: change.reason.trim().into(),
+                        before_record,
+                        after_record: change.record.clone(),
+                        created_at: Utc::now(),
+                    });
+                if let Some(row) = self
+                    .data
+                    .attendance
+                    .iter_mut()
+                    .find(|a| a.id == change.record.id)
+                {
+                    *row = change.record;
+                } else {
+                    self.data.attendance.push(change.record);
+                }
+            }
             Action::SaveEmployeeRecord(draft, contacts) => {
                 let contacts = contacts.normalized()?;
                 ensure!(
@@ -698,6 +745,7 @@ impl DemoStore {
                     "Close the employee's previous open attendance record first."
                 );
                 self.data.attendance.push(Attendance {
+                    revision: 0,
                     id: Uuid::new_v4(),
                     company_id: self.data.company.id,
                     employee_id: id,
@@ -722,6 +770,7 @@ impl DemoStore {
                     "Check-out cannot be before check-in."
                 );
                 row.checked_out_at = Some(Utc::now());
+                row.revision += 1;
             }
             Action::RequestLeave(draft) => {
                 let row = draft.request(self.data.company.id)?;

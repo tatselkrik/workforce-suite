@@ -118,6 +118,7 @@ impl Access {
                 self.role.manages_accounts()
             }
             Action::CheckIn(id) => self.can_record(*id),
+            Action::CorrectAttendance(_) => self.role.manages_hr(),
             Action::CheckOut(id) => data
                 .attendance
                 .iter()

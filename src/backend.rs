@@ -693,6 +693,11 @@ impl CloudClient {
         let contacts = self.rows("employee_contacts", Some(company.id))?;
         let mut attendance: Vec<Attendance> = self.rows("attendance", Some(company.id))?;
         attendance.sort_by(|a, b| b.checked_in_at.cmp(&a.checked_in_at));
+        let corrections = if access.role.manages_hr() {
+            self.rows("attendance_corrections", Some(company.id))?
+        } else {
+            Vec::new()
+        };
         let mut leave: Vec<LeaveRequest> = self.rows("leave_requests", Some(company.id))?;
         leave.sort_by(|a, b| b.starts_on.cmp(&a.starts_on));
         let (accounts, access_events) = if access.role.manages_accounts() {
@@ -727,6 +732,7 @@ impl CloudClient {
             access,
             accounts,
             access_events,
+            corrections,
         })
     }
 
@@ -767,6 +773,14 @@ impl CloudClient {
             let _:Option<Uuid>=decode(response).context("The logo file changed, but its company setting could not be saved. Refresh and retry.")?;
             self.logo_cache = None;
             return self.snapshot();
+        }
+        if let Action::CorrectAttendance(change) = &action {
+            change.validate(current, Utc::now())?;
+            let response = self.request(Method::POST, "rpc/correct_attendance")?
+                .json(&json!({"p_change":change.payload()})).send()
+                .context("Could not save the correction. Check your connection and refresh before retrying.")?;
+            let _: Uuid = decode(response)?;
+            return self.snapshot().context("Attendance correction saved, but refresh failed. Click Refresh before trying again.");
         }
         if let Action::SaveEmployeeRecord(draft, contacts) = &action {
             let employee = draft.employee(current.company.id)?;
@@ -838,6 +852,7 @@ impl CloudClient {
                 .context("Contacts saved, but refresh failed. Click Refresh before trying again.");
         }
         let (method, table, id, body) = match action {
+            Action::CorrectAttendance(_) => unreachable!("Corrections return above"),
             Action::SaveEmployeeRecord(_, _) => unreachable!("Employee record saves return above"),
             Action::SaveEmployeeContacts(_) | Action::SaveOwnContacts(_) => {
                 unreachable!("Contact saves return above")
@@ -1048,7 +1063,17 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
             }
             (_, "23505") => "That record already exists. Refresh before trying again.".into(),
             (_, "23P01") => {
-                "These dates overlap an existing pending or approved leave request.".into()
+                if value
+                    .get("message")
+                    .and_then(Value::as_str)
+                    .is_some_and(|m| {
+                        m.starts_with("These times overlap another attendance record.")
+                    })
+                {
+                    "These times overlap another attendance record. Review both shifts before saving.".into()
+                } else {
+                    "These dates overlap an existing pending or approved leave request.".into()
+                }
             }
             (_, "42501") => "This operation is not permitted for your company workspace.".into(),
             (_, "PGRST202" | "PGRST205" | "42P01") => {

@@ -9,7 +9,7 @@ Application identifier: `io.github.tatselkrik.hrisdesktop`.
 - **Overview:** active headcount, today's attendance, pending requests, and approved time away.
 - **Employee records:** click a name or Edit to open one record with Employment, Contact details and Emergency contact tabs. Save changes writes these together. Manage reporting relationships, optional hire dates, allowances and archived records.
 - **Private contacts:** personal phone, personal email, home address and an emergency contact with primary/alternate phones. Administrators and HR manage these records; each active staff member can edit their own contacts through Profile. See [contact permissions](docs/EMPLOYEE-CONTACTS.md).
-- **Attendance:** record check-in/check-out, choose a historical day from a month/year calendar, review recorded check-ins, approved leave and employees with no check-in; reject duplicate daily check-ins and multiple open shifts. Live timestamps come from the database server and use the company time zone.
+- **Attendance:** record check-in/check-out, choose a historical day from a month/year calendar, review recorded check-ins, approved leave and employees with no check-in; reject duplicate daily check-ins and multiple open shifts. Live timestamps come from the database server and use the company time zone. HR and Administrators can record past entries or correct times with a required reason and immutable before/after history. Concurrent stale edits and overlapping shifts are rejected. See [attendance corrections](docs/ATTENDANCE-CORRECTIONS.md).
 - **Leave:** request annual, sick, or unpaid leave; approve or reject pending requests; prevent overlaps and annual leave over-allocation.
 - **Account Manager:** administrators manage employees with staff roles, sign-in access and access history. Add staff employee opens the same employee form; save employment, contacts and role together. Existing employees receive staff access from their Staff role & sign-in tab. Disabled accounts are hidden unless Show disabled is selected. Other roles cannot open Account Manager. See [account permissions](docs/ACCOUNT-MANAGER.md).
 - **Settings:** company defaults with shared logo upload/removal in the right column, account display scale, 12/24-hour time and Light/Dark/System themes. Database configuration is handled during deployment.
@@ -22,7 +22,7 @@ The interface uses `egui`/`eframe`. The domain rules and Supabase Auth/REST adap
 
 ## Try it
 
-The private Windows setup installs version 0.1.8 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection and update-verification profiles, but no account password or session.
+The private Windows setup installs version 0.1.9 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection and update-verification profiles, but no account password or session.
 
 Open **HRIS Desktop** and sign in with an assigned Administrator, HR Generalist or Manager account. Ordinary Employee accounts are reserved for a future mobile-friendly portal and cannot sign into this desktop app. Its company database is already selected by the installation. Account login remains necessary to access HR records; database setup is not part of that login.
 
@@ -33,7 +33,7 @@ An unconfigured source build can run demo mode without an account. Sample change
 Suggested walkthrough:
 
 1. Open **Employees**, click an employee or add one, edit employment/contact details, and choose **Save changes**. Set **Reports to** here.
-2. Open **Attendance**, use **Choose date** to pick a day in the calendar or **Today**, and review who has a check-in, no check-in or approved leave. Check-ins can only be recorded for today; an old open shift can be checked out from its original date. Missing check-ins are not confirmed absence without shift/holiday rules.
+2. Open **Attendance**, use **Choose date** to pick a day in the calendar or **Today**, and review who has a check-in, no check-in or approved leave. **Check in** records the current server time. HR can use **Record past attendance**, a row's **Record** button or **Correct** to enter verified times and a required reason. **History** retains each correction; **Check out now** always uses the current server time, including an overnight open shift. Missing check-ins are not confirmed absence without shift/holiday rules.
 3. Open **Leave**, submit a weekday request for that employee, and approve it.
 4. Return to **Employees** to see the updated annual balance.
 
