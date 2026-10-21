@@ -20,11 +20,11 @@ OutFile "${SETUP_OUTPUT}"
 InstallDir "$LOCALAPPDATA\Programs\HRIS Desktop"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
-VIProductVersion "0.1.3.0"
+VIProductVersion "0.1.4.0"
 VIAddVersionKey /LANG=1033 "ProductName" "HRIS Desktop"
-VIAddVersionKey /LANG=1033 "ProductVersion" "0.1.3"
+VIAddVersionKey /LANG=1033 "ProductVersion" "0.1.4"
 VIAddVersionKey /LANG=1033 "FileDescription" "HRIS Desktop private prototype setup"
-VIAddVersionKey /LANG=1033 "FileVersion" "0.1.3.0"
+VIAddVersionKey /LANG=1033 "FileVersion" "0.1.4.0"
 VIAddVersionKey /LANG=1033 "LegalCopyright" ""
 
 !define MUI_ABORTWARNING
@@ -78,7 +78,7 @@ Section "HRIS Desktop"
   CreateShortCut "$SMPROGRAMS\HRIS Desktop.lnk" "$INSTDIR\HRIS-Desktop.exe" "" "$INSTDIR\HRIS-Desktop.exe" 0
   CreateShortCut "$DESKTOP\HRIS Desktop.lnk" "$INSTDIR\HRIS-Desktop.exe" "" "$INSTDIR\HRIS-Desktop.exe" 0
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayName" "HRIS Desktop"
-  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "0.1.3"
+  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "0.1.4"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\HRIS-Desktop.exe"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "UninstallString" '$\"$INSTDIR\Uninstall.exe$\"'

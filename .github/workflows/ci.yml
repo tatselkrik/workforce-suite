@@ -43,6 +43,8 @@ jobs:
       - name: Test schema and tenant authorization
         working-directory: tools/db-tests
         run: npm test
+      - name: Test privileged account provisioning
+        run: node --test tests/account_admin_edge.test.mjs
 
 # No automatic database deployment, release publication, or signing is configured.
 # Choose a dedicated Supabase project and deployment approval policy first.

@@ -21,12 +21,14 @@ fn auth_fixture(
     let address = listener.local_addr().unwrap();
     let requests = Arc::new(Mutex::new(Vec::new()));
     let observed = requests.clone();
-    let expected_requests = if companies.is_empty() { 2 } else { 7 };
+    let expected_requests = if companies.is_empty() { 2 } else { 10 };
     let user_id = companies
         .first()
         .map(|company| company.owner_id)
         .unwrap_or_default();
     let company_json = serde_json::to_string(&companies).unwrap();
+    let assigned = !companies.is_empty();
+    let company_id = companies.first().map(|c| c.id).unwrap_or_default();
     let server = thread::spawn(move || {
         let deadline = Instant::now() + Duration::from_secs(15);
         let mut count = 0;
@@ -71,6 +73,12 @@ fn auth_fixture(
             let user = json!({"id":user_id,"email":"demo@example.invalid","email_confirmed_at":"2026-01-01T00:00:00Z"});
             let (status, body) = if first.starts_with("POST /auth/v1/token?") {
                 ("200 OK",json!({"access_token":"test-user-jwt","refresh_token":"test-refresh-token","expires_at":4102444800i64,"expires_in":3600,"user":user}).to_string())
+            } else if first.starts_with("POST /rest/v1/rpc/my_hris_access ") {
+                if assigned {
+                    ("200 OK",json!({"company_id":company_id,"user_id":user_id,"role":"administrator","employee_id":null,"direct_reports":[]}).to_string())
+                } else {
+                    ("403 Forbidden", json!({"code":"42501"}).to_string())
+                }
             } else if first.starts_with("GET /auth/v1/user ") {
                 ("200 OK", user.to_string())
             } else if first.starts_with("GET /storage/v1/object/authenticated/") {
@@ -158,10 +166,10 @@ fn an_unassigned_account_cannot_create_a_company_or_load_employee_modules() {
         Err(error) => error.to_string(),
         Ok(_) => panic!("An unassigned account must not connect."),
     };
-    assert!(error.contains("not assigned"));
+    assert!(error.contains("access has changed"));
     let requests = requests.lock().unwrap();
     assert_eq!(requests.len(), 2);
-    assert!(requests[1].starts_with("GET /rest/v1/companies?"));
+    assert!(requests[1].starts_with("POST /rest/v1/rpc/my_hris_access "));
     assert!(
         !requests
             .iter()

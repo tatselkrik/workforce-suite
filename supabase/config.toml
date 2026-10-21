@@ -4,6 +4,10 @@
 # working directory name when running `supabase init`.
 project_id = "hris-desktop"
 
+[functions.account-admin]
+# The handler verifies the bearer with Auth and checks protected membership on every call.
+verify_jwt = false
+
 [api]
 enabled = true
 # Port to use for the API URL.

@@ -33,12 +33,13 @@ try {
     create role anon nologin;
     create role authenticated nologin;
     create schema auth;
-    create table auth.users(id uuid primary key);
+    create table auth.users(id uuid primary key, email text unique, email_confirmed_at timestamptz,
+      raw_user_meta_data jsonb default '{}'::jsonb);
     create function auth.uid() returns uuid language sql stable as
       $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     grant usage on schema auth to authenticated;
     grant execute on function auth.uid() to authenticated;
-    insert into auth.users values ('${uidA}'),('${uidB}');
+    insert into auth.users(id,email,email_confirmed_at) values ('${uidA}','admin@example.invalid',now()),('${uidB}','unassigned@example.invalid',now());
     -- Minimal managed-Storage contract for local policy tests; no S3 service is simulated.
     create schema storage;
     create table storage.buckets(id text primary key, name text, public boolean default false,
@@ -55,7 +56,7 @@ try {
     await db.exec(await readFile(new URL(filename,folder),'utf8'));
   }
   eq((await db.query(`select count(*)::int as n from pg_class where relname in ('companies','employees','attendance','leave_requests') and relrowsecurity`)).rows[0].n,4,'RLS enabled on every HR table');
-  eq((await db.query(`select count(*)::int as n from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='hris_private' and p.prosecdef`)).rows[0].n,0,'No security-definer bypass');
+  eq((await db.query(`select count(*)::int as n from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosecdef`)).rows[0].n,0,'Exposed RPCs use invoker security; protected definer helpers stay private');
 
   await session(uidA);
   await deny(`insert into public.companies(owner_id,name) values ($1,'Unapproved first company')`,[uidA],['42501']);
@@ -154,6 +155,8 @@ try {
   }
   await deny(`insert into public.companies(owner_id,name) values ($1,'Anonymous')`,[uidA],['42501']);
   await deny(`update public.employees set full_name='Anonymous'`,[],['42501']);
+  const {runAccessTests}=await import('./accounts.test.mjs');
+  await runAccessTests({db,eq,deny,session,employee,request,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL schema, authorization, and workflow assertions.`);
 } finally {
   await db.close();

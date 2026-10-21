@@ -297,6 +297,9 @@ pub struct Snapshot {
     pub attendance: Vec<Attendance>,
     pub leave: Vec<LeaveRequest>,
     pub mode: Mode,
+    pub access: crate::access::Access,
+    pub accounts: Vec<crate::access::ManagedAccount>,
+    pub access_events: Vec<crate::access::AccessEvent>,
 }
 
 impl Snapshot {
@@ -311,6 +314,9 @@ impl Snapshot {
             attendance: Vec::new(),
             leave: Vec::new(),
             mode: Mode::SignedOut,
+            access: crate::access::Access::default(),
+            accounts: Vec::new(),
+            access_events: Vec::new(),
         }
     }
 
@@ -442,14 +448,68 @@ impl DemoStore {
                 attendance,
                 leave,
                 mode: Mode::Demo,
+                access: crate::access::Access::demo_admin(),
+                accounts: vec![
+                    crate::access::ManagedAccount {
+                        user_id: Uuid::nil(),
+                        email: "administrator@example.invalid".into(),
+                        role: crate::access::Role::Administrator,
+                        active: true,
+                        employee_id: None,
+                        manager_user_id: None,
+                        email_confirmed: true,
+                        is_owner: true,
+                    },
+                    crate::access::ManagedAccount {
+                        user_id: Uuid::from_u128(11),
+                        email: "hr@example.invalid".into(),
+                        role: crate::access::Role::HrGeneralist,
+                        active: true,
+                        employee_id: Some(Uuid::from_u128(100)),
+                        manager_user_id: None,
+                        email_confirmed: true,
+                        is_owner: false,
+                    },
+                    crate::access::ManagedAccount {
+                        user_id: Uuid::from_u128(12),
+                        email: "manager@example.invalid".into(),
+                        role: crate::access::Role::Manager,
+                        active: true,
+                        employee_id: Some(Uuid::from_u128(103)),
+                        manager_user_id: None,
+                        email_confirmed: true,
+                        is_owner: false,
+                    },
+                    crate::access::ManagedAccount {
+                        user_id: Uuid::from_u128(13),
+                        email: "employee@example.invalid".into(),
+                        role: crate::access::Role::Employee,
+                        active: true,
+                        employee_id: Some(Uuid::from_u128(101)),
+                        manager_user_id: Some(Uuid::from_u128(12)),
+                        email_confirmed: true,
+                        is_owner: false,
+                    },
+                ],
+                access_events: Vec::new(),
             },
         }
     }
 
     pub fn execute(&mut self, action: Action) -> Result<()> {
+        self.data.access.authorize(&action, &self.data)?;
         match action {
             Action::SaveEmployee(draft) => {
                 let employee = draft.employee(self.data.company.id)?;
+                ensure!(
+                    employee.status != EmployeeStatus::Archived
+                        || !self
+                            .data
+                            .accounts
+                            .iter()
+                            .any(|a| a.active && a.employee_id == Some(employee.id)),
+                    "An active account is linked to this employee. Deactivate or unlink it first."
+                );
                 ensure!(
                     !self.data.employees.iter().any(|e| e.id != employee.id
                         && e.employee_code

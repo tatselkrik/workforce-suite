@@ -1,3 +1,4 @@
+use crate::access::{Access, AccessEvent, AdminAction, ManagedAccount};
 use crate::account::{self, AccountAction, AccountProfile, DisplayPreferences, PersonalDetails};
 use crate::domain::*;
 use anyhow::{Context, Result, bail, ensure};
@@ -178,6 +179,26 @@ pub struct CloudClient {
     account: AccountProfile,
 }
 
+#[derive(Debug)]
+struct AccessRevoked;
+impl std::fmt::Display for AccessRevoked {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(
+            "Your HRIS access has changed or expired. Sign in again or contact your administrator.",
+        )
+    }
+}
+impl std::error::Error for AccessRevoked {}
+
+#[derive(Debug)]
+struct PortalAccount;
+impl std::fmt::Display for PortalAccount {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(crate::access::EMPLOYEE_PORTAL_NOTICE)
+    }
+}
+impl std::error::Error for PortalAccount {}
+
 impl CloudClient {
     pub fn connect(
         config: ConnectionConfig,
@@ -237,6 +258,12 @@ impl CloudClient {
             .json(&json!({"refresh_token": self.session.refresh_token}))
             .send()
             .context("Session refresh failed. Sign in again.")?;
+        if matches!(
+            response.status(),
+            StatusCode::BAD_REQUEST | StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN
+        ) {
+            return Err(AccessRevoked.into());
+        }
         let mut session: AuthSession =
             decode(response).context("Session expired. Sign in again.")?;
         if session.expires_at == 0 {
@@ -490,6 +517,26 @@ impl CloudClient {
     }
 
     pub fn snapshot(&mut self) -> Result<Snapshot> {
+        let response = self
+            .request(Method::POST, "rpc/my_hris_access")?
+            .json(&json!({}))
+            .send()
+            .context("Could not verify your current HRIS access. Check your connection.")?;
+        if matches!(
+            response.status(),
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN
+        ) {
+            return Err(AccessRevoked.into());
+        }
+        let access: Access = decode(response)?;
+        ensure!(
+            access.user_id == self.session.user.id,
+            "The access response did not match your account."
+        );
+        if !access.role.uses_desktop() {
+            let _ = self.sign_out_scope("local");
+            return Err(PortalAccount.into());
+        }
         let mut companies: Vec<Company> = self.rows("companies", None)?;
         ensure!(
             !companies.is_empty(),
@@ -501,7 +548,7 @@ impl CloudClient {
         );
         let company = companies.remove(0);
         ensure!(
-            company.owner_id == self.session.user.id,
+            company.id == access.company_id,
             "This HR account is not assigned to this company's records."
         );
         let mut employees: Vec<Employee> = self.rows("employees", Some(company.id))?;
@@ -510,16 +557,39 @@ impl CloudClient {
         attendance.sort_by(|a, b| b.checked_in_at.cmp(&a.checked_in_at));
         let mut leave: Vec<LeaveRequest> = self.rows("leave_requests", Some(company.id))?;
         leave.sort_by(|a, b| b.starts_on.cmp(&a.starts_on));
+        let (accounts, access_events) = if access.role.manages_accounts() {
+            let response = self
+                .request(Method::POST, "rpc/list_company_accounts")?
+                .json(&json!({}))
+                .send()?;
+            let accounts: Vec<ManagedAccount> = decode(response)?;
+            let response = self
+                .request(Method::GET, "account_access_events")?
+                .query(&[
+                    ("select", "*"),
+                    ("order", "created_at.desc,id.desc"),
+                    ("limit", "50"),
+                ])
+                .send()?;
+            let events: Vec<AccessEvent> = decode(response)?;
+            (accounts, events)
+        } else {
+            (Vec::new(), Vec::new())
+        };
         Ok(Snapshot {
             company,
             employees,
             attendance,
             leave,
             mode: Mode::Supabase,
+            access,
+            accounts,
+            access_events,
         })
     }
 
     pub fn execute(&mut self, action: Action, current: &Snapshot) -> Result<Snapshot> {
+        current.access.authorize(&action, current)?;
         let (method, table, id, body) = match action {
             Action::SaveEmployee(draft) => {
                 let employee = draft.employee(current.company.id)?;
@@ -597,6 +667,63 @@ impl CloudClient {
             .context("Change saved, but refresh failed. Click Refresh before trying again.")
     }
 
+    pub fn execute_admin(
+        &mut self,
+        action: AdminAction,
+        current: &Snapshot,
+    ) -> Result<(Snapshot, String)> {
+        ensure!(
+            current.access.role.manages_accounts(),
+            "Only administrators can manage accounts."
+        );
+        let message = match action {
+            AdminAction::Save(draft) => {
+                draft.validate(current)?;
+                let body = json!({"p_user_id":draft.user_id,"p_email":draft.email.trim(),"p_role":draft.role,
+                    "p_active":draft.active,"p_employee_id":draft.employee_id,"p_manager_user_id":draft.manager_user_id});
+                if draft.user_id.is_none() && draft.create_new {
+                    let response = self.account_request(Method::POST, "/functions/v1/account-admin")?
+                        .json(&json!({"operation":"create","email":draft.email.trim(),"password":draft.password,"active":draft.active,
+                            "role":draft.role,"employee_id":draft.employee_id,"manager_user_id":draft.manager_user_id})).send()?;
+                    let result: Value = decode(response)?;
+                    if result.get("confirmation_sent").and_then(Value::as_bool) == Some(true) {
+                        if draft.role.uses_desktop() {
+                            "Account created. The user must confirm their email before signing in."
+                        } else {
+                            "Employee account created and confirmation email sent. The employee portal is planned; this account has no desktop access."
+                        }
+                    } else {
+                        if draft.role.uses_desktop() {
+                            "Account created, but the confirmation email was not sent. Use Send confirmation to retry."
+                        } else {
+                            "Employee account created for the planned portal. Confirmation email was not sent; use Send confirmation to retry. No desktop access is granted."
+                        }
+                    }
+                } else {
+                    let response = self
+                        .request(Method::POST, "rpc/save_company_account")?
+                        .json(&body)
+                        .send()?;
+                    let _: Uuid = decode(response)?;
+                    "Account access saved."
+                }
+            }
+            AdminAction::ResendConfirmation(user_id) => {
+                let response = self
+                    .account_request(Method::POST, "/functions/v1/account-admin")?
+                    .json(&json!({"operation":"resend","user_id":user_id}))
+                    .send()?;
+                let _: Value = decode(response)?;
+                "Confirmation email sent."
+            }
+        };
+        Ok((
+            self.snapshot()
+                .context("Account change saved, but refresh failed. Refresh before retrying.")?,
+            message.into(),
+        ))
+    }
+
     pub fn sign_out(&mut self) -> Result<()> {
         self.sign_out_scope("local")
     }
@@ -640,7 +767,7 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
                 "These dates overlap an existing pending or approved leave request.".into()
             }
             (_, "42501") => "This operation is not permitted for your company workspace.".into(),
-            (_, "PGRST205" | "42P01") => {
+            (_, "PGRST202" | "PGRST205" | "42P01") => {
                 "Your company workspace is not ready. Contact your HRIS administrator.".into()
             }
             _ => value
@@ -668,6 +795,7 @@ pub enum Command {
     SignOut,
     SignOutEverywhere,
     Account(AccountAction),
+    Admin(AdminAction),
     Connect {
         config: ConnectionConfig,
         email: String,
@@ -695,9 +823,15 @@ pub fn worker(
             .as_ref()
             .map(|store| store.data.clone())
             .unwrap_or_else(Snapshot::signed_out);
-        while let Ok(command) = receiver.recv() {
+        loop {
+            let command = match receiver.recv_timeout(Duration::from_secs(60)) {
+                Ok(command) => command,
+                Err(mpsc::RecvTimeoutError::Timeout) if cloud.is_some() => Command::Refresh,
+                Err(mpsc::RecvTimeoutError::Timeout) => continue,
+                Err(mpsc::RecvTimeoutError::Disconnected) => break,
+            };
             let mut message = String::new();
-            let result: Result<Snapshot> = match command {
+            let mut result: Result<Snapshot> = match command {
                 Command::Connect {
                     config,
                     email,
@@ -769,7 +903,36 @@ pub fn worker(
                         current.clone()
                     })
                 }
+                Command::Admin(action) => {
+                    let changed = match cloud.as_mut() {
+                        Some(client) => client.execute_admin(action, &current),
+                        None => demo
+                            .as_mut()
+                            .context("Sign in to manage accounts.")
+                            .and_then(|store| {
+                                execute_demo_admin(store, action)
+                                    .map(|message| (store.data.clone(), message))
+                            }),
+                    };
+                    changed.map(|(data, text)| {
+                        message = text;
+                        data
+                    })
+                }
             };
+            let access_error = result
+                .as_ref()
+                .err()
+                .filter(|error| {
+                    error.downcast_ref::<AccessRevoked>().is_some()
+                        || error.downcast_ref::<PortalAccount>().is_some()
+                })
+                .map(|error| error.to_string());
+            if let Some(error) = access_error {
+                cloud = None;
+                message = error;
+                result = Ok(Snapshot::signed_out());
+            }
             if let Ok(data) = &result {
                 current = data.clone();
             }
@@ -790,6 +953,102 @@ pub fn worker(
         }
     });
     (commands, updates)
+}
+
+fn execute_demo_admin(store: &mut DemoStore, action: AdminAction) -> Result<String> {
+    ensure!(
+        store.data.access.role.manages_accounts(),
+        "Only administrators can manage accounts."
+    );
+    match action {
+        AdminAction::Save(draft) => {
+            draft.validate(&store.data)?;
+            let user_id = draft.user_id.unwrap_or_else(Uuid::new_v4);
+            ensure!(
+                user_id != Uuid::nil()
+                    || (draft.active && draft.role == crate::access::Role::Administrator),
+                "The installation administrator must remain active with Administrator access."
+            );
+            ensure!(
+                !store
+                    .data
+                    .accounts
+                    .iter()
+                    .any(|a| a.user_id != user_id
+                        && a.email.eq_ignore_ascii_case(draft.email.trim())),
+                "That account already exists."
+            );
+            ensure!(
+                !draft.active
+                    || draft.employee_id.is_none()
+                    || !store.data.accounts.iter().any(|a| a.active
+                        && a.user_id != user_id
+                        && a.employee_id == draft.employee_id),
+                "This employee already has an active account."
+            );
+            let account = ManagedAccount {
+                user_id,
+                email: draft.email.trim().into(),
+                role: draft.role,
+                active: draft.active,
+                employee_id: draft.employee_id,
+                manager_user_id: draft.manager_user_id,
+                email_confirmed: true,
+                is_owner: user_id == Uuid::nil(),
+            };
+            let mut chain = draft.manager_user_id;
+            let mut seen = std::collections::HashSet::new();
+            while let Some(id) = chain {
+                ensure!(
+                    id != user_id && seen.insert(id),
+                    "Reporting relationships cannot contain a cycle."
+                );
+                chain = store
+                    .data
+                    .accounts
+                    .iter()
+                    .find(|a| a.user_id == id)
+                    .and_then(|a| a.manager_user_id);
+            }
+            ensure!(
+                !(draft.active && draft.role == crate::access::Role::Employee)
+                    || !store
+                        .data
+                        .accounts
+                        .iter()
+                        .any(|a| a.active && a.manager_user_id == Some(user_id)),
+                "Reassign this manager's direct reports before changing the role to Employee."
+            );
+            if let Some(old) = store
+                .data
+                .accounts
+                .iter_mut()
+                .find(|a| a.user_id == user_id)
+            {
+                *old = account;
+            } else {
+                store.data.accounts.push(account);
+            }
+            store.data.access_events.insert(
+                0,
+                AccessEvent {
+                    id: Uuid::new_v4(),
+                    actor_id: store.data.access.user_id,
+                    user_id,
+                    action: if draft.user_id.is_some() {
+                        "access_changed"
+                    } else {
+                        "account_added"
+                    }
+                    .into(),
+                    created_at: Utc::now().to_rfc3339(),
+                    details: json!({"role":draft.role,"active":draft.active}),
+                },
+            );
+            Ok("Demo account access updated in memory. No account or email was created.".into())
+        }
+        AdminAction::ResendConfirmation(_) => anyhow::bail!("Demo accounts do not send email."),
+    }
 }
 
 fn execute_demo_account(profile: &mut AccountProfile, action: AccountAction) -> Result<String> {

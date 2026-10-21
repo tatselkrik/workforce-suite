@@ -1,4 +1,5 @@
 use hris_desktop::{
+    access::{AccountDraft, AdminAction, Role},
     account::{self, AccountAction, DisplayPreferences, PersonalDetails},
     backend::{self, CloudClient, Command, ConnectionConfig},
     domain::{Company, DemoStore},
@@ -128,10 +129,17 @@ fn baseline(company: &Company) -> Vec<Reply> {
             200,
             token(user(company), "profile-jwt"),
         ),
+        reply(
+            "POST /rest/v1/rpc/my_hris_access ",
+            200,
+            json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]}),
+        ),
         reply("GET /rest/v1/companies?", 200, json!([company])),
         reply("GET /rest/v1/employees?", 200, json!([])),
         reply("GET /rest/v1/attendance?", 200, json!([])),
         reply("GET /rest/v1/leave_requests?", 200, json!([])),
+        reply("POST /rest/v1/rpc/list_company_accounts ", 200, json!([])),
+        reply("GET /rest/v1/account_access_events?", 200, json!([])),
         reply("GET /auth/v1/user ", 200, user(company)),
         reply(
             "GET /storage/v1/object/authenticated/profile-photos/",
@@ -148,6 +156,116 @@ fn connect(config: ConnectionConfig) -> CloudClient {
     )
     .unwrap()
     .0
+}
+
+#[test]
+fn employee_desktop_sign_in_is_rejected_before_loading_hr_data_and_revokes_its_session() {
+    let company = Company::default();
+    let mut replies = baseline(&company);
+    replies[1] = reply(
+        "POST /rest/v1/rpc/my_hris_access ",
+        200,
+        json!({"company_id":company.id,"user_id":company.owner_id,"role":"employee","employee_id":uuid::Uuid::new_v4(),"direct_reports":[]}),
+    );
+    replies.truncate(2);
+    replies.push(reply("POST /auth/v1/logout?scope=local ", 204, Value::Null));
+    let (config, server, requests) = fixture(replies);
+    let result = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    );
+    assert!(
+        result
+            .err()
+            .unwrap()
+            .to_string()
+            .contains("employee portal")
+    );
+    server.join().unwrap();
+    let requests = requests.lock().unwrap();
+    assert_eq!(requests.len(), 3);
+    assert!(
+        !requests
+            .iter()
+            .any(|r| r.line.contains("/employees") || r.line.contains("/storage/"))
+    );
+}
+
+#[test]
+fn manager_desktop_sign_in_does_not_request_administrator_account_data() {
+    let company = Company::default();
+    let mut replies = baseline(&company);
+    replies[1] = reply(
+        "POST /rest/v1/rpc/my_hris_access ",
+        200,
+        json!({"company_id":company.id,"user_id":company.owner_id,"role":"manager","employee_id":uuid::Uuid::new_v4(),"direct_reports":[]}),
+    );
+    replies.drain(6..8);
+    let (config, server, requests) = fixture(replies);
+    let (client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert_eq!(data.access.role, Role::Manager);
+    assert!(data.accounts.is_empty());
+    drop(client);
+    server.join().unwrap();
+    let requests = requests.lock().unwrap();
+    assert!(
+        !requests
+            .iter()
+            .any(|r| r.line.contains("list_company_accounts")
+                || r.line.contains("account_access_events"))
+    );
+}
+
+#[test]
+fn account_provisioning_preserves_disabled_access_and_sends_password_only_to_the_function() {
+    let company = Company::default();
+    let mut replies = baseline(&company);
+    replies.push(reply(
+        "POST /functions/v1/account-admin ",
+        201,
+        json!({"confirmation_sent":false}),
+    ));
+    replies.extend(baseline(&company).into_iter().skip(1).take(7));
+    let (config, server, requests) = fixture(replies);
+    let (mut client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    let mut draft = AccountDraft::new();
+    draft.email = "employee@example.invalid".into();
+    draft.active = false;
+    draft.password = "synthetic initial passphrase".into();
+    draft.confirmation = draft.password.clone();
+    let (_, message) = client
+        .execute_admin(AdminAction::Save(draft), &data)
+        .unwrap();
+    assert!(message.contains("planned portal"));
+    server.join().unwrap();
+    let requests = requests.lock().unwrap();
+    let body = requests[10].json();
+    assert_eq!(body["active"], false);
+    assert_eq!(body["role"], "employee");
+    assert!(body["employee_id"].is_null());
+    assert_eq!(body["password"], "synthetic initial passphrase");
+    assert!(!body.to_string().contains("confirmation"));
+    assert!(requests[10].headers.contains("profile-jwt"));
+    assert!(
+        requests
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| *i != 10)
+            .all(
+                |(_, r)| !String::from_utf8_lossy(&r.body).contains("synthetic initial passphrase")
+            )
+    );
 }
 fn photo() -> Vec<u8> {
     let mut bytes = Cursor::new(Vec::new());
@@ -224,21 +342,21 @@ fn personal_details_preferences_and_private_photo_roundtrip_use_only_the_signed_
     server.join().unwrap();
     let requests = requests.lock().unwrap();
     assert_eq!(
-        requests[7].json(),
+        requests[10].json(),
         json!({"data":{"hris_profile":{"full_name":"Alex Morgan","preferred_name":"Morgan","contact_phone":""}}})
     );
-    assert!(requests[8].json().get("app_metadata").is_none());
+    assert!(requests[11].json().get("app_metadata").is_none());
     assert!(
-        requests[9]
+        requests[12]
             .headers
             .to_lowercase()
             .contains("x-upsert: true")
     );
     assert_eq!(
-        image::load_from_memory(&requests[9].body).unwrap().width(),
+        image::load_from_memory(&requests[12].body).unwrap().width(),
         256
     );
-    assert_eq!(requests[12].json(), json!({"prefixes":[path]}));
+    assert_eq!(requests[15].json(), json!({"prefixes":[path]}));
     for request in &requests[1..] {
         assert!(
             request
@@ -274,6 +392,46 @@ fn an_incorrect_current_password_prevents_any_password_update_request() {
             .iter()
             .any(|r| r.line.starts_with("PUT "))
     );
+}
+
+#[test]
+fn revoked_company_access_clears_worker_snapshot_and_account() {
+    let company = Company::default();
+    let mut replies = baseline(&company);
+    replies.push(reply(
+        "POST /rest/v1/rpc/my_hris_access ",
+        403,
+        json!({"code":"42501"}),
+    ));
+    let (config, server, _) = fixture(replies);
+    let (commands, updates) = backend::worker(None, eframe::egui::Context::default());
+    commands
+        .send(Command::Connect {
+            config,
+            email: "synthetic@example.invalid".into(),
+            password: "synthetic passphrase".into(),
+        })
+        .unwrap();
+    assert_eq!(
+        updates
+            .recv_timeout(Duration::from_secs(10))
+            .unwrap()
+            .result
+            .unwrap()
+            .mode,
+        hris_desktop::domain::Mode::Supabase
+    );
+    commands.send(Command::Refresh).unwrap();
+    let event = updates.recv_timeout(Duration::from_secs(10)).unwrap();
+    let cleared = event.result.unwrap();
+    assert_eq!(cleared.mode, hris_desktop::domain::Mode::SignedOut);
+    assert!(
+        cleared.employees.is_empty()
+            && cleared.accounts.is_empty()
+            && cleared.access_events.is_empty()
+    );
+    assert!(event.account.is_none());
+    server.join().unwrap();
 }
 
 #[test]
@@ -317,21 +475,21 @@ fn password_and_email_changes_reauthenticate_and_keep_email_pending_until_confir
     server.join().unwrap();
     let requests = requests.lock().unwrap();
     assert_eq!(
-        requests[8].json(),
+        requests[11].json(),
         json!({"password":"new synthetic passphrase","current_password":"old synthetic passphrase"})
     );
     assert!(
-        requests[8]
+        requests[11]
             .headers
             .to_lowercase()
             .contains("authorization: bearer fresh-password-jwt")
     );
     assert_eq!(
-        requests[10].json(),
+        requests[13].json(),
         json!({"email":"updated@example.invalid"})
     );
     assert!(
-        requests[10]
+        requests[13]
             .headers
             .to_lowercase()
             .contains("authorization: bearer fresh-email-jwt")

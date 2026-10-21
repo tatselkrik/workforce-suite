@@ -1,0 +1,32 @@
+# Account Manager deployment review — 0.1.4
+
+Status: locally verified candidate, awaiting explicit hosted deployment approval. Keep installed 0.1.3 until the hosted changes and checks are complete.
+
+## Requested hosted changes
+
+Apply `supabase/migrations/20261021012241_account_manager_roles.sql` only to the existing dedicated HRIS project. Its version is provisional until the migration tool assigns the hosted version.
+
+- Add protected company memberships and account-access history; backfill the existing owner as an active Administrator.
+- Add narrow private authorization helpers and invoker-only public access/account RPCs.
+- Replace owner-only HR access with current membership scopes: Administrator/HR Generalist for company HR records, Manager for own/direct reports, Employee for future own-record portal access. Employee accounts are rejected by the desktop.
+- Preserve the original owner and prevent client-written memberships, self-demotion, self-approval, duplicate active employee links and reporting cycles. Serialize employee links/archiving and leave-budget decisions.
+- Extend private own-photo policies to active members. No public photo bucket or server credential is introduced.
+
+Deploy `supabase/functions/account-admin/index.ts` with `handler.mjs` as the new `account-admin` function in the same project. It validates each bearer with Auth, checks current Administrator membership, creates unconfirmed Auth identities using its hosted server credential and assigns access using the caller's JWT. It sends confirmation requests and preserves pending accounts if delivery fails. No existing function will be replaced according to the current preflight.
+
+The change affects live access rules and adds privileged server-side account provisioning. It does not delete existing HR data, change the company connection, change the administrator password/email, switch the Free plan or touch another company's project. The migration is transactional. The preflight found one company, one confirmed owner and no HR records; recheck that state at deployment time.
+
+## Verification and installation sequence
+
+1. Recheck the target, hosted migration history, owner membership and record counts. Apply the reviewed migration and align its local filename to the returned version.
+2. Deploy the reviewed function. Verify active administrator access and anonymous/nonadministrator denial, run rollback-only hosted role/workflow fixtures and inspect security/performance advisors. Verify confirmed account provisioning separately without bypassing email ownership.
+3. Recheck the existing account and record counts after cleanup. Preserve the original account credentials, deployment profile and Free plan.
+4. Rebuild the private package from the final exact source revision if migration naming or verification documentation changed. Install only after HRIS is closed and its existing installation marker, executable and profile are verified; back up the existing named files first. Verify installed hashes, Windows registration, shortcuts and startup.
+
+The original owner remains compatible with 0.1.3, which can be retained or restored during investigation without dropping the new membership/history tables. Do not automatically roll back by deleting accounts or audit history. Any hosted permission failure requires diagnosis before installation proceeds.
+
+## Current evidence and limits
+
+40 Rust tests, 126 local PostgreSQL assertions and 22 provisioning-handler tests passed. Formatting, optimized Windows build and native minimum-size/125% visual checks passed. Tests are local and use fictional identities; hosted Account Manager workflows have not run.
+
+Automatic approval review rejected the migration because live schema/RLS changes need explicit deployment confirmation. No migration, function deployment or installation has occurred for this update. The default localhost confirmation redirect and company mail-delivery configuration still need a usable deployment flow before workplace rollout. No public release, push or remote CI result is claimed.
