@@ -553,6 +553,7 @@ impl CloudClient {
         );
         let mut employees: Vec<Employee> = self.rows("employees", Some(company.id))?;
         employees.sort_by(|a, b| a.full_name.cmp(&b.full_name));
+        let contacts = self.rows("employee_contacts", Some(company.id))?;
         let mut attendance: Vec<Attendance> = self.rows("attendance", Some(company.id))?;
         attendance.sort_by(|a, b| b.checked_in_at.cmp(&a.checked_in_at));
         let mut leave: Vec<LeaveRequest> = self.rows("leave_requests", Some(company.id))?;
@@ -579,6 +580,7 @@ impl CloudClient {
         Ok(Snapshot {
             company,
             employees,
+            contacts,
             attendance,
             leave,
             mode: Mode::Supabase,
@@ -590,7 +592,57 @@ impl CloudClient {
 
     pub fn execute(&mut self, action: Action, current: &Snapshot) -> Result<Snapshot> {
         current.access.authorize(&action, current)?;
+        if let Action::SaveEmployeeContacts(contacts) = &action {
+            let contacts = contacts.normalized()?;
+            ensure!(
+                contacts.company_id == current.company.id
+                    && current
+                        .employees
+                        .iter()
+                        .any(|e| e.id == contacts.employee_id),
+                "Choose an employee in this company."
+            );
+            let existing = current
+                .contacts
+                .iter()
+                .any(|c| c.employee_id == contacts.employee_id);
+            let mut body = json!({"phone": contacts.phone, "personal_email": contacts.personal_email,
+                "address": contacts.address, "emergency_name": contacts.emergency_name,
+                "emergency_relationship": contacts.emergency_relationship, "emergency_phone": contacts.emergency_phone,
+                "emergency_alternate_phone": contacts.emergency_alternate_phone});
+            let method = if existing {
+                Method::PATCH
+            } else {
+                Method::POST
+            };
+            let mut request = self
+                .request(method, "employee_contacts")?
+                .header("Prefer", "return=representation");
+            if existing {
+                request = request.query(&[
+                    ("company_id", format!("eq.{}", current.company.id)),
+                    ("employee_id", format!("eq.{}", contacts.employee_id)),
+                ]);
+            } else {
+                body["company_id"] = json!(current.company.id);
+                body["employee_id"] = json!(contacts.employee_id);
+            }
+            let rows: Vec<Value> = decode(
+                request
+                    .json(&body)
+                    .send()
+                    .context("Could not save employee contacts. Check your connection.")?,
+            )?;
+            ensure!(
+                rows.len() == 1,
+                "No contact record changed. Refresh and check your permissions."
+            );
+            return self
+                .snapshot()
+                .context("Contacts saved, but refresh failed. Click Refresh before trying again.");
+        }
         let (method, table, id, body) = match action {
+            Action::SaveEmployeeContacts(_) => unreachable!("Contact saves return above"),
             Action::SaveEmployee(draft) => {
                 let employee = draft.employee(current.company.id)?;
                 let mut body = json!({"employee_code": employee.employee_code, "full_name":employee.full_name,

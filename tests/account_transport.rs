@@ -136,6 +136,7 @@ fn baseline(company: &Company) -> Vec<Reply> {
         ),
         reply("GET /rest/v1/companies?", 200, json!([company])),
         reply("GET /rest/v1/employees?", 200, json!([])),
+        reply("GET /rest/v1/employee_contacts?", 200, json!([])),
         reply("GET /rest/v1/attendance?", 200, json!([])),
         reply("GET /rest/v1/leave_requests?", 200, json!([])),
         reply("POST /rest/v1/rpc/list_company_accounts ", 200, json!([])),
@@ -201,7 +202,7 @@ fn manager_desktop_sign_in_does_not_request_administrator_account_data() {
         200,
         json!({"company_id":company.id,"user_id":company.owner_id,"role":"manager","employee_id":uuid::Uuid::new_v4(),"direct_reports":[]}),
     );
-    replies.drain(6..8);
+    replies.drain(7..9);
     let (config, server, requests) = fixture(replies);
     let (client, data) = CloudClient::connect(
         config,
@@ -223,6 +224,99 @@ fn manager_desktop_sign_in_does_not_request_administrator_account_data() {
 }
 
 #[test]
+fn employee_contacts_save_and_reload_separately_with_scoped_updates_and_zero_row_errors() {
+    use hris_desktop::{contacts::EmployeeContacts, domain::Action};
+    let company = Company::default();
+    let employee = DemoStore::new().data.employees[0].clone();
+    let mut contacts = EmployeeContacts::empty(company.id, employee.id);
+    contacts.phone = " 000 000 0000 ".into();
+    contacts.personal_email = " sample@example.invalid ".into();
+    let normalized = contacts.normalized().unwrap();
+    let snapshot_replies = |contacts: Vec<EmployeeContacts>| {
+        let mut replies = baseline(&company);
+        replies[3] = reply("GET /rest/v1/employees?", 200, json!([employee]));
+        replies[4] = reply("GET /rest/v1/employee_contacts?", 200, json!(contacts));
+        replies
+    };
+    let mut replies = snapshot_replies(vec![]);
+    replies.push(reply(
+        "POST /rest/v1/employee_contacts ",
+        201,
+        json!([normalized]),
+    ));
+    replies.extend(
+        snapshot_replies(vec![normalized.clone()])
+            .into_iter()
+            .skip(1)
+            .take(8),
+    );
+    let mut updated = normalized.clone();
+    updated.address = "Updated fictional address".into();
+    replies.push(reply(
+        "PATCH /rest/v1/employee_contacts?",
+        200,
+        json!([updated]),
+    ));
+    replies.extend(
+        snapshot_replies(vec![updated.clone()])
+            .into_iter()
+            .skip(1)
+            .take(8),
+    );
+    replies.push(reply("PATCH /rest/v1/employee_contacts?", 200, json!([])));
+    let (config, server, observed) = fixture(replies);
+    let (mut client, initial) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert!(initial.contacts.is_empty());
+    let saved = client
+        .execute(Action::SaveEmployeeContacts(contacts), &initial)
+        .unwrap();
+    assert_eq!(saved.contacts, vec![normalized]);
+    let saved = client
+        .execute(Action::SaveEmployeeContacts(updated.clone()), &saved)
+        .unwrap();
+    assert_eq!(saved.contacts, vec![updated.clone()]);
+    assert!(
+        client
+            .execute(Action::SaveEmployeeContacts(updated), &saved)
+            .unwrap_err()
+            .to_string()
+            .contains("No contact record changed")
+    );
+    server.join().unwrap();
+    let observed = observed.lock().unwrap();
+    let create = observed
+        .iter()
+        .find(|r| r.line.starts_with("POST /rest/v1/employee_contacts "))
+        .unwrap();
+    assert_eq!(create.json()["phone"], "000 000 0000");
+    assert_eq!(create.json()["company_id"], company.id.to_string());
+    assert_eq!(create.json()["employee_id"], employee.id.to_string());
+    assert!(create.json().get("updated_at").is_none());
+    let edit = observed
+        .iter()
+        .find(|r| r.line.starts_with("PATCH /rest/v1/employee_contacts?"))
+        .unwrap();
+    assert!(edit.line.contains(&format!("company_id=eq.{}", company.id)));
+    assert!(
+        edit.line
+            .contains(&format!("employee_id=eq.{}", employee.id))
+    );
+    assert!(edit.json().get("company_id").is_none());
+    assert!(edit.json().get("employee_id").is_none());
+    assert!(edit.json().get("updated_at").is_none());
+    assert!(
+        !observed
+            .iter()
+            .any(|r| r.line.starts_with("PUT /auth/v1/user "))
+    );
+}
+
+#[test]
 fn account_provisioning_preserves_disabled_access_and_sends_password_only_to_the_function() {
     let company = Company::default();
     let mut replies = baseline(&company);
@@ -231,7 +325,7 @@ fn account_provisioning_preserves_disabled_access_and_sends_password_only_to_the
         201,
         json!({"confirmation_sent":false}),
     ));
-    replies.extend(baseline(&company).into_iter().skip(1).take(7));
+    replies.extend(baseline(&company).into_iter().skip(1).take(8));
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -250,18 +344,18 @@ fn account_provisioning_preserves_disabled_access_and_sends_password_only_to_the
     assert!(message.contains("planned portal"));
     server.join().unwrap();
     let requests = requests.lock().unwrap();
-    let body = requests[10].json();
+    let body = requests[11].json();
     assert_eq!(body["active"], false);
     assert_eq!(body["role"], "employee");
     assert!(body["employee_id"].is_null());
     assert_eq!(body["password"], "synthetic initial passphrase");
     assert!(!body.to_string().contains("confirmation"));
-    assert!(requests[10].headers.contains("profile-jwt"));
+    assert!(requests[11].headers.contains("profile-jwt"));
     assert!(
         requests
             .iter()
             .enumerate()
-            .filter(|(i, _)| *i != 10)
+            .filter(|(i, _)| *i != 11)
             .all(
                 |(_, r)| !String::from_utf8_lossy(&r.body).contains("synthetic initial passphrase")
             )
@@ -342,21 +436,21 @@ fn personal_details_preferences_and_private_photo_roundtrip_use_only_the_signed_
     server.join().unwrap();
     let requests = requests.lock().unwrap();
     assert_eq!(
-        requests[10].json(),
+        requests[11].json(),
         json!({"data":{"hris_profile":{"full_name":"Alex Morgan","preferred_name":"Morgan","contact_phone":""}}})
     );
-    assert!(requests[11].json().get("app_metadata").is_none());
+    assert!(requests[12].json().get("app_metadata").is_none());
     assert!(
-        requests[12]
+        requests[13]
             .headers
             .to_lowercase()
             .contains("x-upsert: true")
     );
     assert_eq!(
-        image::load_from_memory(&requests[12].body).unwrap().width(),
+        image::load_from_memory(&requests[13].body).unwrap().width(),
         256
     );
-    assert_eq!(requests[15].json(), json!({"prefixes":[path]}));
+    assert_eq!(requests[16].json(), json!({"prefixes":[path]}));
     for request in &requests[1..] {
         assert!(
             request
@@ -475,21 +569,21 @@ fn password_and_email_changes_reauthenticate_and_keep_email_pending_until_confir
     server.join().unwrap();
     let requests = requests.lock().unwrap();
     assert_eq!(
-        requests[11].json(),
+        requests[12].json(),
         json!({"password":"new synthetic passphrase","current_password":"old synthetic passphrase"})
     );
     assert!(
-        requests[11]
+        requests[12]
             .headers
             .to_lowercase()
             .contains("authorization: bearer fresh-password-jwt")
     );
     assert_eq!(
-        requests[13].json(),
+        requests[14].json(),
         json!({"email":"updated@example.invalid"})
     );
     assert!(
-        requests[13]
+        requests[14]
             .headers
             .to_lowercase()
             .contains("authorization: bearer fresh-email-jwt")

@@ -1,6 +1,7 @@
 pub mod access;
 pub mod account;
 pub mod backend;
+pub mod contacts;
 pub mod domain;
 pub mod ui;
 

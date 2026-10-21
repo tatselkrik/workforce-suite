@@ -1,4 +1,12 @@
-# Account Manager deployment review — 0.1.4
+# Employee contacts deployment — 0.1.5
+
+Status: the additive contact migration is deployed and hosted permission checks passed. Kirk authorized direct SQL changes/testing in this dedicated prototype and retention of labeled synthetic fixtures. This authorization does not extend to unrelated projects or a future company's production rollout.
+
+Apply all migrations in order, including `20261021033544_employee_contact_details.sql`. It creates a separate private contact table, explicit column grants, validation/timestamp trigger and current-membership RLS. Existing employee directory rows, account policies and the active `account-admin` function stay compatible. No server credential, account email/password change, new cost or data deletion is needed. Retain the labeled synthetic contact fixture for repeat testing.
+
+45 Rust tests, 166 local database assertions, 22 handler regression tests, hosted role/validation checks, native minimum-size/125% layouts and live Rust-adapter save/new-sign-in persistence passed. See `VERIFICATION.md` for exact limits. Package the normal executable with the existing private company connection, back up the previous installation and verify payload hashes, registration, shortcuts and startup. If rollback is needed, restore 0.1.4 without dropping the additive contact table.
+
+## Historical Account Manager deployment review — 0.1.4
 
 Status: explicitly approved and deployed on 2026-10-21; hosted role/provisioning checks passed and temporary test data was removed. The private installation report records the subsequent guarded Windows update.
 

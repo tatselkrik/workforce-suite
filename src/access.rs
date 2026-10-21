@@ -83,6 +83,10 @@ pub struct Access {
 }
 
 impl Access {
+    pub fn can_read_contacts(&self, employee: Uuid) -> bool {
+        self.role.manages_hr() || self.employee_id == Some(employee)
+    }
+
     pub fn demo_admin() -> Self {
         Self {
             company_id: Uuid::from_u128(1),
@@ -100,7 +104,7 @@ impl Access {
     }
     pub fn authorize(&self, action: &Action, data: &Snapshot) -> Result<()> {
         let allowed = match action {
-            Action::SaveEmployee(_) => self.role.manages_hr(),
+            Action::SaveEmployee(_) | Action::SaveEmployeeContacts(_) => self.role.manages_hr(),
             Action::SaveCompany(_) => self.role.manages_accounts(),
             Action::CheckIn(id) => self.can_record(*id),
             Action::CheckOut(id) => data

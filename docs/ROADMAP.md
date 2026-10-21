@@ -12,7 +12,7 @@ Employee accounts are prepared for the portal and cannot sign into the desktop. 
 
 ## Stage 2 — Employee records and organization
 
-Add contact and emergency details, employment types, locations, contracts, attachments, employment history and digital 201 files. Then extend reporting relationships to employee records without accounts and provide organization charts. Give sensitive documents their own access and retention rules.
+The first update adds private contact and emergency details (see [contact permissions](EMPLOYEE-CONTACTS.md)). Next add employment types, locations, contracts, attachments, employment history and digital 201 files. Then extend reporting relationships to employee records without accounts and provide organization charts. Give sensitive documents their own access and retention rules.
 
 ## Stage 3 — Leave policies and approvals
 

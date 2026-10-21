@@ -157,6 +157,8 @@ try {
   await deny(`update public.employees set full_name='Anonymous'`,[],['42501']);
   const {runAccessTests}=await import('./accounts.test.mjs');
   await runAccessTests({db,eq,deny,session,employee,request,company:companyA,owner:uidA,unassigned:uidB});
+  const {runContactTests}=await import('./contacts.test.mjs');
+  await runContactTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL schema, authorization, and workflow assertions.`);
 } finally {
   await db.close();

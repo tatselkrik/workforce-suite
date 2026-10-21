@@ -11,6 +11,8 @@ Account Manager appears above Settings for Administrators. Protected Supabase me
 
 Nobody can review their own leave. Ordinary employees use the future mobile-friendly portal, not this desktop app. Managers and other assigned staff roles use the desktop. These are fixed prototype roles; a Payroll Officer or custom permissions should be introduced with the corresponding module rather than receiving speculative access now.
 
+Personal addresses and emergency contacts have a narrower scope than the employee directory: Administrators and HR Generalists manage all contact records; other active members can read only their own linked contacts. Managers cannot read direct reports' private contacts. See [Employee contacts](EMPLOYEE-CONTACTS.md).
+
 ## Administrator workflow
 
 Create an employee record first for an enabled Manager or Employee account. In Account Manager, use **New account**, enter the email, role, employee link and optional reporting manager, then choose an initial password and confirmation. **Create account & send confirmation** creates an unconfirmed Auth identity, assigns the selected access status and requests its confirmation email. Share the initial password privately. Staff confirm email ownership before signing in and can change the initial password in Profile. Employee accounts are marked **Portal (planned)** and cannot sign into the desktop; creating one does not provide a working portal yet.

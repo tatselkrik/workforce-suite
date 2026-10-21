@@ -294,6 +294,7 @@ pub enum Mode {
 pub struct Snapshot {
     pub company: Company,
     pub employees: Vec<Employee>,
+    pub contacts: Vec<crate::contacts::EmployeeContacts>,
     pub attendance: Vec<Attendance>,
     pub leave: Vec<LeaveRequest>,
     pub mode: Mode,
@@ -311,6 +312,7 @@ impl Snapshot {
                 ..Company::default()
             },
             employees: Vec::new(),
+            contacts: Vec::new(),
             attendance: Vec::new(),
             leave: Vec::new(),
             mode: Mode::SignedOut,
@@ -351,6 +353,7 @@ impl Snapshot {
 #[derive(Clone, Debug)]
 pub enum Action {
     SaveEmployee(EmployeeDraft),
+    SaveEmployeeContacts(crate::contacts::EmployeeContacts),
     CheckIn(Uuid),
     CheckOut(Uuid),
     RequestLeave(LeaveDraft),
@@ -445,6 +448,18 @@ impl DemoStore {
             data: Snapshot {
                 company,
                 employees,
+                contacts: vec![crate::contacts::EmployeeContacts {
+                    phone: "000 000 0000".into(),
+                    personal_email: "synthetic.employee@example.invalid".into(),
+                    address: "Fictional sample address — demo only".into(),
+                    emergency_name: "Sample Emergency Contact".into(),
+                    emergency_relationship: "Sibling".into(),
+                    emergency_phone: "000 000 0001".into(),
+                    ..crate::contacts::EmployeeContacts::empty(
+                        Uuid::from_u128(1),
+                        Uuid::from_u128(103),
+                    )
+                }],
                 attendance,
                 leave,
                 mode: Mode::Demo,
@@ -499,6 +514,29 @@ impl DemoStore {
     pub fn execute(&mut self, action: Action) -> Result<()> {
         self.data.access.authorize(&action, &self.data)?;
         match action {
+            Action::SaveEmployeeContacts(contacts) => {
+                let mut contacts = contacts.normalized()?;
+                ensure!(
+                    contacts.company_id == self.data.company.id
+                        && self
+                            .data
+                            .employees
+                            .iter()
+                            .any(|e| e.id == contacts.employee_id),
+                    "Choose an employee in this company."
+                );
+                contacts.updated_at = Some(Utc::now());
+                if let Some(existing) = self
+                    .data
+                    .contacts
+                    .iter_mut()
+                    .find(|c| c.employee_id == contacts.employee_id)
+                {
+                    *existing = contacts;
+                } else {
+                    self.data.contacts.push(contacts);
+                }
+            }
             Action::SaveEmployee(draft) => {
                 let employee = draft.employee(self.data.company.id)?;
                 ensure!(

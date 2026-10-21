@@ -8,6 +8,7 @@ Application identifier: `io.github.tatselkrik.hrisdesktop`.
 
 - **Overview:** active headcount, today's attendance, pending requests, and approved time away.
 - **Employee records:** add/edit employees, search and filter the directory, customize annual allowances, and archive employees while retaining history.
+- **Private contacts:** Employees → Contacts opens personal phone, personal email, home address and an emergency contact with primary/alternate phones. Administrators and HR manage these records; other staff can view only their own linked details. See [contact permissions](docs/EMPLOYEE-CONTACTS.md).
 - **Attendance:** record check-in/check-out, browse dates, reject duplicate daily check-ins and multiple open shifts. Live timestamps come from the database server and use the company time zone.
 - **Leave:** request annual, sick, or unpaid leave; approve or reject pending requests; prevent overlaps and annual leave over-allocation.
 - **Account Manager:** administrators create or link accounts, assign Administrator, HR Generalist, Manager or Employee access, link employee records and reporting managers, deactivate access and review access changes. Other roles cannot open this tab. See [account permissions](docs/ACCOUNT-MANAGER.md).
@@ -20,7 +21,7 @@ The interface uses `egui`/`eframe`. The domain rules and Supabase Auth/REST adap
 
 ## Try it
 
-The private Windows setup installs version 0.1.4 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection profile, but no account password or session.
+The private Windows setup installs version 0.1.5 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection profile, but no account password or session.
 
 Open **HRIS Desktop** and sign in with an assigned Administrator, HR Generalist or Manager account. Ordinary Employee accounts are reserved for a future mobile-friendly portal and cannot sign into this desktop app. Its company database is already selected by the installation. Account login remains necessary to access HR records; database setup is not part of that login.
 
