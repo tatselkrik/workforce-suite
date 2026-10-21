@@ -72,7 +72,7 @@ impl EmployeeStatus {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Employee {
     pub id: Uuid,
     pub company_id: Uuid,
@@ -328,6 +328,7 @@ pub struct Snapshot {
     pub corrections: Vec<crate::corrections::CorrectionEvent>,
     pub employment_types: Vec<crate::employment::EmploymentOption>,
     pub work_locations: Vec<crate::employment::EmploymentOption>,
+    pub employment_history: Vec<crate::history::EmploymentEvent>,
 }
 
 impl Snapshot {
@@ -351,6 +352,7 @@ impl Snapshot {
             corrections: Vec::new(),
             employment_types: Vec::new(),
             work_locations: Vec::new(),
+            employment_history: Vec::new(),
         }
     }
 
@@ -540,7 +542,7 @@ impl DemoStore {
             status,
         })
         .collect();
-        Self {
+        let mut store = Self {
             data: Snapshot {
                 company,
                 logo_png: None,
@@ -606,6 +608,7 @@ impl DemoStore {
                 ],
                 access_events: Vec::new(),
                 corrections: Vec::new(),
+                employment_history: Vec::new(),
                 employment_types: crate::employment::demo_choices(
                     crate::employment::EmploymentKind::EmploymentType,
                     Uuid::from_u128(1),
@@ -615,10 +618,24 @@ impl DemoStore {
                     Uuid::from_u128(1),
                 ),
             },
-        }
+        };
+        store.data.employment_history = crate::history::demo_initial(&store.data);
+        store
     }
 
     pub fn execute(&mut self, action: Action) -> Result<()> {
+        let before = self
+            .data
+            .employees
+            .iter()
+            .map(|e| crate::history::EmploymentState::capture(&self.data, e))
+            .collect();
+        self.apply(action)?;
+        crate::history::record_demo_changes(&mut self.data, before);
+        Ok(())
+    }
+
+    fn apply(&mut self, action: Action) -> Result<()> {
         self.data.access.authorize(&action, &self.data)?;
         match action {
             Action::SaveEmploymentOption(draft) => {
@@ -703,12 +720,12 @@ impl DemoStore {
                         "That employee code is already in use."
                     );
                     self.data.employees.push(employee);
-                } else if let Err(error) = self.execute(Action::SaveEmployee(employee_draft)) {
+                } else if let Err(error) = self.apply(Action::SaveEmployee(employee_draft)) {
                     return Err(error);
                 }
                 let mut contacts = contacts;
                 contacts.employee_id = id;
-                if let Err(error) = self.execute(Action::SaveEmployeeContacts(contacts)) {
+                if let Err(error) = self.apply(Action::SaveEmployeeContacts(contacts)) {
                     self.data = before;
                     return Err(error);
                 }

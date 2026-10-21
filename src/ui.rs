@@ -69,6 +69,7 @@ enum ContactSection {
     Contact,
     Emergency,
     Access,
+    History,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -625,6 +626,71 @@ impl HrisApp {
                     draft.active = false;
                     app.employment_option_form = Some(draft);
                 }
+                Ok(
+                    "history-baseline" | "history-updated" | "history-created" | "history-archived"
+                    | "history-long" | "history-empty" | "history-manager",
+                ) => {
+                    let preview = std::env::var("HRIS_PREVIEW_FORM").unwrap_or_default();
+                    let mut store = DemoStore {
+                        data: app.data.clone(),
+                    };
+                    let mut target = Uuid::from_u128(101);
+                    if preview == "history-created" {
+                        let draft = EmployeeDraft {
+                            employee_code: "QA-HISTORY-PREVIEW".into(),
+                            full_name: "Synthetic New Employee".into(),
+                            department: "Operations".into(),
+                            job_title: "Associate".into(),
+                            annual_leave_days: 15,
+                            ..Default::default()
+                        };
+                        let _ = store.execute(Action::SaveEmployee(draft));
+                        target = store.data.employees.last().unwrap().id;
+                    } else if matches!(preview.as_str(), "history-updated" | "history-long") {
+                        let mut draft = EmployeeDraft::from(
+                            store
+                                .data
+                                .employees
+                                .iter()
+                                .find(|e| e.id == target)
+                                .unwrap(),
+                        );
+                        draft.department = if preview == "history-long" {
+                            "Regional client services and administrative operations for the northern district".into()
+                        } else {
+                            "Client Support".into()
+                        };
+                        draft.job_title = if preview == "history-long" {
+                            "Senior specialist for regional client service coordination and workforce planning".into()
+                        } else {
+                            "Senior associate".into()
+                        };
+                        draft.work_location_id = Some(Uuid::from_u128(2000));
+                        let _ = store.execute(Action::SaveEmployee(draft));
+                    } else if preview == "history-archived" {
+                        target = Uuid::from_u128(102);
+                        let mut draft = EmployeeDraft::from(
+                            store
+                                .data
+                                .employees
+                                .iter()
+                                .find(|e| e.id == target)
+                                .unwrap(),
+                        );
+                        draft.status = EmployeeStatus::Archived;
+                        let _ = store.execute(Action::SaveEmployee(draft));
+                    } else if preview == "history-manager" {
+                        target = store.data.access.employee_id.unwrap_or(target);
+                    }
+                    if preview == "history-empty" {
+                        store.data.employment_history.clear();
+                    }
+                    app.data = store.data;
+                    app.open_employee(target);
+                    if app.data.access.role.manages_hr() {
+                        app.contacts_section = ContactSection::History;
+                    }
+                }
                 _ => {}
             }
             if std::env::var("HRIS_PREVIEW_PAGE").as_deref() == Ok("sign-in") {
@@ -946,9 +1012,22 @@ impl HrisApp {
                         "Staff role & sign-in",
                     );
                 }
+                if editable && draft.id.is_some() {
+                    ui.selectable_value(
+                        &mut self.contacts_section,
+                        ContactSection::History,
+                        "History",
+                    );
+                }
             });
             ui.separator();
-            ui.set_max_width(ui.available_width().min(680.0));
+            ui.set_max_width(ui.available_width().min(
+                if self.contacts_section == ContactSection::History {
+                    920.0
+                } else {
+                    680.0
+                },
+            ));
             let body_height =
                 (ui.available_height() - if editable { 90.0 } else { 130.0 }).max(80.0);
             let scroll = egui::ScrollArea::vertical()
@@ -963,6 +1042,9 @@ impl HrisApp {
                     ContactSection::Employment=>employment_fields(ui,&mut draft,&self.data),
                     ContactSection::Contact if private_visible=>contact_fields(ui,&mut contacts,false),
                     ContactSection::Emergency if private_visible=>contact_fields(ui,&mut contacts,true),
+                    ContactSection::History if editable=>{
+                        if let Some(id)=draft.id { employment_history(ui,&self.data,id,self.time_format()); }
+                    }
                     ContactSection::Access if self.data.access.role.manages_accounts()=>{
                         if access.is_none() {
                             if let Some(existing)=self.data.accounts.iter().find(|a|a.employee_id==draft.id && draft.id.is_some()) {
@@ -3147,6 +3229,74 @@ fn company_logo(ui: &mut Ui, texture: Option<&egui::TextureHandle>, name: &str, 
     }
 }
 
+fn employment_history(ui: &mut Ui, data: &Snapshot, employee: Uuid, time_format: &str) {
+    ui.label("Saved changes, newest first. Unsaved edits are not shown.")
+        .on_hover_text("History is read-only. Correct the Employment fields to add a new event; the original entry remains.");
+    let events = crate::history::timeline(data, employee);
+    if events.is_empty() {
+        empty(
+            ui,
+            "No saved employment history is available. Refresh to load the latest records.",
+        );
+    }
+    for (index, event) in events.into_iter().enumerate() {
+        ui.add_space(10.0);
+        let changes = event.changes();
+        let title = if event.kind == crate::history::HistoryKind::Updated {
+            format!(
+                "{} ({} {})",
+                event.kind.label(),
+                changes.len(),
+                if changes.len() == 1 {
+                    "field"
+                } else {
+                    "fields"
+                }
+            )
+        } else {
+            event.kind.label().into()
+        };
+        ui.horizontal_wrapped(|ui| {
+            ui.label(
+                RichText::new(account_timestamp(
+                    &event.recorded_at.to_rfc3339(),
+                    data.company.tz(),
+                    time_format,
+                ))
+                .strong(),
+            );
+            ui.label(match event.actor_role {
+                Some(role) => format!("Saved by {} ({})", event.actor_name, role.label()),
+                None => "Saved by System".into(),
+            });
+        });
+        egui::CollapsingHeader::new(title).id_salt(("employment-history",event.id)).default_open(index==0).show(ui,|ui| {
+            if event.kind==crate::history::HistoryKind::StartingSnapshot {
+                ui.label("Starting snapshot captured when history was enabled. Earlier changes are not recorded.");
+            }
+            let updating=event.before_record.is_some();
+            let value_width=((ui.available_width()-155.0)/if updating {2.0}else{1.0}).clamp(85.0,320.0);
+            egui::Grid::new(("employment-history-fields",event.id)).striped(true).spacing([12.0,10.0]).max_col_width(value_width).show(ui,|ui| {
+                ui.strong("Field");
+                if updating {ui.strong("Before");}
+                ui.strong(if updating {"After"}else{"Saved value"});ui.end_row();
+                for change in changes {
+                    let _field=ui.label(change.label);
+                    #[cfg(feature="qa-screenshot")]
+                    if index==0 && matches!((std::env::var("HRIS_PREVIEW_SCROLL").as_deref(),change.label),
+                        (Ok("department"),"Department") | (Ok("job-title"),"Job title")) {
+                        _field.scroll_to_me(Some(Align::Min));
+                    }
+                    if let Some(before)=change.before.as_ref(){ui.vertical(|ui|{ui.set_width(value_width);ui.add(egui::Label::new(before).wrap());});}
+                    let after=if change.before.as_ref()==Some(&change.after){format!("{} (different record)",change.after)}else{change.after};
+                    ui.vertical(|ui|{ui.set_width(value_width);ui.add(egui::Label::new(after).wrap());});ui.end_row();
+                }
+            });
+        });
+        ui.separator();
+    }
+}
+
 fn employment_assignment(
     ui: &mut Ui,
     kind: EmploymentKind,
@@ -4217,5 +4367,71 @@ mod identity_ui_tests {
         previous = next;
         sync_profile_contacts(&previous, &Snapshot::signed_out(), &mut draft);
         assert!(draft.is_none());
+    }
+}
+
+#[cfg(test)]
+mod employment_history_layout_tests {
+    use super::*;
+    #[test]
+    fn long_employment_history_values_reserve_height_and_do_not_overlap_the_next_row() {
+        let mut store = DemoStore::new();
+        let person = store.data.employees[1].clone();
+        let department =
+            "Regional client services and administrative operations for the northern district";
+        let title =
+            "Senior specialist for regional client service coordination and workforce planning";
+        let mut draft = EmployeeDraft::from(&person);
+        draft.department = department.into();
+        draft.job_title = title.into();
+        draft.work_location_id = Some(Uuid::from_u128(2000));
+        store.execute(Action::SaveEmployee(draft)).unwrap();
+        let ctx = egui::Context::default();
+        let mut output = None;
+        for _ in 0..3 {
+            output = Some(ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(520.0, 1400.0),
+                    )),
+                    ..Default::default()
+                },
+                |ui| employment_history(ui, &store.data, person.id, "%H:%M"),
+            ));
+            output.as_mut().unwrap().textures_delta.clear();
+        }
+        let output = output.unwrap();
+        let bounds = |needle: &str| {
+            output
+                .shapes
+                .iter()
+                .find_map(|shape| match &shape.shape {
+                    egui::epaint::Shape::Text(text) if text.galley.job.text == needle => {
+                        Some(text.galley.rect.translate(text.pos.to_vec2()))
+                    }
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("Missing rendered history value: {needle}"))
+        };
+        let department_rect = bounds(department);
+        let title_rect = bounds(title);
+        let location_rect = bounds("Main office");
+        assert!(
+            department_rect.height() > 20.0 && title_rect.height() > 20.0,
+            "Long values must wrap"
+        );
+        assert!(
+            department_rect.bottom() <= title_rect.top(),
+            "Department text overlaps job-title row"
+        );
+        assert!(
+            title_rect.bottom() <= location_rect.top(),
+            "Job-title text overlaps work-location row"
+        );
+        assert!(
+            department_rect.right() <= 520.0 && title_rect.right() <= 520.0,
+            "History extends outside the viewport"
+        );
     }
 }

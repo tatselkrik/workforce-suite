@@ -6,6 +6,7 @@ pub mod contacts;
 pub mod corrections;
 pub mod domain;
 pub mod employment;
+pub mod history;
 pub mod ui;
 pub mod updater;
 

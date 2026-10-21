@@ -731,6 +731,11 @@ impl CloudClient {
                     .then(a.id.cmp(&b.id))
             });
         }
+        let employment_history = if access.role.manages_hr() {
+            self.rows("employment_history", Some(company.id))?
+        } else {
+            Vec::new()
+        };
         let (logo_png, logo_warning) = self.company_logo(&company);
         Ok(Snapshot {
             company,
@@ -747,6 +752,7 @@ impl CloudClient {
             corrections,
             employment_types,
             work_locations,
+            employment_history,
         })
     }
 
@@ -1434,11 +1440,16 @@ fn execute_demo_admin(store: &mut DemoStore, action: AdminAction) -> Result<Stri
                         full_name: name,
                         annual_leave_days: store.data.company.annual_leave_days,
                         ..Default::default()
-                    }
-                    .employee(store.data.company.id)?;
-                    let id = employee.id;
-                    store.data.employees.push(employee);
-                    id
+                    };
+                    let code = employee.employee_code.to_uppercase();
+                    store.execute(Action::SaveEmployee(employee))?;
+                    store
+                        .data
+                        .employees
+                        .iter()
+                        .find(|e| e.employee_code == code)
+                        .unwrap()
+                        .id
                 }
             };
             ensure!(

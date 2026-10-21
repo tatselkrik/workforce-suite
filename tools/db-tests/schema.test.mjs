@@ -55,8 +55,18 @@ try {
     grant select,insert,update,delete on storage.objects to authenticated,anon;
   `);
   const folder=new URL('../../supabase/migrations/',import.meta.url);
+  let companyA;
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_employment_history.sql')) {
+      companyA=(await db.query(`insert into public.companies(owner_id,name,timezone) values ($1,'Demo Company A','Asia/Manila') returning *`,[uidA])).rows[0];
+    }
     await db.exec(await readFile(new URL(filename,folder),'utf8'));
+    if(filename.endsWith('_employment_history.sql')) {
+      const initial=(await db.query('select * from public.employment_history')).rows;
+      eq(initial.length,1,'Migration captures one initial snapshot for each existing employee');
+      eq(initial[0].kind,'starting_snapshot','Existing employee baseline is never a fabricated creation event');
+      eq([initial[0].before_record,initial[0].actor_id,initial[0].actor_name],[null,null,'System'],'Migration baseline has no invented actor or prior record');
+    }
     await db.query('insert into supabase_migrations.schema_migrations(version) values($1)',[filename.split('_')[0]]);
   }
   eq((await db.query(`select count(*)::int as n from pg_class where relname in ('companies','employees','attendance','leave_requests') and relrowsecurity`)).rows[0].n,4,'RLS enabled on every HR table');
@@ -67,7 +77,7 @@ try {
   await session(uidB);
   await deny(`insert into public.companies(owner_id,name) values ($1,'Unapproved other company')`,[uidB],['42501']);
   await db.exec('reset role');
-  const companyA=(await db.query(`insert into public.companies(owner_id,name,timezone) values ($1,'Demo Company A','Asia/Manila') returning *`,[uidA])).rows[0];
+  if(!companyA)companyA=(await db.query(`insert into public.companies(owner_id,name,timezone) values ($1,'Demo Company A','Asia/Manila') returning *`,[uidA])).rows[0];
   await deny(`insert into public.companies(owner_id,name) values ($1,'Second installation company')`,[uidB],['23505']);
   eq((await db.query('select count(*)::int as n from public.companies')).rows[0].n,1,'Database permits exactly one company');
   const photoPath=uidA+'/avatar.png';
@@ -171,6 +181,8 @@ try {
   await runCorrectionTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
   const {runEmploymentTests}=await import('./employment.test.mjs');
   await runEmploymentTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
+  const {runHistoryTests}=await import('./history.test.mjs');
+  await runHistoryTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL schema, authorization, and workflow assertions.`);
 } finally {
   await db.close();
