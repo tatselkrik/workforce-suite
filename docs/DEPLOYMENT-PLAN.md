@@ -1,4 +1,12 @@
-# Employee-first staff access, Profile and shared company logo — 0.1.7
+# Attendance calendar and sign-in branding — 0.1.8
+
+This update uses the existing schema and functions; no SQL, RLS, bucket-access or hosted-function change is required. The company logo remains private in Supabase. Only a validated company name/logo cache survives locally for pre-login/offline display; HR data and sessions still clear on sign-out. Cache entries are scoped to the packaged connection and kept outside source/install bundles. A newly configured device uses packaged/default branding until its first successful sync.
+
+Attendance dates use a native calendar with month/year selection, recorded-day hints and Today. The roster uses available employee/hire data, preserves archived recorded history and separates approved leave from no recorded check-in. This does not implement work schedules, holidays or a confirmed-absence calculation. Settings puts company fields/save on the left and logo controls on the right. Staff-role help explains disabling access and protected administrator identities.
+
+Use the existing signed private update channel and preserve the connection/verification profiles and prior installation backup. Current verification and exact release/installation evidence belong in `VERIFICATION.md` and the private versioned report. No public push or remote CI is implied.
+
+# Historical employee-first staff access, Profile and shared company logo — 0.1.7
 
 The additive `20261021075507_employee_profile_and_company_logo.sql` migration and account-admin v3 are deployed to the dedicated prototype. desktop-release v1 remains compatible. It adds own-contact editing, atomic staff/employee/contact saves, a private company-logo bucket/revision and a protected own-supervisor name projection. Older 0.1.6 clients remain readable; coordinate final 0.1.7 packaging with these schema/function changes. No company-selection or connection setup is added to the desktop.
 

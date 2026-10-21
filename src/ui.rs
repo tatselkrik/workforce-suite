@@ -7,7 +7,7 @@ use crate::{
     domain::*,
     updater::{self, UpdateState},
 };
-use chrono::{Datelike, Duration};
+use chrono::{Datelike, Duration, Months, NaiveDate};
 use eframe::egui::{self, Align, Color32, FontId, Frame, Layout, RichText, Stroke, Ui, Vec2};
 use std::sync::mpsc;
 use uuid::Uuid;
@@ -85,7 +85,8 @@ pub struct HrisApp {
     search: String,
     employee_status: Option<EmployeeStatus>,
     department: String,
-    attendance_date: String,
+    attendance_date: NaiveDate,
+    calendar_month: NaiveDate,
     check_in_employee: Option<Uuid>,
     leave_filter: Option<LeaveStatus>,
     employee_form: Option<EmployeeDraft>,
@@ -99,6 +100,9 @@ pub struct HrisApp {
     login_email: String,
     login_password: String,
     company_logo: Option<egui::TextureHandle>,
+    login_branding: branding::LoginBranding,
+    login_logo: Option<egui::TextureHandle>,
+    login_branding_warning: Option<String>,
     account: Option<AccountProfile>,
     avatar: Option<egui::TextureHandle>,
     personal_draft: PersonalDetails,
@@ -243,13 +247,33 @@ impl HrisApp {
                 cc.egui_ctx
                     .load_texture("company-logo", image, egui::TextureOptions::LINEAR)
             });
+        let login_branding = connection
+            .as_ref()
+            .and_then(branding::load_login_branding)
+            .unwrap_or_default();
+        let login_logo = login_branding
+            .logo_png
+            .as_ref()
+            .and_then(|png| branding::circular_logo(png).ok())
+            .map(|image| {
+                cc.egui_ctx
+                    .load_texture("login-company-logo", image, egui::TextureOptions::LINEAR)
+            })
+            .or_else(|| {
+                login_branding
+                    .company_name
+                    .is_empty()
+                    .then(|| company_logo.clone())
+                    .flatten()
+            });
         let account = (data.mode == Mode::Demo).then(AccountProfile::demo);
         let personal_draft = account
             .as_ref()
             .map(|a| a.details.clone())
             .unwrap_or_default();
         let mut app = Self {
-            attendance_date: data.company.today().to_string(),
+            attendance_date: data.company.today(),
+            calendar_month: month_start(data.company.today()),
             company_draft: data.company.clone(),
             data,
             page: Page::Overview,
@@ -272,6 +296,9 @@ impl HrisApp {
             login_email: String::new(),
             login_password: String::new(),
             company_logo,
+            login_branding,
+            login_logo,
+            login_branding_warning: None,
             account,
             avatar: None,
             personal_draft,
@@ -348,6 +375,11 @@ impl HrisApp {
                         app.data.accounts.clear();
                     }
                     if !app.data.access.role.uses_desktop() {
+                        app.login_branding = branding::LoginBranding {
+                            company_name: app.data.company.name.clone(),
+                            logo_png: app.data.logo_png.clone(),
+                        };
+                        app.login_logo = app.company_logo.clone();
                         app.data = Snapshot::signed_out();
                         app.account = None;
                         app.notice = Some((crate::access::EMPLOYEE_PORTAL_NOTICE.into(), true));
@@ -376,7 +408,7 @@ impl HrisApp {
                     app.update_state = UpdateState::Available(updater::VerifiedRelease {
                         release: updater::Release {
                             application_id: crate::APP_ID.into(),
-                            version: "0.1.8".into(),
+                            version: "0.1.9".into(),
                             platform: "windows-x64".into(),
                             requires_schema: "20261021054356".into(),
                             artifact: "0.1.8/HRIS-Desktop-Update-0.1.8.exe".into(),
@@ -471,7 +503,39 @@ impl HrisApp {
                 }
                 _ => {}
             }
+            if app.data.mode == Mode::Demo
+                && std::env::var("HRIS_PREVIEW_ATTENDANCE_DATE").as_deref() == Ok("previous")
+            {
+                let date = app.data.company.today().pred_opt().unwrap();
+                app.attendance_date = date;
+                app.calendar_month = month_start(date);
+                if let Some(mut record) = app.data.attendance.first().cloned() {
+                    record.id = Uuid::new_v4();
+                    record.work_date = date;
+                    record.checked_in_at -= Duration::days(1);
+                    record.checked_out_at =
+                        record.checked_out_at.map(|value| value - Duration::days(1));
+                    app.data.attendance.push(record);
+                }
+                if let Some(employee) = app.data.employees.get(1) {
+                    app.data.leave.push(LeaveRequest {
+                        id: Uuid::new_v4(),
+                        company_id: app.data.company.id,
+                        employee_id: employee.id,
+                        kind: LeaveKind::Annual,
+                        starts_on: date,
+                        ends_on: date,
+                        reason: "Fictional calendar preview".into(),
+                        status: LeaveStatus::Approved,
+                    });
+                }
+            }
             if std::env::var("HRIS_PREVIEW_PAGE").as_deref() == Ok("sign-in") {
+                app.login_branding = branding::LoginBranding {
+                    company_name: app.data.company.name.clone(),
+                    logo_png: app.data.logo_png.clone(),
+                };
+                app.login_logo = app.company_logo.clone();
                 app.data = Snapshot::signed_out();
                 app.account = None;
                 app.connection = Some(ConnectionConfig {
@@ -546,11 +610,34 @@ impl HrisApp {
                         self.department.clear();
                         self.employee_status = Some(EmployeeStatus::Active);
                         self.leave_filter = None;
-                        self.attendance_date = data.company.today().to_string();
+                        self.attendance_date = data.company.today();
+                        self.calendar_month = month_start(self.attendance_date);
                         self.check_in_employee = data.active().next().map(|employee| employee.id);
                         self.employee_form = None;
                         self.contacts_form = None;
                         self.leave_form = None;
+                    }
+                    if data.mode == Mode::Supabase && data.logo_warning.is_none() {
+                        let next = branding::LoginBranding {
+                            company_name: data.company.name.clone(),
+                            logo_png: data.logo_png.clone(),
+                        };
+                        if self.login_branding != next || self.login_branding_warning.is_some() {
+                            self.login_logo = next
+                                .logo_png
+                                .as_ref()
+                                .and_then(|png| branding::circular_logo(png).ok())
+                                .map(|image| {
+                                    ctx.load_texture(
+                                        "login-company-logo",
+                                        image,
+                                        egui::TextureOptions::LINEAR,
+                                    )
+                                });
+                            self.login_branding_warning = self.connection.as_ref().and_then(|config|
+                                branding::save_login_branding(config,&next).err().map(|_|"The company logo is saved online, but sign-in branding on this device could not be refreshed. Refresh to retry.".into()));
+                            self.login_branding = next;
+                        }
                     }
                     sync_profile_contacts(&self.data, &data, &mut self.profile_contacts_draft);
                     if self.data.logo_png != data.logo_png || self.data.mode != data.mode {
@@ -1482,132 +1569,154 @@ impl HrisApp {
             }
         });
         ui.label(RichText::new("Balances show the current calendar year. Archive employees from Edit to preserve their history.").color(muted(ui)).size(12.0));
-        ui.label(RichText::new("Contacts are managed by HR and administrators. Staff can view their own contact details.").color(muted(ui)).size(12.0));
+        ui.label(RichText::new("Contacts are managed by HR and administrators. Staff can update their own contacts in Profile.").color(muted(ui)).size(12.0));
     }
 
     fn attendance(&mut self, ui: &mut Ui) {
-        ui.horizontal(|ui| {
-            if ui.button("<").clicked() {
-                if let Ok(date) = parse_date(&self.attendance_date) {
-                    self.attendance_date = (date - Duration::days(1)).to_string();
+        let today = self.data.company.today();
+        ui.horizontal_wrapped(|ui| {
+            ui.label("Attendance date");
+            let response = ui.button(format!(
+                "{}  |  Choose date",
+                self.attendance_date.format("%b %d, %Y")
+            ));
+            let popup = egui::Popup::menu(&response)
+                .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside);
+            #[cfg(feature = "qa-screenshot")]
+            let popup = if std::env::var("HRIS_PREVIEW_CALENDAR").as_deref() == Ok("open") {
+                popup.open(true)
+            } else {
+                popup
+            };
+            popup.show(|ui| {
+                if attendance_calendar(
+                    ui,
+                    &mut self.attendance_date,
+                    &mut self.calendar_month,
+                    today,
+                    &self.data,
+                ) {
+                    ui.close();
                 }
-            }
-            ui.add_sized(
-                [125.0, 34.0],
-                egui::TextEdit::singleline(&mut self.attendance_date),
-            );
-            if ui.button(">").clicked() {
-                if let Ok(date) = parse_date(&self.attendance_date) {
-                    self.attendance_date = (date + Duration::days(1)).to_string();
-                }
-            }
+            });
             if ui.button("Today").clicked() {
-                self.attendance_date = self.data.company.today().to_string();
+                self.attendance_date = today;
+                self.calendar_month = month_start(today);
             }
             ui.label(RichText::new(&self.data.company.timezone).color(muted(ui)));
         });
-        let date = match parse_date(&self.attendance_date) {
-            Ok(date) => date,
-            Err(error) => {
-                ui.colored_label(ui.visuals().error_fg_color, error.to_string());
-                return;
-            }
-        };
+        let date = self.attendance_date;
         card(ui, |ui| {
             ui.label(RichText::new("Record a check-in").strong());
-            ui.horizontal(|ui| {
+            ui.horizontal_wrapped(|ui| {
                 employee_picker(
                     ui,
                     "checkin_employee",
                     &self.data,
                     &mut self.check_in_employee,
                 );
-                ui.add_enabled_ui(
-                    date == self.data.company.today() && self.check_in_employee.is_some(),
-                    |ui| {
-                        if primary(ui, "Check in") {
-                            if let Some(id) = self.check_in_employee {
-                                self.send(Command::Change(Action::CheckIn(id)));
-                            }
+                ui.add_enabled_ui(date == today && self.check_in_employee.is_some(), |ui| {
+                    if primary(ui, "Check in") {
+                        if let Some(id) = self.check_in_employee {
+                            self.send(Command::Change(Action::CheckIn(id)));
                         }
-                    },
-                );
+                    }
+                });
             });
             ui.label(RichText::new("Check-ins use today's company date. Live timestamps come from the database server.").color(muted(ui)).size(12.0));
         });
         ui.add_space(8.0);
-        let rows: Vec<_> = self
-            .data
-            .attendance
+        let rows = crate::attendance::daily_roster(&self.data, date);
+        let recorded = rows.iter().filter(|row| row.attendance.is_some()).count();
+        let on_leave = rows
             .iter()
-            .filter(|a| a.work_date == date)
-            .cloned()
-            .collect();
+            .filter(|row| row.attendance.is_none() && row.approved_leave.is_some())
+            .count();
+        let missing = rows.len() - recorded - on_leave;
         card(ui, |ui| {
             ui.label(
-                RichText::new(format!(
-                    "{} attendance record(s) · {}",
-                    rows.len(),
-                    date.format("%A, %B %d")
-                ))
-                .size(17.0)
-                .strong(),
+                RichText::new(date.format("%A, %B %d, %Y").to_string())
+                    .size(17.0)
+                    .strong(),
             );
+            ui.horizontal_wrapped(|ui| {
+                badge(ui, &format!("{recorded} recorded"), true);
+                badge(ui, &format!("{missing} no check-in"), false);
+                badge(ui, &format!("{on_leave} approved leave"), false);
+            });
             ui.add_space(8.0);
             egui::ScrollArea::horizontal().show(ui, |ui| {
                 egui::Grid::new("attendance_table")
                     .striped(true)
-                    .spacing([32.0, 16.0])
+                    .spacing([28.0, 16.0])
                     .show(ui, |ui| {
                         headers(
                             ui,
                             &["EMPLOYEE", "CHECK-IN", "CHECK-OUT", "ELAPSED", "STATUS", ""],
                         );
                         for row in &rows {
-                            ui.label(
-                                RichText::new(self.data.employee_name(row.employee_id)).strong(),
-                            );
-                            ui.label(
-                                row.checked_in_at
-                                    .with_timezone(&self.data.company.tz())
-                                    .format(self.time_format())
-                                    .to_string(),
-                            );
-                            ui.label(
-                                row.checked_out_at
-                                    .map(|t| {
-                                        t.with_timezone(&self.data.company.tz())
-                                            .format(self.time_format())
-                                            .to_string()
-                                    })
-                                    .unwrap_or_else(|| "—".into()),
-                            );
-                            ui.label(
-                                row.checked_out_at
-                                    .map(|t| {
-                                        format!(
-                                            "{:.1} h",
-                                            (t - row.checked_in_at).num_minutes() as f64 / 60.0
-                                        )
-                                    })
-                                    .unwrap_or_else(|| "In progress".into()),
-                            );
-                            badge(
-                                ui,
-                                if row.checked_out_at.is_some() {
-                                    "Completed"
-                                } else {
-                                    "Checked in"
-                                },
-                                true,
-                            );
-                            if row.checked_out_at.is_none() {
-                                if self.data.access.can_record(row.employee_id)
-                                    && ui.button("Check out").clicked()
+                            ui.label(RichText::new(&row.employee.full_name).strong());
+                            if let Some(record) = &row.attendance {
+                                ui.label(
+                                    record
+                                        .checked_in_at
+                                        .with_timezone(&self.data.company.tz())
+                                        .format(self.time_format())
+                                        .to_string(),
+                                );
+                                ui.label(
+                                    record
+                                        .checked_out_at
+                                        .map(|t| {
+                                            t.with_timezone(&self.data.company.tz())
+                                                .format(self.time_format())
+                                                .to_string()
+                                        })
+                                        .unwrap_or_else(|| "—".into()),
+                                );
+                                ui.label(
+                                    record
+                                        .checked_out_at
+                                        .map(|t| {
+                                            format!(
+                                                "{:.1} h",
+                                                (t - record.checked_in_at).num_minutes() as f64
+                                                    / 60.0
+                                            )
+                                        })
+                                        .unwrap_or_else(|| "In progress".into()),
+                                );
+                                badge(
+                                    ui,
+                                    if record.checked_out_at.is_some() {
+                                        "Completed"
+                                    } else {
+                                        "Checked in"
+                                    },
+                                    true,
+                                );
+                                if record.checked_out_at.is_none()
+                                    && self.data.access.can_record(record.employee_id)
                                 {
-                                    self.send(Command::Change(Action::CheckOut(row.id)));
+                                    if ui.button("Check out").clicked() {
+                                        self.send(Command::Change(Action::CheckOut(record.id)));
+                                    }
+                                } else {
+                                    ui.label("—");
                                 }
                             } else {
+                                for _ in 0..3 {
+                                    ui.label("—");
+                                }
+                                badge(
+                                    ui,
+                                    if row.approved_leave.is_some() {
+                                        "Approved leave"
+                                    } else {
+                                        "No check-in"
+                                    },
+                                    false,
+                                );
                                 ui.label("—");
                             }
                             ui.end_row();
@@ -1615,8 +1724,9 @@ impl HrisApp {
                     });
             });
             if rows.is_empty() {
-                empty(ui, "No attendance records for this date.");
+                empty(ui, "No employee records available for this date.");
             }
+            ui.label(RichText::new("Roster uses available employee records and hire dates. No check-in does not confirm absence; shifts and holidays are not configured yet.").color(muted(ui)).small());
         });
         ui.label(RichText::new("Elapsed time includes breaks; it is not a payroll calculation. Open overnight records can be closed from their original date.").color(muted(ui)).size(12.0));
         ui.add_space(12.0);
@@ -1838,61 +1948,90 @@ impl HrisApp {
         });
     }
 
+    fn company_defaults_fields(&mut self, ui: &mut Ui) {
+        field(
+            ui,
+            "Company name",
+            &mut self.company_draft.name,
+            "Your company",
+        );
+        field(
+            ui,
+            "Time zone",
+            &mut self.company_draft.timezone,
+            "Asia/Manila",
+        );
+        ui.label("Annual leave for new employees");
+        ui.add(
+            egui::DragValue::new(&mut self.company_draft.annual_leave_days)
+                .range(0..=366)
+                .suffix(" days"),
+        );
+        ui.label(
+            RichText::new("Existing allowances stay unchanged.")
+                .color(muted(ui))
+                .small(),
+        );
+        if primary(ui, "Save company settings") {
+            match self.company_draft.validate() {
+                Ok(()) => self.send(Command::Change(Action::SaveCompany(
+                    self.company_draft.clone(),
+                ))),
+                Err(error) => self.notice = Some((error.to_string(), true)),
+            }
+        }
+    }
+
+    fn company_logo_controls(&mut self, ui: &mut Ui) {
+        ui.label(RichText::new("Company logo").strong());
+        company_logo(
+            ui,
+            self.company_logo.as_ref(),
+            &self.data.company.name,
+            80.0,
+        );
+        ui.horizontal_wrapped(|ui| {
+            if ui.button("Upload logo").clicked() {
+                match account::choose_image("Choose a company logo") {
+                    Ok(Some(path)) => self.send(Command::Change(Action::UploadCompanyLogo(path))),
+                    Ok(None) => {}
+                    Err(error) => self.notice = Some((error.to_string(), true)),
+                }
+            }
+            if ui
+                .add_enabled(
+                    self.data.company.logo_version.is_some(),
+                    egui::Button::new("Remove logo"),
+                )
+                .clicked()
+            {
+                self.send(Command::Change(Action::RemoveCompanyLogo));
+            }
+        });
+        ui.label(RichText::new("PNG or JPEG, up to 5 MiB and 2048 × 2048. Transparent circular display on the sidebar and sign-in page.").color(muted(ui)).small());
+        if let Some(warning) = self
+            .data
+            .logo_warning
+            .as_ref()
+            .or(self.login_branding_warning.as_ref())
+        {
+            ui.colored_label(ui.visuals().error_fg_color, warning);
+        }
+    }
+
     fn settings(&mut self, ui: &mut Ui) {
         if self.data.access.role.manages_accounts() {
             card(ui, |ui| {
-                ui.set_max_width(ui.available_width().min(630.0));
+                ui.set_max_width(ui.available_width().min(840.0));
                 ui.label(RichText::new("Company defaults").size(18.0).strong());
-                ui.horizontal_wrapped(|ui| {
-                    company_logo(ui,self.company_logo.as_ref(),&self.data.company.name,76.0);
-                    ui.vertical(|ui| {
-                        ui.set_max_width(ui.available_width().min(360.0));
-                        if ui.button("Upload company logo").clicked() {
-                            match account::choose_image("Choose a company logo") {
-                                Ok(Some(path))=>self.send(Command::Change(Action::UploadCompanyLogo(path))),
-                                Ok(None)=>{},Err(error)=>self.notice=Some((error.to_string(),true)),
-                            }
-                        }
-                        if ui.add_enabled(self.data.company.logo_version.is_some(),egui::Button::new("Remove company logo")).clicked() {
-                            self.send(Command::Change(Action::RemoveCompanyLogo));
-                        }
-                        ui.label(RichText::new("PNG or JPEG, up to 5 MiB and 2048 × 2048. Transparency is preserved; the full logo fits inside a circle.").color(muted(ui)).small());
-                    });
-                });
-                if let Some(warning) = &self.data.logo_warning {
-                    ui.colored_label(ui.visuals().error_fg_color, warning);
-                }
-                ui.separator();
-                ui.set_max_width(ui.available_width().min(630.0));
-                field(
-                    ui,
-                    "Company name",
-                    &mut self.company_draft.name,
-                    "Your company",
-                );
-                field(
-                    ui,
-                    "Time zone",
-                    &mut self.company_draft.timezone,
-                    "Asia/Manila",
-                );
-                ui.horizontal(|ui| {
-                    ui.label("Annual leave for new employees");
-                    ui.add(
-                        egui::DragValue::new(&mut self.company_draft.annual_leave_days)
-                            .range(0..=366)
-                            .suffix(" days"),
-                    );
-                });
-                ui.label(RichText::new("The default allowance applies to new employees. Existing employees retain their individual allowance.").color(muted(ui)).size(12.0));
-                if primary(ui, "Save company settings") {
-                    match self.company_draft.validate() {
-                        Ok(()) => self.send(Command::Change(Action::SaveCompany(
-                            self.company_draft.clone(),
-                        ))),
-                        Err(error) => self.notice = Some((error.to_string(), true)),
+                ui.add_space(6.0);
+                ui.columns(2, |columns| {
+                    for column in columns.iter_mut() {
+                        column.spacing_mut().item_spacing.y = 6.0;
                     }
-                }
+                    self.company_defaults_fields(&mut columns[0]);
+                    self.company_logo_controls(&mut columns[1]);
+                });
             });
             ui.add_space(12.0);
         }
@@ -2252,7 +2391,9 @@ impl HrisApp {
     }
 
     fn sign_in(&mut self, ui: &mut Ui) {
-        sign_in_layout(ui, |ui| {
+        let logo = self.login_logo.clone();
+        let company_name = self.login_branding.company_name.clone();
+        sign_in_layout(ui, logo.as_ref(), &company_name, |ui| {
             if let Some(error) = &self.deployment_error {
                 ui.heading("Company connection unavailable");
                 ui.label(error);
@@ -2660,6 +2801,7 @@ fn staff_access_fields(ui: &mut Ui, draft: &mut AccountDraft, data: &Snapshot) {
         field(ui, "Sign-in email", &mut draft.email, "Work email");
     }
     ui.add_enabled_ui(!protected, |ui| {
+        ui.checkbox(&mut draft.active, "Sign-in access enabled");
         ui.label("Desktop role");
         let label = |role: Role| {
             if role == Role::Employee {
@@ -2675,12 +2817,14 @@ fn staff_access_fields(ui: &mut Ui, draft: &mut AccountDraft, data: &Snapshot) {
                     ui.selectable_value(&mut draft.role, role, label(role));
                 }
             });
-        ui.checkbox(&mut draft.active, "Sign-in access enabled");
     });
     if protected {
         ui.label("Your administrator role is protected. Employment details are managed in the other tabs.");
     }
     ui.label(RichText::new(draft.role.description()).color(muted(ui)));
+    if !protected {
+        ui.label(RichText::new("To suspend access, clear Sign-in access enabled and save. To remove the staff role while retaining the employee, choose No staff role. Show disabled in Account Manager reveals suspended staff.").color(muted(ui)).small());
+    }
     if !editing {
         password_field(
             ui,
@@ -2717,7 +2861,12 @@ fn public_access_draft(draft: &AccountDraft) -> AccountDraft {
     }
 }
 
-fn sign_in_layout(ui: &mut Ui, contents: impl FnOnce(&mut Ui)) -> egui::Rect {
+fn sign_in_layout(
+    ui: &mut Ui,
+    logo: Option<&egui::TextureHandle>,
+    company_name: &str,
+    contents: impl FnOnce(&mut Ui),
+) -> egui::Rect {
     ui.horizontal(|ui| {
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             ui.label(
@@ -2728,10 +2877,21 @@ fn sign_in_layout(ui: &mut Ui, contents: impl FnOnce(&mut Ui)) -> egui::Rect {
         });
     });
     ui.vertical_centered(|ui| {
-        ui.add_space(24.0);
-        ui.heading(RichText::new("HRIS Desktop").strong());
-        ui.label(RichText::new("Your company workspace").color(muted(ui)));
-        ui.add_space(20.0);
+        ui.add_space(12.0);
+        if logo.is_some() || !company_name.is_empty() {
+            company_logo(ui, logo, company_name, 64.0);
+            ui.add_space(4.0);
+        }
+        ui.heading(
+            RichText::new(if company_name.is_empty() {
+                "HRIS Desktop"
+            } else {
+                company_name
+            })
+            .size(22.0)
+            .strong(),
+        );
+        ui.add_space(12.0);
         Frame::new()
             .fill(ui.visuals().window_fill)
             .stroke(Stroke::new(
@@ -3088,6 +3248,135 @@ mod profile_navigation_tests {
     }
 }
 
+fn month_start(date: NaiveDate) -> NaiveDate {
+    date.with_day(1).unwrap()
+}
+
+fn calendar_cells(month: NaiveDate) -> [Option<NaiveDate>; 42] {
+    let first = month_start(month);
+    let offset = first.weekday().num_days_from_monday() as i64;
+    std::array::from_fn(|index| {
+        first
+            .checked_add_signed(Duration::days(index as i64 - offset))
+            .filter(|day| day.month() == first.month() && day.year() == first.year())
+    })
+}
+
+fn attendance_calendar(
+    ui: &mut Ui,
+    selected: &mut NaiveDate,
+    month: &mut NaiveDate,
+    today: NaiveDate,
+    data: &Snapshot,
+) -> bool {
+    ui.set_min_width(280.0);
+    ui.spacing_mut().item_spacing = Vec2::new(6.0, 5.0);
+    let mut chosen = false;
+    ui.horizontal(|ui| {
+        if ui
+            .add_enabled(
+                *month > NaiveDate::from_ymd_opt(1900, 1, 1).unwrap(),
+                egui::Button::new("<"),
+            )
+            .clicked()
+        {
+            *month = month.checked_sub_months(Months::new(1)).unwrap();
+        }
+        let mut year = month.year();
+        let mut number = month.month();
+        egui::ComboBox::from_id_salt("attendance_calendar_month")
+            .width(116.0)
+            .selected_text(month.format("%B").to_string())
+            .show_ui(ui, |ui| {
+                for value in 1..=12 {
+                    ui.add_enabled_ui(year < today.year() || value <= today.month(), |ui| {
+                        ui.selectable_value(
+                            &mut number,
+                            value,
+                            NaiveDate::from_ymd_opt(2024, value, 1)
+                                .unwrap()
+                                .format("%B")
+                                .to_string(),
+                        );
+                    });
+                }
+            });
+        egui::ComboBox::from_id_salt("attendance_calendar_year")
+            .width(64.0)
+            .height(180.0)
+            .selected_text(year.to_string())
+            .show_ui(ui, |ui| {
+                for value in (1900..=today.year()).rev() {
+                    ui.selectable_value(&mut year, value, value.to_string());
+                }
+            });
+        if year == today.year() {
+            number = number.min(today.month());
+        }
+        *month = NaiveDate::from_ymd_opt(year, number, 1).unwrap();
+        if ui
+            .add_enabled(*month < month_start(today), egui::Button::new(">"))
+            .clicked()
+        {
+            *month = month.checked_add_months(Months::new(1)).unwrap();
+        }
+    });
+    ui.separator();
+    egui::Grid::new("attendance_calendar_days")
+        .spacing([5.0, 4.0])
+        .show(ui, |ui| {
+            for day in ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"] {
+                ui.label(RichText::new(day).small().color(muted(ui)));
+            }
+            ui.end_row();
+            let cells = calendar_cells(*month);
+            let visible_cells = cells
+                .iter()
+                .rposition(Option::is_some)
+                .map(|last| (last / 7 + 1) * 7)
+                .unwrap_or(35);
+            for (index, cell) in cells.into_iter().take(visible_cells).enumerate() {
+                if let Some(date) = cell {
+                    let count = data
+                        .attendance
+                        .iter()
+                        .filter(|record| record.work_date == date)
+                        .count();
+                    let mut text = RichText::new(date.day().to_string());
+                    if count > 0 {
+                        text = text.color(accent(ui)).strong();
+                    }
+                    let mut button = egui::Button::new(text).selected(date == *selected);
+                    if date == today {
+                        button = button.stroke(Stroke::new(1.0, accent(ui)));
+                    }
+                    if ui
+                        .add_enabled(date <= today, button.min_size(Vec2::new(34.0, 30.0)))
+                        .on_hover_text(format!(
+                            "{} · {count} check-in record(s)",
+                            date.format("%b %d, %Y")
+                        ))
+                        .clicked()
+                    {
+                        *selected = date;
+                        chosen = true;
+                    }
+                } else {
+                    ui.allocate_space(Vec2::new(34.0, 30.0));
+                }
+                if index % 7 == 6 {
+                    ui.end_row();
+                }
+            }
+        });
+    ui.label(
+        RichText::new("Teal dates have recorded check-ins.")
+            .small()
+            .color(muted(ui)),
+    );
+    chosen
+}
+
 fn card<R>(ui: &mut Ui, contents: impl FnOnce(&mut Ui) -> R) -> R {
     Frame::new()
         .fill(ui.visuals().window_fill)
@@ -3198,9 +3487,18 @@ mod identity_ui_tests {
                             .frame(Frame::new().inner_margin(28))
                             .show(ui, |ui| {
                                 let output = egui::ScrollArea::vertical().show(ui, |ui| {
-                                    sign_in_layout(ui, |ui| {
-                                        login_controls(ui, &mut email, &mut password, true);
-                                    })
+                                    sign_in_layout(
+                                        ui,
+                                        None,
+                                        "Synthetic Company With A Saved Sign-in Logo",
+                                        |ui| {
+                                            ui.heading("Sign in");
+                                            ui.label(
+                                                "Use your HRIS account to access company records.",
+                                            );
+                                            login_controls(ui, &mut email, &mut password, true);
+                                        },
+                                    )
                                 });
                                 assert!(
                                     output.inner.top() < size.y * 0.4,
@@ -3222,6 +3520,84 @@ mod identity_ui_tests {
                 );
                 output.textures_delta.clear();
             }
+        }
+    }
+
+    #[test]
+    fn calendar_month_cells_handle_leap_days_and_monday_alignment() {
+        for (year, days) in [(2024, 29), (2100, 28), (2000, 29)] {
+            let month = NaiveDate::from_ymd_opt(year, 2, 1).unwrap();
+            let cells = calendar_cells(month);
+            assert_eq!(cells.iter().flatten().count(), days);
+            assert_eq!(
+                cells.iter().position(|d| d == &Some(month)).unwrap(),
+                month.weekday().num_days_from_monday() as usize
+            );
+            assert!(
+                cells
+                    .iter()
+                    .flatten()
+                    .all(|day| day.month() == 2 && day.year() == year)
+            );
+        }
+    }
+
+    #[test]
+    fn calendar_day_click_changes_the_date_and_future_days_remain_disabled() {
+        fn text_position(shape: &egui::epaint::Shape, text: &str) -> Option<egui::Pos2> {
+            match shape {
+                egui::epaint::Shape::Text(value) if value.galley.job.text == text => {
+                    Some(value.pos + value.galley.size() * 0.5)
+                }
+                egui::epaint::Shape::Vec(shapes) => {
+                    shapes.iter().find_map(|s| text_position(s, text))
+                }
+                _ => None,
+            }
+        }
+        for (target, expected) in [("14", 14), ("22", 21)] {
+            let ctx = egui::Context::default();
+            configure_theme(&ctx);
+            let today = NaiveDate::from_ymd_opt(2026, 10, 21).unwrap();
+            let mut selected = today;
+            let mut month = month_start(today);
+            let data = DemoStore::new().data;
+            let input = egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    Vec2::new(500.0, 600.0),
+                )),
+                ..Default::default()
+            };
+            let mut position = None;
+            for _ in 0..2 {
+                let mut output = ctx.run_ui(input.clone(), |ui| {
+                    attendance_calendar(ui, &mut selected, &mut month, today, &data);
+                });
+                position = output
+                    .shapes
+                    .iter()
+                    .find_map(|shape| text_position(&shape.shape, target));
+                output.textures_delta.clear();
+            }
+            let position = position.expect("Day must be rendered");
+            for pressed in [true, false] {
+                let mut pointer = input.clone();
+                pointer.events = vec![
+                    egui::Event::PointerMoved(position),
+                    egui::Event::PointerButton {
+                        pos: position,
+                        button: egui::PointerButton::Primary,
+                        pressed,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ];
+                let mut output = ctx.run_ui(pointer, |ui| {
+                    attendance_calendar(ui, &mut selected, &mut month, today, &data);
+                });
+                output.textures_delta.clear();
+            }
+            assert_eq!(selected.day(), expected);
         }
     }
 
