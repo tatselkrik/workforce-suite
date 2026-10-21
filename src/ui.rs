@@ -3281,7 +3281,8 @@ fn employment_history(ui: &mut Ui, data: &Snapshot, employee: Uuid, time_format:
                 if updating {ui.strong("Before");}
                 ui.strong(if updating {"After"}else{"Saved value"});ui.end_row();
                 for change in changes {
-                    let _field=ui.label(change.label);
+                    // Match the value cells' top-down layout: a bare Grid label is vertically centered.
+                    let _field=ui.vertical(|ui|ui.label(change.label)).inner;
                     #[cfg(feature="qa-screenshot")]
                     if index==0 && matches!((std::env::var("HRIS_PREVIEW_SCROLL").as_deref(),change.label),
                         (Ok("department"),"Department") | (Ok("job-title"),"Job title")) {
@@ -4373,6 +4374,80 @@ mod identity_ui_tests {
 #[cfg(test)]
 mod employment_history_layout_tests {
     use super::*;
+    #[test]
+    fn history_fields_and_values_align_in_snapshot_and_change_rows() {
+        for scale in [1.0, 1.25] {
+            for updating in [false, true] {
+                let mut store = DemoStore::new();
+                let person = store.data.employees[1].clone();
+                let event = store
+                    .data
+                    .employment_history
+                    .iter_mut()
+                    .find(|event| event.employee_id == person.id)
+                    .unwrap();
+                if updating {
+                    event.kind = crate::history::HistoryKind::Updated;
+                    event.before_record = Some(event.after_record.clone());
+                }
+                event.after_record.employee.employee_code = "HISTORY-ALIGNMENT".into();
+                event.after_record.employee.department = "Regional client services and administrative operations for the northern district".into();
+                let changes = event.changes();
+                let ctx = egui::Context::default();
+                ctx.set_zoom_factor(scale);
+                let mut output = None;
+                for _ in 0..3 {
+                    output = Some(ctx.run_ui(
+                        egui::RawInput {
+                            screen_rect: Some(egui::Rect::from_min_size(
+                                egui::Pos2::ZERO,
+                                egui::vec2(520.0, 1800.0),
+                            )),
+                            ..Default::default()
+                        },
+                        |ui| employment_history(ui, &store.data, person.id, "%H:%M"),
+                    ));
+                    output.as_mut().unwrap().textures_delta.clear();
+                }
+                let output = output.unwrap();
+                let tops = |needle: &str| {
+                    let positions: Vec<_> = output
+                        .shapes
+                        .iter()
+                        .filter_map(|shape| match &shape.shape {
+                            egui::epaint::Shape::Text(text) if text.galley.job.text == needle => {
+                                Some(text.pos.y + text.galley.rect.top())
+                            }
+                            _ => None,
+                        })
+                        .collect();
+                    assert!(!positions.is_empty(), "Missing history text: {needle}");
+                    positions
+                };
+                let aligned =
+                    |needle: &str, y: f32| tops(needle).iter().any(|top| (y - top).abs() <= 1.0);
+                let header = tops("Field")[0];
+                assert!(aligned(
+                    if updating { "After" } else { "Saved value" },
+                    header
+                ));
+                if updating {
+                    assert!(aligned("Before", header));
+                }
+                for change in changes {
+                    let label_top = tops(change.label)[0];
+                    assert!(
+                        aligned(&change.after, label_top),
+                        "{} is misaligned at scale {scale}, updating={updating}",
+                        change.label
+                    );
+                    if let Some(before) = change.before {
+                        assert!(aligned(&before, label_top));
+                    }
+                }
+            }
+        }
+    }
     #[test]
     fn long_employment_history_values_reserve_height_and_do_not_overlap_the_next_row() {
         let mut store = DemoStore::new();

@@ -1,5 +1,12 @@
 # Prototype verification — 2026-10-21
 
+## Employment history row alignment — version 0.1.12
+
+- Field labels now use the same measured top-down cell layout as Saved value and Before/After cells. This fixes the vertical mismatch while retaining the height needed for wrapped values. The change is limited to history presentation; database, authorization, saved events, dependencies and deployment profiles are unchanged.
+- The new actual paint-geometry regression reproduced the original Employee code misalignment before the fix. It now checks aligned headers and field/value text in starting snapshots and change entries at normal/125% scale, including long values. Both layout regressions and the complete 97-test Rust suite passed.
+- Nine fictional native previews were inspected: snapshot headers/first rows, scrolled and bottom rows, Before/After changes, normal/125% scale and long values in light/dark themes. Labels align with the first line of their values; wrapped rows retain their height and Save/Cancel remain visible. Actual signed-in native form interaction is not claimed.
+- No SQL or Edge Function changes were required. The database, hosted access and live employee mutation suites from 0.1.11 were not rerun for this presentation-only patch. Final feature-free build, privacy/startup, exact installer/recovery, signed private update and installation evidence are recorded separately with the versioned artifacts. No public push, remote CI, Windows Authenticode or other-machine verification is claimed.
+
 ## Automatic employment history — version 0.1.11
 
 - HR Generalists and Administrators open the saved employee record's History tab for automatic creation/update events, saved actor/role/time and before/after values. Existing employees receive a Starting snapshot without invented earlier history. Ten Employment fields are tracked. Contact-only, role-only and unchanged saves add no event; archiving retains the timeline. Profile, Manager and ordinary Employee scopes do not gain HR-only history. Recorded time is the database save time; scheduled/effective-date employment actions remain future work.
