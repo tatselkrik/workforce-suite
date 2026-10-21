@@ -22,6 +22,15 @@ const TEAL: Color32 = Color32::from_rgb(0, 123, 112);
 const BG: Color32 = Color32::from_rgb(245, 247, 250);
 const LINE: Color32 = Color32::from_rgb(226, 232, 238);
 
+mod organization_view;
+
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+enum EmployeeView {
+    #[default]
+    Directory,
+    Organization,
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Page {
     Overview,
@@ -89,6 +98,8 @@ pub struct HrisApp {
     notice: Option<(String, bool)>,
     search: String,
     employee_status: Option<EmployeeStatus>,
+    employee_view: EmployeeView,
+    organization: organization_view::State,
     department: String,
     employment_type_filter: EmploymentFilter,
     work_location_filter: EmploymentFilter,
@@ -299,6 +310,8 @@ impl HrisApp {
             notice: updater::previous_result(),
             search: String::new(),
             employee_status: Some(EmployeeStatus::Active),
+            employee_view: EmployeeView::Directory,
+            organization: organization_view::State::default(),
             department: String::new(),
             employment_type_filter: EmploymentFilter::All,
             work_location_filter: EmploymentFilter::All,
@@ -641,6 +654,73 @@ impl HrisApp {
                     app.employment_option_form = Some(draft);
                 }
                 Ok(
+                    "chart" | "chart-filtered" | "chart-collapsed" | "chart-archived"
+                    | "chart-long" | "chart-deep" | "chart-empty" | "chart-manager"
+                    | "chart-record" | "chart-no-match" | "chart-cycle",
+                ) => {
+                    let preview = std::env::var("HRIS_PREVIEW_FORM").unwrap_or_default();
+                    app.employee_view = EmployeeView::Organization;
+                    for employee in &mut app.data.employees {
+                        employee.reports_to = match employee.id.as_u128() {
+                            101 => Some(Uuid::from_u128(103)),
+                            102 | 103 | 106 | 107 => Some(Uuid::from_u128(100)),
+                            104 | 105 => Some(Uuid::from_u128(102)),
+                            _ => None,
+                        };
+                    }
+                    match preview.as_str() {
+                        "chart-filtered" => {
+                            app.organization.filters.department = Some("Operations".into())
+                        }
+                        "chart-collapsed" => {
+                            app.organization.collapsed.insert(Uuid::from_u128(100));
+                        }
+                        "chart-archived" => app.organization.filters.include_archived = true,
+                        "chart-empty" => app.data.employees.clear(),
+                        "chart-no-match" => {
+                            app.organization.filters.search = "No matching person".into()
+                        }
+                        "chart-cycle" => {
+                            if let Some(e) = app
+                                .data
+                                .employees
+                                .iter_mut()
+                                .find(|e| e.id == Uuid::from_u128(106))
+                            {
+                                e.reports_to = Some(e.id);
+                            }
+                        }
+                        "chart-long" => {
+                            if let Some(e) = app
+                                .data
+                                .employees
+                                .iter_mut()
+                                .find(|e| e.id == Uuid::from_u128(100))
+                            {
+                                e.full_name="Alexandra Rivera Santos — regional employee services and operations".into();
+                                e.department="Regional employee services and administrative operations for the northern district".into();
+                                e.job_title="Senior manager for regional people operations and organizational development".into();
+                            }
+                            app.data.work_locations[0].name="Regional headquarters and employee services centre for the northern district".into();
+                        }
+                        "chart-deep" => {
+                            let template = app.data.employees[0].clone();
+                            for id in 3000..3012 {
+                                let mut employee = template.clone();
+                                employee.id = Uuid::from_u128(id);
+                                employee.employee_code = format!("QA-{id}");
+                                employee.full_name =
+                                    format!("Synthetic reporting level {}", id - 2998);
+                                employee.reports_to =
+                                    Some(Uuid::from_u128(if id == 3000 { 100 } else { id - 1 }));
+                                app.data.employees.push(employee);
+                            }
+                        }
+                        "chart-record" => app.open_employee(Uuid::from_u128(101)),
+                        _ => {}
+                    }
+                }
+                Ok(
                     "documents"
                     | "documents-archived"
                     | "documents-empty"
@@ -901,6 +981,8 @@ impl HrisApp {
             match update.result {
                 Ok(data) => {
                     if self.data.access != data.access {
+                        self.organization = organization_view::State::default();
+                        self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
                         self.account_form = None;
                         self.employee_form = None;
@@ -915,6 +997,8 @@ impl HrisApp {
                         );
                     }
                     if self.data.mode != data.mode {
+                        self.organization = organization_view::State::default();
+                        self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
                         self.clear_profile_secrets(ctx);
                         self.session_confirmation = None;
@@ -1134,7 +1218,17 @@ impl HrisApp {
         let mut save = false;
         card(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
-                close = ui.button("< Back").clicked();
+                close = ui
+                    .button(
+                        if self.page == Page::Employees
+                            && self.employee_view == EmployeeView::Organization
+                        {
+                            "< Back to chart"
+                        } else {
+                            "< Back"
+                        },
+                    )
+                    .clicked();
                 ui.label(
                     RichText::new(if draft.full_name.is_empty() {
                         "New employee"
@@ -1460,11 +1554,15 @@ impl HrisApp {
             Page::Employees => (
                 if self.employee_form.is_some() {
                     "Employee record"
+                } else if self.employee_view == EmployeeView::Organization {
+                    "Organization chart"
                 } else {
                     "Employee directory"
                 },
                 if self.employee_form.is_some() {
                     "Employment, reporting and private contacts in one record."
+                } else if self.employee_view == EmployeeView::Organization {
+                    "Explore reporting relationships and open employee records."
                 } else {
                     "Click an employee to open their record."
                 },
@@ -1501,13 +1599,14 @@ impl HrisApp {
             ui.add_space(12.0);
         }
         if self.data.mode == Mode::Demo {
-            if employee_open {
+            if employee_open
+                || (self.page == Page::Employees
+                    && self.employee_view == EmployeeView::Organization)
+            {
                 ui.label(
-                    RichText::new(
-                        "Demo · Fictional employee record. Changes reset when the app closes.",
-                    )
-                    .color(accent(ui))
-                    .small(),
+                    RichText::new("Demo · Fictional records. Changes reset when the app closes.")
+                        .color(accent(ui))
+                        .small(),
                 );
             } else {
                 Frame::new().fill(adaptive(ui, Color32::from_rgb(232,243,240), Color32::from_rgb(24,58,54))).corner_radius(8).inner_margin(12).show(ui,|ui| {
@@ -1787,6 +1886,23 @@ impl HrisApp {
     fn employees(&mut self, ui: &mut Ui) {
         if self.employee_form.is_some() {
             self.employee_record(ui);
+            return;
+        }
+        ui.horizontal_wrapped(|ui| {
+            ui.selectable_value(
+                &mut self.employee_view,
+                EmployeeView::Directory,
+                "Directory",
+            );
+            ui.selectable_value(
+                &mut self.employee_view,
+                EmployeeView::Organization,
+                "Organization chart",
+            );
+        });
+        ui.add_space(10.0);
+        if self.employee_view == EmployeeView::Organization {
+            self.organization_chart(ui);
             return;
         }
         ui.horizontal_wrapped(|ui| {
