@@ -117,7 +117,8 @@ impl Access {
             Action::SaveCompany(_)
             | Action::UploadCompanyLogo(_)
             | Action::RemoveCompanyLogo
-            | Action::SaveEmploymentOption(_) => self.role.manages_accounts(),
+            | Action::SaveEmploymentOption(_)
+            | Action::SaveLeavePolicy(_) => self.role.manages_accounts(),
             Action::CheckIn(id) => self.can_record(*id),
             Action::CorrectAttendance(_) => self.role.manages_hr(),
             Action::CheckOut(id) => data
@@ -127,12 +128,22 @@ impl Access {
                 .is_some_and(|r| self.can_record(r.employee_id)),
             Action::RequestLeave(draft) => draft.employee_id.is_some_and(|id| self.can_record(id)),
             Action::DecideLeave(id, status) => {
-                *status != LeaveStatus::Pending
+                matches!(status, LeaveStatus::Approved | LeaveStatus::Rejected)
                     && data
                         .leave
                         .iter()
                         .find(|r| r.id == *id)
-                        .is_some_and(|r| self.can_review(r.employee_id))
+                        .is_some_and(|r| crate::leave::can_review_access(self, r))
+            }
+            Action::ReviewLeave(id, _, _, _) => data
+                .leave
+                .iter()
+                .find(|r| r.id == *id)
+                .is_some_and(|r| crate::leave::can_review_access(self, r)),
+            Action::CancelLeave(id, _, _) => {
+                data.leave.iter().find(|r| r.id == *id).is_some_and(|r| {
+                    self.role.manages_hr() || self.employee_id == Some(r.employee_id)
+                })
             }
         };
         ensure!(

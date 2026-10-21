@@ -47,6 +47,7 @@ fn historical_roster_separates_missing_and_approved_leave_and_retains_archived_r
         });
     }
     data.leave.push(LeaveRequest {
+        policy: Default::default(),
         id: Uuid::new_v4(),
         company_id: data.company.id,
         employee_id: data.employees[5].id,

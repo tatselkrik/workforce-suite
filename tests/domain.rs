@@ -18,6 +18,7 @@ fn draft(store: &DemoStore) -> EmployeeDraft {
 }
 fn leave(employee_id: Uuid, start: &str, end: &str) -> LeaveDraft {
     LeaveDraft {
+        options: Default::default(),
         employee_id: Some(employee_id),
         kind: LeaveKind::Annual,
         starts_on: start.into(),
@@ -151,9 +152,11 @@ fn invalid_leave_ranges_and_cross_year_requests_are_rejected() {
             .is_err()
     );
     assert!(
-        leave(employee, "2026-10-24", "2026-10-25")
-            .request(company.id)
-            .is_err()
+        hris_desktop::leave::prepare(
+            &DemoStore::new().data,
+            &leave(employee, "2026-10-24", "2026-10-25")
+        )
+        .is_err()
     );
 }
 
@@ -211,8 +214,19 @@ fn only_approved_annual_leave_consumes_the_balance() {
 fn approval_cannot_exceed_the_annual_allowance() {
     let mut store = DemoStore::new();
     store.data.leave.clear();
-    store.data.employees[0].annual_leave_days = 1;
-    let employee = store.data.employees[0].id;
+    store.data.employees[2].annual_leave_days = 1;
+    let employee = store.data.employees[2].id;
+    assert!(
+        store
+            .execute(Action::RequestLeave(leave(
+                employee,
+                "2027-01-04",
+                "2027-01-05"
+            )))
+            .is_err()
+    );
+    assert!(store.data.leave.is_empty());
+    store.data.employees[2].annual_leave_days = 2;
     store
         .execute(Action::RequestLeave(leave(
             employee,
@@ -221,6 +235,8 @@ fn approval_cannot_exceed_the_annual_allowance() {
         )))
         .unwrap();
     let id = store.data.leave[0].id;
+    // A balance can change while a request is waiting; approval revalidates it.
+    store.data.employees[2].annual_leave_days = 1;
     assert!(
         store
             .execute(Action::DecideLeave(id, LeaveStatus::Approved))
@@ -247,6 +263,7 @@ fn approved_current_year_leave_prevents_lowering_the_allowance() {
     store.data.leave.clear();
     let employee = store.data.employees[2].id;
     let year = store.data.company.today().year();
+    store.data.employees[2].joined_on = Some(NaiveDate::from_ymd_opt(year, 1, 1).unwrap());
     let monday = (1..=7)
         .map(|d| NaiveDate::from_ymd_opt(year, 1, d).unwrap())
         .find(|d| d.weekday().number_from_monday() == 1)

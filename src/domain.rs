@@ -190,6 +190,7 @@ pub enum LeaveKind {
     Annual,
     Sick,
     Unpaid,
+    Custom,
 }
 
 impl LeaveKind {
@@ -199,6 +200,7 @@ impl LeaveKind {
             Self::Annual => "Annual leave",
             Self::Sick => "Sick leave",
             Self::Unpaid => "Unpaid leave",
+            Self::Custom => "Custom leave",
         }
     }
 }
@@ -209,6 +211,7 @@ pub enum LeaveStatus {
     Pending,
     Approved,
     Rejected,
+    Cancelled,
 }
 
 impl LeaveStatus {
@@ -217,12 +220,15 @@ impl LeaveStatus {
             Self::Pending => "Pending",
             Self::Approved => "Approved",
             Self::Rejected => "Rejected",
+            Self::Cancelled => "Cancelled",
         }
     }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct LeaveRequest {
+    #[serde(flatten)]
+    pub policy: crate::leave::RequestPolicy,
     pub id: Uuid,
     pub company_id: Uuid,
     pub employee_id: Uuid,
@@ -235,6 +241,7 @@ pub struct LeaveRequest {
 
 #[derive(Clone, Debug, Default)]
 pub struct LeaveDraft {
+    pub options: crate::leave::LeaveOptions,
     pub employee_id: Option<Uuid>,
     pub kind: LeaveKind,
     pub starts_on: String,
@@ -255,14 +262,11 @@ impl LeaveDraft {
             "Split requests that cross a calendar year into two requests."
         );
         ensure!(
-            weekdays(starts_on, ends_on) > 0,
-            "Choose at least one Monday–Friday workday."
-        );
-        ensure!(
             self.reason.chars().count() <= 500,
             "Keep the note to 500 characters."
         );
         Ok(LeaveRequest {
+            policy: Default::default(),
             id: Uuid::new_v4(),
             company_id,
             employee_id: self
@@ -314,6 +318,7 @@ pub enum Mode {
 
 #[derive(Clone, Debug)]
 pub struct Snapshot {
+    pub leave_setup: crate::leave::LeaveSetup,
     pub company: Company,
     pub logo_png: Option<Vec<u8>>,
     pub logo_warning: Option<String>,
@@ -336,6 +341,7 @@ pub struct Snapshot {
 impl Snapshot {
     pub fn signed_out() -> Self {
         Self {
+            leave_setup: Default::default(),
             company: Company {
                 id: Uuid::nil(),
                 name: "HRIS".into(),
@@ -394,8 +400,9 @@ impl Snapshot {
                     && r.status == LeaveStatus::Approved
                     && r.starts_on.year() == year
             })
-            .map(|r| weekdays(r.starts_on, r.ends_on))
-            .sum()
+            .map(|r| r.units() as u32)
+            .sum::<u32>()
+            .div_ceil(2)
     }
 
     pub fn active(&self) -> impl Iterator<Item = &Employee> {
@@ -418,6 +425,9 @@ pub enum Action {
     CorrectAttendance(crate::corrections::CorrectionChange),
     RequestLeave(LeaveDraft),
     DecideLeave(Uuid, LeaveStatus),
+    ReviewLeave(Uuid, i64, bool, String),
+    CancelLeave(Uuid, i64, String),
+    SaveLeavePolicy(crate::leave::LeavePolicy),
     SaveCompany(Company),
     SaveEmploymentOption(crate::employment::EmploymentOptionDraft),
 }
@@ -536,6 +546,7 @@ impl DemoStore {
         .into_iter()
         .enumerate()
         .map(|(i, (employee, kind, status))| LeaveRequest {
+            policy: Default::default(),
             id: Uuid::from_u128(300 + i as u128),
             company_id: company.id,
             employee_id: employees[employee].id,
@@ -548,6 +559,13 @@ impl DemoStore {
         .collect();
         let mut store = Self {
             data: Snapshot {
+                leave_setup: crate::leave::LeaveSetup {
+                    policy: crate::leave::LeavePolicy {
+                        company_id: company.id,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
                 company,
                 logo_png: None,
                 logo_warning: None,
@@ -779,9 +797,11 @@ impl DemoStore {
                 );
                 ensure!(
                     employee.annual_leave_days
-                        >= self
-                            .data
-                            .annual_used(employee.id, self.data.company.today().year()),
+                        >= crate::leave::minimum_annual_allowance(
+                            &self.data,
+                            &employee,
+                            self.data.company.today().year()
+                        ),
                     "Allowance cannot be less than approved annual leave this year."
                 );
                 if let Some(id) = draft.id {
@@ -843,58 +863,11 @@ impl DemoStore {
                 row.checked_out_at = Some(Utc::now());
                 row.revision += 1;
             }
-            Action::RequestLeave(draft) => {
-                let row = draft.request(self.data.company.id)?;
-                self.require_active(row.employee_id)?;
-                ensure!(
-                    !self
-                        .data
-                        .leave
-                        .iter()
-                        .any(|r| r.employee_id == row.employee_id
-                            && r.status != LeaveStatus::Rejected
-                            && r.starts_on <= row.ends_on
-                            && r.ends_on >= row.starts_on),
-                    "These dates overlap an existing pending or approved request."
-                );
-                self.data.leave.push(row);
-            }
-            Action::DecideLeave(id, status) => {
-                ensure!(status != LeaveStatus::Pending, "Choose approve or reject.");
-                let row = self
-                    .data
-                    .leave
-                    .iter()
-                    .find(|r| r.id == id)
-                    .ok_or_else(|| anyhow::anyhow!("Leave request was not found."))?;
-                ensure!(
-                    row.status == LeaveStatus::Pending,
-                    "Only pending requests can be reviewed."
-                );
-                if status == LeaveStatus::Approved {
-                    self.require_active(row.employee_id)?;
-                    if row.kind == LeaveKind::Annual {
-                        let employee = self
-                            .data
-                            .employees
-                            .iter()
-                            .find(|e| e.id == row.employee_id)
-                            .unwrap();
-                        ensure!(
-                            self.data.annual_used(row.employee_id, row.starts_on.year())
-                                + weekdays(row.starts_on, row.ends_on)
-                                <= employee.annual_leave_days,
-                            "This request exceeds the employee's annual leave allowance."
-                        );
-                    }
-                }
-                self.data
-                    .leave
-                    .iter_mut()
-                    .find(|r| r.id == id)
-                    .unwrap()
-                    .status = status;
-            }
+            action @ (Action::RequestLeave(_)
+            | Action::DecideLeave(_, _)
+            | Action::ReviewLeave(_, _, _, _)
+            | Action::CancelLeave(_, _, _)
+            | Action::SaveLeavePolicy(_)) => crate::leave::apply_demo(&mut self.data, action)?,
             Action::UploadCompanyLogo(path) => {
                 self.data.logo_png = Some(crate::branding::logo_from_file(&path)?);
                 self.data.company.logo_version = Some(Uuid::new_v4());

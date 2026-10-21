@@ -22,6 +22,7 @@ const TEAL: Color32 = Color32::from_rgb(0, 123, 112);
 const BG: Color32 = Color32::from_rgb(245, 247, 250);
 const LINE: Color32 = Color32::from_rgb(226, 232, 238);
 
+mod leave_view;
 mod organization_view;
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
@@ -100,6 +101,7 @@ pub struct HrisApp {
     employee_status: Option<EmployeeStatus>,
     employee_view: EmployeeView,
     organization: organization_view::State,
+    leave_state: leave_view::State,
     department: String,
     employment_type_filter: EmploymentFilter,
     work_location_filter: EmploymentFilter,
@@ -312,6 +314,7 @@ impl HrisApp {
             employee_status: Some(EmployeeStatus::Active),
             employee_view: EmployeeView::Directory,
             organization: organization_view::State::default(),
+            leave_state: leave_view::State::default(),
             department: String::new(),
             employment_type_filter: EmploymentFilter::All,
             work_location_filter: EmploymentFilter::All,
@@ -559,6 +562,7 @@ impl HrisApp {
                 }
                 if let Some(employee) = app.data.employees.get(1) {
                     app.data.leave.push(LeaveRequest {
+                        policy: Default::default(),
                         id: Uuid::new_v4(),
                         company_id: app.data.company.id,
                         employee_id: employee.id,
@@ -919,6 +923,7 @@ impl HrisApp {
                 }
                 _ => {}
             }
+            app.prepare_leave_preview();
             if std::env::var("HRIS_PREVIEW_PAGE").as_deref() == Ok("sign-in") {
                 app.login_branding = branding::LoginBranding {
                     company_name: app.data.company.name.clone(),
@@ -980,8 +985,17 @@ impl HrisApp {
             self.busy = false;
             match update.result {
                 Ok(data) => {
+                    if self
+                        .leave_state
+                        .saving_revision
+                        .is_some_and(|r| data.leave_setup.policy.revision == r + 1)
+                    {
+                        self.leave_state.draft = None;
+                        self.leave_state.saving_revision = None;
+                    }
                     if self.data.access != data.access {
                         self.organization = organization_view::State::default();
+                        self.leave_state = leave_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
                         self.account_form = None;
@@ -998,6 +1012,7 @@ impl HrisApp {
                     }
                     if self.data.mode != data.mode {
                         self.organization = organization_view::State::default();
+                        self.leave_state = leave_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
                         self.clear_profile_secrets(ctx);
@@ -1090,7 +1105,10 @@ impl HrisApp {
                         self.notice = Some((update.message, false));
                     }
                 }
-                Err(error) => self.notice = Some((error, true)),
+                Err(error) => {
+                    self.leave_state.saving_revision = None;
+                    self.notice = Some((error, true));
+                }
             }
             if update.account != self.account {
                 let photo_changed = update.account.as_ref().and_then(|a| a.photo.as_ref())
@@ -1414,6 +1432,7 @@ impl HrisApp {
             .find(|d| d.weekday().number_from_monday() <= 5)
             .unwrap_or(today);
         self.leave_form = Some(LeaveDraft {
+            options: Default::default(),
             employee_id: self
                 .data
                 .active()
@@ -1573,7 +1592,7 @@ impl HrisApp {
             ),
             Page::Leave => (
                 "Time away, organized",
-                "Review requests and keep annual leave balances in view.",
+                "Manage requests, leave policies and ordered approvals.",
             ),
             Page::Accounts => (
                 "Account Manager",
@@ -1646,6 +1665,7 @@ impl HrisApp {
             || self.employment_option_form.is_some()
             || self.correction_form.is_some()
             || self.leave_form.is_some()
+            || self.leave_state.draft.is_some()
             || self.account_form.is_some()
             || !company_fields_equal(&self.company_draft, &self.data.company)
             || self.profile_contacts_draft.as_ref().is_some_and(|draft| {
@@ -1750,10 +1770,7 @@ impl HrisApp {
             .leave
             .iter()
             .filter(|r| {
-                r.status == LeaveStatus::Approved
-                    && r.starts_on <= today
-                    && r.ends_on >= today
-                    && today.weekday().number_from_monday() <= 5
+                r.status == LeaveStatus::Approved && r.charges().iter().any(|d| d.date == today)
             })
             .count();
         ui.columns(4, |columns| {
@@ -2066,14 +2083,23 @@ impl HrisApp {
                                         .map(|d| d.to_string())
                                         .unwrap_or_else(|| "Not set".into()),
                                 );
-                                let used = self
-                                    .data
-                                    .annual_used(employee.id, self.data.company.today().year());
-                                ui.label(format!(
-                                    "{} / {} days",
-                                    employee.annual_leave_days.saturating_sub(used),
-                                    employee.annual_leave_days
-                                ));
+                                if let Some(kind) =
+                                    self.data.leave_setup.policy.leave_type("annual")
+                                {
+                                    let today = self.data.company.today();
+                                    let balance = crate::leave::balance(
+                                        &self.data,
+                                        employee,
+                                        kind,
+                                        today.year(),
+                                        today,
+                                        None,
+                                    );
+                                    ui.label(format!(
+                                        "{} days available",
+                                        crate::leave::days(balance.available_units)
+                                    ));
+                                }
                                 badge(
                                     ui,
                                     employee.status.label(),
@@ -2206,7 +2232,12 @@ impl HrisApp {
             .iter()
             .filter(|row| row.attendance.is_none() && row.approved_leave.is_some())
             .count();
-        let missing = rows.len() - recorded - on_leave;
+        let missing = rows
+            .iter()
+            .filter(|row| {
+                row.attendance.is_none() && row.scheduled_workday && row.approved_leave_units < 2
+            })
+            .count();
         card(ui, |ui| {
             ui.label(
                 RichText::new(date.format("%A, %B %d, %Y").to_string())
@@ -2298,8 +2329,12 @@ impl HrisApp {
                                 }
                                 badge(
                                     ui,
-                                    if row.approved_leave.is_some() {
-                                        "Approved leave"
+                                    if row.approved_leave_units>=2 {
+                                        "Approved leave (full day)"
+                                    } else if row.approved_leave_units==1 {
+                                        "Approved leave (half-day)"
+                                    } else if !row.scheduled_workday {
+                                        "Holiday / non-workday"
                                     } else {
                                         "No check-in"
                                     },
@@ -2318,7 +2353,7 @@ impl HrisApp {
             if rows.is_empty() {
                 empty(ui, "No employee records available for this date.");
             }
-            ui.label(RichText::new("Roster uses available employee records and hire dates. No check-in does not confirm absence; shifts and holidays are not configured yet.").color(muted(ui)).small());
+            ui.label(RichText::new("Roster uses hire dates, saved leave charges and the current holiday/workweek calendar. No check-in does not confirm absence; individual shift schedules are not configured yet.").color(muted(ui)).small());
         });
         ui.label(RichText::new("Elapsed time includes breaks; it is not a payroll calculation. Open overnight records can be closed from their original date.").color(muted(ui)).size(12.0));
         ui.add_space(12.0);
@@ -2333,91 +2368,7 @@ impl HrisApp {
     }
 
     fn leave(&mut self, ui: &mut Ui) {
-        ui.horizontal(|ui| {
-            ui.selectable_value(&mut self.leave_filter, None, "All requests");
-            for status in [
-                LeaveStatus::Pending,
-                LeaveStatus::Approved,
-                LeaveStatus::Rejected,
-            ] {
-                ui.selectable_value(&mut self.leave_filter, Some(status), status.label());
-            }
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if primary(ui, "+ Request leave") {
-                    self.new_leave();
-                }
-            });
-        });
-        let rows: Vec<_> = self
-            .data
-            .leave
-            .iter()
-            .filter(|r| self.leave_filter.is_none_or(|s| s == r.status))
-            .cloned()
-            .collect();
-        card(ui, |ui| {
-            egui::ScrollArea::horizontal().show(ui, |ui| {
-                egui::Grid::new("leave_grid")
-                    .striped(true)
-                    .spacing([18.0, 16.0])
-                    .show(ui, |ui| {
-                        headers(
-                            ui,
-                            &["EMPLOYEE", "TYPE", "DATES", "DAYS", "STATUS", "REVIEW"],
-                        );
-                        for row in &rows {
-                            ui.label(
-                                RichText::new(self.data.employee_name(row.employee_id)).strong(),
-                            )
-                            .on_hover_text(&row.reason);
-                            ui.label(row.kind.label());
-                            ui.vertical(|ui| {
-                                ui.set_width(125.0);
-                                ui.label(row.starts_on.to_string());
-                                ui.label(
-                                    RichText::new(format!("to {}", row.ends_on))
-                                        .color(muted(ui))
-                                        .size(12.0),
-                                );
-                            });
-                            ui.label(weekdays(row.starts_on, row.ends_on).to_string());
-                            badge(ui, row.status.label(), row.status == LeaveStatus::Approved);
-                            ui.horizontal(|ui| {
-                                if row.status == LeaveStatus::Pending
-                                    && self.data.access.can_review(row.employee_id)
-                                {
-                                    if ui.button("Approve").clicked() {
-                                        self.send(Command::Change(Action::DecideLeave(
-                                            row.id,
-                                            LeaveStatus::Approved,
-                                        )));
-                                    }
-                                    if ui.button("Reject").clicked() {
-                                        self.send(Command::Change(Action::DecideLeave(
-                                            row.id,
-                                            LeaveStatus::Rejected,
-                                        )));
-                                    }
-                                } else {
-                                    ui.label(
-                                        RichText::new(if row.status == LeaveStatus::Pending {
-                                            "Awaiting reviewer"
-                                        } else {
-                                            "Reviewed"
-                                        })
-                                        .color(muted(ui)),
-                                    );
-                                }
-                            });
-                            ui.end_row();
-                        }
-                    });
-            });
-            if rows.is_empty() {
-                empty(ui, "No leave requests in this view.");
-            }
-        });
-        ui.label(RichText::new("Prototype policy: Monday–Friday workdays, no holiday calendar or carryover. Annual leave is deducted only after approval.").color(muted(ui)).size(12.0));
+        self.leave_page(ui);
     }
 
     fn accounts(&mut self, ui: &mut Ui) {
@@ -2641,6 +2592,21 @@ impl HrisApp {
                 };
                 ui.scroll_to_rect(_section.response.rect, Some(align));
             }
+            ui.add_space(12.0);
+        }
+        if self.data.access.role.manages_accounts() {
+            card(ui, |ui| {
+                ui.label(
+                    RichText::new("Leave policies and approvals")
+                        .size(18.0)
+                        .strong(),
+                );
+                ui.label("Configure workweeks, holidays, leave types, accrual, carryover and approval chains.");
+                if ui.button("Manage leave policies").clicked() {
+                    self.page = Page::Leave;
+                    self.leave_state.view = leave_view::View::Policies;
+                }
+            });
             ui.add_space(12.0);
         }
         card(ui, |ui| {
@@ -3669,24 +3635,24 @@ impl HrisApp {
             let mut open = true;
             let mut save = false;
             let mut cancel = false;
-            egui::Window::new("Request leave").open(&mut open).collapsible(false).resizable(false).anchor(egui::Align2::CENTER_CENTER,[0.0,0.0]).default_width(440.0)
+            egui::Window::new("Request leave").open(&mut open).collapsible(false).resizable(false).vscroll(false).anchor(egui::Align2::CENTER_CENTER,[0.0,0.0]).default_width(440.0)
                 .show(ctx,|ui| {
                     ui.add_enabled_ui(!self.busy,|ui| {
-                        ui.label("Employee");employee_picker(ui,"leave_employee",&self.data,&mut draft.employee_id);
-                        ui.label("Leave type");egui::ComboBox::from_id_salt("leave_kind").selected_text(draft.kind.label()).show_ui(ui,|ui|{for kind in LeaveKind::ALL{ui.selectable_value(&mut draft.kind,kind,kind.label());}});
-                        field(ui,"Start date",&mut draft.starts_on,"YYYY-MM-DD");field(ui,"End date",&mut draft.ends_on,"YYYY-MM-DD");
-                        if let (Ok(start),Ok(end))=(parse_date(&draft.starts_on),parse_date(&draft.ends_on)) {
-                            ui.label(RichText::new(format!("{} Monday–Friday workday(s)",weekdays(start,end))).color(accent(ui)));
-                            if let Some(employee)=self.data.employees.iter().find(|e|Some(e.id)==draft.employee_id){let used=self.data.annual_used(employee.id,start.year());ui.label(RichText::new(format!("Annual balance for {}: {} / {} days",start.year(),employee.annual_leave_days.saturating_sub(used),employee.annual_leave_days)).color(muted(ui)).size(12.0));}
-                        }
-                        ui.label("Note (optional)");ui.add_sized([ui.available_width(),70.0],egui::TextEdit::multiline(&mut draft.reason).hint_text("Add only information needed to review this request."));
-                        ui.label(RichText::new("Exclude sensitive medical details. Requests cannot cross calendar years in this prototype.").color(muted(ui)).size(11.0));
+                        let body=egui::ScrollArea::vertical().id_salt("leave_request_fields").max_height((ctx.content_rect().height()-240.0).max(160.0));
+                        #[cfg(feature="qa-screenshot")]
+                        let body=body.stick_to_bottom(std::env::var("HRIS_PREVIEW_SCROLL").as_deref()==Ok("bottom"));
+                        body.show(ui,|ui|{
+                            self.leave_request_fields(ui,&mut draft);
+                            ui.label("Note (optional)");ui.add_sized([ui.available_width(),70.0],egui::TextEdit::multiline(&mut draft.reason).hint_text("Add only information needed to review this request."));
+                            ui.label(RichText::new("Exclude sensitive medical details. Requests cannot cross calendar years.").color(muted(ui)).size(11.0));
+                            if let Some((text,true))=&self.notice {ui.colored_label(ui.visuals().error_fg_color,text);}
+                        });
+                        ui.separator();
                         ui.horizontal(|ui|{save=primary(ui,"Submit request");cancel=ui.button("Cancel").clicked();});
-                        if let Some((text,true))=&self.notice {ui.colored_label(ui.visuals().error_fg_color,text);}
                     });
                 });
             if save {
-                match draft.request(self.data.company.id) {
+                match crate::leave::prepare(&self.data, &draft) {
                     Ok(_) => {
                         self.close_on_success = true;
                         self.send(Command::Change(Action::RequestLeave(draft.clone())));

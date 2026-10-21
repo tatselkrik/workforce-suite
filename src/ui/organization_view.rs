@@ -187,16 +187,18 @@ fn show_rows(
             let response = ui
                 .horizontal_top(|ui| {
                     let indent = row.depth.min(5) as f32 * 18.0;
-                    if indent > 0.0 {
-                        ui.add_space(indent);
-                    }
-                    if node.children.is_empty() {
-                        ui.allocate_space(Vec2::new(24.0, 28.0));
-                    } else {
+                    // Reserve the same gutter for branches and leaves. Button minimum
+                    // widths otherwise make peers drift when only one has children.
+                    let (gutter, _) = ui
+                        .allocate_exact_size(Vec2::new(indent + 32.0, 28.0), egui::Sense::hover());
+                    if !node.children.is_empty() {
                         let expanded = !collapsed.contains(&node.employee.id);
                         let button = ui
-                            .add_sized(
-                                [24.0, 28.0],
+                            .place(
+                                egui::Rect::from_min_size(
+                                    gutter.min + Vec2::new(indent, 0.0),
+                                    Vec2::new(28.0, 28.0),
+                                ),
                                 egui::Button::new(if expanded { "v" } else { ">" }),
                             )
                             .on_hover_text(if expanded {
@@ -360,6 +362,50 @@ fn node_card(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn branch_and_leaf_peers_share_an_exact_card_origin() {
+        for scale in [1.0, 1.25] {
+            let mut data = DemoStore::new().data;
+            data.employees.truncate(4);
+            let root = data.employees[0].id;
+            let branch = data.employees[1].id;
+            for (i, e) in data.employees.iter_mut().enumerate() {
+                e.full_name = format!("Alignment {i}");
+                e.reports_to = match i {
+                    0 => None,
+                    1 | 2 => Some(root),
+                    _ => Some(branch),
+                };
+            }
+            let chart = Chart::build(&data, &Filters::default());
+            let ctx = egui::Context::default();
+            configure_theme(&ctx);
+            ctx.set_zoom_factor(scale);
+            let mut positions = std::collections::HashMap::new();
+            for _ in 0..3 {
+                let output = frame(&ctx, raw(700.0, Vec::new()), |ui| {
+                    show_rows(ui, &chart, &HashSet::new(), &data);
+                });
+                positions.clear();
+                for shape in output.shapes {
+                    if let egui::epaint::Shape::Text(text) = shape.shape {
+                        if text.galley.job.text.starts_with("Alignment ") {
+                            positions.insert(text.galley.job.text.clone(), text.pos.x);
+                        }
+                    }
+                }
+            }
+            assert!(
+                (positions["Alignment 1"] - positions["Alignment 2"]).abs() < 0.5,
+                "Branches and leaves at the same depth must align"
+            );
+            assert!(
+                (positions["Alignment 1"] - positions["Alignment 0"] - 18.0).abs() < 0.5,
+                "Each depth must use one consistent indentation step"
+            );
+        }
+    }
 
     fn frame(
         context: &egui::Context,

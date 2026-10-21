@@ -19,6 +19,7 @@ const uidB = '00000000-0000-0000-0000-000000000012';
 const session = async (uid,role='authenticated') => {
   await db.exec('reset role');
   await db.query("select set_config('request.jwt.claim.sub',$1,false)",[uid]);
+  await db.query("select set_config('request.headers',$1,false)",[JSON.stringify({'x-hris-leave-contract':'2'})]);
   await db.exec(`set role ${role}`);
 };
 const employee = async (company,code='EMP-001',allowance=15,status='active') => (await db.query(`
@@ -56,7 +57,9 @@ try {
   `);
   const folder=new URL('../../supabase/migrations/',import.meta.url);
   let companyA;
+  const deferred=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_leave_policies_and_approval_chains.sql')||filename.endsWith('_leave_policy_tracking_start.sql')||filename.endsWith('_leave_client_compatibility.sql')) {deferred.push(filename);continue;}
     if(filename.endsWith('_employment_history.sql')) {
       companyA=(await db.query(`insert into public.companies(owner_id,name,timezone) values ($1,'Demo Company A','Asia/Manila') returning *`,[uidA])).rows[0];
     }
@@ -185,7 +188,14 @@ try {
   await runHistoryTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
   const {runDocumentTests}=await import('./documents.test.mjs');
   await runDocumentTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
-  console.log(`Passed ${checks} local PostgreSQL schema, authorization, and workflow assertions.`);
+  console.log(`Passed ${checks} legacy schema assertions before upgrading leave writes.`);
+  await db.exec('reset role');
+  const beforeLeave=(await db.query('select id,company_id,employee_id,kind,starts_on,ends_on,reason,status from public.leave_requests order by id')).rows;
+  for(const filename of deferred) {await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version) values($1)',[filename.split('_')[0]]);}
+  eq((await db.query('select id,company_id,employee_id,kind,starts_on,ends_on,reason,status from public.leave_requests order by id')).rows,beforeLeave,'Leave migration preserves existing identity, dates, notes and final decisions');
+  const {runLeaveTests}=await import('./leave.test.mjs');
+  await runLeaveTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
+  console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();
 }

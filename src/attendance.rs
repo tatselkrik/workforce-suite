@@ -1,11 +1,13 @@
 use crate::domain::{Attendance, Employee, EmployeeStatus, LeaveKind, LeaveStatus, Snapshot};
-use chrono::{Datelike, NaiveDate};
+use chrono::NaiveDate;
 
 #[derive(Clone)]
 pub struct DailyRow {
     pub employee: Employee,
     pub attendance: Option<Attendance>,
     pub approved_leave: Option<LeaveKind>,
+    pub approved_leave_units: i32,
+    pub scheduled_workday: bool,
 }
 
 /// A missing record is not proof of absence: shifts/holidays are not configured yet.
@@ -26,15 +28,22 @@ pub fn daily_roster(data: &Snapshot, date: NaiveDate) -> Vec<DailyRow> {
                 .find(|l| {
                     l.employee_id == employee.id
                         && l.status == LeaveStatus::Approved
-                        && l.starts_on <= date
-                        && l.ends_on >= date
-                        && date.weekday().num_days_from_monday() < 5
+                        && l.charges().iter().any(|d| d.date == date)
                 })
                 .map(|l| l.kind);
             let employed = employee.status == EmployeeStatus::Active
                 && employee.joined_on.is_none_or(|joined| joined <= date);
             (attendance.is_some() || approved_leave.is_some() || employed).then(|| DailyRow {
                 employee: employee.clone(),
+                approved_leave_units: data
+                    .leave
+                    .iter()
+                    .filter(|l| l.employee_id == employee.id && l.status == LeaveStatus::Approved)
+                    .flat_map(|l| l.charges())
+                    .filter(|d| d.date == date)
+                    .map(|d| d.units)
+                    .sum(),
+                scheduled_workday: data.leave_setup.policy.working(date),
                 attendance,
                 approved_leave,
             })

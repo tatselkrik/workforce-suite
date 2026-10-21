@@ -161,6 +161,15 @@ fn baseline(company: &Company) -> Vec<Reply> {
         reply("GET /rest/v1/employment_history?", 200, json!([])),
         reply("GET /rest/v1/employee_documents?", 200, json!([])),
         reply("GET /rest/v1/employee_document_events?", 200, json!([])),
+        reply(
+            "GET /rest/v1/leave_policies?",
+            200,
+            json!([hris_desktop::leave::LeavePolicy {
+                company_id: company.id,
+                ..Default::default()
+            }]),
+        ),
+        reply("GET /rest/v1/leave_events?", 200, json!([])),
         reply("GET /auth/v1/user ", 200, user(company)),
         reply(
             "GET /storage/v1/object/authenticated/profile-photos/",
@@ -168,6 +177,124 @@ fn baseline(company: &Company) -> Vec<Reply> {
             json!({"code":"NoSuchKey","message":"Object not found"}),
         ),
     ]
+}
+
+#[test]
+fn leave_writes_use_revisioned_rpcs_accept_scalar_results_and_reload_saved_charges() {
+    use hris_desktop::{domain::*, leave::*};
+    let mut store = DemoStore::new();
+    store.data.leave.clear();
+    let company = store.data.company.clone();
+    let draft = LeaveDraft {
+        employee_id: Some(store.data.employees[3].id),
+        starts_on: "2028-03-01".into(),
+        ends_on: "2028-03-01".into(),
+        options: LeaveOptions {
+            type_code: "annual".into(),
+            day_part: DayPart::Am,
+        },
+        ..Default::default()
+    };
+    let row = prepare(&store.data, &draft).unwrap();
+    let mut replies = baseline(&company);
+    replies[3] = reply("GET /rest/v1/employees?", 200, json!(store.data.employees));
+    replies.push(reply("POST /rest/v1/rpc/submit_leave ", 200, json!(row.id)));
+    let mut after = baseline(&company);
+    after[3] = reply("GET /rest/v1/employees?", 200, json!(store.data.employees));
+    after[7] = reply("GET /rest/v1/leave_requests?", 200, json!([row]));
+    replies.extend(after.into_iter().skip(1).take(16));
+    replies.push(reply(
+        "POST /rest/v1/rpc/cancel_leave ",
+        409,
+        json!({"code":"PT409","message":"This request changed. Refresh before cancelling."}),
+    ));
+    let (config, server, requests) = fixture(replies);
+    let (mut client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    let saved = client.execute(Action::RequestLeave(draft), &data).unwrap();
+    assert_eq!(saved.leave[0].units(), 1);
+    assert!(
+        client
+            .execute(
+                Action::CancelLeave(row.id, 0, "Synthetic reason".into()),
+                &saved
+            )
+            .is_err()
+    );
+    server.join().unwrap();
+    let requests = requests.lock().unwrap();
+    let sent = requests
+        .iter()
+        .find(|r| r.line.starts_with("POST /rest/v1/rpc/submit_leave "))
+        .unwrap()
+        .json();
+    assert_eq!(sent["p_part"], "am");
+    assert_eq!(sent["p_type_code"], "annual");
+    assert!(sent.get("charged_units").is_none());
+    assert!(sent.get("approval_steps").is_none());
+    assert!(
+        requests
+            .iter()
+            .filter(|r| r.line.contains(" /rest/v1/"))
+            .all(|r| r
+                .headers
+                .to_lowercase()
+                .contains("x-hris-leave-contract: 2"))
+    );
+    assert!(
+        requests
+            .iter()
+            .filter(|r| r.line.starts_with("GET /rest/v1/leave_policies?"))
+            .all(|r| r.line.contains("order=company_id.asc"))
+    );
+    assert!(
+        !requests
+            .iter()
+            .any(|r| r.line.starts_with("PATCH /rest/v1/leave_requests")
+                || r.line.starts_with("POST /rest/v1/leave_requests"))
+    );
+}
+
+#[test]
+fn policy_saves_require_the_loaded_revision_and_refresh_the_authoritative_policy() {
+    use hris_desktop::{domain::Action, leave::LeavePolicy};
+    let company = Company::default();
+    let mut policy = LeavePolicy {
+        company_id: company.id,
+        ..Default::default()
+    };
+    policy.workweek.push(6);
+    let mut replies = baseline(&company);
+    replies.push(reply("POST /rest/v1/rpc/save_leave_policy ", 200, json!(1)));
+    let mut after = baseline(&company);
+    let mut server_policy = policy.clone();
+    server_policy.revision = 1;
+    after[15] = reply("GET /rest/v1/leave_policies?", 200, json!([server_policy]));
+    replies.extend(after.into_iter().skip(1).take(16));
+    let (config, server, requests) = fixture(replies);
+    let (mut client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    let saved = client
+        .execute(Action::SaveLeavePolicy(policy), &data)
+        .unwrap();
+    assert_eq!(saved.leave_setup.policy.revision, 1);
+    assert!(saved.leave_setup.policy.workweek.contains(&6));
+    server.join().unwrap();
+    let requests = requests.lock().unwrap();
+    let sent = requests
+        .iter()
+        .find(|r| r.line.starts_with("POST /rest/v1/rpc/save_leave_policy "))
+        .unwrap()
+        .json();
+    assert_eq!(sent["p_expected_revision"], 0);
 }
 
 struct DocumentFixture {
@@ -255,7 +382,7 @@ fn employee_document_upload_reserves_private_path_finalizes_and_reloads_protecte
             f.baseline(vec![ready.clone()], f.store.data.document_events.clone())
                 .into_iter()
                 .skip(1)
-                .take(14),
+                .take(16),
         );
         let (config, server, requests) = fixture(replies);
         let (mut client, current) = CloudClient::connect(
@@ -411,7 +538,7 @@ fn private_document_download_verifies_bytes_before_writing_a_user_selected_copy(
                 f.baseline(vec![ready.clone()], vec![])
                     .into_iter()
                     .skip(1)
-                    .take(14),
+                    .take(16),
             );
         }
         let (config, server, requests) = fixture(replies);
@@ -468,7 +595,7 @@ fn archiving_documents_uses_revisioned_rpc_and_reloads_retained_files() {
         f.baseline(vec![archived.clone()], vec![])
             .into_iter()
             .skip(1)
-            .take(14),
+            .take(16),
     );
     let (config, server, requests) = fixture(replies);
     let (mut client, current) = CloudClient::connect(
@@ -542,7 +669,7 @@ fn employment_history_is_reloaded_with_company_scope_and_never_supplied_by_the_w
     let mut after = baseline(&company);
     after[3] = reply("GET /rest/v1/employees?", 200, json!([saved]));
     after[12] = reply("GET /rest/v1/employment_history?", 200, json!(events));
-    replies.extend(after.into_iter().skip(1).take(14));
+    replies.extend(after.into_iter().skip(1).take(16));
     let (config, server, requests) = fixture(replies);
     let (mut client, current) = CloudClient::connect(
         config,
@@ -631,7 +758,7 @@ fn attendance_correction_uses_the_guarded_rpc_and_reloads_immutable_history() {
     after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
     after[5] = reply("GET /rest/v1/attendance?", 200, json!([row]));
     after[6] = reply("GET /rest/v1/attendance_corrections?", 200, json!([event]));
-    replies.extend(after.into_iter().skip(1).take(14));
+    replies.extend(after.into_iter().skip(1).take(16));
     let (config, server, requests) = fixture(replies);
     let (mut client, current) = CloudClient::connect(
         config,
@@ -695,7 +822,7 @@ fn employment_options_use_guarded_rpc_and_reload_inactive_labels_without_changin
     revised[0].revision = 1;
     revised[0].name = "Main office renamed".into();
     after[11] = reply("GET /rest/v1/work_locations?", 200, json!(revised));
-    replies.extend(after.into_iter().skip(1).take(14));
+    replies.extend(after.into_iter().skip(1).take(16));
     let (config, server, requests) = fixture(replies);
     let (mut client, current) = CloudClient::connect(
         config,
@@ -784,7 +911,7 @@ fn editing_staff_saves_the_same_employee_contacts_and_role_in_one_rpc() {
     ));
     let mut after = baseline(&company);
     after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
-    replies.extend(after.into_iter().skip(1).take(14));
+    replies.extend(after.into_iter().skip(1).take(16));
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -862,7 +989,7 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
     ));
     let mut after = baseline(&revised);
     after.remove(0);
-    after.truncate(14);
+    after.truncate(16);
     replies.extend(after);
     replies.push(Reply {
         prefix: "GET /storage/v1/object/authenticated/company-branding/".into(),
@@ -870,7 +997,7 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
         body: png,
         mime: "image/png",
     });
-    replies.extend(baseline(&revised).into_iter().skip(1).take(14));
+    replies.extend(baseline(&revised).into_iter().skip(1).take(16));
     replies.push(reply(
         "DELETE /storage/v1/object/company-branding ",
         200,
@@ -881,7 +1008,7 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
         200,
         Value::Null,
     ));
-    replies.extend(baseline(&company).into_iter().skip(1).take(14));
+    replies.extend(baseline(&company).into_iter().skip(1).take(16));
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -1017,7 +1144,7 @@ fn employee_contacts_save_and_reload_separately_with_scoped_updates_and_zero_row
         snapshot_replies(vec![normalized.clone()])
             .into_iter()
             .skip(1)
-            .take(14),
+            .take(16),
     );
     let mut updated = normalized.clone();
     updated.address = "Updated fictional address".into();
@@ -1030,7 +1157,7 @@ fn employee_contacts_save_and_reload_separately_with_scoped_updates_and_zero_row
         snapshot_replies(vec![updated.clone()])
             .into_iter()
             .skip(1)
-            .take(14),
+            .take(16),
     );
     replies.push(reply("PATCH /rest/v1/employee_contacts?", 200, json!([])));
     let (config, server, observed) = fixture(replies);
@@ -1102,7 +1229,7 @@ fn unified_employee_save_uses_one_transaction_rpc_instead_of_separate_partial_wr
     ));
     let mut after = baseline(&company);
     after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
-    initial.extend(after.into_iter().skip(1).take(14));
+    initial.extend(after.into_iter().skip(1).take(16));
     let (config, server, requests) = fixture(initial);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -1215,7 +1342,7 @@ fn account_provisioning_preserves_disabled_access_and_sends_password_only_to_the
         201,
         json!({"confirmation_sent":false}),
     ));
-    replies.extend(baseline(&company).into_iter().skip(1).take(14));
+    replies.extend(baseline(&company).into_iter().skip(1).take(16));
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -1235,13 +1362,13 @@ fn account_provisioning_preserves_disabled_access_and_sends_password_only_to_the
     assert!(message.contains("planned portal"));
     server.join().unwrap();
     let requests = requests.lock().unwrap();
-    let body = requests[17].json();
+    let body = requests[19].json();
     assert_eq!(body["active"], false);
     assert_eq!(body["role"], "employee");
     assert!(body["employee_id"].is_null());
     assert_eq!(body["password"], "synthetic initial passphrase");
     assert!(!body.to_string().contains("confirmation"));
-    assert!(requests[17].headers.contains("profile-jwt"));
+    assert!(requests[19].headers.contains("profile-jwt"));
     assert!(
         requests
             .iter()
@@ -1325,21 +1452,21 @@ fn personal_details_preferences_and_private_photo_roundtrip_use_only_the_signed_
     server.join().unwrap();
     let requests = requests.lock().unwrap();
     assert_eq!(
-        requests[17].json(),
+        requests[19].json(),
         json!({"data":{"hris_profile":{"full_name":"Alex Morgan","preferred_name":"Morgan","contact_phone":""}}})
     );
-    assert!(requests[18].json().get("app_metadata").is_none());
+    assert!(requests[20].json().get("app_metadata").is_none());
     assert!(
-        requests[19]
+        requests[21]
             .headers
             .to_lowercase()
             .contains("x-upsert: true")
     );
     assert_eq!(
-        image::load_from_memory(&requests[19].body).unwrap().width(),
+        image::load_from_memory(&requests[21].body).unwrap().width(),
         256
     );
-    assert_eq!(requests[22].json(), json!({"prefixes":[path]}));
+    assert_eq!(requests[24].json(), json!({"prefixes":[path]}));
     for request in &requests[1..] {
         assert!(
             request
@@ -1458,21 +1585,21 @@ fn password_and_email_changes_reauthenticate_and_keep_email_pending_until_confir
     server.join().unwrap();
     let requests = requests.lock().unwrap();
     assert_eq!(
-        requests[18].json(),
+        requests[20].json(),
         json!({"password":"new synthetic passphrase","current_password":"old synthetic passphrase"})
     );
     assert!(
-        requests[18]
+        requests[20]
             .headers
             .to_lowercase()
             .contains("authorization: bearer fresh-password-jwt")
     );
     assert_eq!(
-        requests[20].json(),
+        requests[22].json(),
         json!({"email":"updated@example.invalid"})
     );
     assert!(
-        requests[20]
+        requests[22]
             .headers
             .to_lowercase()
             .contains("authorization: bearer fresh-email-jwt")

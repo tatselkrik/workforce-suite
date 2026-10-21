@@ -423,6 +423,7 @@ impl CloudClient {
                 ),
             )
             .header("apikey", self.config.publishable_key.trim())
+            .header("X-HRIS-Leave-Contract", "2")
             .bearer_auth(&self.session.access_token))
     }
 
@@ -631,9 +632,17 @@ impl CloudClient {
     fn rows<T: DeserializeOwned>(&mut self, table: &str, company: Option<Uuid>) -> Result<Vec<T>> {
         let mut all = Vec::new();
         for page in 0..200 {
-            let mut request = self
-                .request(Method::GET, table)?
-                .query(&[("select", "*"), ("order", "id.asc")]);
+            let mut request = self.request(Method::GET, table)?.query(&[
+                ("select", "*"),
+                (
+                    "order",
+                    if table == "leave_policies" {
+                        "company_id.asc"
+                    } else {
+                        "id.asc"
+                    },
+                ),
+            ]);
             if let Some(company_id) = company {
                 request = request.query(&[("company_id", format!("eq.{company_id}"))]);
             }
@@ -745,8 +754,14 @@ impl CloudClient {
         } else {
             (Vec::new(), Vec::new())
         };
+        let policy = self.rows::<crate::leave::LeavePolicy>("leave_policies",Some(company.id))?.into_iter().next().ok_or_else(||anyhow::anyhow!("Leave policies are not configured. Ask the deployment administrator to apply the required migration."))?;
+        let leave_events = self.rows("leave_events", Some(company.id))?;
         let (logo_png, logo_warning) = self.company_logo(&company);
         Ok(Snapshot {
+            leave_setup: crate::leave::LeaveSetup {
+                policy,
+                events: leave_events,
+            },
             company,
             logo_png,
             logo_warning,
@@ -1058,21 +1073,56 @@ impl CloudClient {
             ),
             Action::RequestLeave(draft) => {
                 let row = draft.request(current.company.id)?;
+                let code = if draft.options.type_code.is_empty() {
+                    row.type_code()
+                } else {
+                    &draft.options.type_code
+                };
                 (
                     Method::POST,
-                    "leave_requests",
+                    "rpc/submit_leave",
                     None,
-                    json!({"company_id":row.company_id,"employee_id":row.employee_id,
-                    "kind":row.kind,"starts_on":row.starts_on,"ends_on":row.ends_on,"reason":row.reason}),
+                    json!({"p_employee":row.employee_id,"p_type_code":code,"p_starts":row.starts_on,"p_ends":row.ends_on,"p_part":draft.options.day_part,"p_reason":row.reason}),
                 )
             }
             Action::DecideLeave(id, status) => {
-                ensure!(status != LeaveStatus::Pending, "Choose approve or reject.");
+                ensure!(
+                    matches!(status, LeaveStatus::Approved | LeaveStatus::Rejected),
+                    "Choose approve or reject."
+                );
+                let revision = current
+                    .leave
+                    .iter()
+                    .find(|r| r.id == id)
+                    .ok_or_else(|| anyhow::anyhow!("Request not found."))?
+                    .policy
+                    .revision;
                 (
-                    Method::PATCH,
-                    "leave_requests",
-                    Some(id),
-                    json!({"status":status}),
+                    Method::POST,
+                    "rpc/review_leave",
+                    None,
+                    json!({"p_id":id,"p_revision":revision,"p_approve":status==LeaveStatus::Approved,"p_note":""}),
+                )
+            }
+            Action::ReviewLeave(id, revision, approve, note) => (
+                Method::POST,
+                "rpc/review_leave",
+                None,
+                json!({"p_id":id,"p_revision":revision,"p_approve":approve,"p_note":note}),
+            ),
+            Action::CancelLeave(id, revision, reason) => (
+                Method::POST,
+                "rpc/cancel_leave",
+                None,
+                json!({"p_id":id,"p_revision":revision,"p_reason":reason}),
+            ),
+            Action::SaveLeavePolicy(policy) => {
+                policy.validate(Some(&current.leave_setup.policy))?;
+                (
+                    Method::POST,
+                    "rpc/save_leave_policy",
+                    None,
+                    json!({"p_policy":policy,"p_expected_revision":policy.revision}),
                 )
             }
             Action::SaveCompany(company) => {
@@ -1094,6 +1144,16 @@ impl CloudClient {
             if table != "companies" {
                 request = request.query(&[("company_id", format!("eq.{}", current.company.id))]);
             }
+        }
+        if table.starts_with("rpc/") {
+            let result: Value = decode(request.send().context("Could not save the leave change. Check your connection and refresh before retrying.")?)?;
+            ensure!(
+                !result.is_null(),
+                "No leave record changed. Refresh before trying again."
+            );
+            return self.snapshot().context(
+                "Leave change saved, but refresh failed. Click Refresh before trying again.",
+            );
         }
         let rows: Vec<Value> = decode(
             request

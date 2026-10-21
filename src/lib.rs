@@ -8,6 +8,7 @@ pub mod documents;
 pub mod domain;
 pub mod employment;
 pub mod history;
+pub mod leave;
 pub mod organization;
 pub mod ui;
 pub mod updater;

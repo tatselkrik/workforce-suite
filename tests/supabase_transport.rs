@@ -21,7 +21,7 @@ fn auth_fixture(
     let address = listener.local_addr().unwrap();
     let requests = Arc::new(Mutex::new(Vec::new()));
     let observed = requests.clone();
-    let expected_requests = if companies.is_empty() { 2 } else { 17 };
+    let expected_requests = if companies.is_empty() { 2 } else { 19 };
     let user_id = companies
         .first()
         .map(|company| company.owner_id)
@@ -85,6 +85,15 @@ fn auth_fixture(
                 (
                     "404 Not Found",
                     json!({"code":"NoSuchKey","message":"Object not found"}).to_string(),
+                )
+            } else if first.starts_with("GET /rest/v1/leave_policies?") {
+                (
+                    "200 OK",
+                    json!([hris_desktop::leave::LeavePolicy {
+                        company_id,
+                        ..Default::default()
+                    }])
+                    .to_string(),
                 )
             } else if first.starts_with("GET /rest/v1/companies?") {
                 ("200 OK", company_json.clone())
