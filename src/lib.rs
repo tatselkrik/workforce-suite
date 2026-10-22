@@ -12,6 +12,7 @@ pub mod employment;
 pub mod history;
 pub mod imports;
 pub mod leave;
+pub mod notifications;
 pub mod organization;
 pub mod overtime;
 pub mod report_views;

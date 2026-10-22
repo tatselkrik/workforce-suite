@@ -26,6 +26,7 @@ mod breaks_view;
 mod calculations_view;
 mod imports_view;
 mod leave_view;
+mod notifications_view;
 mod organization_view;
 mod overtime_view;
 mod report_columns;
@@ -51,6 +52,7 @@ enum Page {
     Accounts,
     Settings,
     Profile,
+    Notifications,
 }
 
 impl Page {
@@ -73,6 +75,7 @@ impl Page {
             Self::Accounts => "Account Manager",
             Self::Settings => "Settings",
             Self::Profile => "Profile",
+            Self::Notifications => "Notifications",
         }
     }
 }
@@ -121,6 +124,7 @@ pub struct HrisApp {
     overtime_state: overtime_view::State,
     report_state: reports_view::State,
     import_state: imports_view::State,
+    notification_state: notifications_view::State,
     department: String,
     employment_type_filter: EmploymentFilter,
     work_location_filter: EmploymentFilter,
@@ -342,6 +346,7 @@ impl HrisApp {
             overtime_state: overtime_view::State::default(),
             report_state,
             import_state: imports_view::State::default(),
+            notification_state: notifications_view::State::default(),
             department: String::new(),
             employment_type_filter: EmploymentFilter::All,
             work_location_filter: EmploymentFilter::All,
@@ -403,6 +408,7 @@ impl HrisApp {
                 Ok("attendance") => app.page = Page::Attendance,
                 Ok("leave") => app.page = Page::Leave,
                 Ok("reports") => app.page = Page::Reports,
+                Ok("notifications") => app.page = Page::Notifications,
                 Ok("settings") => app.page = Page::Settings,
                 Ok("profile") => app.page = Page::Profile,
                 Ok("accounts") => app.page = Page::Accounts,
@@ -959,6 +965,7 @@ impl HrisApp {
             app.prepare_overtime_preview();
             app.prepare_reports_preview();
             app.prepare_import_preview();
+            app.prepare_notifications_preview();
             if std::env::var("HRIS_PREVIEW_PAGE").as_deref() == Ok("sign-in") {
                 app.login_branding = branding::LoginBranding {
                     company_name: app.data.company.name.clone(),
@@ -1037,6 +1044,7 @@ impl HrisApp {
                         self.request_state = requests_view::State::default();
                         self.overtime_state = overtime_view::State::default();
                         self.report_state = reports_view::State::new(data.company.today());
+                        self.notification_state = notifications_view::State::default();
                         self.import_state = imports_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
@@ -1061,6 +1069,7 @@ impl HrisApp {
                         self.request_state = requests_view::State::default();
                         self.overtime_state = overtime_view::State::default();
                         self.report_state = reports_view::State::new(data.company.today());
+                        self.notification_state = notifications_view::State::default();
                         self.import_state = imports_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
@@ -1141,6 +1150,7 @@ impl HrisApp {
                         }
                     }
                     self.data = data;
+                    self.notification_state.invalidate();
                     if !self.data.active().any(|e| {
                         Some(e.id) == self.check_in_employee && self.data.access.can_record(e.id)
                     }) {
@@ -1656,6 +1666,11 @@ impl HrisApp {
                 } else if ui.button("Refresh").clicked() {
                     self.send(Command::Refresh);
                 }
+                self.notification_state.current(&self.data);
+                let unread = self.notification_state.unread;
+                if ui.add_enabled(!self.busy && !self.has_unsaved_edits(),egui::Button::new(format!("Notifications ({unread})"))).on_hover_text("Save or close open editors before opening Notifications.").clicked() {
+                    self.navigate(Page::Notifications,ui.ctx());
+                }
                 ui.label(
                     RichText::new(self.data.company.today().format("%b %d, %Y").to_string())
                         .color(muted(ui)),
@@ -1724,6 +1739,7 @@ impl HrisApp {
                 "Your profile",
                 "Manage your personal details, account security and sessions.",
             ),
+            Page::Notifications => ("Notifications", "Approval tasks, personal updates and reminders within your current access."),
         };
         let employee_open =
             matches!(self.page, Page::Employees | Page::Accounts) && self.employee_form.is_some();
@@ -3906,6 +3922,7 @@ impl eframe::App for HrisApp {
                                 }
                                 Page::Settings => self.settings(ui),
                                 Page::Profile => self.profile(ui),
+                                Page::Notifications => self.notifications_page(ui),
                             });
                         });
                     });

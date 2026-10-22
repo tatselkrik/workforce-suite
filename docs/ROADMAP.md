@@ -28,7 +28,7 @@ Implemented: detailed attendance reports, filed-charge leave reports, employee s
 
 ## Stage 6 — Notifications and connections
 
-Add in-app notifications, reminders and document-expiry alerts. Configure a usable email-confirmation destination and reliable company email delivery. Connect payroll/accounting/attendance systems through explicitly configured integrations, with retries and audit history.
+Implemented: a role-scoped in-app notification inbox with private read/unread history, current approval tasks, personal request updates, upcoming leave, unfinished check-outs and HR-only document-expiry/contract-end reminders; see [notifications](NOTIFICATIONS.md). Configure a usable email-confirmation destination and reliable company email delivery. Connect payroll/accounting/attendance systems through explicitly configured integrations, with retries and audit history.
 
 ## Stage 7 — Hiring, onboarding and exit
 

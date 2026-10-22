@@ -107,6 +107,7 @@ impl Access {
     }
     pub fn authorize(&self, action: &Action, data: &Snapshot) -> Result<()> {
         let allowed = match action {
+            Action::NotificationReads(_) => self.role.uses_desktop() && data.mode != crate::domain::Mode::SignedOut && self.company_id == data.company.id,
             Action::ImportEmployees(_, _) => self.role.manages_hr(),
             Action::Overtime(action) => crate::overtime::allowed(self, action, data),
             Action::AttendanceRequest(action) => crate::requests::allowed(self, action, data),

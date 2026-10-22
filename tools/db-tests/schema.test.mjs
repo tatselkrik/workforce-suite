@@ -65,7 +65,9 @@ try {
   const overtimeMigrations=[];
   const importMigrations=[];
   const reportPreferenceMigrations=[];
+  const notificationMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_notification_read_state.sql')) {notificationMigrations.push(filename);continue;}
     if(filename.endsWith('_report_preferences.sql')) {reportPreferenceMigrations.push(filename);continue;}
     if(filename.endsWith('_employee_csv_imports.sql')) {importMigrations.push(filename);continue;}
     if(filename.endsWith('_overtime_approvals.sql')) {overtimeMigrations.push(filename);continue;}
@@ -265,6 +267,15 @@ try {
   eq((await db.query('select id,raw_user_meta_data from auth.users order by id')).rows,beforePreferenceAuth,'Preference migration preserves Auth metadata and legacy views');
   eq((await db.query('select to_jsonb(e) original from public.employees e order by id')).rows,beforePreferencePeople,'Preference migration preserves employee records');
   await runReportPreferenceTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB,legacy});
+  console.log(`Passed ${checks} schema assertions before notifications.`);
+  await db.exec('reset role');
+  const beforeNotifications=(await db.query('select to_jsonb(e) original from public.employees e order by id')).rows;
+  const beforeNotificationAuth=(await db.query('select id,raw_user_meta_data from auth.users order by id')).rows;
+  for(const filename of notificationMigrations) {await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version) values($1)',[filename.split('_')[0]]);}
+  eq((await db.query('select to_jsonb(e) original from public.employees e order by id')).rows,beforeNotifications,'Notification migration preserves all employee records');
+  eq((await db.query('select id,raw_user_meta_data from auth.users order by id')).rows,beforeNotificationAuth,'Notification migration preserves Auth metadata');
+  const {runNotificationTests}=await import('./notifications.test.mjs');
+  await runNotificationTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

@@ -721,6 +721,8 @@ impl CloudClient {
                     "order",
                     if matches!(table, "leave_policies" | "attendance_calculation_policies") {
                         "company_id.asc"
+                    } else if table == "notification_read_state" {
+                        "user_id.asc,company_id.asc"
                     } else {
                         "id.asc"
                     },
@@ -904,7 +906,12 @@ impl CloudClient {
             Default::default()
         };
         let (logo_png, logo_warning) = self.company_logo(&company);
+        let mut notification_rows: Vec<crate::notifications::ReadState> = self.rows("notification_read_state", Some(company.id))?;
+        ensure!(notification_rows.len() <= 1, "Notification history response is invalid.");
+        let notification_reads = notification_rows.pop().unwrap_or(crate::notifications::ReadState { user_id: access.user_id, company_id: company.id, ..Default::default() });
+        notification_reads.validate(access.user_id,company.id)?;
         Ok(Snapshot {
+            notification_reads,
             imports,
             overtime,
             requests,
@@ -1063,6 +1070,12 @@ impl CloudClient {
 
     pub fn execute(&mut self, action: Action, current: &Snapshot) -> Result<Snapshot> {
         current.access.authorize(&action, current)?;
+        if let Action::NotificationReads(action) = &action {
+            let payload=action.payload(current.company.id)?;
+            let saved:crate::notifications::ReadState=decode(self.request(Method::POST,"rpc/set_notification_reads")?.json(&payload).send().context("Could not update notification history. Refresh before retrying.")?)?;
+            saved.validate(current.access.user_id,current.company.id)?;
+            return self.snapshot().context("Notification history saved, but refresh failed. Refresh before retrying.");
+        }
         if let Action::ImportEmployees(preview, reason) = &action {
             let fresh = self.snapshot()?;
             ensure!(
@@ -1263,6 +1276,7 @@ impl CloudClient {
                 .context("Contacts saved, but refresh failed. Click Refresh before trying again.");
         }
         let (method, table, id, body) = match action {
+            Action::NotificationReads(_) => unreachable!("Notification reads return above"),
             Action::ImportEmployees(_, _) => unreachable!("imports use their guarded transaction"),
             Action::Overtime(_) => unreachable!("Overtime actions return above"),
             Action::AttendanceRequest(_) => unreachable!("Attendance requests return above"),

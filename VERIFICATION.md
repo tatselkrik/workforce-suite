@@ -1,6 +1,33 @@
 # Prototype verification â€” 2026-10-22
 
 
+
+## In-app notifications and reminders - version 0.1.25
+
+- 236 Rust tests and1015 local PostgreSQL assertions passed. Coverage includes
+  role/company/current-step scope, no self-review, own decision/local-date
+  windows, document states/stages,24-hour overnight guard, bounded read keys,
+  incremental merges and composite-key/RPC HTTP loading. Inbox rendering uses
+  a cache invalidated by data/access changes and refreshed periodically.
+- Additive migration `20261022145739` deployed; all26 hosted/local versions match.
+  Prior HR counts and report layouts preserved. Own active desktop staff RLS,
+  revoked direct mutation and invoker RPC/private guarded implementation
+  verified. Security/FK findings unchanged; one informational unused-index
+  notice for the new FK index. No Edge Function change.
+- Actual Admin/Manager Auth verified HR correction/expiry alerts, own check-out
+  and decision updates, Manager document exclusion, mark read/unread/reset,
+  fresh-sign-in state and independent-session merge. Unfiltered private RLS,
+  direct/crosscompany denial, JWT metadata exclusion and disabled valid-JWT
+  access checked. Synthetic account disabled, employee/document archived,
+  sessions revoked and unrelated HR/Admin profile/read markers preserved.
+  Initial synthetic shift overlap correctly rejected; corrected dates used
+  for final verification. No real password changed.
+- Eleven final fictional native previews inspected across light/dark125%, roles,
+  filters, read/unread, empty state and long wrapping. Normal startup/privacy,
+  exact installer/recovery, signing/private publication and installation belong
+  in the private version report. No signed-in native button automation, remote
+  CI, Authenticode or other-PC claim is made.
+
 ## Workforce analysis and custom report columns — version 0.1.24
 
 - 226 Rust tests and964 local PostgreSQL assertions passed. Current headcount,

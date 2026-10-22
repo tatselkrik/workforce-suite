@@ -322,6 +322,7 @@ pub enum Mode {
 
 #[derive(Clone, Debug)]
 pub struct Snapshot {
+    pub notification_reads: crate::notifications::ReadState,
     pub imports: crate::imports::Setup,
     pub overtime: crate::overtime::Setup,
     pub requests: crate::requests::Setup,
@@ -351,6 +352,7 @@ pub struct Snapshot {
 impl Snapshot {
     pub fn signed_out() -> Self {
         Self {
+            notification_reads: Default::default(),
             imports: Default::default(),
             overtime: Default::default(),
             requests: Default::default(),
@@ -430,6 +432,7 @@ impl Snapshot {
 
 #[derive(Clone, Debug)]
 pub enum Action {
+    NotificationReads(crate::notifications::ReadAction),
     ImportEmployees(crate::imports::Preview, String),
     Overtime(crate::overtime::OvertimeAction),
     AttendanceRequest(crate::requests::RequestAction),
@@ -585,6 +588,7 @@ impl DemoStore {
         .collect();
         let mut store = Self {
             data: Snapshot {
+                notification_reads: crate::notifications::ReadState { company_id: company.id, ..Default::default() },
                 imports: Default::default(),
                 overtime: Default::default(),
                 requests: Default::default(),
@@ -703,6 +707,11 @@ impl DemoStore {
     fn apply(&mut self, action: Action) -> Result<()> {
         self.data.access.authorize(&action, &self.data)?;
         match action {
+            Action::NotificationReads(action) => {
+                self.data.notification_reads.user_id = self.data.access.user_id;
+                self.data.notification_reads.company_id = self.data.company.id;
+                self.data.notification_reads.apply(&action)?;
+            }
             Action::ImportEmployees(preview, reason) => {
                 crate::imports::apply_demo(self, preview, reason)?
             }
