@@ -57,6 +57,7 @@ try {
   `);
   const folder=new URL('../../supabase/migrations/',import.meta.url);
   const onboardingMigrations=[];
+  const exitMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -70,6 +71,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_employee_exit_clearance.sql')){exitMigrations.push(filename);continue;}
     if(filename.endsWith('_hiring_offers_onboarding.sql')) {onboardingMigrations.push(filename);continue;}
     if(filename.endsWith('_recruiting_attachments_interviews.sql')) {recruitingMigrations.push(filename);continue;}
     if(filename.endsWith('_applicant_pipeline.sql')) {hiringMigrations.push(filename);continue;}
@@ -305,6 +307,10 @@ try {
   eq((await db.query('select to_jsonb(t) r from public.applicants t order by id')).rows,preservedHiring,'Offer migration preserves applications');
   const {runOnboardingTests}=await import('./onboarding.test.mjs');
   await runOnboardingTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
+  await db.exec('reset role');
+  for(const filename of exitMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  const {runExitTests}=await import('./exits.test.mjs');
+  await runExitTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();
