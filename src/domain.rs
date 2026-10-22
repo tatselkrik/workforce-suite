@@ -322,6 +322,8 @@ pub enum Mode {
 
 #[derive(Clone, Debug)]
 pub struct Snapshot {
+    pub onboarding: crate::onboarding::Setup,
+    pub recruiting: crate::recruiting::Setup,
     pub hiring: crate::hiring::Setup,
     pub notification_reads: crate::notifications::ReadState,
     pub imports: crate::imports::Setup,
@@ -353,6 +355,8 @@ pub struct Snapshot {
 impl Snapshot {
     pub fn signed_out() -> Self {
         Self {
+            recruiting: Default::default(),
+            onboarding: Default::default(),
             hiring: Default::default(),
             notification_reads: Default::default(),
             imports: Default::default(),
@@ -434,6 +438,8 @@ impl Snapshot {
 
 #[derive(Clone, Debug)]
 pub enum Action {
+    Onboarding(crate::onboarding::HiringAction),
+    Interview(crate::recruiting::InterviewAction),
     Hiring(crate::hiring::HiringAction),
     NotificationReads(crate::notifications::ReadAction),
     ImportEmployees(crate::imports::Preview, String),
@@ -591,8 +597,13 @@ impl DemoStore {
         .collect();
         let mut store = Self {
             data: Snapshot {
+                recruiting: Default::default(),
+                onboarding: Default::default(),
                 hiring: Default::default(),
-                notification_reads: crate::notifications::ReadState { company_id: company.id, ..Default::default() },
+                notification_reads: crate::notifications::ReadState {
+                    company_id: company.id,
+                    ..Default::default()
+                },
                 imports: Default::default(),
                 overtime: Default::default(),
                 requests: Default::default(),
@@ -711,7 +722,15 @@ impl DemoStore {
     fn apply(&mut self, action: Action) -> Result<()> {
         self.data.access.authorize(&action, &self.data)?;
         match action {
-            Action::Hiring(action) => crate::hiring::apply_demo(&mut self.data,&action,chrono::Utc::now())?,
+            Action::Onboarding(action) => {
+                crate::onboarding::apply_demo(&mut self.data, &action, chrono::Utc::now())?
+            }
+            Action::Interview(action) => {
+                crate::recruiting::apply_demo(&mut self.data, &action, chrono::Utc::now())?
+            }
+            Action::Hiring(action) => {
+                crate::hiring::apply_demo(&mut self.data, &action, chrono::Utc::now())?
+            }
             Action::NotificationReads(action) => {
                 self.data.notification_reads.user_id = self.data.access.user_id;
                 self.data.notification_reads.company_id = self.data.company.id;

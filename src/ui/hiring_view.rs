@@ -26,6 +26,16 @@ impl Editor {
         }
     }
 }
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+pub(super) enum Tab {
+    #[default]
+    Details,
+    History,
+    Attachments,
+    Interviews,
+    Offers,
+    Onboarding,
+}
 #[derive(Default)]
 pub(super) struct State {
     pub form: Option<Editor>,
@@ -34,7 +44,7 @@ pub(super) struct State {
     pub stage: Option<Stage>,
     pub include_archived: bool,
     pub page: usize,
-    pub history: bool,
+    pub tab: Tab,
     pub next: Option<Stage>,
     pub reason: String,
     pub closing: bool,
@@ -202,6 +212,42 @@ fn history_fields(ui: &mut Ui, e: &hiring::Event) -> Vec<(egui::Rect, egui::Rect
 }
 impl HrisApp {
     pub(super) fn hiring(&mut self, ui: &mut Ui) {
+        if self.data.access.role == Role::Manager {
+            card(ui, |ui| {
+                ui.horizontal_wrapped(|ui| {
+                    ui.add_enabled_ui(
+                        !self.onboarding_state.editing() && !self.recruiting_state.editing(),
+                        |ui| {
+                            ui.selectable_value(
+                                &mut self.onboarding_state.active,
+                                false,
+                                "Your interviews",
+                            );
+                            ui.selectable_value(
+                                &mut self.onboarding_state.active,
+                                true,
+                                "Your onboarding tasks",
+                            );
+                        },
+                    );
+                });
+            });
+            ui.add_space(10.0);
+            if self.onboarding_state.active {
+                self.onboarding(ui, None);
+            } else {
+                self.applicant_interviews(ui, None);
+            }
+            return;
+        }
+        if self.onboarding_state.active {
+            self.onboarding(ui, None);
+            return;
+        }
+        if self.recruiting_state.agenda {
+            self.applicant_interviews(ui, None);
+            return;
+        }
         if hiring::authorize(&self.data.access, &self.data).is_err() {
             self.hiring_state = State::default();
             empty(
@@ -222,8 +268,14 @@ impl HrisApp {
                         original: None,
                         reason: "Application recorded".into(),
                     });
-                    self.hiring_state.history = false;
+                    self.hiring_state.tab = Tab::Details;
                     self.hiring_state.closing = false;
+                }
+                if ui.button("Interview agenda").clicked() {
+                    self.recruiting_state.agenda = true;
+                }
+                if ui.button("Onboarding").clicked() {
+                    self.onboarding_state.active = true;
                 }
                 ui.label(RichText::new("Private to HR and Administrators").color(muted(ui)));
             });
@@ -330,7 +382,7 @@ impl HrisApp {
                         .clicked()
                     {
                         self.hiring_state.open(r.clone());
-                        self.hiring_state.history = false;
+                        self.hiring_state.tab = Tab::Details;
                     }
                     badge(ui, r.stage.label(), !r.stage.terminal());
                     if r.archived {
@@ -369,7 +421,11 @@ impl HrisApp {
         card(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
                 if ui.button("< All applicants").clicked() {
-                    if e.changed() || !self.hiring_state.reason.is_empty() {
+                    if e.changed()
+                        || !self.hiring_state.reason.is_empty()
+                        || self.recruiting_state.editing()
+                        || self.onboarding_state.editing()
+                    {
                         self.hiring_state.closing = true;
                     } else {
                         close = true;
@@ -384,13 +440,24 @@ impl HrisApp {
                     .strong()
                     .size(21.0),
                 );
-                if let Some(r) = &e.original {
+            });
+            if let Some(r) = &e.original {
+                ui.horizontal_wrapped(|ui| {
                     badge(ui, r.stage.label(), !r.stage.terminal());
+                    if self
+                        .data
+                        .onboarding
+                        .conversions
+                        .iter()
+                        .any(|c| c.applicant_id == r.id)
+                    {
+                        badge(ui, "Hired", true);
+                    }
                     if r.archived {
                         badge(ui, "Archived", false);
                     }
-                }
-            });
+                });
+            }
             if self.hiring_state.closing {
                 ui.label("Discard unsaved changes and return to the applicant list?");
                 ui.horizontal(|ui| {
@@ -416,15 +483,39 @@ impl HrisApp {
                     self.hiring_state.reason.clear();
                 }
             }
-            ui.horizontal(|ui| {
-                ui.selectable_value(&mut self.hiring_state.history, false, "Details");
+            ui.horizontal_wrapped(|ui| {
+                ui.selectable_value(&mut self.hiring_state.tab, Tab::Details, "Details");
                 ui.add_enabled_ui(e.original.is_some(), |ui| {
-                    ui.selectable_value(&mut self.hiring_state.history, true, "History");
+                    ui.selectable_value(&mut self.hiring_state.tab, Tab::History, "History");
+                    ui.selectable_value(
+                        &mut self.hiring_state.tab,
+                        Tab::Attachments,
+                        "Résumés / files",
+                    );
+                    ui.selectable_value(&mut self.hiring_state.tab, Tab::Interviews, "Interviews");
+                    ui.selectable_value(&mut self.hiring_state.tab, Tab::Offers, "Offers");
+                    ui.selectable_value(&mut self.hiring_state.tab, Tab::Onboarding, "Onboarding");
                 });
             });
         });
         ui.add_space(10.0);
-        if self.hiring_state.history {
+        if self.hiring_state.tab == Tab::Offers {
+            if let Some(id) = e.draft.id {
+                self.applicant_offers(ui, id);
+            }
+        } else if self.hiring_state.tab == Tab::Onboarding {
+            if let Some(id) = e.draft.id {
+                self.onboarding(ui, Some(id));
+            }
+        } else if self.hiring_state.tab == Tab::Attachments {
+            if let Some(id) = e.draft.id {
+                self.applicant_attachments(ui, id);
+            }
+        } else if self.hiring_state.tab == Tab::Interviews {
+            if let Some(id) = e.draft.id {
+                self.applicant_interviews(ui, Some(id));
+            }
+        } else if self.hiring_state.tab == Tab::History {
             if let Some(id) = e.draft.id {
                 self.applicant_history(ui, id);
             }
@@ -509,7 +600,14 @@ impl HrisApp {
                         ui.label("Save or discard detail edits before changing the pipeline.");
                     }
                     ui.add_enabled_ui(!e.changed() && !stale, |ui| {
-                        if !r.archived {
+                        if !r.archived
+                            && !self
+                                .data
+                                .onboarding
+                                .conversions
+                                .iter()
+                                .any(|c| c.applicant_id == r.id)
+                        {
                             egui::ComboBox::from_id_salt("applicant_next_stage")
                                 .selected_text(
                                     self.hiring_state
@@ -579,6 +677,8 @@ impl HrisApp {
             }
         }
         if close {
+            self.recruiting_state = Default::default();
+            self.onboarding_state = Default::default();
             self.hiring_state.form = None;
             self.hiring_state.closing = false;
             self.hiring_state.reason.clear();
@@ -694,7 +794,11 @@ impl HrisApp {
             });
         } else if preview == "hiring-details" || preview == "hiring-history" {
             self.hiring_state.open(self.data.hiring.records[0].clone());
-            self.hiring_state.history = preview == "hiring-history";
+            self.hiring_state.tab = if preview == "hiring-history" {
+                Tab::History
+            } else {
+                Tab::Details
+            };
         } else if preview == "hiring-archived" {
             let r = self.data.hiring.records[0].clone();
             hiring::apply_demo(

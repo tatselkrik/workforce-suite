@@ -1,3 +1,4 @@
+mod recruiting_adapter;
 use crate::access::{Access, AccessEvent, AdminAction, ManagedAccount};
 use crate::account::{self, AccountAction, AccountProfile, DisplayPreferences, PersonalDetails};
 use crate::documents::{self, DocumentAction, DocumentState, EmployeeDocument};
@@ -905,13 +906,35 @@ impl CloudClient {
         } else {
             Default::default()
         };
-        let hiring=if access.role.manages_hr(){crate::hiring::Setup{records:self.rows("applicants",Some(company.id))?,events:self.rows("applicant_events",Some(company.id))?}}else{Default::default()};
+        let hiring = if access.role.manages_hr() {
+            crate::hiring::Setup {
+                records: self.rows("applicants", Some(company.id))?,
+                events: self.rows("applicant_events", Some(company.id))?,
+            }
+        } else {
+            Default::default()
+        };
+        let recruiting = self.recruiting_snapshot(&access)?;
+        let onboarding = self.onboarding_snapshot(&access)?;
         let (logo_png, logo_warning) = self.company_logo(&company);
-        let mut notification_rows: Vec<crate::notifications::ReadState> = self.rows("notification_read_state", Some(company.id))?;
-        ensure!(notification_rows.len() <= 1, "Notification history response is invalid.");
-        let notification_reads = notification_rows.pop().unwrap_or(crate::notifications::ReadState { user_id: access.user_id, company_id: company.id, ..Default::default() });
-        notification_reads.validate(access.user_id,company.id)?;
+        let mut notification_rows: Vec<crate::notifications::ReadState> =
+            self.rows("notification_read_state", Some(company.id))?;
+        ensure!(
+            notification_rows.len() <= 1,
+            "Notification history response is invalid."
+        );
+        let notification_reads =
+            notification_rows
+                .pop()
+                .unwrap_or(crate::notifications::ReadState {
+                    user_id: access.user_id,
+                    company_id: company.id,
+                    ..Default::default()
+                });
+        notification_reads.validate(access.user_id, company.id)?;
         Ok(Snapshot {
+            onboarding,
+            recruiting,
             hiring,
             notification_reads,
             imports,
@@ -1072,17 +1095,63 @@ impl CloudClient {
 
     pub fn execute(&mut self, action: Action, current: &Snapshot) -> Result<Snapshot> {
         current.access.authorize(&action, current)?;
-        if let Action::Hiring(action)=&action {
-            let payload=action.payload(current)?;let id:Uuid=serde_json::from_value(payload["p_record"]["id"].clone())?;
+        if let Action::Onboarding(action) = &action {
+            let payload = action.payload(current)?;
+            let saved: Value = decode(
+                self.request(Method::POST, "rpc/manage_hiring")?
+                    .json(&payload)
+                    .send()?,
+            )?;
+            ensure!(
+                saved["company_id"] == json!(current.company.id)
+                    && saved["id"] == payload["p_record"]["id"],
+                "Hiring response did not match the current record/company."
+            );
+            return self.snapshot().context("Hiring change saved, but refresh failed. Keep your draft and Refresh before retrying.");
+        }
+        if let Action::Interview(action) = &action {
+            let payload = action.payload(current, Utc::now())?;
+            let saved: Value = decode(
+                self.request(Method::POST, "rpc/manage_interview")?
+                    .json(&payload)
+                    .send()?,
+            )?;
+            ensure!(
+                saved["company_id"] == json!(current.company.id)
+                    && (if payload["p_operation"] == "feedback" {
+                        saved["interview_id"] == payload["p_record"]["id"]
+                            && saved["author_id"] == json!(current.access.user_id)
+                    } else {
+                        saved["id"] == payload["p_record"]["id"]
+                    }),
+                "Interview response did not match the current record/company."
+            );
+            return self.snapshot().context(
+                "Interview saved, but refresh failed. Keep the draft and Refresh before retrying.",
+            );
+        }
+        if let Action::Hiring(action) = &action {
+            let payload = action.payload(current)?;
+            let id: Uuid = serde_json::from_value(payload["p_record"]["id"].clone())?;
             let saved:crate::hiring::Applicant=decode(self.request(Method::POST,"rpc/manage_applicant")?.json(&payload).send().context("Could not save the application. Keep this draft and refresh before retrying.")?)?;
-            ensure!(saved.id==id && saved.company_id==current.company.id,"The application response did not match your company/record.");
+            ensure!(
+                saved.id == id && saved.company_id == current.company.id,
+                "The application response did not match your company/record."
+            );
             return self.snapshot().context("Application saved, but refresh failed. Keep this draft and Refresh; retrying the same new application is safe.");
         }
         if let Action::NotificationReads(action) = &action {
-            let payload=action.payload(current.company.id)?;
-            let saved:crate::notifications::ReadState=decode(self.request(Method::POST,"rpc/set_notification_reads")?.json(&payload).send().context("Could not update notification history. Refresh before retrying.")?)?;
-            saved.validate(current.access.user_id,current.company.id)?;
-            return self.snapshot().context("Notification history saved, but refresh failed. Refresh before retrying.");
+            let payload = action.payload(current.company.id)?;
+            let saved: crate::notifications::ReadState = decode(
+                self.request(Method::POST, "rpc/set_notification_reads")?
+                    .json(&payload)
+                    .send()
+                    .context("Could not update notification history. Refresh before retrying.")?,
+            )?;
+            saved.validate(current.access.user_id, current.company.id)?;
+            return self.snapshot().context(
+                "Notification history saved, but refresh failed. Refresh before retrying.",
+            );
         }
         if let Action::ImportEmployees(preview, reason) = &action {
             let fresh = self.snapshot()?;
@@ -1284,6 +1353,8 @@ impl CloudClient {
                 .context("Contacts saved, but refresh failed. Click Refresh before trying again.");
         }
         let (method, table, id, body) = match action {
+            Action::Onboarding(_) => unreachable!("Hiring workflow changes return above"),
+            Action::Interview(_) => unreachable!("Interview changes return above"),
             Action::Hiring(_) => unreachable!("Applicant changes return above"),
             Action::NotificationReads(_) => unreachable!("Notification reads return above"),
             Action::ImportEmployees(_, _) => unreachable!("imports use their guarded transaction"),
@@ -1602,6 +1673,7 @@ pub enum Command {
         destination: Option<std::path::PathBuf>,
     },
     Document(DocumentAction),
+    Resume(crate::recruiting::ResumeAction),
     CheckUpdates,
     InstallUpdate(VerifiedRelease),
     Change(Action),
@@ -1635,6 +1707,7 @@ pub fn worker(
     thread::spawn(move || {
         let mut demo = initial;
         let mut demo_documents = std::collections::HashMap::new();
+        let mut demo_resumes = std::collections::HashMap::new();
         let mut demo_account = demo.as_ref().map(|_| AccountProfile::demo());
         let mut cloud: Option<CloudClient> = None;
         let mut current = demo
@@ -1695,6 +1768,7 @@ pub fn worker(
                 },
                 Command::SignOut | Command::SignOutEverywhere => {
                     demo_documents.clear();
+                    demo_resumes.clear();
                     update_state = Some(UpdateState::Idle);
                     let everywhere = matches!(command, Command::SignOutEverywhere);
                     if let Some(mut client) = cloud.take() {
@@ -1791,6 +1865,26 @@ pub fn worker(
                             report.rows.len()
                         );
                         report_result = Some(report);
+                        data
+                    })
+                }
+                Command::Resume(action) => {
+                    let changed = match cloud.as_mut() {
+                        Some(client) => client.execute_resume(action, &current),
+                        None => demo
+                            .as_mut()
+                            .context("Sign in to manage application attachments.")
+                            .and_then(|store| {
+                                crate::recruiting::resume_demo(
+                                    &mut store.data,
+                                    &mut demo_resumes,
+                                    action,
+                                )
+                                .map(|text| (store.data.clone(), text))
+                            }),
+                    };
+                    changed.map(|(data, text)| {
+                        message = text;
                         data
                     })
                 }

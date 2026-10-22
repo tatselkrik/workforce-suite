@@ -56,6 +56,7 @@ try {
     grant select,insert,update,delete on storage.objects to authenticated,anon;
   `);
   const folder=new URL('../../supabase/migrations/',import.meta.url);
+  const onboardingMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -67,7 +68,10 @@ try {
   const reportPreferenceMigrations=[];
   const notificationMigrations=[];
   const hiringMigrations=[];
+  const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_hiring_offers_onboarding.sql')) {onboardingMigrations.push(filename);continue;}
+    if(filename.endsWith('_recruiting_attachments_interviews.sql')) {recruitingMigrations.push(filename);continue;}
     if(filename.endsWith('_applicant_pipeline.sql')) {hiringMigrations.push(filename);continue;}
     if(filename.endsWith('_notification_read_state.sql')) {notificationMigrations.push(filename);continue;}
     if(filename.endsWith('_report_preferences.sql')) {reportPreferenceMigrations.push(filename);continue;}
@@ -288,6 +292,19 @@ try {
   eq((await db.query('select to_jsonb(t) original from auth.users t order by id')).rows,beforeHiringAuth,'Applicant migration preserves Auth');
   const {runHiringTests}=await import('./hiring.test.mjs');
   await runHiringTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
+  console.log(`Passed ${checks} schema assertions before recruiting attachments/interviews.`);
+  await db.exec('reset role');
+  const beforeRecruiting=(await db.query('select to_jsonb(t) r from public.applicants t order by id')).rows;
+  for(const filename of recruitingMigrations) {await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version) values($1)',[filename.split('_')[0]]);}
+  eq((await db.query('select to_jsonb(t) r from public.applicants t order by id')).rows,beforeRecruiting,'Recruiting migration preserves applicant records');
+  const {runRecruitingTests}=await import('./recruiting.test.mjs');
+  await runRecruitingTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
+  await db.exec('reset role');
+  const preservedHiring=(await db.query('select to_jsonb(t) r from public.applicants t order by id')).rows;
+  for(const filename of onboardingMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  eq((await db.query('select to_jsonb(t) r from public.applicants t order by id')).rows,preservedHiring,'Offer migration preserves applications');
+  const {runOnboardingTests}=await import('./onboarding.test.mjs');
+  await runOnboardingTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

@@ -2,6 +2,40 @@
 
 
 
+## Recruiting and onboarding - version 0.1.27
+
+- 260 Rust tests and 1310 local PostgreSQL assertions passed, covering private
+  attachments, safe retries, scheduling/overlap, feedback scope, approved offer
+  transitions, exact amounts, atomic employee creation and required checklists.
+  The PostgreSQL harness simulates Auth. Final UI wrapping changes are included
+  in the final regression pass; sandbox-only socket/branding failures were
+  resolved by running the existing local tests with appropriate access.
+- Additive migrations `20261022180842` and `20261022183649` deployed; all29 local
+  and hosted migration versions match. Existing HR data preserved. Public RPCs
+  remain invokers with guarded private writers and active-membership RLS.
+  Security/FK advisory findings unchanged; new unused-index and two overlapping
+  read-policy informational findings were reviewed.
+- Actual HR/Admin/Manager Auth through Rust and REST verified résumé PDF/DOCX
+  upload/retry/original download/archive, interview reassignment/private feedback,
+  Administrator offer approval, recorded acceptance and atomic hire/checklist
+  retries. Managers can complete only assigned tasks and cannot load private
+  applicants, files or offer/pay terms. Direct writes, stale revisions, forged
+  metadata, anonymous and disabled valid-JWT access were denied on fresh reads.
+- All live feature assertions completed. Initial fixture cleanup hit the
+  existing active-direct-report archive guard; actual Admin cleanup resumed in
+  dependency order. Fixtures retained disabled/archived; exact test sessions
+  revoked. Unrelated HR and Administrator profile preserved; no real password
+  changed. Previously authorized identical Storage URLs could return a cached
+  response immediately after disabling the caller. Fresh query URLs denied it;
+  desktop downloads now bypass that cache and uploads specify max-age0.
+- 28 fictional native views inspected, including HR/Manager scopes, light/dark,
+  125% display, forms, wrapped tabs and expanded offer/task/case history. Final
+  long-value wrapping and status-label fixes were recaptured and reviewed.
+- Normal binary/startup/privacy, exact installer/recovery, private Ed25519
+  publication and local installation are recorded separately in the private
+  versioned report. No signed-in native button automation, Authenticode,
+  remote CI, other-PC or running-parent timing claim. No Edge Function change.
+
 ## Applicant pipeline - version 0.1.26
 
 - 249 Rust tests and 1149 local PostgreSQL assertions passed. Coverage includes

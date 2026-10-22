@@ -238,10 +238,20 @@ impl HiringAction {
                 expected_revision,
                 next,
                 reason: r,
-            } => (
-                "stage",
-                record(data, *id)?.stage_change(*expected_revision, *next, r)?,
-            ),
+            } => {
+                ensure!(
+                    !data
+                        .onboarding
+                        .conversions
+                        .iter()
+                        .any(|c| c.applicant_id == *id),
+                    "This applicant has been hired. Employment changes belong in the employee record."
+                );
+                (
+                    "stage",
+                    record(data, *id)?.stage_change(*expected_revision, *next, r)?,
+                )
+            }
             Self::Archive {
                 id,
                 expected_revision,

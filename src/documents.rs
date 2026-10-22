@@ -666,6 +666,17 @@ pub fn prepare_upload(draft: &DocumentDraft, data: &Snapshot) -> Result<Prepared
         .file
         .as_ref()
         .context("Choose a document to upload.")?;
+    let mut prepared = prepare_file(file)?;
+    let mut payload = draft.payload()?;
+    payload
+        .as_object_mut()
+        .unwrap()
+        .extend(prepared.payload.as_object().unwrap().clone());
+    prepared.payload = payload;
+    Ok(prepared)
+}
+/// Shared bounded file validation for employee and applicant attachments.
+pub fn prepare_file(file: &Path) -> Result<PreparedUpload> {
     let name = file
         .file_name()
         .and_then(|s| s.to_str())
@@ -676,7 +687,7 @@ pub fn prepare_upload(draft: &DocumentDraft, data: &Snapshot) -> Result<Prepared
         .take(MAX_FILE_BYTES as u64 + 1)
         .read_to_end(&mut bytes)?;
     let mime = validate_bytes(&bytes, name)?;
-    let mut payload = draft.payload()?;
+    let mut payload = json!({});
     payload["original_filename"] = json!(name);
     payload["mime_type"] = json!(mime);
     payload["byte_size"] = json!(bytes.len());
@@ -893,9 +904,9 @@ pub fn choose_file(save_as: Option<&str>) -> Result<Option<PathBuf>> {
         .encode_utf16()
         .collect();
     let title: Vec<u16> = if save_as.is_some() {
-        "Download employee document\0"
+        "Download document\0"
     } else {
-        "Choose employee document\0"
+        "Choose document\0"
     }
     .encode_utf16()
     .collect();
