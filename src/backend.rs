@@ -138,6 +138,14 @@ struct AuthSession {
     user: AuthUser,
 }
 
+#[derive(Deserialize)]
+struct ReportPreferences {
+    user_id: Uuid,
+    company_id: Uuid,
+    views: Value,
+    revision: i64,
+}
+
 fn default_expiry() -> i64 {
     3600
 }
@@ -472,6 +480,11 @@ impl CloudClient {
             "The account response did not match your session. Sign in again."
         );
         let mut account = user.profile();
+        if self.account.report_views_company.is_some() {
+            account.report_views = self.account.report_views.clone();
+            account.report_views_company = self.account.report_views_company;
+            account.report_views_revision = self.account.report_views_revision;
+        }
         account.photo = self.account.photo.take();
         account.photo_warning = self.account.photo_warning.take();
         self.account = account;
@@ -575,9 +588,54 @@ impl CloudClient {
                 self.update_user(json!({"data":{"hris_preferences":display}}))?;
                 Ok("Display preferences saved.".into())
             }
-            AccountAction::SaveReportViews(views) => {
+            AccountAction::LoadReportViews { company_id } => {
+                let path = format!(
+                    "/rest/v1/report_preferences?select=user_id,company_id,views,revision&user_id=eq.{}&company_id=eq.{company_id}",
+                    self.session.user.id
+                );
+                let mut rows: Vec<ReportPreferences> = decode(
+                    self.account_request(Method::GET, &path)?
+                        .send()
+                        .context("Could not load saved views. Retry when connected.")?,
+                )?;
+                ensure!(
+                    rows.len() <= 1,
+                    "The report preferences response is invalid."
+                );
+                if let Some(row) = rows.pop() {
+                    self.accept_report_preferences(company_id, row)?;
+                } else {
+                    // A still-running older installation may have saved a legacy
+                    // view after the one-time migration. Offer it until the first
+                    // explicit database save; an existing empty row never revives it.
+                    self.account.report_views = crate::report_views::from_metadata(
+                        self.session.user.user_metadata.get("hris_report_views"),
+                    )
+                    .into_iter()
+                    .filter(|v| v.company_id == company_id)
+                    .collect();
+                    self.account.report_views_company = Some(company_id);
+                    self.account.report_views_revision = 0;
+                }
+                Ok("Saved report views loaded.".into())
+            }
+            AccountAction::SaveReportViews {
+                company_id,
+                expected_revision,
+                views,
+            } => {
                 crate::report_views::validate_collection(&views)?;
-                self.update_user(json!({"data":{"hris_report_views":views}}))?;
+                ensure!(
+                    self.account.report_views_company == Some(company_id)
+                        && self.account.report_views_revision == expected_revision,
+                    "Reload saved views before saving changes."
+                );
+                let row:ReportPreferences=decode(self.account_request(Method::POST,"/rest/v1/rpc/save_report_preferences")?.json(&json!({"p_company_id":company_id,"p_expected_revision":expected_revision,"p_views":views})).send().context("Could not save report views. Reload views to check whether the save completed before retrying.")?)?;
+                ensure!(
+                    row.revision == expected_revision.checked_add(1).unwrap_or(-1),
+                    "The saved views response has an invalid revision. Reload views before retrying."
+                );
+                self.accept_report_preferences(company_id, row)?;
                 Ok("Your saved report views were updated.".into())
             }
             AccountAction::UploadPhoto(path) => {
@@ -635,6 +693,23 @@ impl CloudClient {
                 Ok("Other sessions signed out. This device remains signed in. Existing access tokens expire according to the server's session policy.".into())
             }
         }
+    }
+
+    fn accept_report_preferences(
+        &mut self,
+        company_id: Uuid,
+        row: ReportPreferences,
+    ) -> Result<()> {
+        ensure!(
+            row.user_id == self.session.user.id
+                && row.company_id == company_id
+                && row.revision >= 0,
+            "The saved views response did not match your account/company."
+        );
+        self.account.report_views = crate::report_views::from_metadata(Some(&row.views));
+        self.account.report_views_company = Some(company_id);
+        self.account.report_views_revision = row.revision;
+        Ok(())
     }
 
     fn rows<T: DeserializeOwned>(&mut self, table: &str, company: Option<Uuid>) -> Result<Vec<T>> {
@@ -1991,9 +2066,22 @@ fn execute_demo_account(profile: &mut AccountProfile, action: AccountAction) -> 
             display.validate()?;
             profile.display = display;
         }
-        AccountAction::SaveReportViews(views) => {
+        AccountAction::LoadReportViews { company_id } => {
+            profile.report_views_company = Some(company_id);
+        }
+        AccountAction::SaveReportViews {
+            company_id,
+            expected_revision,
+            views,
+        } => {
             crate::report_views::validate_collection(&views)?;
+            ensure!(
+                profile.report_views_revision == expected_revision,
+                "Reload saved views before saving changes."
+            );
             profile.report_views = views;
+            profile.report_views_company = Some(company_id);
+            profile.report_views_revision += 1;
         }
         AccountAction::UploadPhoto(path) => {
             profile.photo = Some(account::photo_from_file(&path)?);

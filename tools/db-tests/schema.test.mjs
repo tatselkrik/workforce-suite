@@ -64,7 +64,9 @@ try {
   const requestMigrations=[];
   const overtimeMigrations=[];
   const importMigrations=[];
+  const reportPreferenceMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_report_preferences.sql')) {reportPreferenceMigrations.push(filename);continue;}
     if(filename.endsWith('_employee_csv_imports.sql')) {importMigrations.push(filename);continue;}
     if(filename.endsWith('_overtime_approvals.sql')) {overtimeMigrations.push(filename);continue;}
     if(filename.endsWith('_attendance_correction_requests.sql')||filename.endsWith('_attendance_request_context_index.sql')) {requestMigrations.push(filename);continue;}
@@ -252,6 +254,17 @@ try {
   eq((await db.query('select id,employee_code,full_name from public.employees order by id')).rows,beforeImports,'Import migration preserves all existing employee records');
   const {runImportTests}=await import('./imports.test.mjs');
   await runImportTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
+  console.log(`Passed ${checks} schema assertions before report preferences.`);
+  await db.exec('reset role');
+  const {runReportPreferenceTests,reportView}=await import('./report-preferences.test.mjs');
+  const legacy=[reportView(companyA.id,'Synthetic legacy view')];
+  await db.query("update auth.users set raw_user_meta_data=jsonb_set(coalesce(raw_user_meta_data,'{}'::jsonb),'{hris_report_views}',$2::jsonb) where id=$1",[uidA,JSON.stringify(legacy)]);
+  const beforePreferenceAuth=(await db.query('select id,raw_user_meta_data from auth.users order by id')).rows;
+  const beforePreferencePeople=(await db.query('select to_jsonb(e) original from public.employees e order by id')).rows;
+  for(const filename of reportPreferenceMigrations) {await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version) values($1)',[filename.split('_')[0]]);}
+  eq((await db.query('select id,raw_user_meta_data from auth.users order by id')).rows,beforePreferenceAuth,'Preference migration preserves Auth metadata and legacy views');
+  eq((await db.query('select to_jsonb(e) original from public.employees e order by id')).rows,beforePreferencePeople,'Preference migration preserves employee records');
+  await runReportPreferenceTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB,legacy});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

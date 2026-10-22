@@ -1,6 +1,32 @@
-# Prototype verification — 2026-10-22
+# Prototype verification â€” 2026-10-22
 
-## Personal saved report views — version 0.1.23
+
+## Workforce analysis and custom report columns — version 0.1.24
+
+- 226 Rust tests and964 local PostgreSQL assertions passed. Current headcount,
+  clipped daily/weekly/monthly recorded trends, saved calculation/overtime
+  consistency, company/Manager scope, safe CSV and legacy filter defaults were
+  verified. Actual headless pointer inputs verified column selection/order.
+- Additive migration `20261022140158` stores personal layouts outside JWT
+  metadata, with own active staff RLS and server revisions. All25 hosted/local
+  migration versions match. Existing HR counts and legacy metadata preserved.
+  Existing security/FK advisories unchanged; new FK index has an informational
+  unused-index notice. No Edge Function change.
+- Actual synthetic Manager Auth verified all headcount groupings, recorded
+  trends, selected CSV order and fresh-sign-in views. Actual Admin/Manager
+  tokens verified own-row privacy, no layout in JWT metadata, stale HTTP409,
+  direct/crosscompany write denial and disabled access with an existing JWT.
+  Real Admin preferences and unrelated HR records preserved; test account
+  disabled, people archived and verification sessions revoked. Password unchanged.
+- Twenty final fictional native previews inspected across light/dark,125%,
+  all groupings/buckets, scoped roles and selected/empty/saved columns.
+  Wrapped table cells and nested chooser sizing were corrected before final
+  captures. No signed-in native button/file-chooser automation is claimed.
+- Normal startup/privacy, exact installer/recovery, signing/private publication
+  and installation are recorded separately in the private version report.
+  No public push, remote CI, Authenticode or other-PC claim is made.
+
+## Personal saved report views â€” version 0.1.23
 
 - 209 Rust tests passed, including fixed/rolling date resolution, bounded and
   untrusted preferences, company/Manager scope checks, own-key Auth transport,
@@ -21,7 +47,7 @@
   local installation state are recorded separately in the private version
   report. No public push, remote CI, Authenticode or other-PC claim is made.
 
-## Atomic employee CSV imports — version 0.1.22
+## Atomic employee CSV imports â€” version 0.1.22
 
 - 200 Rust tests and917 local PostgreSQL assertions passed, including14 import
   workflows, uncertain-response retry HTTP coverage and55 database migration/
@@ -48,7 +74,7 @@
   signing/private publication and installation state belong in the private
   version report. No Authenticode, remote CI, payroll or other-PC claim is made.
 
-## Attendance/leave reports and CSV exports — version 0.1.21
+## Attendance/leave reports and CSV exports â€” version 0.1.21
 
 - 185 Rust tests passed, including nine report workflows and three HTTP checks.
   They verify saved-rule time totals, partial/historical overtime, filed half-day
@@ -74,7 +100,7 @@
   installation are recorded in the private version report. No remote CI,
   Authenticode, payroll or other-PC verification is claimed.
 
-## Overtime approvals — version 0.1.20
+## Overtime approvals â€” version 0.1.20
 
 - 173 Rust tests and 862 local PostgreSQL assertions passed: own submission,
   candidate caps, partial review/revoke, current reporting scopes, no self-review,
@@ -100,7 +126,7 @@
   installers, signing/publication and installation are recorded in the private
   version report once completed. No remote CI or Authenticode claim is made.
 
-## Attendance correction requests — version 0.1.19
+## Attendance correction requests â€” version 0.1.19
 
 - 166 Rust tests and 802 local PostgreSQL assertions passed for the implementation: seven new request workflows, a guarded RPC/history HTTP contract and 66 database/preservation/index checks after the existing 736. Coverage includes own submission, no premature attendance write, one pending request/date, Manager/HR review, no self-approval, immutable proposals/decisions, reason validation, stale parent/request revisions, current reporting scope, break-bound revalidation, cancellation/rejection, linked audit, rule retention, DST conversion and disabled/unassigned/anonymous denials.
 - Migrations `20261022050704_attendance_correction_requests.sql` and `20261022081216_attendance_request_context_index.sql` are deployed. The second covers the private context FK reported by the advisor; existing security findings and five older unindexed-FK findings remain. Original counts matched when excluding newly labeled module fixtures. Existing attendance/corrections were not rewritten. Optional Docker catalog-cache refresh remained unavailable; actual hosted schema and behavior were independently verified.
@@ -111,7 +137,7 @@
 
 Normal optimized startup/privacy, exact installer/recovery, signed private publication and installation are recorded separately with private artifacts. No public push/remote CI, Authenticode, user Update-now automation or running-parent update-wait verification is claimed.
 
-## Attendance time calculations — version 0.1.18
+## Attendance time calculations â€” version 0.1.18
 
 - 158 Rust tests and 736 local PostgreSQL assertions passed for the functional implementation, including nine calculation workflow tests and 55 new migration/permission/preservation assertions after the existing 681 checks. Coverage includes whole-minute grace, early departure, actual outside-shift unpaid intervals, optional pre-shift time, minimum/rounding, overnight/DST handling, unavailable/review states, snapshots, reasoned application, optimistic revisions and roles. The authenticated probe caught sorting a company-keyed policy table by a nonexistent `id`; the client now sorts by `company_id` and the HTTP contract test guards both policy tables. Final versioned tests/build and packaging are recorded with the private artifacts.
 - Migration `20261022041651_attendance_calculations.sql` is deployed and matches hosted history. Employee, attendance, correction, leave, document, shift, assignment and break counts stayed unchanged through deployment. A neutral company policy was seeded; existing attendance was not backfilled. Policy and both history tables have RLS/read-only client grants. Public RPCs are security invokers; private handlers protect company/role/reason/revision checks and retained history. Existing security-advisor notices and unindexed-FK findings are unchanged; new unused-index INFO findings are expected. The optional CLI Docker catalog cache could not refresh, while actual hosted schema and behavior were verified independently.
@@ -122,7 +148,7 @@ Normal optimized startup/privacy, exact installer/recovery, signed private publi
 
 Normal optimized startup/privacy, exact installer/recovery, signed private publication and installation are recorded separately with the versioned private artifacts. No public push, remote CI, Authenticode, user Update-now automation or running-parent update-wait verification is claimed. File recovery does not remove the database schema.
 
-## Paid/unpaid attendance breaks — version 0.1.17
+## Paid/unpaid attendance breaks â€” version 0.1.17
 
 - 149 Rust tests and 681 local PostgreSQL assertions passed for the functional implementation, including eight new break workflow tests and 61 break migration/workflow checks. Coverage includes rules, saved classification, actual unpaid totals, no automatic deduction, own controls, checkout protection, bounds, overlap, retained correction/void history, legacy snapshots and optimistic revisions. The final versioned build and packaging checks are recorded separately with the artifacts.
 - Migration `20261022035331_attendance_breaks.sql` is deployed and its version matches hosted history. Existing employee, attendance, correction, leave, document, template and assignment counts matched across deployment; both break tables initially contained no rows. New tables have RLS/explicit read-only client grants. The public RPC is a security invoker; its private handler checks protected membership, own/HR scope, parent-first locking, revisions, server time and saved classification. An attendance trigger rejects checkout during an open break and corrections outside recorded break bounds. Existing security-advisor notices are unchanged.
@@ -133,7 +159,7 @@ Normal optimized startup/privacy, exact installer/recovery, signed private publi
 
 Normal optimized startup/privacy, exact installer/recovery, signed private publication and local installation are recorded with the versioned private artifacts. No public push, remote CI, Authenticode, user Update-now button automation or running-parent update-wait verification is claimed.
 
-## Shift schedules and employee assignments — version 0.1.16
+## Shift schedules and employee assignments â€” version 0.1.16
 
 - 141 Rust tests pass, including time-field fit/alignment, dated schedule selection, template/attendance snapshots, overnight attribution, revisions, hire dates, roles and the existing HR modules. 620 local PostgreSQL assertions pass: 476 legacy checks before upgrading, 74 leave checks and 70 shift/preservation checks. Compiler concurrency was reduced after this PC reported paging-file exhaustion; the final suite completed with incremental compilation disabled and two jobs.
 - Migration `20261022030213_shift_schedules.sql` is deployed; existing employee, attendance, correction, leave and document counts matched across deployment. Historical attendance plans remain unset; earlier schedules were not invented. All three new tables have RLS/read-only client grants. Public RPCs remain security invokers; private handlers recheck protected HR membership, company locks and optimistic employee/template/time-zone versions. Existing security-advisor notices are unchanged.
@@ -145,9 +171,9 @@ Normal optimized startup/privacy, exact installer/recovery, signed private publi
 Normal optimized build/startup/privacy, exact source archive, installer/recovery, private update publication and installation evidence are recorded in each deployment's separate BUILD/delivery report. This source report does not claim remote CI, Authenticode, user Update-now button automation or running-parent update-wait verification.
 
 
-## Chart alignment, leave policies and approval chains — version 0.1.15
+## Chart alignment, leave policies and approval chains â€” version 0.1.15
 
-- Fixed branch/leaf card alignment with an exact gutter and non-advancing expander placement. The paint regression checks equal peer origins and consistent indentation at normal/125%. Leave includes company workweeks/dated holidays, configurable paid/unpaid types, morning/afternoon/full-day requests, annual/monthly entitlement, capped expiring carryover, pending reservations, cancellation reasons and retained history. Administrators configure 1–5 ordered per-type reviewer/manager/HR/Admin/specific-staff steps. Final approval alone changes reserved days to used leave; self-approval, stale decisions and overlapping halves are rejected.
+- Fixed branch/leaf card alignment with an exact gutter and non-advancing expander placement. The paint regression checks equal peer origins and consistent indentation at normal/125%. Leave includes company workweeks/dated holidays, configurable paid/unpaid types, morning/afternoon/full-day requests, annual/monthly entitlement, capped expiring carryover, pending reservations, cancellation reasons and retained history. Administrators configure 1â€“5 ordered per-type reviewer/manager/HR/Admin/specific-staff steps. Final approval alone changes reserved days to used leave; self-approval, stale decisions and overlapping halves are rejected.
 - All 132 Rust tests and 550 local PostgreSQL assertions passed. The database runner verifies 476 legacy checks before upgrading the retired leave-write contract, then 74 migration/new-workflow checks. Tests cover calendars, charges, scope, ordering, half-day overlap, reservations, carryover/expiry, unknown hire dates, immutable history, revisions, compatibility filtering and scalar RPC responses. Formatting/whitespace checks passed. Unchanged provisioning/publisher Node handlers were not rerun.
 - Three checked-in migrations are deployed and match hosted history; required schema is 20261021210727. Existing original data digests matched across the first migration. Follow-ups prevent inferred accrual/carryover before hire/tracking and preserve older-client sign-in/update compatibility. New clients send a read-contract header; it grants no authorization. Public RPCs remain invokers; private handlers check protected membership and hold the company lock. New tables have RLS/explicit grants; direct client leave writes are retired. The final rollback-only hosted role checks passed Manager/HR/Admin/Employee/disabled/anonymous scope, ordered steps, stale conflicts and limited reviewer receipts, with all test Auth/data changes rolled back. These use simulated PostgreSQL subjects, not nonadministrator Auth tokens.
 - Actual authenticated Rust checks passed calendar quote versus saved charge, reservations, AM/PM overlap, multistage review, stale policy/decision conflicts, cancellation/replay rejection, saved charge/plan retention after calendar edits and fresh sign-in persistence. Original company policy defaults were restored. Labeled archived fixture employees, cancelled requests and inactive type codes remain for future tests; inactive types are hidden by default. Unrelated employment/contact/document/company/branding/attendance/account records were unchanged. Verification sessions were revoked; passwords were unchanged. Real HTTP checks proved legacy/new client reads, compatible update feed and anonymous denial.
@@ -155,7 +181,7 @@ Normal optimized build/startup/privacy, exact source archive, installer/recovery
 - Balances use the current policy/employee allowance and projected credits through the requested start date; this is not a posted credit or effective-date policy ledger. Unknown hire dates do not create accrued/carry credits. Delegation/escalation, cross-year single requests, opening-balance imports, manual credit adjustments and the employee portal remain separate work. See docs/LEAVE-POLICIES.md. No new security advisor warning appeared; the existing leaked-password-protection warning and intentional private-release-table informational notice remain. Exact installer/recovery, private signed publication and installed payload proofs are recorded with the versioned artifacts. No public push, remote CI, Windows Authenticode or other-machine validation is claimed.
 
 
-## Organization chart — version 0.1.14
+## Organization chart â€” version 0.1.14
 
 - Employees has Directory and Organization chart views. Cards use saved Reports to, show employment directory fields and open the existing record with Back to chart. Search, department/location filters, expand/collapse, HR-only archived inclusion and explicit unset/outside-view roots preserve reporting context without inventing managers. Managers remain limited to self and active direct reports; HR/Admin retain company scope. The chart grants no extra record access and contains no private contact, document or account-security fields.
 - All 123 Rust regression tests passed, including seven new hierarchy/scope/filter tests and three UI input/paint tests. Tests cover deterministic forests, retained authorized ancestors, inactive/unset location choices, archives, cross-company/indirect-report denial, signed-out/Employee denial, malformed-cycle fallback and a 1,500-level iterative tree. Real headless input verifies card-open versus team-toggle actions. Paint checks require vertically stacked wrapped values, reserved row height and viewport bounds in deep filtered trees at normal/125% scale. Initial native previews caught inherited horizontal card layout and accumulated frame-border overflow; both were corrected and the regressions pass.
@@ -163,7 +189,7 @@ Normal optimized build/startup/privacy, exact source archive, installer/recovery
 - Seventeen final fictional native captures were inspected: normal/125% chart, filtered context, collapsed teams, archives, long light/dark values, deep hierarchy, empty/no-match, Manager/HR scopes, record return and cycle fallback. The normal feature-free build passed isolated configured startup/closure and source/binary privacy checks. Signed-in native form/button automation is not claimed; input actions are covered by the headless UI tests above.
 - No database, RPC, grant, Edge Function or dependency change is needed. Existing schema `20261021164228` remains required. The database/hosted-role/Node-handler mutation suites from 0.1.13 were not rerun for this client-derived chart. Exact installer/recovery, signed private publication and local installation are recorded with the versioned private artifacts. No public push, remote CI, Windows Authenticode or other-machine validation is claimed.
 
-## Private employee documents / digital 201 files — version 0.1.13
+## Private employee documents / digital 201 files â€” version 0.1.13
 
 - HR/Admin can upload private PDF, DOCX, PNG or JPEG files up to 10 MiB inside saved employee records; label contracts/IDs/certificates/forms; keep optional dates/notes; search/filter; edit metadata; download original; archive/restore; and inspect protected document history. Documents save separately from employee/contact changes and survive employee archival. Expiry badges are reference indicators; notifications, e-signing and approval workflows remain future work.
 - All 113 Rust tests and 476 local PostgreSQL assertions passed. Coverage includes validation, immutable original bytes/paths, actor/audit, revisions, roles, retention, checked downloads, pending retry/discard, HTTP contracts and database policies. DOCX tests cover Word package/content types/relationships/XML, CRC, expansion/depth limits, invalid/encrypted/corrupt archives, unsafe paths and known VBA/macro types. Local Auth/Storage are simulated. Unchanged provisioning/publisher handlers retain earlier 32-test evidence and were not rerun here. Sandbox restrictions initially blocked temporary branding-file replacement and local HTTP; the same suite passed outside the sandbox.
@@ -172,14 +198,14 @@ Normal optimized build/startup/privacy, exact source archive, installer/recovery
 - Seventeen final fictional native previews were inspected at normal/125% scale: list/empty/archived/pending, file/actions/history, light/dark upload/edit/error dialogs, DOCX selection/row and Manager restrictions. Scrollable bodies retain fixed save/cancel/close controls. These are native layout captures, not signed-in native button automation. The normal executable excludes QA controls. Final normal startup/privacy, exact installer/recovery, private signed update and installation evidence is recorded with the versioned private artifacts.
 - Advisors found no new security warning; the pre-existing [leaked-password-protection setting](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) and intentional private release-table informational notice remain. Pinned ZIP 9.0.5 and existing XML 0.41.0 inspect DOCX in memory without extraction/Office execution. This is not antivirus or full document compatibility validation. UTF-8 OOXML and stored/deflate entries are supported; DOC/DOCM/encrypted files are not. Storage backup/recovery remains separate from database/desktop recovery. No public Git push, remote CI, Windows Authenticode or other-machine verification is claimed.
 
-## Employment history row alignment — version 0.1.12
+## Employment history row alignment â€” version 0.1.12
 
 - Field labels now use the same measured top-down cell layout as Saved value and Before/After cells. This fixes the vertical mismatch while retaining the height needed for wrapped values. The change is limited to history presentation; database, authorization, saved events, dependencies and deployment profiles are unchanged.
 - The new actual paint-geometry regression reproduced the original Employee code misalignment before the fix. It now checks aligned headers and field/value text in starting snapshots and change entries at normal/125% scale, including long values. Both layout regressions and the complete 97-test Rust suite passed.
 - Nine fictional native previews were inspected: snapshot headers/first rows, scrolled and bottom rows, Before/After changes, normal/125% scale and long values in light/dark themes. Labels align with the first line of their values; wrapped rows retain their height and Save/Cancel remain visible. Actual signed-in native form interaction is not claimed.
 - No SQL or Edge Function changes were required. The database, hosted access and live employee mutation suites from 0.1.11 were not rerun for this presentation-only patch. Final feature-free build, privacy/startup, exact installer/recovery, signed private update and installation evidence are recorded separately with the versioned artifacts. No public push, remote CI, Windows Authenticode or other-machine verification is claimed.
 
-## Automatic employment history — version 0.1.11
+## Automatic employment history â€” version 0.1.11
 
 - HR Generalists and Administrators open the saved employee record's History tab for automatic creation/update events, saved actor/role/time and before/after values. Existing employees receive a Starting snapshot without invented earlier history. Ten Employment fields are tracked. Contact-only, role-only and unchanged saves add no event; archiving retains the timeline. Profile, Manager and ordinary Employee scopes do not gain HR-only history. Recorded time is the database save time; scheduled/effective-date employment actions remain future work.
 - The additive migration `20261021125457_employment_history.sql` adds explicit employment-only snapshots, saved manager/type/location labels, server sequence/time, indexes, HR/Admin RLS and an immutable-event guard. The narrow recording helper is a private fixed-search-path trigger; no client audit writes or new public RPC are exposed. Protected active membership/canonical employee names supply actors; trusted operator/bootstrap writes without an HR actor are labeled System. History and combined employee/contact/staff saves share one transaction. Existing clients and provisioning are captured without a function redeployment or signature change.
@@ -188,16 +214,16 @@ Normal optimized build/startup/privacy, exact source archive, installer/recovery
 - Real Rust adapter and authenticated HTTP checks passed creation/update/archive events, saved actor and labels, fresh-sign-in persistence, contact-only saves, older-client automatic capture, unchanged unrelated records/history/branding and direct/anonymous denials. Two concurrent employee edits both committed with an intact intermediate before/after chain; this module does not add optimistic employee conflict prevention. The labeled synthetic employee remains archived and test choices inactive. Verification sessions were revoked and account credentials/profile were unchanged.
 - Seventeen final fictional native previews were inspected at normal/125%, light/dark, HR/Manager scopes, starting/creation/archive/empty timelines and scrolled long-value/snapshot rows. Initial previews caught zero-height wrapped cells overlapping later rows; measured vertical cells and the regression test fixed that defect. Final native/privacy/startup, immutable private publication and exact installed-artifact results are recorded with the versioned private artifacts. Actual signed-in native field/button automation, public push, remote CI, Windows Authenticode and other-machine rollout are not claimed. Contracts, attachments/digital 201 files and organization charts remain subsequent modules.
 
-## Employment types and work locations — version 0.1.10
+## Employment types and work locations â€” version 0.1.10
 
 - Administrators manage company-owned employment types and work locations in Settings. HR Generalists and Administrators assign them in the shared Employee/Account Manager Employment editor; Profile mirrors both read-only. Employees provides assignment columns, search and filters, including Not set and inactive choices. Existing employees are left unclassified. Starter choices are editable labels rather than legal classifications.
-- Choice names are trimmed, case-insensitively unique within each list and limited to 1–80 characters. Disabling preserves current assignments and filter visibility while preventing new assignments. Renaming updates the current displayed label; no employment-history module is implied. Revision checks reject stale choice edits with PT409. Unsaved choice forms block update/restart. Both existing attendance entry shortcuts are preserved.
+- Choice names are trimmed, case-insensitively unique within each list and limited to 1â€“80 characters. Disabling preserves current assignments and filter visibility while preventing new assignments. Renaming updates the current displayed label; no employment-history module is implied. Revision checks reject stale choice edits with PT409. Unsaved choice forms block update/restart. Both existing attendance entry shortcuts are preserved.
 - All 86 Rust tests, 340 local PostgreSQL assertions and 32 provisioning/publisher Node tests passed. New checks cover option validation, revisions, retained inactive values, filters, roles, RPC transport/reload, nullable assignments and atomic employee/contact/staff saves. The existing provisioning handler forwards the complete employee object; its regression fixture now includes both new IDs. Local Auth/Storage remain simulated. The Windows installer/recovery integration is separate from the default Rust run and recorded with the exact final artifacts.
 - Additive migration `20261021121404_employment_types_and_locations.sql` was applied to the dedicated prototype, and its checked-in version matches hosted history. Protected dictionaries, indexed composite employee references and server-side membership/role checks enforce company boundaries. Choice configuration and employee validation share the company advisory lock. Older clients omitting the new keys retain assignments; explicit null clears them. No Edge Function redeployment was needed.
 - Hosted rollback-only checks passed HR assignment/configuration separation, Manager read-only employment, unassigned denial, stale conflicts, legacy preservation and inactive retention/new-assignment denial. Live Rust and authenticated HTTP checks passed save/reload, current labels, archived fixture retention and unchanged unrelated records/branding. Two concurrent edits produced exactly one save and one PT409 conflict. Direct dictionary writes and anonymous configuration were denied. Clearly labeled inactive choices and an archived synthetic employee remain for repeat testing. Verification sessions were revoked; account passwords/profile were unchanged.
 - Twelve final fictional native previews were inspected at normal/125% scale: Settings lists and Manager restrictions, add/inactive choice dialogs, new/inactive employee assignments, inactive filters and read-only Profile. Long selector labels truncate and long Profile values wrap; save controls remain visible. Signed-in native field/button automation is not claimed. Final normal-build/privacy/startup, signed private publication and exact installer/installed-startup results are recorded separately with the versioned artifacts. No public push, remote CI, Windows Authenticode or other-machine rollout is claimed. The previously documented leaked-password-protection Auth warning remains; no new security warning was found.
 
-## Reasoned past attendance and correction history — version 0.1.9
+## Reasoned past attendance and correction history â€” version 0.1.9
 
 - HR Generalists and Administrators can record missing past/current attendance and correct check-in/check-out with a required reason. The selected employee/work date stay fixed. Optional check-out dates support overnight shifts; open entries block another check-in. Routine Check in / Check out now retain database-server timestamps. Archived historical corrections preserve inactive status and history. No employee request/approval-chain module or employee deletion was added.
 - Immutable HR-only history stores the verified actor/name/role, server save time, reason and full before/after records. Custom timestamps and revisions remain unavailable as direct client writes. The guarded private helper uses a short-lived protected transaction context; the write and audit are atomic. Revision checks and row locking reject stale edits, and the exclusion constraint arbitrates overlapping shifts. Both new migrations are additive; legacy server-timed clients remain compatible.
@@ -207,7 +233,7 @@ Normal optimized build/startup/privacy, exact source archive, installer/recovery
 - The first live concurrency test caught an explicit 40001 response causing PostgREST 14 to retry indefinitely. The follow-up public invoker wrapper maps it to PT409 (HTTP 409). Only the identified retrying test connection was terminated, and no correction requests remained active afterward. The corrected live test requires the actual conflict message and passed. See [Supabase's documented retry behavior](https://supabase.com/docs/guides/troubleshooting/high-cpu-and-infinite-transaction-retries-when-using-custom-error-codes-in-rpc-functions-77326b).
 - Nine final fictional native previews were inspected at normal/minimum/125% size: missing entry, existing correction, lower reason/save area, visible stale-conflict error, light/dark history and role-specific historical attendance. Save/Cancel remain outside the scroll area, conflict text stays visible, and history uses a supported text separator. Native signed-in field/button automation is not claimed. Final normal-build privacy/startup, exact installer/recovery, private publication and installed-startup evidence are recorded separately with the versioned artifacts. No public push, remote CI, Windows Authenticode or other-machine rollout is claimed.
 
-## Attendance calendar, pre-login branding and compact company defaults — version 0.1.8
+## Attendance calendar, pre-login branding and compact company defaults â€” version 0.1.8
 
 - Daily attendance replaces typed dates and daily arrows with a native calendar, direct month/year selection, recorded-day highlighting and Today. Future dates are disabled. The daily roster shows recorded attendance, approved weekday leave and no recorded check-in. Future hires are excluded; archived people with historical records remain visible. Missing records are not declared confirmed absence because shift/holiday rules and complete employment history are not implemented. Existing check-in/server-time and original-date overnight checkout rules remain enforced.
 - Settings places company name/time zone/leave/save in the left column and shared logo controls in the right. The company name/logo now appear on sign-in. Only validated company branding is cached locally, scoped to the packaged connection; no account, employee, password, token or session fields are persisted. Successful sync refreshes it and logo removal clears it. A new device uses packaged/default branding until its first authenticated sync; another device's changes sync after sign-in. Private Storage/RLS remain unchanged.
@@ -217,7 +243,7 @@ Normal optimized build/startup/privacy, exact source archive, installer/recovery
 - The real Rust adapter verified a temporary transparent logo upload, local branding persistence/reload without authentication, unchanged employee/contact data, and restoration of both original hosted and cached branding. No real company logo was present at the check; the synthetic image was removed. The verification session was revoked and original credentials/profile preserved.
 - No schema, policy, hosted function or dependency change was needed. The 0.1.7 database/handler suites remain historical evidence for unchanged server behavior and were not rerun for these local UI/cache changes. The signed private release, installer hashes, installed-startup evidence and limitations belong in the versioned private report. No public push, remote CI, Windows Authenticode or other-machine/workplace rollout is claimed.
 
-## Employee-first staff, own Profile, company logo and sign-in layout — version 0.1.7
+## Employee-first staff, own Profile, company logo and sign-in layout â€” version 0.1.7
 
 - The sign-in version row no longer consumes the available height. Headless egui geometry checks verify the actual form at normal and minimum-size/125% equivalent viewports, including scroll-content height. Existing Enter-submit tests still pass. Native sign-in captures at both scales were inspected without the reported overflow.
 - Account Manager now lists staff-role employees by name/code, hiding disabled records unless requested. It and Employees open the same Employment/Contact details/Emergency contact/Staff role & sign-in editor. The new invoker RPC saves employment, contacts and role atomically, preserving established identities. Profile mirrors all Employment fields read-only and edits only own private contact/emergency details. Photo/security/session controls remain; account metadata is never a permission source.
@@ -228,7 +254,7 @@ Normal optimized build/startup/privacy, exact source archive, installer/recovery
 - The real Rust adapter passed own contact/emergency save and fresh-sign-in persistence without changing Employment or account details; original contact values were restored and rechecked through another sign-in. A synthetic transparent logo passed upload, private fresh-sign-in retrieval, removal and final absence. Combined provisioning created exactly one employee with full employment/contact/emergency fields and a disabled, unconfirmed staff account; an existing staff edit updated that same person. The labeled synthetic fixture is retained as authorized. Original administrator credentials, account details and company connection were unchanged. Test sessions were revoked. Private update feed compatibility passed.
 - Hosted post-test counts were three Auth identities/memberships, four employees and three contact rows (including the restored blank own-contact row); one Administrator remains active. No company logo revision/object remains. Existing advisor notices remain historical rollout items. No public push, remote CI, other-machine test or full native signed-in form automation is claimed. The private release/installation report supplies publication hashes, installer/recovery and installed-startup evidence once completed.
 
-## Unified employee records, automatic identities, themes and updates — version 0.1.6
+## Unified employee records, automatic identities, themes and updates â€” version 0.1.6
 
 - Employee names and the single Edit action open one record with Employment, Contact details and Emergency contact tabs. Save changes uses one invoker/RLS RPC transaction. Reports to is an employee relationship, including direct reports without accounts. Every company account receives a unique employee identity; existing Administrator access was preserved and backfilled. Unknown hire dates, departments and titles are not invented. Account roles remain protected membership data.
 - Light, Dark and System themes join display scale and time format in Settings. The installed version appears at the top right. Updates are checked after sign-in and every 15 minutes. A compatible release offers Update now; pending edits block restart. A signed private manifest, bounded download and SHA-256 verification precede the copied local helper, per-user installer and sign-in restart. Company connection/key/logo files are preserved. The helper restores prior app files after installation failure; this does not undo a database migration.
@@ -239,19 +265,19 @@ Normal optimized build/startup/privacy, exact source archive, installer/recovery
 - The security advisor reported the existing disabled leaked-password protection warning and an informational no-policy notice on the intentionally private release catalog. Client catalog grants are revoked; only the trusted hosted publisher can write it and staff use a guarded metadata RPC. Performance notices concerned unused relationship/audit indexes in this small prototype; these indexes were retained. See [password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) and [the private-table notice](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy).
 - Windows executables remain without an Authenticode certificate; update payloads use a separate Ed25519 signature. The private signing key is never packaged or committed. No public release/push, remote CI result, employee portal or automatic database deployment is claimed. Confirmation redirect/company mail configuration remains a rollout prerequisite. Live adapter, provisioning, private signed release/download and actual installation results are recorded in the versioned private report without retaining account credentials.
 
-## Employee contacts — version 0.1.5
+## Employee contacts â€” version 0.1.5
 
-- Employees → Contacts provides optional personal phone/email/home address and one emergency contact with relationship, primary phone and optional alternate phone. Both tabs save together. Administrator/HR edit all company contact records; other active members read only their own linked record. Manager team-directory scope does not reveal team private contacts. Ordinary Employee desktop admission remains blocked and the portal remains future work.
+- Employees â†’ Contacts provides optional personal phone/email/home address and one emergency contact with relationship, primary phone and optional alternate phone. Both tabs save together. Administrator/HR edit all company contact records; other active members read only their own linked record. Manager team-directory scope does not reveal team private contacts. Ordinary Employee desktop admission remains blocked and the portal remains future work.
 - All 45 Rust tests passed, including contact normalization, optional clearing, invalid field/partial emergency rejection, retention for archived employees, role restrictions and actual HTTP contracts for create/update/reload, company/employee filters and zero-row update errors. Formatting and the optimized normal Windows build passed. Direct dependency versions are unchanged.
 - All 166 local PostgreSQL assertions and all 22 provisioning-handler regression tests passed. Contact assertions cover explicit grants/RLS, HR edits, own-only Manager/Employee reads, no client deletion or identity/timestamp reassignment, disabled/unassigned/anonymous denial, cross-record links, field validation and archived records. Local Auth/Storage are simulated; these are not concurrent-client or hosted mail tests.
 - Additive migration `20261021033544_employee_contact_details.sql` is deployed to the dedicated prototype; its filename matches hosted history. No existing employee rows or account policies were rewritten. The rollback-only `tools/db-tests/hosted-contacts-smoke.sql` passed hosted validation, Administrator/HR writes, own-only Manager/Employee reads, membership revocation and outsider/anonymous denials. Its temporary role actors rolled back. One initial tool request expired before execution; current counts were checked and the retry succeeded.
-- Native fictional QA captures were inspected for the directory, editable contact form, HR emergency tab at minimum 1000 × 720 window/125% scale and Manager own read-only contacts. An initial hidden-footer problem was corrected with a scrollable body and fixed actions; delayed capture also avoids the opening animation. Save/Cancel and read-only Close are visible. These are native synthetic-layout checks, not signed-in native form interactions.
+- Native fictional QA captures were inspected for the directory, editable contact form, HR emergency tab at minimum 1000 Ã— 720 window/125% scale and Manager own read-only contacts. An initial hidden-footer problem was corrected with a scrollable body and fixed actions; delayed capture also avoids the opening animation. Save/Cancel and read-only Close are visible. These are native synthetic-layout checks, not signed-in native form interactions.
 - A private probe compiled against the actual Rust adapter signed in to the dedicated prototype, changed only the labeled synthetic contact fixture, verified server reload/timestamp and persistence after sign-out/new sign-in, rejected an incomplete emergency contact and checked that account Profile/email were unchanged. Both probe sessions were revoked. Credentials stayed stdin/memory-only. This verifies the cloud adapter, not native authentication automation.
 - The labeled synthetic employee `QA-CONTACT-001` and its fictional contact record remain for repeat testing, as authorized. Final hosted counts are one original Auth user/session/membership, one synthetic employee/contact, zero attendance/leave/access events and one active owner Administrator. The original credentials, deployment profile and plan were preserved. No test accounts were retained because this module did not require new real Auth identities.
 - Security advisors report only the pre-existing [leaked-password-protection warning](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection); performance advisors have an informational [unused-index notice](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index). No new contact-table security issue was reported. Company mail/confirmation landing setup remains a rollout item from 0.1.4.
 - Installation, exact payload hashes and normal startup are recorded in the private 0.1.5 installation report. This remains an unsigned private Windows prototype, with no push, public release or remote CI claim. Employment history, documents/201 files and organization charts are not implemented by this update.
 
-## Account Manager — version 0.1.4
+## Account Manager â€” version 0.1.4
 
 - Administrators can create/link company accounts, assign four fixed roles, link employee records and reporting managers, enable/disable access and inspect recent access changes. Account Manager is above Settings and hidden from every other role. Manager desktop access is retained; ordinary Employee accounts are portal-only and their desktop sign-in is rejected before company HR records or private photos load. The employee portal itself is not implemented.
 - All 40 Rust tests passed, including desktop role admission, manager access without administrator account reads, Employee rejection/session revocation, disabled account provisioning, own-leave review denial, signed-in HTTP contracts and worker cleanup on revoked access. Formatting and the optimized normal Windows build passed. No dependency versions changed.
@@ -268,7 +294,7 @@ Normal optimized build/startup/privacy, exact source archive, installer/recovery
 - The Windows setup is private and unsigned. No push, public release, remote CI, automatic updater, full approval chains, employee portal or company production-readiness claim is included.
 - The earlier 0.1.3 live Profile checks subsequently passed personal/photo/display updates, Enter sign-in, wrong-password rejection, password/email changes and restoration, and local/other/global session controls. Synthetic data was removed and the original account restored. These historical checks were not repeated for 0.1.4. Email confirmation's localhost redirect remains a recorded deployment issue; configure an appropriate confirmation destination before company rollout.
 
-## Full Profile page and circular account photo — version 0.1.3
+## Full Profile page and circular account photo â€” version 0.1.3
 
 - The bottom-left circular photo/initials control opens Profile as a full main-content page, with the same navigation behavior as Settings. Personal details, Account & security, and Sessions group its account functions. Display scale and 12/24-hour time preferences belong in Settings.
 - All 32 Rust tests passed. New checks cover avatar hit testing with/without a texture, bounded image decoding/cropping/circular alpha, personal/security validation, Auth metadata and private-photo round trips, failed uploads, incorrect-current-password rejection, fresh-session password/email updates, pending email confirmation, demo isolation, and global sign-out cleanup even when the server is unreachable. A final regression test checks that photo/security updates preserve unsaved personal/display edits while sign-out clears those drafts. The fixture listener explicitly resets accepted Windows sockets to blocking mode; initial fixture failures were corrected before the passing run.
@@ -278,16 +304,16 @@ Normal optimized build/startup/privacy, exact source archive, installer/recovery
 - The optimized Windows build completed successfully. Its exact source revision, executable/setup hashes, installation state and artifact evidence are recorded in the version's private distribution manifest/report. Actual account passwords, email and photos were not changed to test this update; live signed-in Profile actions, email delivery/confirmation and the native photo chooser still require user interaction. Previous live HR workflow checks below remain historical evidence for unchanged HR behavior.
 - Supabase's security advisor reported one configuration warning: [leaked-password protection is disabled](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). Supabase documents that feature as Pro-plan and above; the current Free plan was preserved. Current-password checks and normal server password-policy validation remain active. No privileged client key, persistent session, public photo URL, remote publication or unrelated hosted-project change was introduced.
 
-## Company sidebar, profile and Enter-key login — version 0.1.2
+## Company sidebar, profile and Enter-key login â€” version 0.1.2
 
 - Native live workflows were verified in the user-signed-in 0.1.1 installation before rebuilding: employee creation/editing and server refresh, attendance check-in/check-out, annual leave request/approval and balance 15 to 14, and successful sign-out returning to an empty login screen. Hosted queries independently confirmed the saved records. Cleanup verified the exact synthetic employee and QA markers before deleting only that employee's attendance, leave and parent record. The database returned to one company and zero employees, attendance and leave requests.
 - The sidebar now places a transparent company logo, or initials fallback, above the company name. It contains only the five navigation items followed by a bottom-left Profile menu. COMPANY/WORKSPACE headings and the old prototype footer were removed. Sign out moved from Settings into Profile; company Settings retains policy/default fields only.
-- The optional deployment logo is bounded to PNG, 2 MiB and 2048 × 2048 pixels. Tests confirm transparent and partially transparent pixels are preserved and invalid/oversized images are rejected. No actual company logo was supplied; QA used a synthetic alpha fixture that is not packaged.
+- The optional deployment logo is bounded to PNG, 2 MiB and 2048 Ã— 2048 pixels. Tests confirm transparent and partially transparent pixels are preserved and invalid/oversized images are rejected. No actual company logo was supplied; QA used a synthetic alpha fixture that is not packaged.
 - All 22 Rust tests passed, including two headless egui tests that send Enter events to the actual email/password widgets and confirm one submission without a newline and no resubmission while busy. This verifies keyboard handling without automating a Windows authentication dialog or sending synthetic credentials to a real server.
 - Native screenshots were visually inspected for the sidebar, company Settings without account actions, Profile with a fictional account at minimum window size and a long company name, transparent-logo rendering, and sign-in. The account preview remains visibly labeled demo and never authenticates. One unsupported decorative arrow glyph was removed after inspection.
 - Database schema, authorization policies and HR workflow rules are unchanged. Installation/build hashes and the exact source revision belong to this version's distribution manifest and update report. The revised installed UI requires a fresh local login after restart; native live workflows above were tested before the visual update, not falsely reported as retested afterward.
 
-## Company deployment flow — version 0.1.1
+## Company deployment flow â€” version 0.1.1
 
 - Company database selection is deployment configuration. The app reads only its packaged profile; remembered device settings and environment variables cannot select another project. Connection setup controls were removed from the interface.
 - Configured installations start on HRIS account sign-in with no company records or fictional demo data loaded. Successful authentication opens Overview. Sign-out clears company records and returns to sign-in, including when remote session revocation fails.
@@ -296,7 +322,7 @@ Normal optimized build/startup/privacy, exact source archive, installer/recovery
 - The database schema, API authorization model and company data were not changed. The earlier 55 PostgreSQL assertions and actual live adapter checks below remain historical evidence for the unchanged database behavior; they were not repeated for this UI/deployment change.
 - Build/installation hashes, the candidate's exact source revision and final installed-screen evidence are recorded in its distribution manifest and installation report. Interactive live sign-in remains a local user action; no automated UI authentication or privileged client key was introduced.
 
-## Earlier Supabase connection update — version 0.1.0
+## Earlier Supabase connection update â€” version 0.1.0
 
 - All 17 Rust tests passed: 14 HR workflow/configuration tests, two local Auth/REST contract tests, and one company-profile precedence/fail-closed test. Formatting was applied with the pinned-compatible Rust 1.95.0 toolchain. Tests use fictional identities and credentials.
 - All 55 local PostgreSQL schema, permission, singleton-company, and workflow assertions passed against both checked-in migrations.
@@ -314,7 +340,7 @@ The hosted SQL tests use database roles and simulated request subjects; the addi
 
 The initial prototype separately passed inspection of Overview, Employees, Attendance, Leave, Settings, Add employee and Request leave, plus a normal optimized Windows startup/close check. Its original 15 integration tests and 52 local SQL assertions were superseded by the current expanded suites above. The original screenshot helper returned transparent pixels; the supported egui screenshot callback is used instead. Restricted local networking required the HTTP fixture test to run with normal loopback access. A cache hard-link warning fell back to file copying; it did not fail compilation.
 
-## Earlier installed Windows check — version 0.1.0
+## Earlier installed Windows check â€” version 0.1.0
 
 - A per-user NSIS 3.11 setup compiled without warnings and installed with exit code 0. It created desktop and Start menu shortcuts and a Windows Apps uninstall registration under `io.github.tatselkrik.hrisdesktop`.
 - All six installed payload files matched the prepared distribution by SHA256. The installed app executable is unchanged from the previous verified candidate: `1b75e99680955f7965e4025e0f1eb4c38aeca2eb9bd2fabe761aaf22004250bb`.

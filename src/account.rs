@@ -123,6 +123,8 @@ pub struct AccountProfile {
     pub details: PersonalDetails,
     pub display: DisplayPreferences,
     pub report_views: Vec<crate::report_views::View>,
+    pub report_views_company: Option<Uuid>,
+    pub report_views_revision: i64,
     pub photo: Option<Vec<u8>>,
     pub photo_warning: Option<String>,
 }
@@ -145,7 +147,14 @@ impl AccountProfile {
 pub enum AccountAction {
     SaveDetails(PersonalDetails),
     SaveDisplay(DisplayPreferences),
-    SaveReportViews(Vec<crate::report_views::View>),
+    LoadReportViews {
+        company_id: Uuid,
+    },
+    SaveReportViews {
+        company_id: Uuid,
+        expected_revision: i64,
+        views: Vec<crate::report_views::View>,
+    },
     UploadPhoto(PathBuf),
     RemovePhoto,
     ChangePassword {

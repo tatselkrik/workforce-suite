@@ -25,14 +25,24 @@ pub enum Kind {
     Attendance,
     Leave,
     Summary,
+    Headcount,
+    Trends,
 }
 impl Kind {
-    pub const ALL: [Self; 3] = [Self::Attendance, Self::Leave, Self::Summary];
+    pub const ALL: [Self; 5] = [
+        Self::Attendance,
+        Self::Leave,
+        Self::Summary,
+        Self::Headcount,
+        Self::Trends,
+    ];
     pub fn label(self) -> &'static str {
         match self {
             Self::Attendance => "Attendance detail",
             Self::Leave => "Leave detail",
             Self::Summary => "Employee summary",
+            Self::Headcount => "Workforce headcount",
+            Self::Trends => "Attendance & leave trends",
         }
     }
     pub fn slug(self) -> &'static str {
@@ -40,6 +50,8 @@ impl Kind {
             Self::Attendance => "attendance",
             Self::Leave => "leave",
             Self::Summary => "employee-summary",
+            Self::Headcount => "workforce-headcount",
+            Self::Trends => "attendance-leave-trends",
         }
     }
 }
@@ -54,6 +66,12 @@ pub struct Filter {
     pub include_archived: bool,
     pub include_missing: bool,
     pub leave_status: Option<LeaveStatus>,
+    #[serde(default)]
+    pub headcount_by: crate::workforce::GroupBy,
+    #[serde(default)]
+    pub trend_bucket: crate::workforce::Granularity,
+    #[serde(default)]
+    pub columns: Option<Vec<String>>,
 }
 impl Filter {
     pub fn new(today: NaiveDate) -> Self {
@@ -66,6 +84,9 @@ impl Filter {
             include_archived: true,
             include_missing: true,
             leave_status: None,
+            headcount_by: Default::default(),
+            trend_bucket: Default::default(),
+            columns: None,
         }
     }
     pub fn validate(&self) -> Result<()> {
@@ -77,6 +98,24 @@ impl Filter {
             (self.ends_on - self.starts_on).num_days() < 366,
             "Choose at most 366 days per report."
         );
+        if let Some(columns) = &self.columns {
+            let available = available_columns(self.kind);
+            ensure!(
+                !columns.is_empty() && columns.len() <= available.len(),
+                "Choose at least one available report column."
+            );
+            let mut unique = std::collections::BTreeSet::new();
+            for column in columns {
+                ensure!(
+                    available.contains(&column.as_str()),
+                    "A selected column is unavailable for this report type. Reset columns or choose a saved view with matching fields."
+                );
+                ensure!(
+                    unique.insert(column),
+                    "Choose each report column only once."
+                );
+            }
+        }
         Ok(())
     }
     pub fn filename(&self) -> String {
@@ -98,6 +137,7 @@ pub struct Report {
     pub headers: Vec<&'static str>,
     pub rows: Vec<Vec<String>>,
     pub employees: usize,
+    pub analysis: Option<crate::workforce::Analysis>,
 }
 
 pub fn same_scope(a: &Access, b: &Access) -> bool {
@@ -149,6 +189,75 @@ const COMMON: [&str; 7] = [
     "Work location (current)",
     "Employee status (current)",
 ];
+const ATTENDANCE_FIELDS: [&str; 17] = [
+    "Work date",
+    "Record status",
+    "Check-in (local)",
+    "Checkout (local)",
+    "Record time zone",
+    "Shift (saved/dated)",
+    "Rule version (saved)",
+    "Gross minutes",
+    "Completed unpaid break minutes",
+    "Minutes excluding unpaid breaks",
+    "Calculation status",
+    "Late minutes",
+    "Early departure minutes",
+    "Overtime candidate minutes",
+    "Current approved overtime minutes",
+    "Approved leave days",
+    "Pending correction requests",
+];
+const SUMMARY_FIELDS: [&str; 16] = [
+    "Attendance records",
+    "Completed records",
+    "Open records",
+    "Days without check-in",
+    "Scheduled past days without check-in",
+    "Gross minutes",
+    "Minutes excluding unpaid breaks",
+    "Records without completed net totals",
+    "Records needing calculation review",
+    "Late minutes",
+    "Early departure minutes",
+    "Overtime candidate minutes",
+    "Current approved overtime minutes",
+    "Approved leave days",
+    "Pending leave days",
+    "Pending correction requests",
+];
+const LEAVE_FIELDS: [&str; 12] = [
+    "Request ID",
+    "Leave type (filed)",
+    "Status",
+    "Request start",
+    "Request end",
+    "Charge date",
+    "Filed charge on date (days)",
+    "Filed total (days)",
+    "Day part",
+    "Filed policy version",
+    "Approved steps",
+    "Total approval steps",
+];
+
+pub fn available_columns(kind: Kind) -> Vec<&'static str> {
+    if kind == Kind::Headcount {
+        return crate::workforce::HEADCOUNT_HEADERS.to_vec();
+    }
+    if kind == Kind::Trends {
+        return crate::workforce::TREND_HEADERS.to_vec();
+    }
+    let mut columns = COMMON.to_vec();
+    columns.extend(match kind {
+        Kind::Attendance => ATTENDANCE_FIELDS.as_slice(),
+        Kind::Summary => SUMMARY_FIELDS.as_slice(),
+        Kind::Leave => LEAVE_FIELDS.as_slice(),
+        _ => unreachable!(),
+    });
+    columns
+}
+
 fn person(data: &Snapshot, e: &Employee) -> Vec<String> {
     vec![
         e.employee_code.clone(),
@@ -215,6 +324,9 @@ pub fn build(data: &Snapshot, f: &Filter, now: DateTime<Utc>) -> Result<Report> 
                 .any(|e| e.id == id && e.company_id == data.company.id && permitted(data, id)),
             "This employee is outside your current report access. Choose another employee."
         );
+    }
+    if matches!(f.kind, Kind::Headcount | Kind::Trends) {
+        return crate::workforce::build(data, f, now)?.project_columns();
     }
     let people = employees(data, f);
     let selected: std::collections::BTreeSet<_> = people.iter().map(|e| e.id).collect();
@@ -296,6 +408,7 @@ pub fn build(data: &Snapshot, f: &Filter, now: DateTime<Utc>) -> Result<Report> 
         headers: COMMON.to_vec(),
         rows: Vec::new(),
         employees: people.len(),
+        analysis: None,
     };
     match f.kind {
         Kind::Attendance | Kind::Summary => {
@@ -308,44 +421,9 @@ pub fn build(data: &Snapshot, f: &Filter, now: DateTime<Utc>) -> Result<Report> 
                 "Report exceeds 50,000 employee-days. Shorten the date range or choose an employee/department."
             );
             if detail {
-                report.headers.extend([
-                    "Work date",
-                    "Record status",
-                    "Check-in (local)",
-                    "Checkout (local)",
-                    "Record time zone",
-                    "Shift (saved/dated)",
-                    "Rule version (saved)",
-                    "Gross minutes",
-                    "Completed unpaid break minutes",
-                    "Minutes excluding unpaid breaks",
-                    "Calculation status",
-                    "Late minutes",
-                    "Early departure minutes",
-                    "Overtime candidate minutes",
-                    "Current approved overtime minutes",
-                    "Approved leave days",
-                    "Pending correction requests",
-                ]);
+                report.headers.extend(ATTENDANCE_FIELDS);
             } else {
-                report.headers.extend([
-                    "Attendance records",
-                    "Completed records",
-                    "Open records",
-                    "Days without check-in",
-                    "Scheduled past days without check-in",
-                    "Gross minutes",
-                    "Minutes excluding unpaid breaks",
-                    "Records without completed net totals",
-                    "Records needing calculation review",
-                    "Late minutes",
-                    "Early departure minutes",
-                    "Overtime candidate minutes",
-                    "Current approved overtime minutes",
-                    "Approved leave days",
-                    "Pending leave days",
-                    "Pending correction requests",
-                ]);
+                report.headers.extend(SUMMARY_FIELDS);
             }
             let mut work = BTreeMap::new();
             for a in &data.attendance {
@@ -540,21 +618,11 @@ pub fn build(data: &Snapshot, f: &Filter, now: DateTime<Utc>) -> Result<Report> 
                 }
             }
         }
+        Kind::Headcount | Kind::Trends => {
+            unreachable!("Workforce reports use their scoped builder")
+        }
         Kind::Leave => {
-            report.headers.extend([
-                "Request ID",
-                "Leave type (filed)",
-                "Status",
-                "Request start",
-                "Request end",
-                "Charge date",
-                "Filed charge on date (days)",
-                "Filed total (days)",
-                "Day part",
-                "Filed policy version",
-                "Approved steps",
-                "Total approval steps",
-            ]);
+            report.headers.extend(LEAVE_FIELDS);
             for e in people {
                 let mut requests: Vec<_> = requests_by
                     .get(&e.id)
@@ -600,7 +668,7 @@ pub fn build(data: &Snapshot, f: &Filter, now: DateTime<Utc>) -> Result<Report> 
         report.rows.iter().all(|r| r.len() == report.headers.len()),
         "The report columns do not match. Export was blocked."
     );
-    Ok(report)
+    report.project_columns()
 }
 
 pub(crate) fn csv_cell(value: &str) -> Result<String> {
@@ -619,7 +687,41 @@ pub(crate) fn csv_cell(value: &str) -> Result<String> {
     ))
 }
 impl Report {
+    fn project_columns(mut self) -> Result<Self> {
+        ensure!(
+            self.rows.iter().all(|row| row.len() == self.headers.len()),
+            "The report columns do not match. Export was blocked."
+        );
+        if let Some(columns) = &self.filter.columns {
+            let indices: Vec<_> = columns
+                .iter()
+                .map(|column| {
+                    self.headers
+                        .iter()
+                        .position(|h| *h == column)
+                        .ok_or_else(|| anyhow::anyhow!("A selected report column is unavailable."))
+                })
+                .collect::<Result<_>>()?;
+            self.rows = self
+                .rows
+                .into_iter()
+                .map(|row| indices.iter().map(|i| row[*i].clone()).collect())
+                .collect();
+            self.headers = indices.iter().map(|i| self.headers[*i]).collect();
+        }
+        Ok(self)
+    }
     pub fn csv(&self) -> Result<Vec<u8>> {
+        self.filter.validate()?;
+        if let Some(columns) = &self.filter.columns {
+            ensure!(
+                columns
+                    .iter()
+                    .map(String::as_str)
+                    .eq(self.headers.iter().copied()),
+                "The generated columns do not match the selected report columns. Run the report again."
+            );
+        }
         let meta = [
             "Company",
             "Report",
@@ -639,11 +741,30 @@ impl Report {
                 .join(","),
         );
         text.push_str("\r\n");
+        let snapshot = self
+            .generated_at
+            .with_timezone(
+                &self
+                    .timezone
+                    .parse::<chrono_tz::Tz>()
+                    .context("The report time zone is invalid.")?,
+            )
+            .date_naive();
         let common = [
             self.company.clone(),
             self.filter.kind.label().into(),
-            self.filter.starts_on.to_string(),
-            self.filter.ends_on.to_string(),
+            if self.filter.kind == Kind::Headcount {
+                snapshot
+            } else {
+                self.filter.starts_on
+            }
+            .to_string(),
+            if self.filter.kind == Kind::Headcount {
+                snapshot
+            } else {
+                self.filter.ends_on
+            }
+            .to_string(),
             self.generated_at.to_rfc3339(),
             self.timezone.clone(),
         ];

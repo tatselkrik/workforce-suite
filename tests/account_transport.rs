@@ -40,35 +40,41 @@ impl Request {
 type Requests = Arc<Mutex<Vec<Request>>>;
 
 #[test]
-fn saved_report_preferences_create_edit_reload_and_delete_only_the_own_metadata_key() {
+fn saved_report_preferences_create_edit_reload_and_delete_only_the_own_guarded_row() {
     use hris_desktop::{
         report_views::{Period, View},
-        reports::Filter,
+        reports::{Filter, Kind},
     };
     let company = Company::default();
-    let original = user(&company);
+    let mut filter = Filter::new(company.today());
+    filter.columns = Some(vec!["Work date".into(), "Employee code".into()]);
     let view = View::new(
         company.id,
         "Synthetic team attendance".into(),
-        Filter::new(company.today()),
+        filter,
         Period::Last30,
     )
     .unwrap();
-    let mut saved = original.clone();
-    saved["user_metadata"]["hris_report_views"] = json!([view]);
-    let mut edited_view = view.clone();
-    edited_view.name = "Synthetic monthly leave".into();
-    edited_view.period = Period::ThisMonth;
-    edited_view.filter.kind = hris_desktop::reports::Kind::Leave;
-    let mut edited = original.clone();
-    edited["user_metadata"]["hris_report_views"] = json!([edited_view]);
-    let mut removed = original.clone();
-    removed["user_metadata"]["hris_report_views"] = json!([]);
+    let mut edited = view.clone();
+    edited.name = "Synthetic monthly leave".into();
+    edited.period = Period::ThisMonth;
+    edited.filter.kind = Kind::Leave;
+    edited.filter.columns = Some(vec!["Charge date".into(), "Full name".into()]);
+    let row = |views: Value, revision| json!({"user_id":company.owner_id,"company_id":company.id,"views":views,"revision":revision});
     let mut replies = baseline(&company);
     replies.extend([
-        reply("PUT /auth/v1/user ", 200, saved),
-        reply("PUT /auth/v1/user ", 200, edited.clone()),
-        reply("GET /auth/v1/user ", 200, edited),
+        reply("GET /rest/v1/report_preferences?", 200, json!([])),
+        reply(
+            "POST /rest/v1/rpc/save_report_preferences ",
+            200,
+            row(json!([view]), 1),
+        ),
+        reply(
+            "POST /rest/v1/rpc/save_report_preferences ",
+            200,
+            row(json!([edited]), 2),
+        ),
+        reply("GET /auth/v1/user ", 200, user(&company)),
         reply(
             format!(
                 "GET /storage/v1/object/authenticated/profile-photos/{}/avatar.png ",
@@ -77,49 +83,150 @@ fn saved_report_preferences_create_edit_reload_and_delete_only_the_own_metadata_
             404,
             json!({"code":"NoSuchKey"}),
         ),
-        reply("PUT /auth/v1/user ", 200, removed),
+        reply(
+            "GET /rest/v1/report_preferences?",
+            200,
+            json!([row(json!([edited]), 2)]),
+        ),
+        reply(
+            "POST /rest/v1/rpc/save_report_preferences ",
+            200,
+            row(json!([]), 3),
+        ),
     ]);
     let (config, server, requests) = fixture(replies);
     let mut client = connect(config);
     client
-        .execute_account(AccountAction::SaveReportViews(vec![view.clone()]))
+        .execute_account(AccountAction::LoadReportViews {
+            company_id: company.id,
+        })
+        .unwrap();
+    client
+        .execute_account(AccountAction::SaveReportViews {
+            company_id: company.id,
+            expected_revision: 0,
+            views: vec![view.clone()],
+        })
         .unwrap();
     assert_eq!(client.account().report_views, vec![view.clone()]);
     client
-        .execute_account(AccountAction::SaveReportViews(vec![edited_view.clone()]))
+        .execute_account(AccountAction::SaveReportViews {
+            company_id: company.id,
+            expected_revision: 1,
+            views: vec![edited.clone()],
+        })
         .unwrap();
     client.refresh_account().unwrap();
-    assert_eq!(client.account().report_views, vec![edited_view.clone()]);
+    assert_eq!(client.account().report_views, vec![edited.clone()]);
+    assert_eq!(client.account().report_views_revision, 2);
+    client
+        .execute_account(AccountAction::LoadReportViews {
+            company_id: company.id,
+        })
+        .unwrap();
+    assert_eq!(client.account().report_views, vec![edited.clone()]);
     assert_eq!(client.account().details.preferred_name, "Alex");
     assert!(
         client
-            .execute_account(AccountAction::SaveReportViews(vec![
-                view.clone(),
-                view.clone()
-            ]))
+            .execute_account(AccountAction::SaveReportViews {
+                company_id: company.id,
+                expected_revision: 2,
+                views: vec![view.clone(), view.clone()]
+            })
+            .is_err()
+    );
+    assert!(
+        client
+            .execute_account(AccountAction::SaveReportViews {
+                company_id: company.id,
+                expected_revision: 1,
+                views: vec![]
+            })
             .is_err()
     );
     client
-        .execute_account(AccountAction::SaveReportViews(vec![]))
+        .execute_account(AccountAction::SaveReportViews {
+            company_id: company.id,
+            expected_revision: 2,
+            views: vec![],
+        })
         .unwrap();
     assert!(client.account().report_views.is_empty());
     server.join().unwrap();
     let requests = requests.lock().unwrap();
     let writes: Vec<_> = requests
         .iter()
-        .filter(|r| r.line.starts_with("PUT /auth/v1/user "))
+        .filter(|r| {
+            r.line
+                .starts_with("POST /rest/v1/rpc/save_report_preferences ")
+        })
         .collect();
     assert_eq!(writes.len(), 3);
-    assert_eq!(
-        writes[0].json(),
-        json!({"data":{"hris_report_views":[view]}})
+    for (write, revision, views) in [
+        (writes[0], 0, json!([view])),
+        (writes[1], 1, json!([edited])),
+        (writes[2], 2, json!([])),
+    ] {
+        assert_eq!(
+            write.json(),
+            json!({"p_company_id":company.id,"p_expected_revision":revision,"p_views":views})
+        );
+        assert!(write.headers.contains("profile-jwt"));
+    }
+    assert!(
+        requests
+            .iter()
+            .all(|r| !r.line.starts_with("PUT /auth/v1/user "))
     );
-    assert_eq!(
-        writes[1].json(),
-        json!({"data":{"hris_report_views":[edited_view]}})
+}
+#[test]
+fn saved_view_conflicts_and_wrong_account_responses_preserve_the_loaded_preferences() {
+    use hris_desktop::{
+        report_views::{Period, View},
+        reports::Filter,
+    };
+    let company = Company::default();
+    let view = View::new(
+        company.id,
+        "Synthetic existing".into(),
+        Filter::new(company.today()),
+        Period::Fixed,
+    )
+    .unwrap();
+    let mut replies = baseline(&company);
+    replies.extend([
+        reply("GET /rest/v1/report_preferences?",200,json!([{"user_id":company.owner_id,"company_id":company.id,"views":[view],"revision":4}])),
+        reply("POST /rest/v1/rpc/save_report_preferences ",409,json!({"code":"PT409","message":"Saved views changed in another session. Reload views."})),
+        reply("GET /rest/v1/report_preferences?",200,json!([{"user_id":uuid::Uuid::new_v4(),"company_id":company.id,"views":[],"revision":8}])),
+    ]);
+    let (config, server, _) = fixture(replies);
+    let mut client = connect(config);
+    client
+        .execute_account(AccountAction::LoadReportViews {
+            company_id: company.id,
+        })
+        .unwrap();
+    assert!(
+        client
+            .execute_account(AccountAction::SaveReportViews {
+                company_id: company.id,
+                expected_revision: 4,
+                views: vec![]
+            })
+            .unwrap_err()
+            .to_string()
+            .contains("another session")
     );
-    assert_eq!(writes[2].json(), json!({"data":{"hris_report_views":[]}}));
-    assert!(writes.iter().all(|r| r.headers.contains("profile-jwt")));
+    assert!(
+        client
+            .execute_account(AccountAction::LoadReportViews {
+                company_id: company.id
+            })
+            .is_err()
+    );
+    assert_eq!(client.account().report_views, vec![view]);
+    assert_eq!(client.account().report_views_revision, 4);
+    server.join().unwrap();
 }
 
 #[test]
@@ -140,6 +247,61 @@ fn invalid_report_metadata_does_not_break_sign_in_or_change_membership() {
     .unwrap();
     assert!(client.account().report_views.is_empty());
     assert_eq!(data.access.role, Role::Administrator);
+    server.join().unwrap();
+}
+
+#[test]
+fn a_late_legacy_view_is_offered_until_saved_and_an_empty_database_row_never_revives_it() {
+    use hris_desktop::{
+        report_views::{Period, View},
+        reports::Filter,
+    };
+    let company = Company::default();
+    let legacy = View::new(
+        company.id,
+        "Synthetic late legacy view".into(),
+        Filter::new(company.today()),
+        Period::Fixed,
+    )
+    .unwrap();
+    let mut account = user(&company);
+    account["user_metadata"]["hris_report_views"] = json!([legacy]);
+    let mut replies = baseline(&company);
+    replies[0].body = serde_json::to_vec(&token(account.clone(), "profile-jwt")).unwrap();
+    replies[31].body = serde_json::to_vec(&account).unwrap();
+    let empty = json!({"user_id":company.owner_id,"company_id":company.id,"views":[],"revision":1});
+    replies.extend([
+        reply("GET /rest/v1/report_preferences?", 200, json!([])),
+        reply(
+            "POST /rest/v1/rpc/save_report_preferences ",
+            200,
+            empty.clone(),
+        ),
+        reply("GET /rest/v1/report_preferences?", 200, json!([empty])),
+    ]);
+    let (config, server, _) = fixture(replies);
+    let mut client = connect(config);
+    client
+        .execute_account(AccountAction::LoadReportViews {
+            company_id: company.id,
+        })
+        .unwrap();
+    assert_eq!(client.account().report_views, vec![legacy]);
+    assert_eq!(client.account().report_views_revision, 0);
+    client
+        .execute_account(AccountAction::SaveReportViews {
+            company_id: company.id,
+            expected_revision: 0,
+            views: vec![],
+        })
+        .unwrap();
+    client
+        .execute_account(AccountAction::LoadReportViews {
+            company_id: company.id,
+        })
+        .unwrap();
+    assert!(client.account().report_views.is_empty());
+    assert_eq!(client.account().report_views_revision, 1);
     server.join().unwrap();
 }
 

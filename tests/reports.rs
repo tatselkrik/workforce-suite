@@ -77,6 +77,47 @@ fn cell<'a>(r: &'a Report, row: usize, title: &str) -> &'a str {
 }
 
 #[test]
+fn workforce_trends_match_saved_attendance_totals_and_current_overtime_authorizations() {
+    let (mut s, draft) = fixture();
+    s.execute(Action::Overtime(OvertimeAction::Submit(draft)))
+        .unwrap();
+    let request = s.data.overtime.records[0].clone();
+    s.data.access.employee_id = Some(s.data.employees[1].id);
+    s.data.access.user_id = uuid::Uuid::from_u128(777);
+    s.execute(Action::Overtime(OvertimeAction::Resolve {
+        id: request.id,
+        expected_revision: request.revision,
+        status: Status::Approved,
+        minutes: Some(45),
+        reason: "Synthetic partial approval".into(),
+    }))
+    .unwrap();
+    let summary = reports::build(&s.data, &filter(&s, Kind::Summary), Utc::now()).unwrap();
+    let trends = reports::build(&s.data, &filter(&s, Kind::Trends), Utc::now()).unwrap();
+    for name in [
+        "Completed records",
+        "Open records",
+        "Late minutes",
+        "Early departure minutes",
+        "Overtime candidate minutes",
+        "Current approved overtime minutes",
+    ] {
+        assert_eq!(cell(&summary, 0, name), cell(&trends, 0, name));
+    }
+    assert_eq!(cell(&trends, 0, "Current approved overtime minutes"), "45");
+    s.data.attendance[0].checked_out_at =
+        Some(s.data.attendance[0].checked_out_at.unwrap() + Duration::minutes(1));
+    assert_eq!(
+        cell(
+            &reports::build(&s.data, &filter(&s, Kind::Trends), Utc::now()).unwrap(),
+            0,
+            "Current approved overtime minutes"
+        ),
+        "0"
+    );
+}
+
+#[test]
 fn reports_reject_portal_signed_out_cross_company_and_outside_manager_scope() {
     let (mut s, _) = fixture();
     let mut f = filter(&s, Kind::Attendance);

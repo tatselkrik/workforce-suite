@@ -1,7 +1,8 @@
 # Reports and CSV exports
 
 Open **Reports**, before Account Manager in the sidebar. Choose Attendance
-detail, Leave detail or Employee summary, then a date range and optional
+detail, Leave detail, Employee summary, Workforce headcount or Attendance &
+leave trends, then a date range and optional
 employee/department filters. Use the calendars, This month or Last 30 days.
 Run report reloads current permitted records. Results show their generation
 time, use 25-row preview pages and scroll in both directions. Export CSV
@@ -80,14 +81,29 @@ the saved report type, dates, employee, department, status and archived/missing
 flags. **Delete view** removes only that preference. Unsaved view editors block
 Update and restart; a failed save retains the editor for retry.
 
-Views persist in the signed-in account's Auth user metadata, separate from
-display/profile fields and protected memberships. No report rows, exports or
+Views persist in a private account/company preference record, outside sign-in
+tokens and separate from display/profile fields and protected memberships.
+The app loads them when Reports is opened. Reload views refreshes this list;
+the server rejects a save based on an older revision. A failed save keeps the
+draft. Reload and review it before saving again. No report rows, exports or
 contact details are stored in the view. Preferences never grant access; an
 employee filter outside current scope cannot be applied, and report generation
 and export independently recheck RLS/membership scope. Other company views are
 not offered. Malformed metadata is ignored without blocking sign-in. In the
-fictional source demo, views last only for the session. Shared views, scheduled
-delivery, custom columns and workforce analysis remain future modules.
+fictional source demo, views last only for the session. Existing valid legacy
+views are copied during deployment. A legacy view saved before this app's
+first database preference save is also offered if no database row exists.
+An existing empty row does not revive deleted legacy views. Update all clients
+before editing saved views; older versions use their preserved legacy list.
+Shared views and scheduled delivery remain future modules.
+
+Expand **Columns** to show/hide available fields and move selected fields Up
+or Down. Preview and CSV retain the chosen order; CSV always includes company,
+report, period, generation time and time zone. At least one field is required.
+Changing report type resets to all columns; applying a saved view restores
+its type and column order. Older saved filters default to all columns. Private
+contact fields cannot be added. See [workforce analysis](WORKFORCE-ANALYSIS.md)
+for current headcount and dated attendance/leave trends.
 
 Create-only employee CSV imports with previews/error reports are available to
 HR/Admin; see [employee imports](EMPLOYEE-IMPORTS.md). Custom report definitions,

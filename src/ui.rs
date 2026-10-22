@@ -28,9 +28,11 @@ mod imports_view;
 mod leave_view;
 mod organization_view;
 mod overtime_view;
+mod report_columns;
 mod reports_view;
 mod requests_view;
 mod shifts_view;
+mod workforce_view;
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 enum EmployeeView {
