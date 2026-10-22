@@ -25,6 +25,7 @@ const LINE: Color32 = Color32::from_rgb(226, 232, 238);
 mod breaks_view;
 mod calculations_view;
 mod imports_view;
+mod hiring_view;
 mod leave_view;
 mod notifications_view;
 mod organization_view;
@@ -49,6 +50,7 @@ enum Page {
     Attendance,
     Leave,
     Reports,
+    Hiring,
     Accounts,
     Settings,
     Profile,
@@ -56,12 +58,13 @@ enum Page {
 }
 
 impl Page {
-    const ALL: [Self; 7] = [
+    const ALL: [Self; 8] = [
         Self::Overview,
         Self::Employees,
         Self::Attendance,
         Self::Leave,
         Self::Reports,
+        Self::Hiring,
         Self::Accounts,
         Self::Settings,
     ];
@@ -72,6 +75,7 @@ impl Page {
             Self::Attendance => "Attendance",
             Self::Leave => "Leave",
             Self::Reports => "Reports",
+            Self::Hiring => "Hiring",
             Self::Accounts => "Account Manager",
             Self::Settings => "Settings",
             Self::Profile => "Profile",
@@ -125,6 +129,7 @@ pub struct HrisApp {
     report_state: reports_view::State,
     import_state: imports_view::State,
     notification_state: notifications_view::State,
+    hiring_state: hiring_view::State,
     department: String,
     employment_type_filter: EmploymentFilter,
     work_location_filter: EmploymentFilter,
@@ -347,6 +352,7 @@ impl HrisApp {
             report_state,
             import_state: imports_view::State::default(),
             notification_state: notifications_view::State::default(),
+            hiring_state: hiring_view::State::default(),
             department: String::new(),
             employment_type_filter: EmploymentFilter::All,
             work_location_filter: EmploymentFilter::All,
@@ -408,6 +414,7 @@ impl HrisApp {
                 Ok("attendance") => app.page = Page::Attendance,
                 Ok("leave") => app.page = Page::Leave,
                 Ok("reports") => app.page = Page::Reports,
+                Ok("hiring") => app.page = Page::Hiring,
                 Ok("notifications") => app.page = Page::Notifications,
                 Ok("settings") => app.page = Page::Settings,
                 Ok("profile") => app.page = Page::Profile,
@@ -966,6 +973,7 @@ impl HrisApp {
             app.prepare_reports_preview();
             app.prepare_import_preview();
             app.prepare_notifications_preview();
+            app.prepare_hiring_preview();
             if std::env::var("HRIS_PREVIEW_PAGE").as_deref() == Ok("sign-in") {
                 app.login_branding = branding::LoginBranding {
                     company_name: app.data.company.name.clone(),
@@ -1045,6 +1053,7 @@ impl HrisApp {
                         self.overtime_state = overtime_view::State::default();
                         self.report_state = reports_view::State::new(data.company.today());
                         self.notification_state = notifications_view::State::default();
+                        self.hiring_state = hiring_view::State::default();
                         self.import_state = imports_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
@@ -1070,6 +1079,7 @@ impl HrisApp {
                         self.overtime_state = overtime_view::State::default();
                         self.report_state = reports_view::State::new(data.company.today());
                         self.notification_state = notifications_view::State::default();
+                        self.hiring_state = hiring_view::State::default();
                         self.import_state = imports_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
@@ -1149,6 +1159,7 @@ impl HrisApp {
                             self.company_draft.logo_version = data.company.logo_version;
                         }
                     }
+                    let hiring_saved = self.hiring_state.accept(&data);
                     self.data = data;
                     self.notification_state.invalidate();
                     if !self.data.active().any(|e| {
@@ -1201,11 +1212,14 @@ impl HrisApp {
                     if self.close_document_on_success {
                         self.document_form = None;
                     }
-                    if !update.message.is_empty() {
+                    if !hiring_saved {
+                        self.notice = Some(("The saved application has changed. Your draft is preserved; reload the saved record before continuing.".into(), true));
+                    } else if !update.message.is_empty() {
                         self.notice = Some((update.message, false));
                     }
                 }
                 Err(error) => {
+                    self.hiring_state.pending = None;
                     self.report_state.pending_views = None;
                     self.overtime_state.saving = false;
                     self.leave_state.saving_revision = None;
@@ -1587,6 +1601,7 @@ impl HrisApp {
                     if page == Page::Accounts && !self.data.access.role.manages_accounts() {
                         continue;
                     }
+                    if page == Page::Hiring && !self.data.access.role.manages_hr() {continue;}
                     let selected = self.page == page;
                     let label = RichText::new(page.title()).size(15.0).color(if selected {
                         Color32::WHITE
@@ -1720,6 +1735,7 @@ impl HrisApp {
                 "Time away, organized",
                 "Manage requests, leave policies and ordered approvals.",
             ),
+            Page::Hiring => ("Hiring", "Track applicants, review stages and retain application history."),
             Page::Reports => (
                 "Reports",
                 "Attendance, filed leave charges and employee totals within your access.",
@@ -1805,6 +1821,7 @@ impl HrisApp {
             || self.request_state.editing()
             || self.overtime_state.editing()
             || self.import_state.editing()
+            || self.hiring_state.editing()
             || self.report_state.view_draft.is_some()
             || self.account_form.is_some()
             || !company_fields_equal(&self.company_draft, &self.data.company)
@@ -3856,7 +3873,7 @@ impl eframe::App for HrisApp {
                 .unwrap_or_default()
         };
         ctx.set_theme(theme.preference());
-        if self.page == Page::Accounts && !self.data.access.role.manages_accounts() {
+        if (self.page == Page::Accounts && !self.data.access.role.manages_accounts()) || (self.page == Page::Hiring && !self.data.access.role.manages_hr()) {
             self.navigate(Page::Overview, &ctx);
         }
         if self.data.mode == Mode::SignedOut {
@@ -3879,7 +3896,7 @@ impl eframe::App for HrisApp {
                 .frame(Frame::new().fill(NAVY).inner_margin(20))
                 .show(ui, |ui| {
                     ui.add_enabled_ui(
-                        !self.busy && !form_open && self.employee_form.is_none(),
+                        !self.busy && !form_open && self.employee_form.is_none() && !self.hiring_state.editing(),
                         |ui| self.sidebar(ui),
                     );
                 });
@@ -3914,6 +3931,7 @@ impl eframe::App for HrisApp {
                                 Page::Attendance => self.attendance(ui),
                                 Page::Leave => self.leave(ui),
                                 Page::Reports => self.reports(ui),
+                                Page::Hiring => self.hiring(ui),
                                 Page::Accounts if self.data.access.role.manages_accounts() => {
                                     self.accounts(ui)
                                 }

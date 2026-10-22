@@ -905,12 +905,14 @@ impl CloudClient {
         } else {
             Default::default()
         };
+        let hiring=if access.role.manages_hr(){crate::hiring::Setup{records:self.rows("applicants",Some(company.id))?,events:self.rows("applicant_events",Some(company.id))?}}else{Default::default()};
         let (logo_png, logo_warning) = self.company_logo(&company);
         let mut notification_rows: Vec<crate::notifications::ReadState> = self.rows("notification_read_state", Some(company.id))?;
         ensure!(notification_rows.len() <= 1, "Notification history response is invalid.");
         let notification_reads = notification_rows.pop().unwrap_or(crate::notifications::ReadState { user_id: access.user_id, company_id: company.id, ..Default::default() });
         notification_reads.validate(access.user_id,company.id)?;
         Ok(Snapshot {
+            hiring,
             notification_reads,
             imports,
             overtime,
@@ -1070,6 +1072,12 @@ impl CloudClient {
 
     pub fn execute(&mut self, action: Action, current: &Snapshot) -> Result<Snapshot> {
         current.access.authorize(&action, current)?;
+        if let Action::Hiring(action)=&action {
+            let payload=action.payload(current)?;let id:Uuid=serde_json::from_value(payload["p_record"]["id"].clone())?;
+            let saved:crate::hiring::Applicant=decode(self.request(Method::POST,"rpc/manage_applicant")?.json(&payload).send().context("Could not save the application. Keep this draft and refresh before retrying.")?)?;
+            ensure!(saved.id==id && saved.company_id==current.company.id,"The application response did not match your company/record.");
+            return self.snapshot().context("Application saved, but refresh failed. Keep this draft and Refresh; retrying the same new application is safe.");
+        }
         if let Action::NotificationReads(action) = &action {
             let payload=action.payload(current.company.id)?;
             let saved:crate::notifications::ReadState=decode(self.request(Method::POST,"rpc/set_notification_reads")?.json(&payload).send().context("Could not update notification history. Refresh before retrying.")?)?;
@@ -1276,6 +1284,7 @@ impl CloudClient {
                 .context("Contacts saved, but refresh failed. Click Refresh before trying again.");
         }
         let (method, table, id, body) = match action {
+            Action::Hiring(_) => unreachable!("Applicant changes return above"),
             Action::NotificationReads(_) => unreachable!("Notification reads return above"),
             Action::ImportEmployees(_, _) => unreachable!("imports use their guarded transaction"),
             Action::Overtime(_) => unreachable!("Overtime actions return above"),

@@ -34,7 +34,7 @@ Implemented: a role-scoped in-app notification inbox with private read/unread hi
 
 Add applicant tracking, interviews, offers, onboarding checklists, exit tasks and clearance workflows. Keep applicant data separate from employee records until hiring is approved.
 
-Started, unreleased: applicant field validation, private HR scope and reasoned stage/revision guards have five local Rust tests. No applicant UI or database persistence is available yet; see the [hiring foundation](HIRING.md).
+Implemented: HR/Admin-only applicant records, search/stage filters, reasoned stage changes, archive/restore and immutable before/after history with revision guards and safe creation retries. Applicants remain separate from employee records and accounts; see the [applicant pipeline](HIRING.md). Next: resume attachments and interviews, then offers and approved hire conversion/onboarding. Exit and clearance remain later work.
 
 ## Stage 8 — Development and performance
 

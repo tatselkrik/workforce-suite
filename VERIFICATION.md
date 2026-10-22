@@ -2,6 +2,35 @@
 
 
 
+## Applicant pipeline - version 0.1.26
+
+- 249 Rust tests and 1149 local PostgreSQL assertions passed. Coverage includes
+  bounded fields/dates, permitted stages, required reasons, stable creation
+  retries, stale revisions, archive/restore, atomic history failure and protected
+  identity. HTTP tests verify company-scoped loads, failed-refresh retries and
+  mismatched response rejection. Local PostgreSQL simulates Auth.
+- Additive migration `20261022172521` deployed. All 27 hosted/local migration
+  versions match. Previous HR/account/document/preference data preserved.
+  Applicant tables have HR/Admin-only RLS; direct writes are revoked; the public
+  invoker RPC uses a private guarded implementation. Existing security/FK
+  findings unchanged; two new unused-index informational notices.
+- Actual HR Auth verified create/edit/retry/stages/archive/restore/history and
+  fresh-sign-in retention through the Rust adapter. Actual Admin/HR reads and
+  Manager/portal exclusions were also checked through unfiltered REST. Direct
+  writes, stale updates, crosscompany/anonymous access, forged user metadata
+  and disabled HR with a still-valid JWT were denied. Unrelated HR data and
+  Administrator profile preserved. Synthetic test accounts disabled, their
+  employee records and application archived, all test sessions revoked.
+- Twelve fictional native previews inspected across light/dark, 125% display,
+  HR/Manager visibility, creation/detail/history and save/archive/restore
+  controls. A measured headless regression verifies history alignment with
+  multiline values across three widths. Save-response tests preserve drafts
+  until a matching record arrives. No real password was changed.
+- Normal binary/startup/privacy, exact installer/recovery and private signing,
+  publication and installation are recorded in the private versioned report.
+  No signed-in native button automation, Authenticode, remote CI, other-PC or
+  running-parent updater timing claim. No Edge Function change.
+
 ## In-app notifications and reminders - version 0.1.25
 
 - 236 Rust tests and1015 local PostgreSQL assertions passed. Coverage includes

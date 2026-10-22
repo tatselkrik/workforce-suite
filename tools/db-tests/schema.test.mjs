@@ -66,7 +66,9 @@ try {
   const importMigrations=[];
   const reportPreferenceMigrations=[];
   const notificationMigrations=[];
+  const hiringMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_applicant_pipeline.sql')) {hiringMigrations.push(filename);continue;}
     if(filename.endsWith('_notification_read_state.sql')) {notificationMigrations.push(filename);continue;}
     if(filename.endsWith('_report_preferences.sql')) {reportPreferenceMigrations.push(filename);continue;}
     if(filename.endsWith('_employee_csv_imports.sql')) {importMigrations.push(filename);continue;}
@@ -276,6 +278,16 @@ try {
   eq((await db.query('select id,raw_user_meta_data from auth.users order by id')).rows,beforeNotificationAuth,'Notification migration preserves Auth metadata');
   const {runNotificationTests}=await import('./notifications.test.mjs');
   await runNotificationTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
+  console.log(`Passed ${checks} schema assertions before applicants.`);
+  await db.exec('reset role');
+  const preservedTables=['employees','company_members','attendance','leave_requests','report_preferences','notification_read_state'];
+  const preserved=await Promise.all(preservedTables.map(t=>db.query(`select to_jsonb(t) original from public.${t} t order by to_jsonb(t)::text`)));
+  const beforeHiringAuth=(await db.query('select to_jsonb(t) original from auth.users t order by id')).rows;
+  for(const filename of hiringMigrations) {await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version) values($1)',[filename.split('_')[0]]);}
+  for(let i=0;i<preservedTables.length;i++) eq((await db.query(`select to_jsonb(t) original from public.${preservedTables[i]} t order by to_jsonb(t)::text`)).rows,preserved[i].rows,`Applicant migration preserves ${preservedTables[i]}`);
+  eq((await db.query('select to_jsonb(t) original from auth.users t order by id')).rows,beforeHiringAuth,'Applicant migration preserves Auth');
+  const {runHiringTests}=await import('./hiring.test.mjs');
+  await runHiringTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();
