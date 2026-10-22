@@ -40,6 +40,110 @@ impl Request {
 type Requests = Arc<Mutex<Vec<Request>>>;
 
 #[test]
+fn saved_report_preferences_create_edit_reload_and_delete_only_the_own_metadata_key() {
+    use hris_desktop::{
+        report_views::{Period, View},
+        reports::Filter,
+    };
+    let company = Company::default();
+    let original = user(&company);
+    let view = View::new(
+        company.id,
+        "Synthetic team attendance".into(),
+        Filter::new(company.today()),
+        Period::Last30,
+    )
+    .unwrap();
+    let mut saved = original.clone();
+    saved["user_metadata"]["hris_report_views"] = json!([view]);
+    let mut edited_view = view.clone();
+    edited_view.name = "Synthetic monthly leave".into();
+    edited_view.period = Period::ThisMonth;
+    edited_view.filter.kind = hris_desktop::reports::Kind::Leave;
+    let mut edited = original.clone();
+    edited["user_metadata"]["hris_report_views"] = json!([edited_view]);
+    let mut removed = original.clone();
+    removed["user_metadata"]["hris_report_views"] = json!([]);
+    let mut replies = baseline(&company);
+    replies.extend([
+        reply("PUT /auth/v1/user ", 200, saved),
+        reply("PUT /auth/v1/user ", 200, edited.clone()),
+        reply("GET /auth/v1/user ", 200, edited),
+        reply(
+            format!(
+                "GET /storage/v1/object/authenticated/profile-photos/{}/avatar.png ",
+                company.owner_id
+            ),
+            404,
+            json!({"code":"NoSuchKey"}),
+        ),
+        reply("PUT /auth/v1/user ", 200, removed),
+    ]);
+    let (config, server, requests) = fixture(replies);
+    let mut client = connect(config);
+    client
+        .execute_account(AccountAction::SaveReportViews(vec![view.clone()]))
+        .unwrap();
+    assert_eq!(client.account().report_views, vec![view.clone()]);
+    client
+        .execute_account(AccountAction::SaveReportViews(vec![edited_view.clone()]))
+        .unwrap();
+    client.refresh_account().unwrap();
+    assert_eq!(client.account().report_views, vec![edited_view.clone()]);
+    assert_eq!(client.account().details.preferred_name, "Alex");
+    assert!(
+        client
+            .execute_account(AccountAction::SaveReportViews(vec![
+                view.clone(),
+                view.clone()
+            ]))
+            .is_err()
+    );
+    client
+        .execute_account(AccountAction::SaveReportViews(vec![]))
+        .unwrap();
+    assert!(client.account().report_views.is_empty());
+    server.join().unwrap();
+    let requests = requests.lock().unwrap();
+    let writes: Vec<_> = requests
+        .iter()
+        .filter(|r| r.line.starts_with("PUT /auth/v1/user "))
+        .collect();
+    assert_eq!(writes.len(), 3);
+    assert_eq!(
+        writes[0].json(),
+        json!({"data":{"hris_report_views":[view]}})
+    );
+    assert_eq!(
+        writes[1].json(),
+        json!({"data":{"hris_report_views":[edited_view]}})
+    );
+    assert_eq!(writes[2].json(), json!({"data":{"hris_report_views":[]}}));
+    assert!(writes.iter().all(|r| r.headers.contains("profile-jwt")));
+}
+
+#[test]
+fn invalid_report_metadata_does_not_break_sign_in_or_change_membership() {
+    let company = Company::default();
+    let mut malicious = user(&company);
+    malicious["user_metadata"]["hris_report_views"] =
+        json!({"role":"administrator","employee_id":"arbitrary"});
+    let mut replies = baseline(&company);
+    replies[0].body = serde_json::to_vec(&token(malicious.clone(), "profile-jwt")).unwrap();
+    replies[31].body = serde_json::to_vec(&malicious).unwrap();
+    let (config, server, _) = fixture(replies);
+    let (client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert!(client.account().report_views.is_empty());
+    assert_eq!(data.access.role, Role::Administrator);
+    server.join().unwrap();
+}
+
+#[test]
 fn employee_import_retries_the_same_batch_after_a_saved_write_with_failed_refresh() {
     use hris_desktop::{
         domain::Action,

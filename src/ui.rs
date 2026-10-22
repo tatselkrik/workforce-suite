@@ -1194,6 +1194,7 @@ impl HrisApp {
                     }
                 }
                 Err(error) => {
+                    self.report_state.pending_views = None;
                     self.overtime_state.saving = false;
                     self.leave_state.saving_revision = None;
                     self.shift_state.saving = false;
@@ -1225,6 +1226,9 @@ impl HrisApp {
                     ctx.set_zoom_factor(self.display_draft.scale_percent as f32 / 100.0);
                 }
                 self.account = update.account;
+            }
+            if let Some(account) = &self.account {
+                self.report_state.accept_account(&account.report_views);
             }
             self.close_on_success = false;
             self.close_document_on_success = false;
@@ -1783,6 +1787,7 @@ impl HrisApp {
             || self.request_state.editing()
             || self.overtime_state.editing()
             || self.import_state.editing()
+            || self.report_state.view_draft.is_some()
             || self.account_form.is_some()
             || !company_fields_equal(&self.company_draft, &self.data.company)
             || self.profile_contacts_draft.as_ref().is_some_and(|draft| {

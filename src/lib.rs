@@ -14,6 +14,7 @@ pub mod imports;
 pub mod leave;
 pub mod organization;
 pub mod overtime;
+pub mod report_views;
 pub mod reports;
 pub mod requests;
 pub mod shifts;

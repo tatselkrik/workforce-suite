@@ -1,4 +1,5 @@
 use super::*;
+use crate::report_views::{self, Period, View};
 use crate::reports::{self, Filter, Kind, Report};
 
 pub(super) struct State {
@@ -7,6 +8,9 @@ pub(super) struct State {
     pub start_month: NaiveDate,
     pub end_month: NaiveDate,
     pub page: usize,
+    pub selected_view: Option<Uuid>,
+    pub view_draft: Option<View>,
+    pub pending_views: Option<Vec<View>>,
 }
 impl State {
     pub fn new(today: NaiveDate) -> Self {
@@ -16,7 +20,26 @@ impl State {
             start_month: month_start(today),
             end_month: month_start(today),
             page: 0,
+            selected_view: None,
+            view_draft: None,
+            pending_views: None,
         }
+    }
+    pub fn accept_account(&mut self, views: &[View]) {
+        if self.pending_views.as_deref() == Some(views) {
+            self.view_draft = None;
+            self.pending_views = None;
+            if !views.iter().any(|v| Some(v.id) == self.selected_view) {
+                self.selected_view = None;
+            }
+        }
+    }
+    fn apply(&mut self, filter: Filter) {
+        self.start_month = month_start(filter.starts_on);
+        self.end_month = month_start(filter.ends_on);
+        self.filter = filter;
+        self.result = None;
+        self.page = 0;
     }
 }
 fn date_filter(
@@ -45,6 +68,116 @@ fn date_filter(
     });
 }
 impl HrisApp {
+    fn save_report_views(&mut self, views: Vec<View>) {
+        match report_views::validate_collection(&views) {
+            Ok(()) => {
+                self.report_state.pending_views = Some(views.clone());
+                self.send(Command::Account(AccountAction::SaveReportViews(views)));
+            }
+            Err(e) => self.notice = Some((e.to_string(), true)),
+        }
+    }
+
+    fn saved_report_views(&mut self, ui: &mut Ui) {
+        let views = self
+            .account
+            .as_ref()
+            .map(|a| a.report_views.clone())
+            .unwrap_or_default();
+        let selected = views
+            .iter()
+            .find(|v| {
+                Some(v.id) == self.report_state.selected_view
+                    && v.company_id == self.data.company.id
+            })
+            .cloned();
+        card(ui, |ui| {
+            ui.label(RichText::new("Your saved views").strong());
+            ui.add_space(6.0);
+            ui.add_enabled_ui(!self.busy, |ui| {
+                ui.horizontal_wrapped(|ui| {
+                    egui::ComboBox::from_id_salt("saved-report-view")
+                        .width(240.0).truncate()
+                        .selected_text(selected.as_ref().map(|v| v.name.as_str()).unwrap_or("Choose a saved view"))
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut self.report_state.selected_view, None, "Choose a saved view");
+                            for view in views.iter().filter(|v| v.company_id == self.data.company.id) {
+                                ui.selectable_value(&mut self.report_state.selected_view, Some(view.id), &view.name);
+                            }
+                        });
+                    if ui.add_enabled(selected.is_some(), egui::Button::new("Apply view")).clicked() {
+                        match selected.as_ref().unwrap().resolve(&self.data, self.data.company.today()) {
+                            Ok(filter) => {
+                                self.report_state.apply(filter);
+                                self.notice = Some(("Saved filters applied. Run report to refresh the results.".into(), false));
+                            }
+                            Err(e) => self.notice = Some((e.to_string(), true)),
+                        }
+                    }
+                    if ui.add_enabled(self.report_state.view_draft.is_none() && views.len() < report_views::MAX_VIEWS,
+                        egui::Button::new("Save current filters…")).clicked() {
+                        self.report_state.view_draft = Some(View {
+                            id: Uuid::new_v4(), company_id: self.data.company.id, name: String::new(),
+                            period: Period::Fixed, filter: self.report_state.filter.clone(),
+                        });
+                    }
+                    if ui.add_enabled(selected.is_some() && self.report_state.view_draft.is_none(), egui::Button::new("Edit view")).clicked() {
+                        self.report_state.view_draft = selected.clone();
+                    }
+                    if ui.add_enabled(selected.is_some() && self.report_state.view_draft.is_none(), egui::Button::new("Delete view")).clicked() {
+                        let id = selected.as_ref().unwrap().id;
+                        self.save_report_views(views.iter().filter(|v| v.id != id).cloned().collect());
+                    }
+                });
+                if let Some(mut draft) = self.report_state.view_draft.take() {
+                    ui.add_space(8.0);
+                    egui::Grid::new("saved-report-editor").num_columns(2).spacing(Vec2::new(12.0,8.0)).show(ui, |ui| {
+                        ui.label("View name");
+                        ui.add(egui::TextEdit::singleline(&mut draft.name).char_limit(80).desired_width(240.0).hint_text("e.g. Monthly team attendance"));
+                        ui.end_row();
+                        ui.label("Period");
+                        egui::ComboBox::from_id_salt("saved-report-period").width(240.0).selected_text(draft.period.label())
+                            .show_ui(ui, |ui| {
+                                for period in Period::ALL { ui.selectable_value(&mut draft.period, period, period.label()); }
+                            });
+                        ui.end_row();
+                    });
+                    ui.horizontal_wrapped(|ui| {
+                        let dates = draft.resolve(&self.data, self.data.company.today()).unwrap_or_else(|_| draft.filter.clone());
+                        ui.label(format!("{} · {} to {} · {}", draft.filter.kind.label(), dates.starts_on, dates.ends_on,
+                            draft.filter.employee_id.map(|id| self.data.employee_name(id)).unwrap_or("All permitted employees")));
+                        if ui.button("Use current report filters").clicked() { draft.filter = self.report_state.filter.clone(); }
+                    });
+                    if draft.period != Period::Fixed {
+                        ui.label(RichText::new("Rolling dates are calculated when you apply the view, using the company time zone.").small().color(muted(ui)));
+                    }
+                    let mut next = views.clone();
+                    if let Some(old) = next.iter_mut().find(|v| v.id == draft.id) { *old = draft.clone(); }
+                    else { next.push(draft.clone()); }
+                    let valid = report_views::validate_collection(&next).and_then(|_| draft.resolve(&self.data, self.data.company.today()).map(|_| ()));
+                    if let Err(e) = &valid { ui.colored_label(ui.visuals().error_fg_color, e.to_string()); }
+                    let mut close = false;
+                    ui.horizontal(|ui| {
+                        if ui.add_enabled(valid.is_ok(), egui::Button::new("Save view")).clicked() {
+                            self.report_state.selected_view = Some(draft.id);
+                            self.save_report_views(next);
+                        }
+                        close = ui.button("Cancel").clicked();
+                    });
+                    if !close { self.report_state.view_draft = Some(draft); }
+                }
+            });
+            ui.label(RichText::new(format!("Private to your account · {} of {} views. Filters only; reports always use current access and fresh records.", views.len(), report_views::MAX_VIEWS)).small().color(muted(ui)));
+            if self.data.mode == Mode::Demo {
+                ui.label(
+                    RichText::new("Demo views last only for this session.")
+                        .small()
+                        .color(muted(ui)),
+                );
+            }
+        });
+    }
+
     pub(super) fn reports(&mut self, ui: &mut Ui) {
         let before = self.report_state.filter.clone();
         ui.horizontal_wrapped(|ui| {
@@ -72,6 +205,8 @@ impl HrisApp {
             self.employee_import(ui);
             return;
         }
+        ui.add_space(10.0);
+        self.saved_report_views(ui);
         ui.add_space(10.0);
         card(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
@@ -438,5 +573,96 @@ impl HrisApp {
         if form == "reports-next-page" {
             self.report_state.page = 1;
         }
+        if form.starts_with("reports-views-") {
+            let mut views = vec![
+                View::new(
+                    self.data.company.id,
+                    "Team attendance · last 30 days".into(),
+                    f.clone(),
+                    Period::Last30,
+                )
+                .unwrap(),
+                View::new(
+                    self.data.company.id,
+                    "Monthly leave overview".into(),
+                    Filter {
+                        kind: Kind::Leave,
+                        ..f.clone()
+                    },
+                    Period::ThisMonth,
+                )
+                .unwrap(),
+            ];
+            if form.contains("manager") {
+                let id = self.data.employees[0].id;
+                self.data.access.role = Role::Manager;
+                self.data.access.employee_id = Some(id);
+                self.data.access.direct_reports = vec![self.data.employees[1].id];
+            }
+            self.report_state.selected_view = Some(views[0].id);
+            if form.contains("edit") || form.contains("invalid") {
+                self.report_state.view_draft = Some(views[0].clone());
+            }
+            if form.contains("invalid") {
+                self.report_state.view_draft.as_mut().unwrap().name = views[1].name.clone();
+            }
+            if form.contains("empty") {
+                views.clear();
+                self.report_state.selected_view = None;
+            }
+            if form.contains("applied") {
+                self.report_state
+                    .apply(views[0].resolve(&self.data, today).unwrap());
+                self.notice = Some((
+                    "Saved filters applied. Run report to refresh the results.".into(),
+                    false,
+                ));
+            }
+            self.account.as_mut().unwrap().report_views = views;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn applying_saved_filters_clears_cached_results_and_paging_even_for_identical_filters() {
+        let data = DemoStore::new().data;
+        let today = data.company.today();
+        let mut state = State::new(today);
+        state.result = Some(reports::build(&data, &state.filter, chrono::Utc::now()).unwrap());
+        state.page = 2;
+        state.apply(state.filter.clone());
+        assert!(state.result.is_none());
+        assert_eq!(state.page, 0);
+        assert_eq!(state.start_month, month_start(state.filter.starts_on));
+        assert_eq!(state.end_month, month_start(state.filter.ends_on));
+    }
+
+    #[test]
+    fn view_editor_closes_only_after_matching_account_preferences_arrive() {
+        let data = DemoStore::new().data;
+        let mut state = State::new(data.company.today());
+        let view = View::new(
+            data.company.id,
+            "Synthetic".into(),
+            state.filter.clone(),
+            Period::Last7,
+        )
+        .unwrap();
+        state.view_draft = Some(view.clone());
+        state.selected_view = Some(view.id);
+        state.pending_views = Some(vec![view.clone()]);
+        state.accept_account(&[]);
+        assert!(state.view_draft.is_some());
+        state.accept_account(&[view.clone()]);
+        assert!(state.view_draft.is_none());
+        assert!(state.pending_views.is_none());
+        assert_eq!(state.selected_view, Some(view.id));
+        state.pending_views = Some(vec![]);
+        state.accept_account(&[]);
+        assert!(state.selected_view.is_none());
     }
 }

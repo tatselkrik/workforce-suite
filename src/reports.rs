@@ -14,9 +14,12 @@ use std::{
 };
 use uuid::Uuid;
 
+use serde::{Deserialize, Serialize};
+
 pub const MAX_ROWS: usize = 50_000;
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Kind {
     #[default]
     Attendance,
@@ -41,7 +44,7 @@ impl Kind {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Filter {
     pub kind: Kind,
     pub starts_on: NaiveDate,

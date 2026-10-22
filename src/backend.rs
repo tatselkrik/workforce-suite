@@ -119,6 +119,9 @@ impl AuthUser {
             last_sign_in_at: self.last_sign_in_at.clone(),
             details,
             display,
+            report_views: crate::report_views::from_metadata(
+                self.user_metadata.get("hris_report_views"),
+            ),
             ..Default::default()
         }
     }
@@ -571,6 +574,11 @@ impl CloudClient {
                 display.validate()?;
                 self.update_user(json!({"data":{"hris_preferences":display}}))?;
                 Ok("Display preferences saved.".into())
+            }
+            AccountAction::SaveReportViews(views) => {
+                crate::report_views::validate_collection(&views)?;
+                self.update_user(json!({"data":{"hris_report_views":views}}))?;
+                Ok("Your saved report views were updated.".into())
             }
             AccountAction::UploadPhoto(path) => {
                 let png = account::photo_from_file(&path)?;
@@ -1982,6 +1990,10 @@ fn execute_demo_account(profile: &mut AccountProfile, action: AccountAction) -> 
         AccountAction::SaveDisplay(display) => {
             display.validate()?;
             profile.display = display;
+        }
+        AccountAction::SaveReportViews(views) => {
+            crate::report_views::validate_collection(&views)?;
+            profile.report_views = views;
         }
         AccountAction::UploadPhoto(path) => {
             profile.photo = Some(account::photo_from_file(&path)?);

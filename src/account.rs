@@ -122,6 +122,7 @@ pub struct AccountProfile {
     pub last_sign_in_at: Option<String>,
     pub details: PersonalDetails,
     pub display: DisplayPreferences,
+    pub report_views: Vec<crate::report_views::View>,
     pub photo: Option<Vec<u8>>,
     pub photo_warning: Option<String>,
 }
@@ -144,6 +145,7 @@ impl AccountProfile {
 pub enum AccountAction {
     SaveDetails(PersonalDetails),
     SaveDisplay(DisplayPreferences),
+    SaveReportViews(Vec<crate::report_views::View>),
     UploadPhoto(PathBuf),
     RemovePhoto,
     ChangePassword {

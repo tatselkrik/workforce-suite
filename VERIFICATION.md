@@ -1,5 +1,26 @@
 # Prototype verification — 2026-10-22
 
+## Personal saved report views — version 0.1.23
+
+- 209 Rust tests passed, including fixed/rolling date resolution, bounded and
+  untrusted preferences, company/Manager scope checks, own-key Auth transport,
+  matching-response editor completion and cached result/paging reset.
+- Actual synthetic Manager Auth verified create/edit/delete, account refresh,
+  fresh sign-in persistence, relative dates and scoped report generation.
+  A forged employee preference granted no outside access. The real Admin's
+  profile/preferences and unrelated HR data were preserved. The synthetic
+  account was disabled, employee archived and verification sessions revoked.
+- Eleven final fictional native previews inspected: saved/empty states,
+  light/dark field alignment including125%, duplicate validation, HR/Manager,
+  applied filters and scrolled report tables. The initial wrapped label was
+  corrected before final previews. Native signed-in button automation was not
+  performed; account actions were exercised through the actual Rust client.
+- No schema or Edge Function changes. Existing required schema remains
+  `20261022095123`; database suites were not rerun for preference-only changes.
+  Normal startup/privacy, exact installers, signatures/private publication and
+  local installation state are recorded separately in the private version
+  report. No public push, remote CI, Authenticode or other-PC claim is made.
+
 ## Atomic employee CSV imports — version 0.1.22
 
 - 200 Rust tests and917 local PostgreSQL assertions passed, including14 import

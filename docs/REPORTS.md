@@ -67,6 +67,28 @@ period or employee/department filter for larger companies. Report inputs are
 indexed in memory and reuse existing attendance/leave calculation rules.
 No database migration or new permission grant is required for this module.
 
+Saved views are private account preferences. Use **Save current filters…**,
+name the view and choose **Saved dates**, **Last 7 days**, **Last 30 days** or
+**This month**, then **Save view**. Up to 20 views can be retained per account.
+Rolling periods end on the company-local date when **Apply view** is clicked;
+This month starts on its first day. Fixed dates retain the original period.
+Apply clears old results; **Run report** fetches fresh records. Export retains
+the same final permission check and create-new CSV behavior.
+
+**Edit view** changes its name/period. **Use current report filters** replaces
+the saved report type, dates, employee, department, status and archived/missing
+flags. **Delete view** removes only that preference. Unsaved view editors block
+Update and restart; a failed save retains the editor for retry.
+
+Views persist in the signed-in account's Auth user metadata, separate from
+display/profile fields and protected memberships. No report rows, exports or
+contact details are stored in the view. Preferences never grant access; an
+employee filter outside current scope cannot be applied, and report generation
+and export independently recheck RLS/membership scope. Other company views are
+not offered. Malformed metadata is ignored without blocking sign-in. In the
+fictional source demo, views last only for the session. Shared views, scheduled
+delivery, custom columns and workforce analysis remain future modules.
+
 Create-only employee CSV imports with previews/error reports are available to
 HR/Admin; see [employee imports](EMPLOYEE-IMPORTS.md). Custom report definitions,
 XLSX formatting and broader workforce analysis remain subsequent work. A CSV
