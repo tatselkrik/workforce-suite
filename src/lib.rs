@@ -2,6 +2,7 @@ pub mod access;
 pub mod account;
 pub mod attendance;
 pub mod backend;
+pub mod breaks;
 pub mod contacts;
 pub mod corrections;
 pub mod documents;

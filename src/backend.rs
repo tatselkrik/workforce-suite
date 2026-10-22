@@ -768,8 +768,17 @@ impl CloudClient {
                 Vec::new()
             },
         };
+        let breaks = crate::breaks::BreakSetup {
+            records: self.rows("attendance_breaks", Some(company.id))?,
+            events: if access.role.manages_hr() {
+                self.rows("attendance_break_events", Some(company.id))?
+            } else {
+                Vec::new()
+            },
+        };
         let (logo_png, logo_warning) = self.company_logo(&company);
         Ok(Snapshot {
+            breaks,
             shifts,
             leave_setup: crate::leave::LeaveSetup {
                 policy,
@@ -923,6 +932,13 @@ impl CloudClient {
 
     pub fn execute(&mut self, action: Action, current: &Snapshot) -> Result<Snapshot> {
         current.access.authorize(&action, current)?;
+        if let Action::AttendanceBreak(action) = &action {
+            let (operation, payload, _) = action.prepare(current, Utc::now())?;
+            let _: Uuid = decode(self.request(Method::POST,"rpc/manage_attendance_break")?.json(&json!({"p_operation":operation,"p_break":payload})).send().context("Could not save the break. Check your connection and refresh before retrying.")?)?;
+            return self
+                .snapshot()
+                .context("Break saved, but refresh failed. Click Refresh before trying again.");
+        }
         let shift_write = match &action {
             Action::SaveShiftTemplate(draft) => Some((
                 "rpc/save_shift_template",
@@ -1067,6 +1083,7 @@ impl CloudClient {
                 .context("Contacts saved, but refresh failed. Click Refresh before trying again.");
         }
         let (method, table, id, body) = match action {
+            Action::AttendanceBreak(_) => unreachable!("Break operations return above"),
             Action::SaveShiftTemplate(_) | Action::AssignShift(_) => {
                 unreachable!("Schedule saves return above")
             }

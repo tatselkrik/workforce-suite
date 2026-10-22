@@ -7,9 +7,10 @@ Ordinary Employee accounts remain reserved for the future employee portal.
 
 Choose working days, start/end times in 24-hour format, and whether company
 holidays are scheduled workdays. An end before the start finishes the next day;
-equal times and shifts of 24 hours or longer are rejected. Break rules and
-lateness, undertime and overtime calculations are separate subsequent modules.
-Elapsed attendance still includes breaks and is not payable time.
+equal times and shifts of 24 hours or longer are rejected. Paid/unpaid break
+rules and actual break recording are available; see [attendance breaks](ATTENDANCE-BREAKS.md).
+Lateness, undertime and overtime calculations follow separately. Elapsed
+attendance still includes breaks and is not payable time.
 
 ## Assignments and history
 
@@ -21,7 +22,7 @@ the server actor, time and reason. A past effective date explicitly corrects the
 schedule shown for that period. Assignments cannot precede a known hire date;
 archived employees cannot receive new assignments. Their history remains.
 
-An assignment copies the shift's name, working days, hours, holiday rule and
+An assignment copies the shift's name, working days, hours, holiday rule, break rules and
 company time zone. Template edits and deactivation do not rewrite that copy.
 To apply revised hours, assign the revised template from the required date.
 Choosing **Company calendar — no shift hours** ends individual scheduling from

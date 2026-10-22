@@ -6,6 +6,8 @@ use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ShiftTemplate {
+    #[serde(default)]
+    pub break_rules: Vec<crate::breaks::BreakRule>,
     pub id: Uuid,
     pub company_id: Uuid,
     pub name: String,
@@ -19,6 +21,8 @@ pub struct ShiftTemplate {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ShiftPlan {
+    #[serde(default)]
+    pub break_rules: Vec<crate::breaks::BreakRule>,
     pub template_id: Uuid,
     pub template_revision: i64,
     pub name: String,
@@ -32,6 +36,7 @@ pub struct ShiftPlan {
 impl ShiftPlan {
     pub fn capture(template: &ShiftTemplate, timezone: &str) -> Self {
         Self {
+            break_rules: template.break_rules.clone(),
             template_id: template.id,
             template_revision: template.revision,
             name: template.name.clone(),
@@ -187,6 +192,7 @@ fn minute(value: &str) -> Result<u32> {
 
 #[derive(Clone, Debug)]
 pub struct ShiftTemplateDraft {
+    pub break_rules: Vec<crate::breaks::BreakRule>,
     pub id: Option<Uuid>,
     pub expected_revision: Option<i64>,
     pub name: String,
@@ -199,6 +205,7 @@ pub struct ShiftTemplateDraft {
 impl Default for ShiftTemplateDraft {
     fn default() -> Self {
         Self {
+            break_rules: Vec::new(),
             id: None,
             expected_revision: None,
             name: String::new(),
@@ -213,6 +220,7 @@ impl Default for ShiftTemplateDraft {
 impl From<&ShiftTemplate> for ShiftTemplateDraft {
     fn from(t: &ShiftTemplate) -> Self {
         Self {
+            break_rules: t.break_rules.clone(),
             id: Some(t.id),
             expected_revision: Some(t.revision),
             name: t.name.clone(),
@@ -275,7 +283,20 @@ impl ShiftTemplateDraft {
                 .any(|t| Some(t.id) != self.id && t.name.to_lowercase() == name.to_lowercase()),
             "This shift name is already used, including inactive shifts."
         );
+        crate::breaks::validate_rules(
+            &self.break_rules,
+            (end_minute + 1440 - start_minute) % 1440,
+        )?;
         Ok(ShiftTemplate {
+            break_rules: self
+                .break_rules
+                .iter()
+                .cloned()
+                .map(|mut r| {
+                    r.name = r.name.trim().into();
+                    r
+                })
+                .collect(),
             id: self.id.unwrap_or_else(Uuid::new_v4),
             company_id: data.company.id,
             name: name.into(),

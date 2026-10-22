@@ -107,6 +107,7 @@ impl Access {
     }
     pub fn authorize(&self, action: &Action, data: &Snapshot) -> Result<()> {
         let allowed = match action {
+            Action::AttendanceBreak(action) => action.allowed(self, data),
             Action::SaveEmployee(_)
             | Action::SaveEmployeeRecord(_, _)
             | Action::SaveEmployeeContacts(_) => self.role.manages_hr(),

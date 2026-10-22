@@ -320,6 +320,7 @@ pub enum Mode {
 
 #[derive(Clone, Debug)]
 pub struct Snapshot {
+    pub breaks: crate::breaks::BreakSetup,
     pub shifts: crate::shifts::ShiftSetup,
     pub leave_setup: crate::leave::LeaveSetup,
     pub company: Company,
@@ -344,6 +345,7 @@ pub struct Snapshot {
 impl Snapshot {
     pub fn signed_out() -> Self {
         Self {
+            breaks: Default::default(),
             shifts: Default::default(),
             leave_setup: Default::default(),
             company: Company {
@@ -418,6 +420,7 @@ impl Snapshot {
 
 #[derive(Clone, Debug)]
 pub enum Action {
+    AttendanceBreak(crate::breaks::BreakAction),
     SaveShiftTemplate(crate::shifts::ShiftTemplateDraft),
     AssignShift(crate::shifts::ShiftAssignmentDraft),
     SaveEmployee(EmployeeDraft),
@@ -566,6 +569,7 @@ impl DemoStore {
         .collect();
         let mut store = Self {
             data: Snapshot {
+                breaks: Default::default(),
                 shifts: Default::default(),
                 leave_setup: crate::leave::LeaveSetup {
                     policy: crate::leave::LeavePolicy {
@@ -670,6 +674,7 @@ impl DemoStore {
     fn apply(&mut self, action: Action) -> Result<()> {
         self.data.access.authorize(&action, &self.data)?;
         match action {
+            Action::AttendanceBreak(action) => crate::breaks::apply_demo(&mut self.data, action)?,
             Action::SaveShiftTemplate(draft) => {
                 crate::shifts::save_demo_template(&mut self.data, draft)?
             }
@@ -701,6 +706,7 @@ impl DemoStore {
             }
             Action::CorrectAttendance(change) => {
                 change.validate(&self.data, Utc::now())?;
+                crate::breaks::validate_attendance(&self.data, &change.record)?;
                 let before_record = self
                     .data
                     .attendance
@@ -862,6 +868,10 @@ impl DemoStore {
                 });
             }
             Action::CheckOut(id) => {
+                ensure!(
+                    self.data.breaks.open(id).is_none(),
+                    "End the open break before checking out."
+                );
                 let row = self
                     .data
                     .attendance

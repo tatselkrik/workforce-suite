@@ -31,7 +31,10 @@ impl HrisApp {
                 (Tab::History, "Schedule history"),
             ] {
                 ui.add_enabled_ui(
-                    self.shift_state.template.is_none() && self.shift_state.assignment.is_none(),
+                    self.shift_state.template.is_none()
+                        && self.shift_state.assignment.is_none()
+                        && self.break_state.form.is_none()
+                        && self.break_state.void_target.is_none(),
                     |ui| {
                         ui.selectable_value(&mut self.shift_state.tab, tab, label);
                     },
@@ -42,6 +45,13 @@ impl HrisApp {
         if self.shift_state.tab == Tab::Daily && self.attendance_date > self.data.company.today() {
             self.attendance_date = self.data.company.today();
             self.calendar_month = month_start(self.attendance_date);
+        }
+        if self.shift_state.tab != Tab::Daily {
+            self.break_state.detail = None;
+        }
+        if let Some(id) = self.break_state.detail {
+            self.attendance_breaks(ui, id);
+            return false;
         }
         if self.shift_state.template.is_some() {
             self.shift_template_editor(ui);
@@ -97,6 +107,7 @@ impl HrisApp {
                     shifts::hours(t.start_minute, t.end_minute),
                     shifts::day_names(&t.days)
                 ));
+                breaks_view::rules_summary(ui, &t.break_rules);
                 ui.horizontal_wrapped(|ui| {
                     badge(ui, if t.active { "Active" } else { "Inactive" }, t.active);
                     ui.label(if t.works_on_holidays {
@@ -118,7 +129,7 @@ impl HrisApp {
             });
             ui.add_space(8.0);
         }
-        ui.label(RichText::new("Editing or deactivating a shift keeps existing assignment snapshots. Assign the revised shift to apply its new hours. Breaks and lateness/overtime rules will follow in the next module.").small().color(muted(ui)));
+        ui.label(RichText::new("Editing or deactivating a shift keeps existing assignment snapshots. Assign the revised shift to apply its new hours. Set break rules when editing the shift. Lateness, undertime and overtime calculations follow separately.").small().color(muted(ui)));
     }
     fn shift_template_editor(&mut self, ui: &mut Ui) {
         let Some(mut draft) = self.shift_state.template.take() else {
@@ -138,6 +149,7 @@ impl HrisApp {
                 ui.label(RichText::new("24-hour time. An end before the start finishes the following day. Equal times are not a valid shift.").small().color(muted(ui)));
                 ui.add_space(10.0);ui.label(RichText::new("Working days *").strong());
                 ui.horizontal_wrapped(|ui| {for day in 1..=7 {let mut checked=draft.days.contains(&day);if ui.checkbox(&mut checked,shifts::DAY_NAMES[(day-1) as usize]).changed() {draft.days.retain(|d| *d!=day);if checked {draft.days.push(day);}}}});
+                breaks_view::rules_editor(ui,&mut draft.break_rules);
                 ui.checkbox(&mut draft.works_on_holidays,"Schedule work on company holidays");
                 ui.checkbox(&mut draft.active,"Active — available for new assignments");
                 ui.add_space(8.0);ui.label(format!("Assignment time zone: {}",self.data.company.timezone));

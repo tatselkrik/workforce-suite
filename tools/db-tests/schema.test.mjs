@@ -59,7 +59,9 @@ try {
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
+  const breakMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_attendance_breaks.sql')) {breakMigrations.push(filename);continue;}
     if(filename.endsWith('_shift_schedules.sql')) {shiftMigrations.push(filename);continue;}
     if(filename.endsWith('_leave_policies_and_approval_chains.sql')||filename.endsWith('_leave_policy_tracking_start.sql')||filename.endsWith('_leave_client_compatibility.sql')) {deferred.push(filename);continue;}
     if(filename.endsWith('_employment_history.sql')) {
@@ -203,6 +205,13 @@ try {
   eq((await db.query('select id,company_id,employee_id,work_date,checked_in_at,checked_out_at,revision from public.attendance order by id')).rows,beforeShifts,'Shift migration preserves all existing attendance');
   const {runShiftTests}=await import('./shifts.test.mjs');
   await runShiftTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
+  console.log(`Passed ${checks} schema assertions before break migration.`);
+  await db.exec('reset role');
+  const beforeBreaks=(await db.query('select id,employee_id,work_date,checked_in_at,checked_out_at,revision,planned_shift from public.attendance order by id')).rows;
+  for(const filename of breakMigrations) {await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version) values($1)',[filename.split('_')[0]]);}
+  eq((await db.query('select id,employee_id,work_date,checked_in_at,checked_out_at,revision,planned_shift from public.attendance order by id')).rows,beforeBreaks,'Break migration preserves existing attendance and saved plans');
+  const {runBreakTests}=await import('./breaks.test.mjs');
+  await runBreakTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

@@ -24,7 +24,7 @@ The interface uses `egui`/`eframe`. The domain rules and Supabase Auth/REST adap
 
 ## Try it
 
-The private Windows setup installs version 0.1.16 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection and update-verification profiles, but no account password or session.
+The private Windows setup installs version 0.1.17 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection and update-verification profiles, but no account password or session.
 
 Open **HRIS Desktop** and sign in with an assigned Administrator, HR Generalist or Manager account. Ordinary Employee accounts are reserved for a future mobile-friendly portal and cannot sign into this desktop app. Its company database is already selected by the installation. Account login remains necessary to access HR records; database setup is not part of that login.
 
@@ -84,9 +84,9 @@ The desktop client sends the publishable key in `apikey` and the signed-in user'
 
 ## Prototype boundaries
 
-- One company per dedicated database. Company setup is an operator action, not an app sign-up option. Four fixed roles are available; Employee is portal-only and the portal UI is not built yet. Custom roles, multi-stage approval chains and a general HR audit trail remain future work. Managers use the desktop to review direct reports' leave in one step; nobody can approve their own leave.
-- Leave uses Monday–Friday workdays. Holidays, different workweeks, carryover, accrual, partial days, cancellations, and country-specific statutory rules are not implemented. The sample 15-day allowance is configurable sample policy, not a legal entitlement claim. Requests spanning calendar years must be split.
-- Attendance supports one shift per employee per company date. Elapsed time includes breaks; payroll, overtime and schedule rules are outside this version. Reasoned HR time corrections and immutable correction history are available. The visible Biometric integration card is deliberately disabled.
+- One company per dedicated database. Company setup is an operator action. Four fixed roles are available; Employee is portal-only and the portal UI is not built yet. Configurable ordered leave approval chains are available; nobody approves their own leave. Custom roles, delegation and a general HR audit trail remain future work.
+- Leave supports configurable workweeks, dated holidays, full/half-days, annual/monthly entitlement, capped carryover, cancellation and retained approval/charge snapshots. Statutory entitlement rules, posted credit adjustments and effective-date policy versions remain future work. The sample 15-day allowance is a configurable example, not a legal entitlement claim. Requests spanning calendar years must be split.
+- Attendance supports one record per employee work date, saved shift schedules and paid/unpaid break rules, actual break tracking and reasoned HR corrections with retained history. Gross elapsed time includes breaks; break details also show time excluding recorded unpaid breaks. Neither is payable time. Lateness, undertime, overtime and payroll calculations follow separately. The visible Biometric integration card remains disabled.
 - Live mode requires internet access; there is no offline queue or local cache of employee data. Use Refresh to load changes from another device. Errors remain visible, and the app never silently falls back to demo after a failed live request.
 - UI and network requests run on separate threads. A failed write/refresh may require a manual Refresh before retrying; duplicate and state-transition rules protect against repeated submissions.
 - The Windows executables have no Authenticode certificate. Update manifests are separately signed with Ed25519 and verified before installation. Database migrations remain an operator action; this is not a production readiness certification.
@@ -132,4 +132,4 @@ $env:HRIS_SCREENSHOT_TO = 'C:\absolute\path\hris-preview.png'
 
 Implementation references: [eframe native applications](https://docs.rs/eframe/0.37.0/eframe/), [Supabase row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security), [Supabase publishable API keys](https://supabase.com/docs/guides/getting-started/api-keys), [Supabase password authentication](https://supabase.com/docs/guides/auth/passwords), and [PGlite extensions](https://pglite.dev/extensions/).
 
-Shift schedules and dated employee assignments are under **Attendance**. See [shift schedules](docs/SHIFT-SCHEDULES.md) for overnight handling, preserved history and role scope. Break rules and lateness/undertime/overtime calculations follow in the next module.
+Shift schedules and dated employee assignments are under **Attendance**. See [shift schedules](docs/SHIFT-SCHEDULES.md) for overnight handling, preserved history and role scope. Add paid/unpaid rules when editing a shift, then open **Daily attendance > Breaks** for actual times, HR corrections and history. See [attendance breaks](docs/ATTENDANCE-BREAKS.md). Lateness, undertime and overtime calculations follow separately.

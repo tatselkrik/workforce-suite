@@ -127,7 +127,7 @@ impl CorrectionDraft {
     }
 }
 
-fn local_time(day: NaiveDate, value: &str, tz: chrono_tz::Tz) -> Result<DateTime<Utc>> {
+pub(crate) fn local_time(day: NaiveDate, value: &str, tz: chrono_tz::Tz) -> Result<DateTime<Utc>> {
     let time = NaiveTime::parse_from_str(value.trim(), "%H:%M:%S%.f")
         .or_else(|_| NaiveTime::parse_from_str(value.trim(), "%H:%M"))
         .map_err(|_| anyhow::anyhow!("Enter a valid 24-hour time, such as 08:30 or 17:00."))?;
@@ -149,6 +149,7 @@ impl CorrectionChange {
             "Only HR staff and administrators can correct attendance."
         );
         let a = &self.record;
+        crate::breaks::validate_attendance(data, a)?;
         ensure!(
             a.company_id == data.company.id,
             "Choose an employee in this company."
