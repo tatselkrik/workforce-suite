@@ -24,6 +24,7 @@ const LINE: Color32 = Color32::from_rgb(226, 232, 238);
 
 mod leave_view;
 mod organization_view;
+mod shifts_view;
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 enum EmployeeView {
@@ -102,6 +103,7 @@ pub struct HrisApp {
     employee_view: EmployeeView,
     organization: organization_view::State,
     leave_state: leave_view::State,
+    shift_state: shifts_view::State,
     department: String,
     employment_type_filter: EmploymentFilter,
     work_location_filter: EmploymentFilter,
@@ -315,6 +317,7 @@ impl HrisApp {
             employee_view: EmployeeView::Directory,
             organization: organization_view::State::default(),
             leave_state: leave_view::State::default(),
+            shift_state: shifts_view::State::default(),
             department: String::new(),
             employment_type_filter: EmploymentFilter::All,
             work_location_filter: EmploymentFilter::All,
@@ -924,6 +927,7 @@ impl HrisApp {
                 _ => {}
             }
             app.prepare_leave_preview();
+            app.prepare_shift_preview();
             if std::env::var("HRIS_PREVIEW_PAGE").as_deref() == Ok("sign-in") {
                 app.login_branding = branding::LoginBranding {
                     company_name: app.data.company.name.clone(),
@@ -996,6 +1000,7 @@ impl HrisApp {
                     if self.data.access != data.access {
                         self.organization = organization_view::State::default();
                         self.leave_state = leave_view::State::default();
+                        self.shift_state = shifts_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
                         self.account_form = None;
@@ -1013,6 +1018,7 @@ impl HrisApp {
                     if self.data.mode != data.mode {
                         self.organization = organization_view::State::default();
                         self.leave_state = leave_view::State::default();
+                        self.shift_state = shifts_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
                         self.clear_profile_secrets(ctx);
@@ -1088,6 +1094,11 @@ impl HrisApp {
                             .find(|e| self.data.access.can_record(e.id))
                             .map(|e| e.id);
                     }
+                    if self.shift_state.saving {
+                        self.shift_state.template = None;
+                        self.shift_state.assignment = None;
+                        self.shift_state.saving = false;
+                    }
                     if self.close_on_success {
                         self.document_form = None;
                         self.employee_form = None;
@@ -1107,6 +1118,7 @@ impl HrisApp {
                 }
                 Err(error) => {
                     self.leave_state.saving_revision = None;
+                    self.shift_state.saving = false;
                     self.notice = Some((error, true));
                 }
             }
@@ -1587,8 +1599,13 @@ impl HrisApp {
                 },
             ),
             Page::Attendance => (
-                "Daily attendance",
-                "Record check-ins, close shifts, and review daily records.",
+                match self.shift_state.tab {
+                    shifts_view::Tab::Daily => "Daily attendance",
+                    shifts_view::Tab::Shifts => "Shift schedules",
+                    shifts_view::Tab::Assignments => "Employee schedules",
+                    shifts_view::Tab::History => "Schedule history",
+                },
+                "Review attendance and manage employee work schedules.",
             ),
             Page::Leave => (
                 "Time away, organized",
@@ -1666,6 +1683,8 @@ impl HrisApp {
             || self.correction_form.is_some()
             || self.leave_form.is_some()
             || self.leave_state.draft.is_some()
+            || self.shift_state.template.is_some()
+            || self.shift_state.assignment.is_some()
             || self.account_form.is_some()
             || !company_fields_equal(&self.company_draft, &self.data.company)
             || self.profile_contacts_draft.as_ref().is_some_and(|draft| {
@@ -2125,6 +2144,9 @@ impl HrisApp {
     }
 
     fn attendance(&mut self, ui: &mut Ui) {
+        if !self.attendance_navigation(ui) {
+            return;
+        }
         let today = self.data.company.today();
         ui.horizontal_wrapped(|ui| {
             ui.label("Attendance date");
@@ -2257,10 +2279,14 @@ impl HrisApp {
                     .show(ui, |ui| {
                         headers(
                             ui,
-                            &["EMPLOYEE", "CHECK-IN", "CHECK-OUT", "ELAPSED", "STATUS", ""],
+                            &["EMPLOYEE / PLANNED SHIFT", "CHECK-IN", "CHECK-OUT", "ELAPSED", "STATUS", ""],
                         );
                         for row in &rows {
-                            ui.label(RichText::new(&row.employee.full_name).strong());
+                            ui.vertical(|ui| {
+                                ui.set_width(230.0);
+                                ui.label(RichText::new(&row.employee.full_name).strong()).on_hover_text(&row.employee.employee_code);
+                                if let Some(p) = &row.planned_shift { ui.label(RichText::new(format!("{} · {} · {}",p.name,p.hours(),p.timezone)).small().color(muted(ui))); } else { ui.label(RichText::new(if row.attendance.is_some() {"No saved shift hours"} else {"Company calendar"}).small().color(muted(ui))); }
+                            });
                             if let Some(record) = &row.attendance {
                                 ui.label(
                                     record
@@ -2353,9 +2379,9 @@ impl HrisApp {
             if rows.is_empty() {
                 empty(ui, "No employee records available for this date.");
             }
-            ui.label(RichText::new("Roster uses hire dates, saved leave charges and the current holiday/workweek calendar. No check-in does not confirm absence; individual shift schedules are not configured yet.").color(muted(ui)).small());
+            ui.label(RichText::new("Roster uses dated shift assignments, hire dates, saved leave charges and company holidays. Unassigned employees use the company calendar. No check-in does not confirm absence.").color(muted(ui)).small());
         });
-        ui.label(RichText::new("Elapsed time includes breaks; it is not a payroll calculation. Open overnight records can be closed from their original date.").color(muted(ui)).size(12.0));
+        ui.label(RichText::new("Elapsed time includes breaks; it is not a payroll calculation. Overnight attendance belongs to its starting date. Open records can be closed from that date.").color(muted(ui)).size(12.0));
         ui.add_space(12.0);
         card(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
@@ -3513,6 +3539,7 @@ impl HrisApp {
                                 ui.label(attendance_times(before, &self.data));
                             }
                             ui.add_space(8.0);
+                            field(ui, "Check-in date *", &mut draft.checked_in_date, "YYYY-MM-DD; overnight shifts may check in the next day");
                             field(ui, "Check-in time *", &mut draft.checked_in, "24-hour time, e.g. 08:30");
                             field(ui, "Check-out date", &mut draft.checked_out_date, "YYYY-MM-DD (supports overnight shifts)");
                             field(ui, "Check-out time", &mut draft.checked_out, "24-hour time, or leave empty if still open");
@@ -4656,6 +4683,17 @@ fn attendance_calendar(
     today: NaiveDate,
     data: &Snapshot,
 ) -> bool {
+    calendar_control(ui, selected, month, today, today, data)
+}
+
+fn calendar_control(
+    ui: &mut Ui,
+    selected: &mut NaiveDate,
+    month: &mut NaiveDate,
+    today: NaiveDate,
+    latest: NaiveDate,
+    data: &Snapshot,
+) -> bool {
     ui.set_min_width(280.0);
     ui.spacing_mut().item_spacing = Vec2::new(6.0, 5.0);
     let mut chosen = false;
@@ -4676,7 +4714,7 @@ fn attendance_calendar(
             .selected_text(month.format("%B").to_string())
             .show_ui(ui, |ui| {
                 for value in 1..=12 {
-                    ui.add_enabled_ui(year < today.year() || value <= today.month(), |ui| {
+                    ui.add_enabled_ui(year < latest.year() || value <= latest.month(), |ui| {
                         ui.selectable_value(
                             &mut number,
                             value,
@@ -4693,16 +4731,16 @@ fn attendance_calendar(
             .height(180.0)
             .selected_text(year.to_string())
             .show_ui(ui, |ui| {
-                for value in (1900..=today.year()).rev() {
+                for value in (1900..=latest.year()).rev() {
                     ui.selectable_value(&mut year, value, value.to_string());
                 }
             });
-        if year == today.year() {
-            number = number.min(today.month());
+        if year == latest.year() {
+            number = number.min(latest.month());
         }
         *month = NaiveDate::from_ymd_opt(year, number, 1).unwrap();
         if ui
-            .add_enabled(*month < month_start(today), egui::Button::new(">"))
+            .add_enabled(*month < month_start(latest), egui::Button::new(">"))
             .clicked()
         {
             *month = month.checked_add_months(Months::new(1)).unwrap();
@@ -4738,7 +4776,7 @@ fn attendance_calendar(
                         button = button.stroke(Stroke::new(1.0, accent(ui)));
                     }
                     if ui
-                        .add_enabled(date <= today, button.min_size(Vec2::new(34.0, 30.0)))
+                        .add_enabled(date <= latest, button.min_size(Vec2::new(34.0, 30.0)))
                         .on_hover_text(format!(
                             "{} · {count} check-in record(s)",
                             date.format("%b %d, %Y")

@@ -58,7 +58,9 @@ try {
   const folder=new URL('../../supabase/migrations/',import.meta.url);
   let companyA;
   const deferred=[];
+  const shiftMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_shift_schedules.sql')) {shiftMigrations.push(filename);continue;}
     if(filename.endsWith('_leave_policies_and_approval_chains.sql')||filename.endsWith('_leave_policy_tracking_start.sql')||filename.endsWith('_leave_client_compatibility.sql')) {deferred.push(filename);continue;}
     if(filename.endsWith('_employment_history.sql')) {
       companyA=(await db.query(`insert into public.companies(owner_id,name,timezone) values ($1,'Demo Company A','Asia/Manila') returning *`,[uidA])).rows[0];
@@ -195,6 +197,12 @@ try {
   eq((await db.query('select id,company_id,employee_id,kind,starts_on,ends_on,reason,status from public.leave_requests order by id')).rows,beforeLeave,'Leave migration preserves existing identity, dates, notes and final decisions');
   const {runLeaveTests}=await import('./leave.test.mjs');
   await runLeaveTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
+  await db.exec('reset role');
+  const beforeShifts=(await db.query('select id,company_id,employee_id,work_date,checked_in_at,checked_out_at,revision from public.attendance order by id')).rows;
+  for(const filename of shiftMigrations) {await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version) values($1)',[filename.split('_')[0]]);}
+  eq((await db.query('select id,company_id,employee_id,work_date,checked_in_at,checked_out_at,revision from public.attendance order by id')).rows,beforeShifts,'Shift migration preserves all existing attendance');
+  const {runShiftTests}=await import('./shifts.test.mjs');
+  await runShiftTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

@@ -173,6 +173,8 @@ impl EmployeeDraft {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Attendance {
+    #[serde(default)]
+    pub planned_shift: Option<crate::shifts::ShiftPlan>,
     pub id: Uuid,
     pub company_id: Uuid,
     pub employee_id: Uuid,
@@ -318,6 +320,7 @@ pub enum Mode {
 
 #[derive(Clone, Debug)]
 pub struct Snapshot {
+    pub shifts: crate::shifts::ShiftSetup,
     pub leave_setup: crate::leave::LeaveSetup,
     pub company: Company,
     pub logo_png: Option<Vec<u8>>,
@@ -341,6 +344,7 @@ pub struct Snapshot {
 impl Snapshot {
     pub fn signed_out() -> Self {
         Self {
+            shifts: Default::default(),
             leave_setup: Default::default(),
             company: Company {
                 id: Uuid::nil(),
@@ -414,6 +418,8 @@ impl Snapshot {
 
 #[derive(Clone, Debug)]
 pub enum Action {
+    SaveShiftTemplate(crate::shifts::ShiftTemplateDraft),
+    AssignShift(crate::shifts::ShiftAssignmentDraft),
     SaveEmployee(EmployeeDraft),
     SaveEmployeeRecord(EmployeeDraft, crate::contacts::EmployeeContacts),
     SaveEmployeeContacts(crate::contacts::EmployeeContacts),
@@ -521,6 +527,7 @@ impl DemoStore {
             .take(5)
             .enumerate()
             .map(|(i, e)| Attendance {
+                planned_shift: None,
                 revision: 0,
                 id: Uuid::from_u128(200 + i as u128),
                 company_id: company.id,
@@ -559,6 +566,7 @@ impl DemoStore {
         .collect();
         let mut store = Self {
             data: Snapshot {
+                shifts: Default::default(),
                 leave_setup: crate::leave::LeaveSetup {
                     policy: crate::leave::LeavePolicy {
                         company_id: company.id,
@@ -662,6 +670,13 @@ impl DemoStore {
     fn apply(&mut self, action: Action) -> Result<()> {
         self.data.access.authorize(&action, &self.data)?;
         match action {
+            Action::SaveShiftTemplate(draft) => {
+                crate::shifts::save_demo_template(&mut self.data, draft)?
+            }
+            Action::AssignShift(draft) => {
+                let assignment = draft.assignment(&self.data)?;
+                self.data.shifts.assignments.push(assignment);
+            }
             Action::SaveEmploymentOption(draft) => {
                 let option = draft.option(&self.data)?;
                 let choices = match draft.kind {
@@ -818,7 +833,7 @@ impl DemoStore {
             }
             Action::CheckIn(id) => {
                 self.require_active(id)?;
-                let today = self.data.company.today();
+                let today = crate::shifts::work_date_at(&self.data, id, Utc::now());
                 ensure!(
                     !self
                         .data
@@ -836,6 +851,7 @@ impl DemoStore {
                     "Close the employee's previous open attendance record first."
                 );
                 self.data.attendance.push(Attendance {
+                    planned_shift: self.data.shifts.plan(id, today).cloned(),
                     revision: 0,
                     id: Uuid::new_v4(),
                     company_id: self.data.company.id,

@@ -756,8 +756,21 @@ impl CloudClient {
         };
         let policy = self.rows::<crate::leave::LeavePolicy>("leave_policies",Some(company.id))?.into_iter().next().ok_or_else(||anyhow::anyhow!("Leave policies are not configured. Ask the deployment administrator to apply the required migration."))?;
         let leave_events = self.rows("leave_events", Some(company.id))?;
+        let mut shift_templates: Vec<crate::shifts::ShiftTemplate> =
+            self.rows("shift_templates", Some(company.id))?;
+        shift_templates.sort_by_key(|t| t.name.to_lowercase());
+        let shifts = crate::shifts::ShiftSetup {
+            templates: shift_templates,
+            assignments: self.rows("shift_assignments", Some(company.id))?,
+            versions: if access.role.manages_hr() {
+                self.rows("shift_template_versions", Some(company.id))?
+            } else {
+                Vec::new()
+            },
+        };
         let (logo_png, logo_warning) = self.company_logo(&company);
         Ok(Snapshot {
+            shifts,
             leave_setup: crate::leave::LeaveSetup {
                 policy,
                 events: leave_events,
@@ -910,6 +923,24 @@ impl CloudClient {
 
     pub fn execute(&mut self, action: Action, current: &Snapshot) -> Result<Snapshot> {
         current.access.authorize(&action, current)?;
+        let shift_write = match &action {
+            Action::SaveShiftTemplate(draft) => Some((
+                "rpc/save_shift_template",
+                json!({"p_shift":draft.payload(current)?}),
+            )),
+            Action::AssignShift(draft) => {
+                draft.assignment(current)?;
+                Some(("rpc/assign_shift", json!({"p_assignment":draft.payload()?})))
+            }
+            _ => None,
+        };
+        if let Some((rpc, payload)) = shift_write {
+            let _: Uuid = decode(self.request(Method::POST, rpc)?.json(&payload).send()
+                .context("Could not save the schedule. Check your connection and refresh before retrying.")?)?;
+            return self
+                .snapshot()
+                .context("Schedule saved, but refresh failed. Click Refresh before trying again.");
+        }
         if matches!(
             &action,
             Action::UploadCompanyLogo(_) | Action::RemoveCompanyLogo
@@ -1036,6 +1067,9 @@ impl CloudClient {
                 .context("Contacts saved, but refresh failed. Click Refresh before trying again.");
         }
         let (method, table, id, body) = match action {
+            Action::SaveShiftTemplate(_) | Action::AssignShift(_) => {
+                unreachable!("Schedule saves return above")
+            }
             Action::SaveEmploymentOption(_) => unreachable!("Employment choices return above"),
             Action::CorrectAttendance(_) => unreachable!("Corrections return above"),
             Action::SaveEmployeeRecord(_, _) => unreachable!("Employee record saves return above"),

@@ -10,6 +10,7 @@ pub mod employment;
 pub mod history;
 pub mod leave;
 pub mod organization;
+pub mod shifts;
 pub mod ui;
 pub mod updater;
 

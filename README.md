@@ -24,7 +24,7 @@ The interface uses `egui`/`eframe`. The domain rules and Supabase Auth/REST adap
 
 ## Try it
 
-The private Windows setup installs version 0.1.15 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection and update-verification profiles, but no account password or session.
+The private Windows setup installs version 0.1.16 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection and update-verification profiles, but no account password or session.
 
 Open **HRIS Desktop** and sign in with an assigned Administrator, HR Generalist or Manager account. Ordinary Employee accounts are reserved for a future mobile-friendly portal and cannot sign into this desktop app. Its company database is already selected by the installation. Account login remains necessary to access HR records; database setup is not part of that login.
 
@@ -131,3 +131,5 @@ $env:HRIS_SCREENSHOT_TO = 'C:\absolute\path\hris-preview.png'
 `HRIS_PREVIEW_PAGE` can select `employees`, `attendance`, `leave`, `accounts`, `settings` or `profile` in this QA build. `HRIS_PREVIEW_FORM` can open `employee`, `leave` or `account`. `HRIS_PREVIEW_ROLE` can preview `hr_generalist`, `manager` or `employee` with fictional role-scoped records. `HRIS_PREVIEW_PROFILE=security` or `sessions` selects a Profile section. `HRIS_PREVIEW_AVATAR` can load a synthetic local QA photo into the visibly labeled demo without authenticating. `HRIS_PREVIEW_SIZE=compact` uses the minimum window size, `HRIS_PREVIEW_SCALE=125` checks enlarged display, and `HRIS_PREVIEW_SCROLL=bottom` captures lower content. `HRIS_PREVIEW_COMPANY_NAME` can override the fictional demo name. These environment controls are excluded from a normal production build.
 
 Implementation references: [eframe native applications](https://docs.rs/eframe/0.37.0/eframe/), [Supabase row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security), [Supabase publishable API keys](https://supabase.com/docs/guides/getting-started/api-keys), [Supabase password authentication](https://supabase.com/docs/guides/auth/passwords), and [PGlite extensions](https://pglite.dev/extensions/).
+
+Shift schedules and dated employee assignments are under **Attendance**. See [shift schedules](docs/SHIFT-SCHEDULES.md) for overnight handling, preserved history and role scope. Break rules and lateness/undertime/overtime calculations follow in the next module.

@@ -8,9 +8,10 @@ pub struct DailyRow {
     pub approved_leave: Option<LeaveKind>,
     pub approved_leave_units: i32,
     pub scheduled_workday: bool,
+    pub planned_shift: Option<crate::shifts::ShiftPlan>,
 }
 
-/// A missing record is not proof of absence: shifts/holidays are not configured yet.
+/// A missing record is not proof of absence. Saved shifts and leave retain their snapshots.
 /// Historical records survive archiving; future hires do not appear as missing.
 pub fn daily_roster(data: &Snapshot, date: NaiveDate) -> Vec<DailyRow> {
     let mut rows: Vec<_> = data
@@ -43,7 +44,20 @@ pub fn daily_roster(data: &Snapshot, date: NaiveDate) -> Vec<DailyRow> {
                     .filter(|d| d.date == date)
                     .map(|d| d.units)
                     .sum(),
-                scheduled_workday: data.leave_setup.policy.working(date),
+                planned_shift: attendance
+                    .as_ref()
+                    .and_then(|a| a.planned_shift.clone())
+                    .or_else(|| {
+                        attendance
+                            .is_none()
+                            .then(|| data.shifts.plan(employee.id, date).cloned())
+                            .flatten()
+                    }),
+                scheduled_workday: data
+                    .shifts
+                    .plan(employee.id, date)
+                    .map(|p| p.working(data, date))
+                    .unwrap_or_else(|| data.leave_setup.policy.working(date)),
                 attendance,
                 approved_leave,
             })

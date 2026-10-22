@@ -102,6 +102,7 @@ fn overnight_times_follow_company_timezone_and_reject_future_or_reversed_times()
         8
     );
     assert_eq!(row.checked_in_at.hour(), 14);
+    draft.checked_in_date = draft.work_date.to_string();
     draft.checked_out_date = draft.work_date.to_string();
     assert!(draft.change(&store.data, now).is_err());
     draft.checked_out.clear();
@@ -151,6 +152,7 @@ fn duplicates_overlaps_and_pre_hire_dates_are_denied() {
     assert!(draft.change(&store.data, now).is_err());
     let mut next = draft.clone();
     next.work_date += Duration::days(1);
+    next.checked_in_date = next.work_date.to_string();
     next.checked_out_date = next.work_date.to_string();
     assert!(
         next.change(&store.data, now)
@@ -175,6 +177,7 @@ fn archived_employee_history_is_retained_and_correctable_only_before_today() {
     store.data.employees[0].status = EmployeeStatus::Archived;
     assert!(draft.change(&store.data, now).is_ok());
     draft.work_date = now.with_timezone(&store.data.company.tz()).date_naive();
+    draft.checked_in_date = draft.work_date.to_string();
     draft.checked_out_date = draft.work_date.to_string();
     assert!(
         draft
@@ -209,6 +212,7 @@ fn fractional_seconds_round_trip_and_dst_ambiguities_are_not_silently_changed() 
     draft.checked_out.clear();
     for (day, time) in [("2026-03-08", "02:30"), ("2025-11-02", "01:30")] {
         draft.work_date = parse_date(day).unwrap();
+        draft.checked_in_date = draft.work_date.to_string();
         draft.checked_in = time.into();
         assert!(draft.change(&store.data, now).is_err());
     }

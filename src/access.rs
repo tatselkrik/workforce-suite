@@ -120,6 +120,7 @@ impl Access {
             | Action::SaveEmploymentOption(_)
             | Action::SaveLeavePolicy(_) => self.role.manages_accounts(),
             Action::CheckIn(id) => self.can_record(*id),
+            Action::SaveShiftTemplate(_) | Action::AssignShift(_) => self.role.manages_hr(),
             Action::CorrectAttendance(_) => self.role.manages_hr(),
             Action::CheckOut(id) => data
                 .attendance

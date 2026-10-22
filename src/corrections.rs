@@ -26,6 +26,7 @@ pub struct CorrectionDraft {
     pub employee_id: Uuid,
     pub work_date: NaiveDate,
     pub checked_in: String,
+    pub checked_in_date: String,
     pub checked_out_date: String,
     pub checked_out: String,
     pub reason: String,
@@ -49,6 +50,11 @@ impl CorrectionDraft {
         Self {
             employee_id,
             work_date,
+            checked_in_date: original
+                .as_ref()
+                .map(|a| a.checked_in_at.with_timezone(&tz).date_naive())
+                .unwrap_or(work_date)
+                .to_string(),
             checked_in: original
                 .as_ref()
                 .map(|a| {
@@ -75,7 +81,11 @@ impl CorrectionDraft {
     }
 
     pub fn change(&self, data: &Snapshot, now: DateTime<Utc>) -> Result<CorrectionChange> {
-        let time_in = local_time(self.work_date, &self.checked_in, data.company.tz())?;
+        let time_in = local_time(
+            parse_date(&self.checked_in_date)?,
+            &self.checked_in,
+            data.company.tz(),
+        )?;
         let time_out = if self.checked_out.trim().is_empty() {
             None
         } else {
@@ -87,6 +97,16 @@ impl CorrectionDraft {
         };
         let change = CorrectionChange {
             record: Attendance {
+                planned_shift: self
+                    .original
+                    .as_ref()
+                    .and_then(|a| a.planned_shift.clone())
+                    .or_else(|| {
+                        self.original
+                            .is_none()
+                            .then(|| data.shifts.plan(self.employee_id, self.work_date).cloned())
+                            .flatten()
+                    }),
                 id: self
                     .original
                     .as_ref()
@@ -149,10 +169,14 @@ impl CorrectionChange {
             a.work_date >= NaiveDate::from_ymd_opt(1900, 1, 1).unwrap()
                 && a.work_date <= today
                 && a.checked_in_at <= now
-                && a.checked_in_at
+                && (a
+                    .checked_in_at
                     .with_timezone(&data.company.tz())
                     .date_naive()
                     == a.work_date
+                    || a.planned_shift.as_ref().is_some_and(
+                        |p| p.overnight() && p.contains_clock(a.work_date, a.checked_in_at)
+                    ))
                 && a.checked_out_at
                     .is_none_or(|t| t <= now && t >= a.checked_in_at),
             "Use past or current times; check-out must be on or after check-in."

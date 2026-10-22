@@ -16,11 +16,11 @@ Implemented: one employee editor with private contact/emergency details and repo
 
 ## Stage 3 — Leave policies and approvals
 
-Implemented: company holiday calendars and custom workweeks, full/morning/afternoon requests, configurable leave types, annual/monthly entitlement, capped expiring carryover, cancellation, pending reservations and per-type 1–5 ordered approval steps with retained reviewer/date history. Existing requests retain original charges; new policy versions do not rewrite filed plans. See [leave policies](LEAVE-POLICIES.md). Delegation, automatic escalation, effective-date policies, imported opening balances and posted credit adjustments remain future work. Next: attendance rules.
+Implemented: company holiday calendars and custom workweeks, full/morning/afternoon requests, configurable leave types, annual/monthly entitlement, capped expiring carryover, cancellation, pending reservations and per-type 1–5 ordered approval steps with retained reviewer/date history. Existing requests retain original charges; new policy versions do not rewrite filed plans. See [leave policies](LEAVE-POLICIES.md). Delegation, automatic escalation, effective-date policies, imported opening balances and posted credit adjustments remain future work. Next: attendance break and calculation rules.
 
 ## Stage 4 — Attendance rules
 
-Direct HR attendance corrections with required reasons and before/after history are implemented. Add shift schedules, breaks, lateness, undertime, overtime and employee correction requests with approval history. Biometric integration is visible but disabled in this prototype. Actual device support requires choosing a device/protocol and verifying it against physical hardware.
+Direct HR attendance corrections with required reasons and before/after history are implemented. Shift schedules, dated employee assignments, retained schedule history and overnight attendance attribution are implemented. Next add breaks, lateness, undertime, overtime and employee correction requests with approval history. Biometric integration is visible but disabled in this prototype. Actual device support requires choosing a device/protocol and verifying it against physical hardware.
 
 ## Stage 5 — Reports and data exchange
 
