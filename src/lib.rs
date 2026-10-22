@@ -13,6 +13,7 @@ pub mod history;
 pub mod leave;
 pub mod organization;
 pub mod overtime;
+pub mod reports;
 pub mod requests;
 pub mod shifts;
 pub mod ui;

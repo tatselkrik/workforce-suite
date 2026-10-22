@@ -1,5 +1,31 @@
 # Prototype verification — 2026-10-22
 
+## Attendance/leave reports and CSV exports — version 0.1.21
+
+- 185 Rust tests passed, including nine report workflows and three HTTP checks.
+  They verify saved-rule time totals, partial/historical overtime, filed half-day
+  charges clipped to the period, cancelled history, unknown totals, missing-day
+  semantics, Manager scopes, bounds, duplicates, safe file creation, UTF-8/CSV
+  quoting and formula-prefix protection. Export reloads records and rechecks
+  access before file IO; revoked/changed scope creates no local file.
+- Actual Admin and synthetic Manager Auth sessions verified attendance/summary/
+  empty leave reports, 525 recorded gross minutes, UTF-8 export, own/direct-report
+  scope, denied outside-employee export and fresh-sign-in persistence. Test user
+  disabled, three synthetic people archived, unrelated data/rules preserved and
+  verification sessions revoked. Export samples contain synthetic people only
+  and remain private verification files.
+- Fourteen final fictional native previews inspected across attendance, leave,
+  summaries, employee/department filters, empty state, Manager/HR, paging,
+  light/dark, 125% and right-side report columns. Nested-table height and wide
+  column sizing were corrected after earlier captures; final previews supersede
+  them. Signed-in native button/file-chooser automation is not claimed.
+- No database migration, RLS/grant or Edge Function change. The prior 862 local
+  PostgreSQL assertions remain historical evidence for unchanged schema; that
+  database suite was not rerun for this report-only module. Normal build/startup,
+  privacy, exact installers/recovery, signing/private publication and any local
+  installation are recorded in the private version report. No remote CI,
+  Authenticode, payroll or other-PC verification is claimed.
+
 ## Overtime approvals — version 0.1.20
 
 - 173 Rust tests and 862 local PostgreSQL assertions passed: own submission,

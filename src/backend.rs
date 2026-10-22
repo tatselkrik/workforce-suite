@@ -663,7 +663,7 @@ impl CloudClient {
         )
     }
 
-    pub fn snapshot(&mut self) -> Result<Snapshot> {
+    fn current_access(&mut self) -> Result<Access> {
         let response = self
             .request(Method::POST, "rpc/my_hris_access")?
             .json(&json!({}))
@@ -684,6 +684,29 @@ impl CloudClient {
             let _ = self.sign_out_scope("local");
             return Err(PortalAccount.into());
         }
+        Ok(access)
+    }
+
+    pub fn report(
+        &mut self,
+        filter: &crate::reports::Filter,
+        destination: Option<&Path>,
+    ) -> Result<(Snapshot, crate::reports::Report)> {
+        filter.validate()?;
+        let data = self.snapshot()?;
+        let report = crate::reports::build(&data, filter, Utc::now())?;
+        let access = self.current_access()?;
+        if !crate::reports::same_scope(&data.access, &access) {
+            return Err(AccessRevoked.into());
+        }
+        if let Some(path) = destination {
+            report.save(path)?;
+        }
+        Ok((data, report))
+    }
+
+    pub fn snapshot(&mut self) -> Result<Snapshot> {
+        let access = self.current_access()?;
         let mut companies: Vec<Company> = self.rows("companies", None)?;
         ensure!(
             !companies.is_empty(),
@@ -1441,6 +1464,10 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
 }
 
 pub enum Command {
+    Report {
+        filter: crate::reports::Filter,
+        destination: Option<std::path::PathBuf>,
+    },
     Document(DocumentAction),
     CheckUpdates,
     InstallUpdate(VerifiedRelease),
@@ -1458,6 +1485,7 @@ pub enum Command {
 }
 
 pub struct Update {
+    pub report: Option<crate::reports::Report>,
     pub result: std::result::Result<Snapshot, String>,
     pub message: String,
     pub account: Option<AccountProfile>,
@@ -1488,6 +1516,7 @@ pub fn worker(
                 Err(mpsc::RecvTimeoutError::Disconnected) => break,
             };
             let mut message = String::new();
+            let mut report_result = None;
             let mut update_state = None;
             let mut check_after_sign_in = false;
             let mut result: Result<Snapshot> = match command {
@@ -1579,6 +1608,35 @@ pub fn worker(
                             .and_then(|store| store.execute(action).map(|_| store.data.clone())),
                     }
                 }
+                Command::Report {
+                    filter,
+                    destination,
+                } => {
+                    let exporting = destination.is_some();
+                    let changed = match cloud.as_mut() {
+                        Some(client) => client.report(&filter, destination.as_deref()),
+                        None => demo
+                            .as_ref()
+                            .context("Sign in to run company reports.")
+                            .and_then(|store| {
+                                let report =
+                                    crate::reports::build(&store.data, &filter, Utc::now())?;
+                                if let Some(path) = destination.as_deref() {
+                                    report.save(path)?;
+                                }
+                                Ok((store.data.clone(), report))
+                            }),
+                    };
+                    changed.map(|(data, report)| {
+                        message = format!(
+                            "{} {} row(s).",
+                            if exporting { "Exported" } else { "Generated" },
+                            report.rows.len()
+                        );
+                        report_result = Some(report);
+                        data
+                    })
+                }
                 Command::Document(action) => {
                     let changed = match cloud.as_mut() {
                         Some(client) => client.execute_document(action, &current),
@@ -1647,6 +1705,7 @@ pub fn worker(
             }
             if events
                 .send(Update {
+                    report: report_result,
                     result: result.map_err(|e| e.to_string()),
                     message,
                     account: cloud
@@ -1669,6 +1728,7 @@ pub fn worker(
                         .unwrap_or_else(|e| UpdateState::Failed(e.to_string()));
                     if events
                         .send(Update {
+                            report: None,
                             result: Ok(current.clone()),
                             message: String::new(),
                             account: None,

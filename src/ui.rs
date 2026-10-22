@@ -27,6 +27,7 @@ mod calculations_view;
 mod leave_view;
 mod organization_view;
 mod overtime_view;
+mod reports_view;
 mod requests_view;
 mod shifts_view;
 
@@ -43,17 +44,19 @@ enum Page {
     Employees,
     Attendance,
     Leave,
+    Reports,
     Accounts,
     Settings,
     Profile,
 }
 
 impl Page {
-    const ALL: [Self; 6] = [
+    const ALL: [Self; 7] = [
         Self::Overview,
         Self::Employees,
         Self::Attendance,
         Self::Leave,
+        Self::Reports,
         Self::Accounts,
         Self::Settings,
     ];
@@ -63,6 +66,7 @@ impl Page {
             Self::Employees => "Employees",
             Self::Attendance => "Attendance",
             Self::Leave => "Leave",
+            Self::Reports => "Reports",
             Self::Accounts => "Account Manager",
             Self::Settings => "Settings",
             Self::Profile => "Profile",
@@ -112,6 +116,7 @@ pub struct HrisApp {
     calculation_state: calculations_view::State,
     request_state: requests_view::State,
     overtime_state: overtime_view::State,
+    report_state: reports_view::State,
     department: String,
     employment_type_filter: EmploymentFilter,
     work_location_filter: EmploymentFilter,
@@ -310,6 +315,7 @@ impl HrisApp {
             .as_ref()
             .map(|a| a.details.clone())
             .unwrap_or_default();
+        let report_state = reports_view::State::new(data.company.today());
         let mut app = Self {
             attendance_date: data.company.today(),
             calendar_month: month_start(data.company.today()),
@@ -330,6 +336,7 @@ impl HrisApp {
             calculation_state: calculations_view::State::default(),
             request_state: requests_view::State::default(),
             overtime_state: overtime_view::State::default(),
+            report_state,
             department: String::new(),
             employment_type_filter: EmploymentFilter::All,
             work_location_filter: EmploymentFilter::All,
@@ -390,6 +397,7 @@ impl HrisApp {
                 Ok("employees") => app.page = Page::Employees,
                 Ok("attendance") => app.page = Page::Attendance,
                 Ok("leave") => app.page = Page::Leave,
+                Ok("reports") => app.page = Page::Reports,
                 Ok("settings") => app.page = Page::Settings,
                 Ok("profile") => app.page = Page::Profile,
                 Ok("accounts") => app.page = Page::Accounts,
@@ -944,6 +952,7 @@ impl HrisApp {
             app.prepare_calculation_preview();
             app.prepare_request_preview();
             app.prepare_overtime_preview();
+            app.prepare_reports_preview();
             if std::env::var("HRIS_PREVIEW_PAGE").as_deref() == Ok("sign-in") {
                 app.login_branding = branding::LoginBranding {
                     company_name: app.data.company.name.clone(),
@@ -1021,6 +1030,7 @@ impl HrisApp {
                         self.calculation_state = calculations_view::State::default();
                         self.request_state = requests_view::State::default();
                         self.overtime_state = overtime_view::State::default();
+                        self.report_state = reports_view::State::new(data.company.today());
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
                         self.account_form = None;
@@ -1043,6 +1053,7 @@ impl HrisApp {
                         self.calculation_state = calculations_view::State::default();
                         self.request_state = requests_view::State::default();
                         self.overtime_state = overtime_view::State::default();
+                        self.report_state = reports_view::State::new(data.company.today());
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
                         self.clear_profile_secrets(ctx);
@@ -1064,6 +1075,11 @@ impl HrisApp {
                         self.correction_form = None;
                         self.employment_option_form = None;
                         self.correction_history = None;
+                    }
+                    if let Some(report) = update.report {
+                        if report.filter == self.report_state.filter {
+                            self.report_state.result = Some(report);
+                        }
                     }
                     if data.mode == Mode::Supabase && data.logo_warning.is_none() {
                         let next = branding::LoginBranding {
@@ -1668,6 +1684,10 @@ impl HrisApp {
             Page::Leave => (
                 "Time away, organized",
                 "Manage requests, leave policies and ordered approvals.",
+            ),
+            Page::Reports => (
+                "Reports",
+                "Attendance, filed leave charges and employee totals within your access.",
             ),
             Page::Accounts => (
                 "Account Manager",
@@ -3855,6 +3875,7 @@ impl eframe::App for HrisApp {
                                 Page::Employees => self.employees(ui),
                                 Page::Attendance => self.attendance(ui),
                                 Page::Leave => self.leave(ui),
+                                Page::Reports => self.reports(ui),
                                 Page::Accounts if self.data.access.role.manages_accounts() => {
                                     self.accounts(ui)
                                 }

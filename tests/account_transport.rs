@@ -40,6 +40,115 @@ impl Request {
 type Requests = Arc<Mutex<Vec<Request>>>;
 
 #[test]
+fn report_export_reloads_scoped_data_and_rechecks_access_before_creating_csv() {
+    use hris_desktop::reports::{Filter, Kind};
+    let store = DemoStore::new();
+    let company = store.data.company.clone();
+    let mut initial = baseline(&company);
+    initial[3] = reply(
+        "GET /rest/v1/employees?",
+        200,
+        json!([store.data.employees[0]]),
+    );
+    let mut fresh = baseline(&company);
+    let mut changed = store.data.employees[0].clone();
+    changed.full_name = "Synthetic refreshed report employee".into();
+    fresh[3] = reply("GET /rest/v1/employees?", 200, json!([changed]));
+    initial.extend(fresh.into_iter().skip(1).take(28));
+    initial.push(reply("POST /rest/v1/rpc/my_hris_access ",200,json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]})));
+    let (config, server, requests) = fixture(initial);
+    let (mut client, _) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    let mut f = Filter::new(company.today());
+    f.kind = Kind::Summary;
+    f.include_missing = false;
+    let path = std::env::temp_dir().join(format!("hris-fresh-report-{}.csv", uuid::Uuid::new_v4()));
+    let (_, report) = client.report(&f, Some(&path)).unwrap();
+    assert_eq!(report.rows.len(), 1);
+    let csv = std::fs::read_to_string(&path).unwrap();
+    assert!(csv.contains("Synthetic refreshed report employee"));
+    assert!(!csv.contains("Alex Rivera"));
+    std::fs::remove_file(path).unwrap();
+    server.join().unwrap();
+    let requests = requests.lock().unwrap();
+    assert_eq!(
+        requests
+            .iter()
+            .filter(|r| r.line.starts_with("POST /rest/v1/rpc/my_hris_access "))
+            .count(),
+        3
+    );
+    assert!(
+        requests
+            .iter()
+            .filter(|r| r.line.starts_with("POST /rest/v1/"))
+            .all(|r| r.line.starts_with("POST /rest/v1/rpc/my_hris_access ")
+                || r.line
+                    .starts_with("POST /rest/v1/rpc/list_company_accounts "))
+    );
+}
+
+#[test]
+fn report_access_changed_during_loading_prevents_local_export() {
+    use hris_desktop::reports::{Filter, Kind};
+    let company = Company::default();
+    let mut replies = baseline(&company);
+    replies.extend(baseline(&company).into_iter().skip(1).take(28));
+    replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,json!({"company_id":company.id,"user_id":company.owner_id,"role":"manager","employee_id":null,"direct_reports":[]})));
+    let (config, server, _) = fixture(replies);
+    let (mut client, _) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    let mut f = Filter::new(company.today());
+    f.kind = Kind::Summary;
+    let path =
+        std::env::temp_dir().join(format!("hris-denied-report-{}.csv", uuid::Uuid::new_v4()));
+    assert!(client.report(&f, Some(&path)).is_err());
+    assert!(!path.exists());
+    server.join().unwrap();
+}
+
+#[test]
+fn revoked_report_access_fails_before_reading_records_or_writing_a_file() {
+    use hris_desktop::reports::Filter;
+    let company = Company::default();
+    let mut replies = baseline(&company);
+    replies.push(reply(
+        "POST /rest/v1/rpc/my_hris_access ",
+        403,
+        json!({"message":"Access disabled"}),
+    ));
+    let (config, server, requests) = fixture(replies);
+    let (mut client, _) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    let path =
+        std::env::temp_dir().join(format!("hris-revoked-report-{}.csv", uuid::Uuid::new_v4()));
+    assert!(
+        client
+            .report(&Filter::new(company.today()), Some(&path))
+            .is_err()
+    );
+    assert!(!path.exists());
+    server.join().unwrap();
+    let requests = requests.lock().unwrap();
+    assert_eq!(
+        requests.last().unwrap().line,
+        "POST /rest/v1/rpc/my_hris_access HTTP/1.1"
+    );
+}
+
+#[test]
 fn attendance_requests_use_guarded_rpc_and_reload_proposals_and_decision_history() {
     use chrono::Duration;
     use hris_desktop::{

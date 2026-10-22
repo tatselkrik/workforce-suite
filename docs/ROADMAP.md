@@ -24,7 +24,7 @@ Direct HR attendance corrections with required reasons and before/after history 
 
 ## Stage 5 — Reports and data exchange
 
-Add detailed attendance/leave reports, spreadsheet exports, validated imports with previews/error reports, then custom reports and workforce analysis. Apply the same role scopes to reports and exports as to on-screen records.
+Implemented: detailed attendance reports, filed-charge leave reports, employee summaries and date/employee/department/status filters with role-scoped CSV exports (see [reports](REPORTS.md)). Saved-rule calculations, missing-day review flags, partial/historical overtime and incomplete totals remain distinct. Next add validated CSV imports with previews/error reports, then custom reports and workforce analysis. XLSX formatting remains future work.
 
 ## Stage 6 — Notifications and connections
 
