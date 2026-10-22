@@ -24,7 +24,7 @@ Direct HR attendance corrections with required reasons and before/after history 
 
 ## Stage 5 — Reports and data exchange
 
-Implemented: detailed attendance reports, filed-charge leave reports, employee summaries and date/employee/department/status filters with role-scoped CSV exports (see [reports](REPORTS.md)). Saved-rule calculations, missing-day review flags, partial/historical overtime and incomplete totals remain distinct. Next add validated CSV imports with previews/error reports, then custom reports and workforce analysis. XLSX formatting remains future work.
+Implemented: detailed attendance reports, filed-charge leave reports, employee summaries and date/employee/department/status filters with role-scoped CSV exports (see [reports](REPORTS.md)). Saved-rule calculations, missing-day review flags, partial/historical overtime and incomplete totals remain distinct. Implemented: HR/Admin create-only employee CSV imports with row previews/error exports, active reference validation, atomic batch writes, guarded retries and immutable source links/history (see [employee imports](EMPLOYEE-IMPORTS.md)). Next add custom report views and workforce analysis; attendance/leave imports and bulk updates remain later data-exchange modules. XLSX formatting remains future work.
 
 ## Stage 6 — Notifications and connections
 

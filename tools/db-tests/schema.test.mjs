@@ -63,7 +63,9 @@ try {
   const calculationMigrations=[];
   const requestMigrations=[];
   const overtimeMigrations=[];
+  const importMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_employee_csv_imports.sql')) {importMigrations.push(filename);continue;}
     if(filename.endsWith('_overtime_approvals.sql')) {overtimeMigrations.push(filename);continue;}
     if(filename.endsWith('_attendance_correction_requests.sql')||filename.endsWith('_attendance_request_context_index.sql')) {requestMigrations.push(filename);continue;}
     if(filename.endsWith('_attendance_calculations.sql')) {calculationMigrations.push(filename);continue;}
@@ -244,6 +246,12 @@ try {
   eq((await db.query('select to_jsonb(r) original from public.attendance_requests r order by id')).rows,beforeOvertimeRequests,'Overtime migration preserves correction-request history');
   const {runOvertimeTests}=await import('./overtime.test.mjs');
   await runOvertimeTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
+  await db.exec('reset role');
+  const beforeImports=(await db.query('select id,employee_code,full_name from public.employees order by id')).rows;
+  for(const filename of importMigrations) {await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version) values($1)',[filename.split('_')[0]]);}
+  eq((await db.query('select id,employee_code,full_name from public.employees order by id')).rows,beforeImports,'Import migration preserves all existing employee records');
+  const {runImportTests}=await import('./imports.test.mjs');
+  await runImportTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

@@ -322,6 +322,7 @@ pub enum Mode {
 
 #[derive(Clone, Debug)]
 pub struct Snapshot {
+    pub imports: crate::imports::Setup,
     pub overtime: crate::overtime::Setup,
     pub requests: crate::requests::Setup,
     pub calculations: crate::calculations::CalculationSetup,
@@ -350,6 +351,7 @@ pub struct Snapshot {
 impl Snapshot {
     pub fn signed_out() -> Self {
         Self {
+            imports: Default::default(),
             overtime: Default::default(),
             requests: Default::default(),
             calculations: Default::default(),
@@ -428,6 +430,7 @@ impl Snapshot {
 
 #[derive(Clone, Debug)]
 pub enum Action {
+    ImportEmployees(crate::imports::Preview, String),
     Overtime(crate::overtime::OvertimeAction),
     AttendanceRequest(crate::requests::RequestAction),
     SaveCalculationPolicy(crate::calculations::PolicyDraft),
@@ -582,6 +585,7 @@ impl DemoStore {
         .collect();
         let mut store = Self {
             data: Snapshot {
+                imports: Default::default(),
                 overtime: Default::default(),
                 requests: Default::default(),
                 calculations: crate::calculations::CalculationSetup {
@@ -682,6 +686,9 @@ impl DemoStore {
     }
 
     pub fn execute(&mut self, action: Action) -> Result<()> {
+        if let Action::ImportEmployees(preview, reason) = action {
+            return crate::imports::apply_demo(self, preview, reason);
+        }
         let before = self
             .data
             .employees
@@ -696,6 +703,9 @@ impl DemoStore {
     fn apply(&mut self, action: Action) -> Result<()> {
         self.data.access.authorize(&action, &self.data)?;
         match action {
+            Action::ImportEmployees(preview, reason) => {
+                crate::imports::apply_demo(self, preview, reason)?
+            }
             Action::SaveCalculationPolicy(draft) => {
                 crate::calculations::save_demo_policy(&mut self.data, draft)?
             }

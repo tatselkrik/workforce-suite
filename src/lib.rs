@@ -10,6 +10,7 @@ pub mod documents;
 pub mod domain;
 pub mod employment;
 pub mod history;
+pub mod imports;
 pub mod leave;
 pub mod organization;
 pub mod overtime;

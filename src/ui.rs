@@ -24,6 +24,7 @@ const LINE: Color32 = Color32::from_rgb(226, 232, 238);
 
 mod breaks_view;
 mod calculations_view;
+mod imports_view;
 mod leave_view;
 mod organization_view;
 mod overtime_view;
@@ -117,6 +118,7 @@ pub struct HrisApp {
     request_state: requests_view::State,
     overtime_state: overtime_view::State,
     report_state: reports_view::State,
+    import_state: imports_view::State,
     department: String,
     employment_type_filter: EmploymentFilter,
     work_location_filter: EmploymentFilter,
@@ -337,6 +339,7 @@ impl HrisApp {
             request_state: requests_view::State::default(),
             overtime_state: overtime_view::State::default(),
             report_state,
+            import_state: imports_view::State::default(),
             department: String::new(),
             employment_type_filter: EmploymentFilter::All,
             work_location_filter: EmploymentFilter::All,
@@ -953,6 +956,7 @@ impl HrisApp {
             app.prepare_request_preview();
             app.prepare_overtime_preview();
             app.prepare_reports_preview();
+            app.prepare_import_preview();
             if std::env::var("HRIS_PREVIEW_PAGE").as_deref() == Ok("sign-in") {
                 app.login_branding = branding::LoginBranding {
                     company_name: app.data.company.name.clone(),
@@ -1031,6 +1035,7 @@ impl HrisApp {
                         self.request_state = requests_view::State::default();
                         self.overtime_state = overtime_view::State::default();
                         self.report_state = reports_view::State::new(data.company.today());
+                        self.import_state = imports_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
                         self.account_form = None;
@@ -1054,6 +1059,7 @@ impl HrisApp {
                         self.request_state = requests_view::State::default();
                         self.overtime_state = overtime_view::State::default();
                         self.report_state = reports_view::State::new(data.company.today());
+                        self.import_state = imports_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
                         self.clear_profile_secrets(ctx);
@@ -1076,6 +1082,14 @@ impl HrisApp {
                         self.employment_option_form = None;
                         self.correction_history = None;
                     }
+                    if let Some(id) = self.import_state.preview.as_ref().map(|p| p.id) {
+                        if data.imports.batches.iter().any(|b| b.id == id) {
+                            self.import_state.preview = None;
+                            self.import_state.reason.clear();
+                            self.import_state.batch = Some(id);
+                        }
+                    }
+                    self.import_state.applying = false;
                     if let Some(report) = update.report {
                         if report.filter == self.report_state.filter {
                             self.report_state.result = Some(report);
@@ -1768,6 +1782,7 @@ impl HrisApp {
             || self.calculation_state.editing()
             || self.request_state.editing()
             || self.overtime_state.editing()
+            || self.import_state.editing()
             || self.account_form.is_some()
             || !company_fields_equal(&self.company_draft, &self.data.company)
             || self.profile_contacts_draft.as_ref().is_some_and(|draft| {

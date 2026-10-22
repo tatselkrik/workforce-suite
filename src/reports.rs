@@ -600,7 +600,7 @@ pub fn build(data: &Snapshot, f: &Filter, now: DateTime<Utc>) -> Result<Report> 
     Ok(report)
 }
 
-fn csv_cell(value: &str) -> Result<String> {
+pub(crate) fn csv_cell(value: &str) -> Result<String> {
     ensure!(
         !value.contains('\0'),
         "A report field contains an invalid null character."
@@ -667,20 +667,23 @@ impl Report {
         Ok(text.into_bytes())
     }
     pub fn save(&self, path: &Path) -> Result<()> {
-        ensure!(
-            path.extension()
-                .is_some_and(|e| e.eq_ignore_ascii_case("csv")),
-            "Use a .csv filename for this report."
-        );
-        let bytes = self.csv()?;
-        let mut file=std::fs::OpenOptions::new().write(true).create_new(true).open(path).context("Could not create the report. Choose a new filename in an existing writable folder; existing files are preserved.")?;
-        if let Err(error) = file.write_all(&bytes).and_then(|_| file.sync_all()) {
-            drop(file);
-            let _ = std::fs::remove_file(path);
-            return Err(error).context("The report could not be saved completely.");
-        }
-        Ok(())
+        save_csv(path, &self.csv()?)
     }
+}
+
+pub(crate) fn save_csv(path: &Path, bytes: &[u8]) -> Result<()> {
+    ensure!(
+        path.extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("csv")),
+        "Use a .csv filename for this CSV file."
+    );
+    let mut file=std::fs::OpenOptions::new().write(true).create_new(true).open(path).context("Could not create the CSV file. Choose a new filename in an existing writable folder; existing files are preserved.")?;
+    if let Err(error) = file.write_all(bytes).and_then(|_| file.sync_all()) {
+        drop(file);
+        let _ = std::fs::remove_file(path);
+        return Err(error).context("The report could not be saved completely.");
+    }
+    Ok(())
 }
 
 #[cfg(windows)]
@@ -694,9 +697,7 @@ pub fn choose_export(filename: &str) -> Result<Option<PathBuf>> {
     let filter: Vec<u16> = "CSV spreadsheet (*.csv)\0*.csv\0\0"
         .encode_utf16()
         .collect();
-    let title: Vec<u16> = "Export HRIS report to a new file\0"
-        .encode_utf16()
-        .collect();
+    let title: Vec<u16> = "Save HRIS CSV to a new file\0".encode_utf16().collect();
     let ext: Vec<u16> = "csv\0".encode_utf16().collect();
     // SAFETY: the owned buffers remain valid throughout the synchronous dialog.
     let mut dialog: OPENFILENAMEW = unsafe { std::mem::zeroed() };

@@ -6,7 +6,7 @@ Application identifier: `io.github.tatselkrik.hrisdesktop`.
 
 ## What works
 
-- **Reports:** date-filtered attendance detail, filed leave charges and employee summaries with role-scoped CSV exports. See [reports](docs/REPORTS.md).
+- **Reports:** date-filtered attendance detail, filed leave charges and employee summaries with role-scoped CSV exports. See [reports](docs/REPORTS.md). HR/Admin can also preview and atomically import new employee/contact records from CSV, with row errors and retained batch history; see [employee imports](docs/EMPLOYEE-IMPORTS.md).
 - **Overview:** active headcount, today's attendance, pending requests, and approved time away.
 - **Employee records:** click a name or Edit to open one record with Employment, Contact details and Emergency contact tabs. Save changes writes these together. Manage reporting relationships, optional hire dates, allowances and archived records. Assign company-defined employment types/work locations and filter/search employees by them. Unset and inactive assignments remain distinguishable. HR/Admin History shows saved employment changes, actor/time and before/after values, with an explicit starting snapshot for existing employees. See [employment setup](docs/EMPLOYMENT-SETUP.md) and [employment history](docs/EMPLOYMENT-HISTORY.md).
 - **Organization chart:** switch from Directory to Organization chart inside Employees. Explore expandable reporting teams, search/filter by department or work location, retain reporting context above matches, and click a card to open the employee record. HR/Admin see company records; Managers see their own record and active direct reports. Archived records are optional for HR. See [organization chart](docs/ORGANIZATION-CHART.md).
@@ -25,7 +25,7 @@ The interface uses `egui`/`eframe`. The domain rules and Supabase Auth/REST adap
 
 ## Try it
 
-The private Windows setup installs version 0.1.21 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection and update-verification profiles, but no account password or session.
+The private Windows setup installs version 0.1.22 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection and update-verification profiles, but no account password or session.
 
 Open **HRIS Desktop** and sign in with an assigned Administrator, HR Generalist or Manager account. Ordinary Employee accounts are reserved for a future mobile-friendly portal and cannot sign into this desktop app. Its company database is already selected by the installation. Account login remains necessary to access HR records; database setup is not part of that login.
 

@@ -49,9 +49,29 @@ impl HrisApp {
         let before = self.report_state.filter.clone();
         ui.horizontal_wrapped(|ui| {
             for kind in Kind::ALL {
-                ui.selectable_value(&mut self.report_state.filter.kind, kind, kind.label());
+                if ui
+                    .selectable_label(
+                        !self.import_state.open && self.report_state.filter.kind == kind,
+                        kind.label(),
+                    )
+                    .clicked()
+                {
+                    self.report_state.filter.kind = kind;
+                    self.import_state.open = false;
+                }
             }
         });
+        if self.data.access.role.manages_hr()
+            && ui
+                .selectable_label(self.import_state.open, "Employee import")
+                .clicked()
+        {
+            self.import_state.open = true;
+        }
+        if self.import_state.open && self.data.access.role.manages_hr() {
+            self.employee_import(ui);
+            return;
+        }
         ui.add_space(10.0);
         card(ui, |ui| {
             ui.horizontal_wrapped(|ui| {

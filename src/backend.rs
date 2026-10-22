@@ -812,8 +812,17 @@ impl CloudClient {
             records: self.rows("overtime_requests", Some(company.id))?,
             events: self.rows("overtime_events", Some(company.id))?,
         };
+        let imports = if access.role.manages_hr() {
+            crate::imports::Setup {
+                batches: self.rows("employee_import_batches", Some(company.id))?,
+                items: self.rows("employee_import_items", Some(company.id))?,
+            }
+        } else {
+            Default::default()
+        };
         let (logo_png, logo_warning) = self.company_logo(&company);
         Ok(Snapshot {
+            imports,
             overtime,
             requests,
             calculations,
@@ -971,6 +980,19 @@ impl CloudClient {
 
     pub fn execute(&mut self, action: Action, current: &Snapshot) -> Result<Snapshot> {
         current.access.authorize(&action, current)?;
+        if let Action::ImportEmployees(preview, reason) = &action {
+            let fresh = self.snapshot()?;
+            ensure!(
+                fresh.access.role.manages_hr() && fresh.company.id == preview.company_id,
+                "Your import access changed. Refresh or sign in again."
+            );
+            if !fresh.imports.batches.iter().any(|b| b.id == preview.id) {
+                preview.validate_current(&fresh)?;
+            }
+            let response=self.request(Method::POST,"rpc/import_employees")?.json(&preview.payload(reason)?).send().context("Could not submit the import. Refresh and retry the same preview if the outcome is uncertain.")?;
+            let _: Uuid = decode(response)?;
+            return self.snapshot().context("Import saved, but refresh failed. Refresh or retry the same preview before reopening the file.");
+        }
         if let Action::Overtime(action) = &action {
             let payload = crate::overtime::payload(action, current)?;
             let _: Uuid = decode(
@@ -1158,6 +1180,7 @@ impl CloudClient {
                 .context("Contacts saved, but refresh failed. Click Refresh before trying again.");
         }
         let (method, table, id, body) = match action {
+            Action::ImportEmployees(_, _) => unreachable!("imports use their guarded transaction"),
             Action::Overtime(_) => unreachable!("Overtime actions return above"),
             Action::AttendanceRequest(_) => unreachable!("Attendance requests return above"),
             Action::SaveCalculationPolicy(_) | Action::ApplyCalculationPolicy(_) => {
@@ -1464,6 +1487,10 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
 }
 
 pub enum Command {
+    ImportErrors {
+        preview: crate::imports::Preview,
+        destination: std::path::PathBuf,
+    },
     Report {
         filter: crate::reports::Filter,
         destination: Option<std::path::PathBuf>,
@@ -1607,6 +1634,30 @@ pub fn worker(
                             .context("Sign in to HRIS to access company records.")
                             .and_then(|store| store.execute(action).map(|_| store.data.clone())),
                     }
+                }
+                Command::ImportErrors {
+                    preview,
+                    destination,
+                } => {
+                    message = "Import error CSV saved. No employee records were changed.".into();
+                    (|| -> Result<Snapshot> {
+                        if let Some(client) = cloud.as_mut() {
+                            let access = client.current_access()?;
+                            if !access.role.manages_hr() || access.company_id != preview.company_id
+                            {
+                                return Err(AccessRevoked.into());
+                            }
+                        } else {
+                            ensure!(
+                                demo.as_ref()
+                                    .is_some_and(|s| s.data.access.role.manages_hr()
+                                        && s.data.company.id == preview.company_id),
+                                "Only HR or Administrators can export import errors."
+                            );
+                        }
+                        crate::reports::save_csv(&destination, &preview.error_csv()?)?;
+                        Ok(current.clone())
+                    })()
                 }
                 Command::Report {
                     filter,

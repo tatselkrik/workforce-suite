@@ -1,5 +1,32 @@
 # Prototype verification — 2026-10-22
 
+## Atomic employee CSV imports — version 0.1.22
+
+- 200 Rust tests and917 local PostgreSQL assertions passed, including14 import
+  workflows, uncertain-response retry HTTP coverage and55 database migration/
+  import checks. Strict CSV/UTF8/BOM/quotes/multiline/source lines, defaults,
+  duplicate/existing codes, contact rules, stale active references, batch limits,
+  normalized server byte budget, safe error CSV and once-only history verified.
+- Additive migration `20261022095123` deployed; all24 versions match. Existing
+  counts preserved; security advisories unchanged/no new FK findings. Optional
+  Docker catalog cache unavailable; actual hosted schema verified separately.
+- Hosted rollback HR subjects verified protected identity/company/active status,
+  actor/hash/links, atomic late-row rollback, retry/changed-retry behavior and
+  Manager/disabled/anonymous/direct audit denials. An expected-code fixture was
+  normalized to uppercase to match existing employee rules; fixtures rolled back.
+- Actual Admin Auth imported two synthetic people/contact/emergency records,
+  default leave and no accounts, one history each, protected audit and safe retry.
+  Invalid/existing previews and changed retries denied; fresh sign-in retained
+  batch/source rows. People archived, audit retained, unrelated data preserved
+  and sessions revoked. HR/Manager database scopes used simulated hosted subjects.
+- Eleven final fictional native previews inspected across ready/error/footer,
+  expanded details,125%, history light/dark, HR and Manager-hidden controls.
+  Native signed-in button/file-chooser automation was not performed. The final
+  pure normalized-size guard was tested after these unchanged UI previews.
+- Exact normal startup/privacy, source/archive, final installers/recovery,
+  signing/private publication and installation state belong in the private
+  version report. No Authenticode, remote CI, payroll or other-PC claim is made.
+
 ## Attendance/leave reports and CSV exports — version 0.1.21
 
 - 185 Rust tests passed, including nine report workflows and three HTTP checks.

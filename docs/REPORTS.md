@@ -67,6 +67,7 @@ period or employee/department filter for larger companies. Report inputs are
 indexed in memory and reuse existing attendance/leave calculation rules.
 No database migration or new permission grant is required for this module.
 
-Validated import previews/error reports, custom report definitions, XLSX
-formatting and broader workforce analysis remain subsequent work. A CSV
+Create-only employee CSV imports with previews/error reports are available to
+HR/Admin; see [employee imports](EMPLOYEE-IMPORTS.md). Custom report definitions,
+XLSX formatting and broader workforce analysis remain subsequent work. A CSV
 export is not an import template or payroll instruction.
