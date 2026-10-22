@@ -74,4 +74,4 @@ portal-only; their future own-record scope is protected in PostgreSQL.
 File recovery does not remove the new database schema. Old clients can still
 read their supported modules and new records receive server-owned snapshots.
 Employee correction requests are available separately; see [request approvals](ATTENDANCE-REQUESTS.md).
-Overtime approvals and payroll remain subsequent modules. The employee portal stays separate; biometric integration stays disabled.
+Overtime approvals are available separately; see [overtime approvals](OVERTIME-APPROVALS.md). Payroll remains a subsequent module. The employee portal stays separate; biometric integration stays disabled.

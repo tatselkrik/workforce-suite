@@ -1,5 +1,31 @@
 # Prototype verification — 2026-10-22
 
+## Overtime approvals — version 0.1.20
+
+- 173 Rust tests and 862 local PostgreSQL assertions passed: own submission,
+  candidate caps, partial review/revoke, current reporting scopes, no self-review,
+  immutable bases/events, cancellation/rejection and stale attendance/breaks.
+  Fractional seconds floor per interval before aggregation, matching Rust.
+- Migration `20261022082855` deployed without changing pre-existing record counts.
+  Hosted rollback-only checks verified current Manager partial approval and
+  revocation, actual-fact preservation, stale break conflicts, protected actors,
+  RLS/invoker functions and unrelated/disabled/anonymous/direct-write denials.
+  Existing security and older FK advisor findings are unchanged; no new FK lint.
+- Actual synthetic Manager/requester and HR/reviewer Auth sessions verified
+  submission, partial approval, revocation, rejection/cancellation, active-request
+  server uniqueness and a server stale-break conflict. A punch correction made
+  an existing approval historical. Fresh sign-in retained six requests/fourteen
+  events. Unrelated records and saved rules were preserved. Synthetic identities
+  are disabled, people archived, template inactive and test sessions revoked.
+- Eighteen fictional native previews inspected at compact size, including normal
+  and enlarged text, light/dark, request/review/history, partial authorization,
+  revocation, stale pending/approved, Manager/HR and empty views. Fields, buttons
+  and history cards align and remain accessible by scrolling.
+- These checks do not automate signed-in Windows button interactions, payroll,
+  other PCs or running-parent updater timing. Normal build/startup, exact final
+  installers, signing/publication and installation are recorded in the private
+  version report once completed. No remote CI or Authenticode claim is made.
+
 ## Attendance correction requests — version 0.1.19
 
 - 166 Rust tests and 802 local PostgreSQL assertions passed for the implementation: seven new request workflows, a guarded RPC/history HTTP contract and 66 database/preservation/index checks after the existing 736. Coverage includes own submission, no premature attendance write, one pending request/date, Manager/HR review, no self-approval, immutable proposals/decisions, reason validation, stale parent/request revisions, current reporting scope, break-bound revalidation, cancellation/rejection, linked audit, rule retention, DST conversion and disabled/unassigned/anonymous denials.

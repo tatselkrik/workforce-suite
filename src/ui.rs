@@ -26,6 +26,7 @@ mod breaks_view;
 mod calculations_view;
 mod leave_view;
 mod organization_view;
+mod overtime_view;
 mod requests_view;
 mod shifts_view;
 
@@ -110,6 +111,7 @@ pub struct HrisApp {
     break_state: breaks_view::State,
     calculation_state: calculations_view::State,
     request_state: requests_view::State,
+    overtime_state: overtime_view::State,
     department: String,
     employment_type_filter: EmploymentFilter,
     work_location_filter: EmploymentFilter,
@@ -327,6 +329,7 @@ impl HrisApp {
             break_state: breaks_view::State::default(),
             calculation_state: calculations_view::State::default(),
             request_state: requests_view::State::default(),
+            overtime_state: overtime_view::State::default(),
             department: String::new(),
             employment_type_filter: EmploymentFilter::All,
             work_location_filter: EmploymentFilter::All,
@@ -940,6 +943,7 @@ impl HrisApp {
             app.prepare_break_preview();
             app.prepare_calculation_preview();
             app.prepare_request_preview();
+            app.prepare_overtime_preview();
             if std::env::var("HRIS_PREVIEW_PAGE").as_deref() == Ok("sign-in") {
                 app.login_branding = branding::LoginBranding {
                     company_name: app.data.company.name.clone(),
@@ -1016,6 +1020,7 @@ impl HrisApp {
                         self.break_state = breaks_view::State::default();
                         self.calculation_state = calculations_view::State::default();
                         self.request_state = requests_view::State::default();
+                        self.overtime_state = overtime_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
                         self.account_form = None;
@@ -1037,6 +1042,7 @@ impl HrisApp {
                         self.break_state = breaks_view::State::default();
                         self.calculation_state = calculations_view::State::default();
                         self.request_state = requests_view::State::default();
+                        self.overtime_state = overtime_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
                         self.clear_profile_secrets(ctx);
@@ -1118,6 +1124,12 @@ impl HrisApp {
                         self.break_state.reason.clear();
                         self.break_state.saving = false;
                     }
+                    if self.overtime_state.saving {
+                        self.overtime_state.form = None;
+                        self.overtime_state.decision = None;
+                        self.overtime_state.reason.clear();
+                        self.overtime_state.saving = false;
+                    }
                     if self.request_state.saving {
                         self.request_state.form = None;
                         self.request_state.resolution = None;
@@ -1152,6 +1164,7 @@ impl HrisApp {
                     }
                 }
                 Err(error) => {
+                    self.overtime_state.saving = false;
                     self.leave_state.saving_revision = None;
                     self.shift_state.saving = false;
                     self.break_state.saving = false;
@@ -1647,6 +1660,7 @@ impl HrisApp {
                         shifts_view::Tab::History => "Schedule history",
                         shifts_view::Tab::Calculations => "Time calculations",
                         shifts_view::Tab::Requests => "Correction requests",
+                        shifts_view::Tab::Overtime => "Overtime approvals",
                     }
                 },
                 "Review attendance and manage employee work schedules.",
@@ -1733,6 +1747,7 @@ impl HrisApp {
             || self.break_state.void_target.is_some()
             || self.calculation_state.editing()
             || self.request_state.editing()
+            || self.overtime_state.editing()
             || self.account_form.is_some()
             || !company_fields_equal(&self.company_draft, &self.data.company)
             || self.profile_contacts_draft.as_ref().is_some_and(|draft| {

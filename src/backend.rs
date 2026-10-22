@@ -785,8 +785,13 @@ impl CloudClient {
             records: self.rows("attendance_requests", Some(company.id))?,
             events: self.rows("attendance_request_events", Some(company.id))?,
         };
+        let overtime = crate::overtime::Setup {
+            records: self.rows("overtime_requests", Some(company.id))?,
+            events: self.rows("overtime_events", Some(company.id))?,
+        };
         let (logo_png, logo_warning) = self.company_logo(&company);
         Ok(Snapshot {
+            overtime,
             requests,
             calculations,
             breaks,
@@ -943,6 +948,18 @@ impl CloudClient {
 
     pub fn execute(&mut self, action: Action, current: &Snapshot) -> Result<Snapshot> {
         current.access.authorize(&action, current)?;
+        if let Action::Overtime(action) = &action {
+            let payload = crate::overtime::payload(action, current)?;
+            let _: Uuid = decode(
+                self.request(Method::POST, "rpc/overtime_request")?
+                    .json(&json!({"p_request":payload}))
+                    .send()
+                    .context("Could not save overtime review. Refresh before retrying.")?,
+            )?;
+            return self
+                .snapshot()
+                .context("Overtime review saved, but refresh failed. Refresh before retrying.");
+        }
         if let Action::AttendanceRequest(action) = &action {
             let payload = crate::requests::payload(action, current, Utc::now())?;
             let _:Uuid=decode(self.request(Method::POST,"rpc/attendance_request")?.json(&json!({"p_request":payload})).send().context("Could not save the attendance request. Check your connection and refresh before retrying.")?)?;
@@ -1118,6 +1135,7 @@ impl CloudClient {
                 .context("Contacts saved, but refresh failed. Click Refresh before trying again.");
         }
         let (method, table, id, body) = match action {
+            Action::Overtime(_) => unreachable!("Overtime actions return above"),
             Action::AttendanceRequest(_) => unreachable!("Attendance requests return above"),
             Action::SaveCalculationPolicy(_) | Action::ApplyCalculationPolicy(_) => {
                 unreachable!("Calculation saves return above")

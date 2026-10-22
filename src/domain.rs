@@ -322,6 +322,7 @@ pub enum Mode {
 
 #[derive(Clone, Debug)]
 pub struct Snapshot {
+    pub overtime: crate::overtime::Setup,
     pub requests: crate::requests::Setup,
     pub calculations: crate::calculations::CalculationSetup,
     pub breaks: crate::breaks::BreakSetup,
@@ -349,6 +350,7 @@ pub struct Snapshot {
 impl Snapshot {
     pub fn signed_out() -> Self {
         Self {
+            overtime: Default::default(),
             requests: Default::default(),
             calculations: Default::default(),
             breaks: Default::default(),
@@ -426,6 +428,7 @@ impl Snapshot {
 
 #[derive(Clone, Debug)]
 pub enum Action {
+    Overtime(crate::overtime::OvertimeAction),
     AttendanceRequest(crate::requests::RequestAction),
     SaveCalculationPolicy(crate::calculations::PolicyDraft),
     ApplyCalculationPolicy(crate::calculations::ApplyPolicy),
@@ -579,6 +582,7 @@ impl DemoStore {
         .collect();
         let mut store = Self {
             data: Snapshot {
+                overtime: Default::default(),
                 requests: Default::default(),
                 calculations: crate::calculations::CalculationSetup {
                     policy: crate::calculations::CalculationPolicy {
@@ -728,6 +732,7 @@ impl DemoStore {
                         .then(a.id.cmp(&b.id))
                 });
             }
+            Action::Overtime(action) => crate::overtime::apply_demo(&mut self.data, action)?,
             Action::AttendanceRequest(action) => {
                 crate::requests::apply_demo(&mut self.data, action)?
             }

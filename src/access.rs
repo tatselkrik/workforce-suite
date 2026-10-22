@@ -107,6 +107,7 @@ impl Access {
     }
     pub fn authorize(&self, action: &Action, data: &Snapshot) -> Result<()> {
         let allowed = match action {
+            Action::Overtime(action) => crate::overtime::allowed(self, action, data),
             Action::AttendanceRequest(action) => crate::requests::allowed(self, action, data),
             Action::SaveCalculationPolicy(_) => self.role.manages_accounts(),
             Action::ApplyCalculationPolicy(_) => self.role.manages_hr(),
