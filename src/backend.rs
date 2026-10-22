@@ -781,8 +781,13 @@ impl CloudClient {
             policy_events:if access.role.manages_hr(){self.rows("attendance_calculation_policy_events",Some(company.id))?}else{Vec::new()},
             attendance_events:if access.role.manages_hr(){self.rows("attendance_calculation_events",Some(company.id))?}else{Vec::new()},
         };
+        let requests = crate::requests::Setup {
+            records: self.rows("attendance_requests", Some(company.id))?,
+            events: self.rows("attendance_request_events", Some(company.id))?,
+        };
         let (logo_png, logo_warning) = self.company_logo(&company);
         Ok(Snapshot {
+            requests,
             calculations,
             breaks,
             shifts,
@@ -938,6 +943,13 @@ impl CloudClient {
 
     pub fn execute(&mut self, action: Action, current: &Snapshot) -> Result<Snapshot> {
         current.access.authorize(&action, current)?;
+        if let Action::AttendanceRequest(action) = &action {
+            let payload = crate::requests::payload(action, current, Utc::now())?;
+            let _:Uuid=decode(self.request(Method::POST,"rpc/attendance_request")?.json(&json!({"p_request":payload})).send().context("Could not save the attendance request. Check your connection and refresh before retrying.")?)?;
+            return self
+                .snapshot()
+                .context("Attendance request saved, but refresh failed. Refresh before retrying.");
+        }
         let calculation_write = match &action {
             Action::SaveCalculationPolicy(draft) => Some((
                 "rpc/save_attendance_calculation_policy",
@@ -1106,6 +1118,7 @@ impl CloudClient {
                 .context("Contacts saved, but refresh failed. Click Refresh before trying again.");
         }
         let (method, table, id, body) = match action {
+            Action::AttendanceRequest(_) => unreachable!("Attendance requests return above"),
             Action::SaveCalculationPolicy(_) | Action::ApplyCalculationPolicy(_) => {
                 unreachable!("Calculation saves return above")
             }

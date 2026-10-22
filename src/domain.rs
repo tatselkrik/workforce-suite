@@ -322,6 +322,7 @@ pub enum Mode {
 
 #[derive(Clone, Debug)]
 pub struct Snapshot {
+    pub requests: crate::requests::Setup,
     pub calculations: crate::calculations::CalculationSetup,
     pub breaks: crate::breaks::BreakSetup,
     pub shifts: crate::shifts::ShiftSetup,
@@ -348,6 +349,7 @@ pub struct Snapshot {
 impl Snapshot {
     pub fn signed_out() -> Self {
         Self {
+            requests: Default::default(),
             calculations: Default::default(),
             breaks: Default::default(),
             shifts: Default::default(),
@@ -424,6 +426,7 @@ impl Snapshot {
 
 #[derive(Clone, Debug)]
 pub enum Action {
+    AttendanceRequest(crate::requests::RequestAction),
     SaveCalculationPolicy(crate::calculations::PolicyDraft),
     ApplyCalculationPolicy(crate::calculations::ApplyPolicy),
     AttendanceBreak(crate::breaks::BreakAction),
@@ -576,6 +579,7 @@ impl DemoStore {
         .collect();
         let mut store = Self {
             data: Snapshot {
+                requests: Default::default(),
                 calculations: crate::calculations::CalculationSetup {
                     policy: crate::calculations::CalculationPolicy {
                         company_id: company.id,
@@ -723,6 +727,9 @@ impl DemoStore {
                         .cmp(&b.name.to_lowercase())
                         .then(a.id.cmp(&b.id))
                 });
+            }
+            Action::AttendanceRequest(action) => {
+                crate::requests::apply_demo(&mut self.data, action)?
             }
             Action::CorrectAttendance(mut change) => {
                 change.record.calculation_snapshot = if let Some(old) = self

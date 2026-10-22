@@ -81,6 +81,12 @@ impl CorrectionDraft {
     }
 
     pub fn change(&self, data: &Snapshot, now: DateTime<Utc>) -> Result<CorrectionChange> {
+        let change = self.proposal(data, now)?;
+        change.validate(data, now)?;
+        Ok(change)
+    }
+
+    pub fn proposal(&self, data: &Snapshot, now: DateTime<Utc>) -> Result<CorrectionChange> {
         let time_in = local_time(
             parse_date(&self.checked_in_date)?,
             &self.checked_in,
@@ -131,7 +137,7 @@ impl CorrectionDraft {
                 crate::calculations::CalculationSnapshot::capture(data, &change.record),
             );
         }
-        change.validate(data, now)?;
+        change.validate_record(data, now)?;
         Ok(change)
     }
 }
@@ -157,6 +163,10 @@ impl CorrectionChange {
             data.access.role.manages_hr(),
             "Only HR staff and administrators can correct attendance."
         );
+        self.validate_record(data, now)
+    }
+
+    pub(crate) fn validate_record(&self, data: &Snapshot, now: DateTime<Utc>) -> Result<()> {
         let a = &self.record;
         crate::breaks::validate_attendance(data, a)?;
         ensure!(

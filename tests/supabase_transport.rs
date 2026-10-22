@@ -21,7 +21,7 @@ fn auth_fixture(
     let address = listener.local_addr().unwrap();
     let requests = Arc::new(Mutex::new(Vec::new()));
     let observed = requests.clone();
-    let expected_requests = if companies.is_empty() { 2 } else { 27 };
+    let expected_requests = if companies.is_empty() { 2 } else { 29 };
     let user_id = companies
         .first()
         .map(|company| company.owner_id)

@@ -1,0 +1,56 @@
+export async function runRequestTests({db,eq,deny,session,company,owner,unassigned}) {
+ const rpc=async p=>(await db.query('select public.attendance_request($1::jsonb) id',[JSON.stringify(p)])).rows[0].id;
+ const denied=async(p,codes=['42501','23514','PT409'])=>deny('select public.attendance_request($1::jsonb)',[JSON.stringify(p)],codes);
+ const row=async id=>(await db.query('select * from public.attendance_requests where id=$1',[id])).rows[0];
+ const actual=async employee=>(await db.query('select * from public.attendance where employee_id=$1 order by work_date',[employee])).rows;
+ const users={manager:'00000000-0000-0000-0000-000000009401',hr:'00000000-0000-0000-0000-000000009402',staff:'00000000-0000-0000-0000-000000009403',outside:'00000000-0000-0000-0000-000000009404'};const people={};
+ eq((await db.query('select count(*)::int n from public.attendance_requests')).rows[0].n,0,'No legacy requests invented');
+ eq((await db.query("select count(*)::int n from pg_class where relname in ('attendance_requests','attendance_request_events') and relrowsecurity")).rows[0].n,2,'Both request tables use RLS');
+ eq((await db.query("select count(*)::int n from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosecdef")).rows[0].n,0,'All exposed RPCs remain security invokers');
+ eq((await db.query("select count(*)::int n from pg_indexes where schemaname='hris_private' and indexname='attendance_request_context_request_idx'")).rows[0].n,1,'Private request context foreign key has a covering index');
+ for(const [key,uid]of Object.entries(users)){await db.exec('reset role');await db.query('insert into auth.users(id,email,email_confirmed_at) values($1,$2,now())',[uid,`request-${key}@example.invalid`]);await session(owner);await db.query('select public.save_company_account($1,$2,$3,true,null,null)',[uid,`request-${key}@example.invalid`,key==='hr'?'hr_generalist':key==='staff'?'employee':'manager']);people[key]=(await db.query('select employee_id from public.company_members where user_id=$1',[uid])).rows[0].employee_id;}
+ await db.query('update public.employees set reports_to=$1,joined_on=$2 where id=$3',[people.manager,'2025-01-01',people.staff]);
+ const submit={operation:'submit',work_date:'2026-02-03',attendance_id:null,expected_revision:null,checked_in_at:'2026-02-03T00:20:00Z',checked_out_at:'2026-02-03T09:00:00Z',expected_timezone:company.timezone,reason:'Synthetic missed check-in request'};
+ await session(users.staff);
+ for(const change of [{reason:''},{reason:'bad\nreason'},{checked_out_at:'2026-02-03T00:00:00Z'},{checked_in_at:'infinity'},{work_date:null},{work_date:'2099-01-01',checked_in_at:'2099-01-01T00:00:00Z'},{expected_timezone:'UTC'},{attendance_id:unassigned}])await denied({...submit,...change});
+ const first=await rpc({...submit,employee_id:people.hr,submitted_by:owner,status:'approved',actor_id:owner,base_record:{forged:true}});let r=await row(first);
+ eq([r.employee_id,r.submitted_by,r.employee_code,r.status,r.revision,r.base_record,r.applied_attendance_id],[people.staff,users.staff,r.employee_code,'pending',0,null,null],'Server derives identity/base and ignores forged approved/actor fields');
+ eq((await actual(people.staff)).length,0,'Submission does not change attendance');
+ await denied(submit,['PT409']);
+ const decide=(id,operation='approve',revision=0)=>({operation,request_id:id,expected_revision:revision,reason:'Synthetic verified review'});
+ await denied(decide(first),['42501']);await denied(decide(first,'reject'),['42501']);
+ for(const table of ['attendance_requests','attendance_request_events']){await deny(`delete from public.${table}`,[],['42501']);await deny(`update public.${table} set reason='Forged'`,[],['42501']);await deny(`insert into public.${table}(id) values(gen_random_uuid())`,[],['42501']);}
+ await deny('insert into hris_private.attendance_request_context values(txid_current(),$1,$2)',[first,users.staff],['42501']);
+ await session(users.outside);eq(await row(first),undefined,'Unrelated manager cannot read request');eq((await db.query('select * from public.attendance_request_events where request_id=$1',[first])).rows.length,0,'Unrelated manager cannot read history');await denied(decide(first),['42501']);await denied(decide(first,'cancel'),['42501']);
+ await session(users.manager);eq((await row(first)).status,'pending','Current manager can read report request');await denied({...decide(first),reason:''},['23514']);
+ await rpc({...decide(first),actor_id:owner,status:'rejected'});r=await row(first);const approved=(await actual(people.staff))[0];
+ eq([r.status,r.revision,r.applied_attendance_id],[ 'approved',1,approved.id],'Manager approval applies exactly once and advances request');
+ eq([approved.checked_in_at,approved.checked_out_at,approved.revision],[new Date(submit.checked_in_at),new Date(submit.checked_out_at),0],'Approval creates the proposed missing attendance');
+ eq(approved.calculation_snapshot.version,1,'New approved attendance captures current server calculation rules');
+ eq((await db.query('select * from public.attendance_request_events where request_id=$1 order by created_at',[first])).rows.map(e=>[e.status,e.actor_id,e.actor_role]),[['pending',users.staff,'employee'],['approved',users.manager,'manager']],'Protected submission and approval actors remain in order');
+ await denied(decide(first),['PT409']);await denied(decide(first,'reject',1),['PT409']);
+ await deny('select public.correct_attendance($1::jsonb)',[JSON.stringify({attendance_id:approved.id,employee_id:people.staff,work_date:submit.work_date,checked_in_at:'2026-02-03T00:21:00Z',checked_out_at:submit.checked_out_at,expected_revision:0,reason:'Forged direct Manager edit'})],['42501']);
+ await session(owner);const audit=(await db.query('select * from public.attendance_corrections where request_id=$1',[first])).rows[0];eq([audit.id,audit.actor_id,audit.actor_role,audit.after_record.id],[r.correction_id,users.manager,'manager',approved.id],'Approval links one retained correction audit with true Manager actor');
+ await session(users.staff);const edit={...submit,attendance_id:approved.id,expected_revision:0,checked_in_at:'2026-02-03T00:25:00Z'};const rejected=await rpc(edit);
+ eq((await row(rejected)).base_record.revision,0,'Existing record is captured at submission');
+ await session(users.hr);await rpc(decide(rejected,'reject'));eq((await row(rejected)).status,'rejected','HR rejects a company request');eq((await actual(people.staff))[0],approved,'Rejection keeps actual attendance intact');
+ await session(users.staff);const cancelled=await rpc(edit);await rpc(decide(cancelled,'cancel'));eq((await row(cancelled)).status,'cancelled','Requester can cancel without deleting history');eq((await db.query('select * from public.attendance_request_events where request_id=$1',[cancelled])).rows.length,2,'Cancellation retains both events');await denied(decide(cancelled,'cancel',1),['PT409']);
+ const stale=await rpc(edit);await session(owner);await db.query('select public.correct_attendance($1::jsonb)',[JSON.stringify({attendance_id:approved.id,employee_id:people.staff,work_date:submit.work_date,checked_in_at:'2026-02-03T00:21:00Z',checked_out_at:submit.checked_out_at,expected_revision:0,reason:'Synthetic concurrent HR correction'})]);
+ await session(users.manager);await denied(decide(stale),['PT409']);eq((await row(stale)).status,'pending','Stale approval leaves proposal pending');eq((await db.query('select * from public.attendance_request_events where request_id=$1',[stale])).rows.length,1,'Failed approval creates no decision event');await session(users.staff);await rpc(decide(stale,'cancel'));
+ let parent=(await actual(people.staff))[0];const latest={...edit,expected_revision:parent.revision,checked_in_at:'2026-02-03T00:26:00Z'};const valid=await rpc(latest);
+ await session(users.manager);await denied(decide(valid,'approve',9),['PT409']);await session(owner);await db.query('update public.employees set reports_to=$1 where id=$2',[people.outside,people.staff]);await session(users.manager);await denied(decide(valid),['42501']);await session(users.hr);await rpc(decide(valid));
+ parent=(await actual(people.staff))[0];eq([parent.revision,parent.planned_shift,parent.calculation_snapshot],[2,approved.planned_shift,approved.calculation_snapshot],'HR approval changes times while retaining saved shift/calculation rules');
+ await session(owner);await db.query('update public.employees set reports_to=$1 where id=$2',[people.manager,people.staff]);
+ await db.query('select public.manage_attendance_break($1,$2::jsonb)',['record',JSON.stringify({attendance_id:parent.id,expected_parent_revision:parent.revision,name:'Synthetic request break',paid:false,started_at:'2026-02-03T04:00:00Z',ended_at:'2026-02-03T05:00:00Z',reason:'Synthetic break bounds'})]);
+ await session(users.staff);await denied({...latest,expected_revision:parent.revision,checked_out_at:'2026-02-03T04:30:00Z'},['23514']);
+ const guarded=await rpc({...latest,expected_revision:parent.revision,checked_out_at:'2026-02-03T08:30:00Z'});
+ await session(owner);await db.query('select public.manage_attendance_break($1,$2::jsonb)',['record',JSON.stringify({attendance_id:parent.id,expected_parent_revision:parent.revision,name:'Synthetic later break',paid:true,started_at:'2026-02-03T08:40:00Z',ended_at:'2026-02-03T08:50:00Z',reason:'Synthetic break recorded after proposal'})]);
+ await session(users.manager);await denied(decide(guarded),['23514']);eq((await row(guarded)).status,'pending','Approval revalidates current break bounds atomically');eq((await actual(people.staff))[0].revision,parent.revision,'Failed break-bound approval leaves actual revision unchanged');
+ await session(users.staff);await rpc(decide(guarded,'cancel'));
+ const disabled=await rpc({...latest,expected_revision:parent.revision,checked_out_at:'2026-02-03T08:55:00Z'});await session(owner);await db.query('select public.save_company_account($1,$2,$3,false,$4,null)',[users.staff,'request-staff@example.invalid','employee',people.staff]);
+ await session(users.staff);eq(await row(disabled),undefined,'Disabled account loses request reads');await denied(decide(disabled,'cancel'),['42501']);await denied(submit,['42501']);
+ await session(unassigned);await denied(submit,['42501']);eq((await db.query('select * from public.attendance_requests')).rows.length,0,'Unassigned account sees no requests');
+ await session('','anon');await denied(submit,['42501']);await deny('select * from public.attendance_requests',[],['42501']);
+ await session(users.hr);const selfRequest=await rpc({...submit,work_date:'2026-02-04',checked_in_at:'2026-02-04T00:00:00Z',checked_out_at:'2026-02-04T09:00:00Z'});await denied(decide(selfRequest),['42501']);await session(owner);await rpc(decide(selfRequest));eq((await row(selfRequest)).status,'approved','Another HR/Admin reviewer can approve HR own attendance');
+ await deny('select hris_private.can_apply_attendance_request($1::jsonb)',['{}'],['42501']);
+}

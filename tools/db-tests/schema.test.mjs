@@ -61,7 +61,9 @@ try {
   const shiftMigrations=[];
   const breakMigrations=[];
   const calculationMigrations=[];
+  const requestMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_attendance_correction_requests.sql')||filename.endsWith('_attendance_request_context_index.sql')) {requestMigrations.push(filename);continue;}
     if(filename.endsWith('_attendance_calculations.sql')) {calculationMigrations.push(filename);continue;}
     if(filename.endsWith('_attendance_breaks.sql')) {breakMigrations.push(filename);continue;}
     if(filename.endsWith('_shift_schedules.sql')) {shiftMigrations.push(filename);continue;}
@@ -222,6 +224,15 @@ try {
   eq((await db.query('select count(*)::int n from public.attendance where calculation_snapshot is not null')).rows[0].n,0,'No historical calculation snapshot is invented');
   const {runCalculationTests}=await import('./calculations.test.mjs');
   await runCalculationTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
+  console.log(`Passed ${checks} schema assertions before request migration.`);
+  await db.exec('reset role');
+  const beforeRequests=(await db.query('select to_jsonb(a) as original from public.attendance a order by id')).rows;
+  const beforeCorrectionRequests=(await db.query('select to_jsonb(c) as original from public.attendance_corrections c order by id')).rows;
+  for(const filename of requestMigrations) {await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version) values($1)',[filename.split('_')[0]]);}
+  eq((await db.query('select to_jsonb(a) as original from public.attendance a order by id')).rows,beforeRequests,'Request migration preserves actual attendance and snapshots');
+  eq((await db.query("select to_jsonb(c)-'request_id' as original from public.attendance_corrections c order by id")).rows,beforeCorrectionRequests,'Request migration preserves all earlier corrections');
+  const {runRequestTests}=await import('./requests.test.mjs');
+  await runRequestTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

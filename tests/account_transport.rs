@@ -39,6 +39,115 @@ impl Request {
 }
 type Requests = Arc<Mutex<Vec<Request>>>;
 
+#[test]
+fn attendance_requests_use_guarded_rpc_and_reload_proposals_and_decision_history() {
+    use chrono::Duration;
+    use hris_desktop::{
+        corrections::CorrectionDraft,
+        domain::*,
+        requests::{RequestAction, Status},
+    };
+    let mut store = DemoStore::new();
+    store.data.attendance.clear();
+    store.data.leave.clear();
+    store.data.employees[0].joined_on = None;
+    let mut draft = CorrectionDraft::new(
+        store.data.employees[0].id,
+        store.data.company.today() - Duration::days(3),
+        None,
+        &store.data,
+    );
+    draft.checked_in = "08:25".into();
+    draft.checked_out = "17:00".into();
+    draft.reason = "Synthetic missing punch".into();
+    let original = store.data.clone();
+    store
+        .execute(Action::AttendanceRequest(RequestAction::Submit(
+            draft.clone(),
+        )))
+        .unwrap();
+    let id = store.data.requests.records[0].id;
+    let prepare = |data: &Snapshot| {
+        let mut responses = baseline(&data.company);
+        for r in &mut responses {
+            r.body = if r.prefix.starts_with("POST /rest/v1/rpc/my_hris_access ") {
+                serde_json::to_vec(&json!({"company_id":data.company.id,"user_id":data.access.user_id,"role":"administrator","employee_id":data.access.employee_id,"direct_reports":[]})).unwrap()
+            } else if r.prefix.starts_with("GET /rest/v1/employees?") {
+                serde_json::to_vec(&data.employees).unwrap()
+            } else if r.prefix.starts_with("GET /rest/v1/attendance_requests?") {
+                serde_json::to_vec(&data.requests.records).unwrap()
+            } else if r
+                .prefix
+                .starts_with("GET /rest/v1/attendance_request_events?")
+            {
+                serde_json::to_vec(&data.requests.events).unwrap()
+            } else {
+                r.body.clone()
+            };
+        }
+        responses
+    };
+    let mut replies = prepare(&original);
+    replies.push(reply(
+        "POST /rest/v1/rpc/attendance_request ",
+        200,
+        json!(id),
+    ));
+    replies.extend(prepare(&store.data).into_iter().skip(1).take(26));
+    replies.push(reply(
+        "POST /rest/v1/rpc/attendance_request ",
+        409,
+        json!({"code":"PT409","message":"This request changed. Refresh and reopen it."}),
+    ));
+    let (config, server, requests) = fixture(replies);
+    let (mut client, loaded) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic-password".into(),
+    )
+    .unwrap();
+    let saved = client
+        .execute(
+            Action::AttendanceRequest(RequestAction::Submit(draft)),
+            &loaded,
+        )
+        .unwrap();
+    assert_eq!(saved.requests.records.len(), 1);
+    assert_eq!(saved.requests.events.len(), 1);
+    assert!(saved.attendance.is_empty());
+    let error = client
+        .execute(
+            Action::AttendanceRequest(RequestAction::Resolve {
+                id,
+                expected_revision: 0,
+                status: Status::Cancelled,
+                reason: "Synthetic cancellation".into(),
+            }),
+            &saved,
+        )
+        .unwrap_err();
+    assert!(error.to_string().contains("changed"));
+    server.join().unwrap();
+    let requests = requests.lock().unwrap();
+    let sent: Vec<_> = requests
+        .iter()
+        .filter(|r| r.line.starts_with("POST /rest/v1/rpc/attendance_request "))
+        .collect();
+    assert_eq!(sent.len(), 2);
+    let p = sent[0].json();
+    assert_eq!(p["p_request"]["operation"], "submit");
+    assert_eq!(p["p_request"]["expected_timezone"], loaded.company.timezone);
+    for key in [
+        "employee_id",
+        "submitted_by",
+        "actor_id",
+        "status",
+        "base_record",
+    ] {
+        assert!(p["p_request"].get(key).is_none());
+    }
+}
+
 fn fixture(replies: Vec<Reply>) -> (ConnectionConfig, thread::JoinHandle<()>, Requests) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     listener.set_nonblocking(true).unwrap();
@@ -193,6 +302,8 @@ fn baseline(company: &Company) -> Vec<Reply> {
             200,
             json!([]),
         ),
+        reply("GET /rest/v1/attendance_requests?", 200, json!([])),
+        reply("GET /rest/v1/attendance_request_events?", 200, json!([])),
         reply("GET /auth/v1/user ", 200, user(company)),
         reply(
             "GET /storage/v1/object/authenticated/profile-photos/",
@@ -225,7 +336,7 @@ fn leave_writes_use_revisioned_rpcs_accept_scalar_results_and_reload_saved_charg
     let mut after = baseline(&company);
     after[3] = reply("GET /rest/v1/employees?", 200, json!(store.data.employees));
     after[7] = reply("GET /rest/v1/leave_requests?", 200, json!([row]));
-    replies.extend(after.into_iter().skip(1).take(24));
+    replies.extend(after.into_iter().skip(1).take(26));
     replies.push(reply(
         "POST /rest/v1/rpc/cancel_leave ",
         409,
@@ -297,7 +408,7 @@ fn policy_saves_require_the_loaded_revision_and_refresh_the_authoritative_policy
     let mut server_policy = policy.clone();
     server_policy.revision = 1;
     after[15] = reply("GET /rest/v1/leave_policies?", 200, json!([server_policy]));
-    replies.extend(after.into_iter().skip(1).take(24));
+    replies.extend(after.into_iter().skip(1).take(26));
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -405,7 +516,7 @@ fn employee_document_upload_reserves_private_path_finalizes_and_reloads_protecte
             f.baseline(vec![ready.clone()], f.store.data.document_events.clone())
                 .into_iter()
                 .skip(1)
-                .take(24),
+                .take(26),
         );
         let (config, server, requests) = fixture(replies);
         let (mut client, current) = CloudClient::connect(
@@ -561,7 +672,7 @@ fn private_document_download_verifies_bytes_before_writing_a_user_selected_copy(
                 f.baseline(vec![ready.clone()], vec![])
                     .into_iter()
                     .skip(1)
-                    .take(24),
+                    .take(26),
             );
         }
         let (config, server, requests) = fixture(replies);
@@ -618,7 +729,7 @@ fn archiving_documents_uses_revisioned_rpc_and_reloads_retained_files() {
         f.baseline(vec![archived.clone()], vec![])
             .into_iter()
             .skip(1)
-            .take(24),
+            .take(26),
     );
     let (config, server, requests) = fixture(replies);
     let (mut client, current) = CloudClient::connect(
@@ -692,7 +803,7 @@ fn employment_history_is_reloaded_with_company_scope_and_never_supplied_by_the_w
     let mut after = baseline(&company);
     after[3] = reply("GET /rest/v1/employees?", 200, json!([saved]));
     after[12] = reply("GET /rest/v1/employment_history?", 200, json!(events));
-    replies.extend(after.into_iter().skip(1).take(24));
+    replies.extend(after.into_iter().skip(1).take(26));
     let (config, server, requests) = fixture(replies);
     let (mut client, current) = CloudClient::connect(
         config,
@@ -781,7 +892,7 @@ fn attendance_correction_uses_the_guarded_rpc_and_reloads_immutable_history() {
     after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
     after[5] = reply("GET /rest/v1/attendance?", 200, json!([row]));
     after[6] = reply("GET /rest/v1/attendance_corrections?", 200, json!([event]));
-    replies.extend(after.into_iter().skip(1).take(24));
+    replies.extend(after.into_iter().skip(1).take(26));
     let (config, server, requests) = fixture(replies);
     let (mut client, current) = CloudClient::connect(
         config,
@@ -845,7 +956,7 @@ fn employment_options_use_guarded_rpc_and_reload_inactive_labels_without_changin
     revised[0].revision = 1;
     revised[0].name = "Main office renamed".into();
     after[11] = reply("GET /rest/v1/work_locations?", 200, json!(revised));
-    replies.extend(after.into_iter().skip(1).take(24));
+    replies.extend(after.into_iter().skip(1).take(26));
     let (config, server, requests) = fixture(replies);
     let (mut client, current) = CloudClient::connect(
         config,
@@ -934,7 +1045,7 @@ fn editing_staff_saves_the_same_employee_contacts_and_role_in_one_rpc() {
     ));
     let mut after = baseline(&company);
     after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
-    replies.extend(after.into_iter().skip(1).take(24));
+    replies.extend(after.into_iter().skip(1).take(26));
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -1012,7 +1123,7 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
     ));
     let mut after = baseline(&revised);
     after.remove(0);
-    after.truncate(24);
+    after.truncate(26);
     replies.extend(after);
     replies.push(Reply {
         prefix: "GET /storage/v1/object/authenticated/company-branding/".into(),
@@ -1020,7 +1131,7 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
         body: png,
         mime: "image/png",
     });
-    replies.extend(baseline(&revised).into_iter().skip(1).take(24));
+    replies.extend(baseline(&revised).into_iter().skip(1).take(26));
     replies.push(reply(
         "DELETE /storage/v1/object/company-branding ",
         200,
@@ -1031,7 +1142,7 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
         200,
         Value::Null,
     ));
-    replies.extend(baseline(&company).into_iter().skip(1).take(24));
+    replies.extend(baseline(&company).into_iter().skip(1).take(26));
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -1180,7 +1291,7 @@ fn employee_contacts_save_and_reload_separately_with_scoped_updates_and_zero_row
         snapshot_replies(vec![normalized.clone()])
             .into_iter()
             .skip(1)
-            .take(24),
+            .take(26),
     );
     let mut updated = normalized.clone();
     updated.address = "Updated fictional address".into();
@@ -1193,7 +1304,7 @@ fn employee_contacts_save_and_reload_separately_with_scoped_updates_and_zero_row
         snapshot_replies(vec![updated.clone()])
             .into_iter()
             .skip(1)
-            .take(24),
+            .take(26),
     );
     replies.push(reply("PATCH /rest/v1/employee_contacts?", 200, json!([])));
     let (config, server, observed) = fixture(replies);
@@ -1265,7 +1376,7 @@ fn unified_employee_save_uses_one_transaction_rpc_instead_of_separate_partial_wr
     ));
     let mut after = baseline(&company);
     after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
-    initial.extend(after.into_iter().skip(1).take(24));
+    initial.extend(after.into_iter().skip(1).take(26));
     let (config, server, requests) = fixture(initial);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -1378,7 +1489,7 @@ fn account_provisioning_preserves_disabled_access_and_sends_password_only_to_the
         201,
         json!({"confirmation_sent":false}),
     ));
-    replies.extend(baseline(&company).into_iter().skip(1).take(24));
+    replies.extend(baseline(&company).into_iter().skip(1).take(26));
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -1398,13 +1509,13 @@ fn account_provisioning_preserves_disabled_access_and_sends_password_only_to_the
     assert!(message.contains("planned portal"));
     server.join().unwrap();
     let requests = requests.lock().unwrap();
-    let body = requests[27].json();
+    let body = requests[29].json();
     assert_eq!(body["active"], false);
     assert_eq!(body["role"], "employee");
     assert!(body["employee_id"].is_null());
     assert_eq!(body["password"], "synthetic initial passphrase");
     assert!(!body.to_string().contains("confirmation"));
-    assert!(requests[27].headers.contains("profile-jwt"));
+    assert!(requests[29].headers.contains("profile-jwt"));
     assert!(
         requests
             .iter()
@@ -1488,21 +1599,21 @@ fn personal_details_preferences_and_private_photo_roundtrip_use_only_the_signed_
     server.join().unwrap();
     let requests = requests.lock().unwrap();
     assert_eq!(
-        requests[27].json(),
+        requests[29].json(),
         json!({"data":{"hris_profile":{"full_name":"Alex Morgan","preferred_name":"Morgan","contact_phone":""}}})
     );
-    assert!(requests[28].json().get("app_metadata").is_none());
+    assert!(requests[30].json().get("app_metadata").is_none());
     assert!(
-        requests[29]
+        requests[31]
             .headers
             .to_lowercase()
             .contains("x-upsert: true")
     );
     assert_eq!(
-        image::load_from_memory(&requests[29].body).unwrap().width(),
+        image::load_from_memory(&requests[31].body).unwrap().width(),
         256
     );
-    assert_eq!(requests[32].json(), json!({"prefixes":[path]}));
+    assert_eq!(requests[34].json(), json!({"prefixes":[path]}));
     for request in &requests[1..] {
         assert!(
             request
@@ -1621,21 +1732,21 @@ fn password_and_email_changes_reauthenticate_and_keep_email_pending_until_confir
     server.join().unwrap();
     let requests = requests.lock().unwrap();
     assert_eq!(
-        requests[28].json(),
+        requests[30].json(),
         json!({"password":"new synthetic passphrase","current_password":"old synthetic passphrase"})
     );
     assert!(
-        requests[28]
+        requests[30]
             .headers
             .to_lowercase()
             .contains("authorization: bearer fresh-password-jwt")
     );
     assert_eq!(
-        requests[30].json(),
+        requests[32].json(),
         json!({"email":"updated@example.invalid"})
     );
     assert!(
-        requests[30]
+        requests[32]
             .headers
             .to_lowercase()
             .contains("authorization: bearer fresh-email-jwt")
