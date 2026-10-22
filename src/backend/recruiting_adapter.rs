@@ -1,6 +1,29 @@
 use super::*;
 use crate::recruiting::{self, Attachment, ResumeAction, Setup};
 impl CloudClient {
+    pub(super) fn exits_snapshot(&mut self, access: &Access) -> Result<crate::exits::Setup> {
+        let mut setup = crate::exits::Setup::default();
+        let company = Some(access.company_id);
+        if access.role.manages_hr() {
+            setup.cases = self.rows("exit_cases", company)?;
+            setup.readiness = decode(
+                self.request(Method::POST, "rpc/exit_readiness_list")?
+                    .json(&json!({}))
+                    .send()?,
+            )?;
+            ensure!(
+                setup
+                    .readiness
+                    .iter()
+                    .all(|r| r.company_id == access.company_id
+                        && setup.cases.iter().any(|c| c.id == r.case_id)),
+                "Exit readiness response is outside the current scope."
+            );
+        }
+        setup.tasks = self.rows("clearance_tasks", company)?;
+        setup.events = self.rows("exit_events", company)?;
+        Ok(setup)
+    }
     pub(super) fn onboarding_snapshot(
         &mut self,
         access: &Access,

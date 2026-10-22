@@ -107,6 +107,7 @@ impl Access {
     }
     pub fn authorize(&self, action: &Action, data: &Snapshot) -> Result<()> {
         let allowed = match action {
+            Action::Exit(action) => action.payload(data).is_ok(),
             Action::Onboarding(action) => action.payload(data).is_ok(),
             Action::Interview(action) => action.payload(data, chrono::Utc::now()).is_ok(),
             Action::Hiring(_) => {

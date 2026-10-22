@@ -21,7 +21,6 @@ fn auth_fixture(
     let address = listener.local_addr().unwrap();
     let requests = Arc::new(Mutex::new(Vec::new()));
     let observed = requests.clone();
-    let expected_requests = if companies.is_empty() { 2 } else { 47 };
     let user_id = companies
         .first()
         .map(|company| company.owner_id)
@@ -32,7 +31,8 @@ fn auth_fixture(
     let server = thread::spawn(move || {
         let deadline = Instant::now() + Duration::from_secs(15);
         let mut count = 0;
-        while count < expected_requests && Instant::now() < deadline {
+        let mut complete=false;
+        while !complete && count < 100 && Instant::now() < deadline {
             let (mut stream, _) = match listener.accept() {
                 Ok(s) => s,
                 Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
@@ -109,14 +109,12 @@ fn auth_fixture(
             } else {
                 ("200 OK", "[]".into())
             };
+            complete=if assigned {first.starts_with("GET /auth/v1/user ")} else {first.starts_with("POST /rest/v1/rpc/my_hris_access ")};
             observed.lock().unwrap().push(request);
             write!(stream,"HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body).unwrap();
             count += 1;
         }
-        assert_eq!(
-            count, expected_requests,
-            "All expected Auth and REST requests must complete"
-        );
+        assert!(complete,"The Auth and HR snapshot request sequence must complete");
     });
     let config = ConnectionConfig {
         url: format!("http://{address}"),

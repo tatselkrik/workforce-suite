@@ -61,7 +61,7 @@ create policy exit_events_scoped_read on public.exit_events for select to authen
  hris_private.company_role(company_id) in ('administrator','hr_generalist') or(task_id is not null and hris_private.can_read_clearance_task(company_id,task_id)));
 create trigger exit_events_immutable before update or delete on public.exit_events for each row execute function hris_private.employment_history_immutable();
 create function hris_private.exit_readiness(p_case uuid) returns jsonb
-language plpgsql stable security definer set search_path='' as $$
+language plpgsql security definer set search_path='' as $$
 declare m public.company_members;c public.exit_cases;today date;begin
  select * into m from public.company_members where user_id=(select auth.uid()) and active and role in ('administrator','hr_generalist');
  if m.user_id is null then raise exception 'Only active HR and Administrators can review exit readiness.' using errcode='42501';end if;
@@ -69,7 +69,7 @@ declare m public.company_members;c public.exit_cases;today date;begin
  if c.id is null then raise exception 'Exit case not found.' using errcode='42501';end if;
  select (now() at time zone timezone)::date into today from public.companies where id=m.company_id;
  return jsonb_build_object('case_id',c.id,'company_id',m.company_id,
- 'last_day_reached',c.last_working_on<=today,
+ 'case_revision',c.revision,'last_day_reached',c.last_working_on<=today,
  'employee_active',exists(select 1 from public.employees where company_id=m.company_id and id=c.employee_id and status='active'),
  'open_required_tasks',(select count(*)from public.clearance_tasks where company_id=m.company_id and case_id=c.id and required and status='open'),
  'active_direct_reports',(select count(*)from public.employees where company_id=m.company_id and reports_to=c.employee_id and status='active'),
@@ -77,6 +77,11 @@ declare m public.company_members;c public.exit_cases;today date;begin
  'pending_leave',(select count(*)from public.leave_requests where company_id=m.company_id and employee_id=c.employee_id and status='pending'),
  'pending_attendance_requests',(select count(*)from public.attendance_requests where company_id=m.company_id and employee_id=c.employee_id and status='pending'),
  'pending_overtime',(select count(*)from public.overtime_requests where company_id=m.company_id and employee_id=c.employee_id and status='pending'),
+ 'pending_assigned_leave',(select count(*)from public.leave_requests r where r.company_id=m.company_id and r.status='pending' and exists(select 1 from jsonb_array_elements(r.approval_steps) s where s->>'approved_by' is null and s->>'kind' in ('manager','person') and s->>'employee_id'=c.employee_id::text)),
+ 'named_leave_policies',(select count(*)from public.leave_policies p cross join lateral jsonb_array_elements(p.types) t where p.company_id=m.company_id and (t->>'active')::boolean and exists(select 1 from jsonb_array_elements(t->'approval_chain') s where s->>'kind'='person' and s->>'employee_id'=c.employee_id::text)),
+ 'open_onboarding_tasks',(select count(*)from public.onboarding_tasks where company_id=m.company_id and assigned_employee_id=c.employee_id and case_status='open' and status='open'),
+ 'open_clearance_tasks',(select count(*)from public.clearance_tasks where company_id=m.company_id and assigned_employee_id=c.employee_id and case_status='open' and status='open'),
+ 'scheduled_interviews',(select count(*)from public.recruiting_interviews where company_id=m.company_id and interviewer_employee_id=c.employee_id and status='scheduled'),
  'installation_owner',exists(select 1 from public.company_members cm join public.companies co on co.id=cm.company_id and co.owner_id=cm.user_id where cm.company_id=m.company_id and cm.employee_id=c.employee_id),
  'own_account',m.employee_id=c.employee_id);
 end;$$;
@@ -85,6 +90,14 @@ grant execute on function hris_private.exit_readiness(uuid) to authenticated;
 create function public.exit_readiness(p_case uuid) returns jsonb language sql security invoker set search_path='' as $$select hris_private.exit_readiness(p_case);$$;
 revoke all on function public.exit_readiness(uuid) from public,anon,authenticated;
 grant execute on function public.exit_readiness(uuid) to authenticated;
+create function public.exit_readiness_list() returns setof jsonb
+language plpgsql security invoker set search_path='' as $$
+declare r record;begin
+ if not exists(select 1 from public.company_members where user_id=(select auth.uid()) and active and role in ('administrator','hr_generalist')) then raise exception 'Only active HR and Administrators can review exit readiness.' using errcode='42501';end if;
+ for r in select id from public.exit_cases where status in ('open','cleared') order by id loop return next hris_private.exit_readiness(r.id);end loop;
+end;$$;
+revoke all on function public.exit_readiness_list() from public,anon,authenticated;
+grant execute on function public.exit_readiness_list() to authenticated;
 create function hris_private.manage_exit(p_operation text,p_record jsonb) returns jsonb
 language plpgsql security definer set search_path='' as $$
 declare m public.company_members;c public.exit_cases;workflow public.exit_cases;task public.clearance_tasks;e public.employees;account public.company_members;
@@ -143,7 +156,7 @@ begin
    -- Serialize with attendance/account archive guards before checking readiness.
    perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(c.employee_id::text,0));
    ready:=hris_private.exit_readiness(c.id);
-   if not (ready->>'last_day_reached')::boolean or not (ready->>'employee_active')::boolean or (ready->>'installation_owner')::boolean or (ready->>'own_account')::boolean or (ready->>'active_direct_reports')::int>0 or (ready->>'open_attendance')::int>0 or (ready->>'pending_leave')::int>0 or (ready->>'pending_attendance_requests')::int>0 or (ready->>'pending_overtime')::int>0 then raise exception 'Exit is not ready: check the last day, reporting, attendance, pending requests and protected account safeguards.' using errcode='23514';end if;
+   if not (ready->>'last_day_reached')::boolean or not (ready->>'employee_active')::boolean or (ready->>'installation_owner')::boolean or (ready->>'own_account')::boolean or (ready->>'active_direct_reports')::int>0 or (ready->>'open_attendance')::int>0 or (ready->>'pending_leave')::int>0 or (ready->>'pending_attendance_requests')::int>0 or (ready->>'pending_overtime')::int>0 or (ready->>'pending_assigned_leave')::int>0 or (ready->>'named_leave_policies')::int>0 or (ready->>'open_onboarding_tasks')::int>0 or (ready->>'open_clearance_tasks')::int>0 or (ready->>'scheduled_interviews')::int>0 then raise exception 'Exit is not ready: check the last day, reporting, attendance, pending requests, assigned approvals/tasks/interviews, leave policies and protected account safeguards.' using errcode='23514';end if;
    for account in select * from public.company_members where company_id=m.company_id and employee_id=c.employee_id and active for update loop
     select email into account_email from auth.users where id=account.user_id;
     perform public.save_company_account(account.user_id,account_email,account.role,false,account.employee_id,null);

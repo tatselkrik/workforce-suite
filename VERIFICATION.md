@@ -1,6 +1,40 @@
-# Prototype verification â€” 2026-10-22
+# Prototype verification — 2026-10-23
 
+## Exit and clearance - version 0.1.28
 
+- 270 Rust tests passed, including exit lifecycle/permissions, original-ID retries,
+  exact saved receipts, preserved drafts, and HTTP refresh recovery. Fixed older
+  HTTP fixtures that assumed a fixed snapshot request count. One real-installer
+  test is intentionally run separately after the installer is prepared.
+- 1370 local PostgreSQL assertions passed. Coverage includes HR-private cases,
+  assigned Manager task access, later named leave approvals and active named
+  policies, required tasks, date/owner/self safeguards and late-audit rollback of
+  both membership deactivation and employee archiving. Local Auth is simulated;
+  real parallel-transaction timing is not claimed.
+- Migration `20261022193159` deployed; all30 local/hosted versions match. Immediate
+  before/after digests match for employees, memberships, attendance, leave,
+  onboarding cases/tasks and Auth. New tables enforce RLS and revoke direct
+  client writes. Public RPCs are invokers with protected private writers.
+  Security and foreign-key findings match the previous baseline; new unused
+  index informational findings were reviewed. No Edge Function change.
+- Actual Admin/HR/Manager sessions through Rust and REST verified creation/retry,
+  task assignment/completion/reopening, reassignment access removal, HR waivers,
+  clearance and Admin finalization. Former assignees and disabled unexpired JWTs
+  lost reads/writes. Employee/Manager private-case and readiness requests, forged
+  metadata, direct writes and history deletion were denied. HR finalization was
+  denied by the hosted server, not just the UI.
+- Unrelated employee/attendance/leave/document/onboarding records matched after
+  live testing. Synthetic records are retained disabled/archived and all exact
+  verification sessions were revoked. An initial transient account-provisioning
+  502 interrupted fixture setup; created fixtures were safely disabled/archived,
+  and a fresh setup completed. No real account password changed.
+- 12 final fictional native views inspected: private HR details, assigned Manager
+  task and decision, forms, ready/finalized cases, retained history and dark 125%.
+  Compact navigation now adjusts button padding and interaction height so Settings
+  remains visible above Profile. Normal startup, binary/source privacy, exact
+  installer recovery, private signature/publication and installation are recorded
+  separately in the versioned report. No signed-in native button automation,
+  Authenticode, remote CI, other-PC or running-parent update timing claim.
 
 ## Recruiting and onboarding - version 0.1.27
 

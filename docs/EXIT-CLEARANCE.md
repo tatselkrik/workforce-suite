@@ -1,8 +1,10 @@
-# Exit and clearance — under development
+# Exit and clearance
 
-This module is not included in installed version 0.1.27. Its database migration
-is a local, unreleased candidate; desktop screens and hosted Auth verification
-remain to be implemented. Existing recruiting and onboarding remain available.
+Available in desktop version 0.1.28 with migration `20261022193159`. Open
+**Exit & clearance** to start or search a case, assign tasks and review readiness.
+HR can open the canonical employee record from the case. Managers receive
+only their assigned checklist. Failed saves/refreshes preserve form drafts;
+creation retries retain the original identifier and never overwrite later edits.
 
 Separate `exit_cases`, `clearance_tasks` and `exit_events` preserve compatibility
 with installed onboarding clients. HR/Admin prepare a last working date,
@@ -17,15 +19,28 @@ completion, HR waiver, reassignment and history use protected memberships,
 revisions and immutable events. Cleared or cancelled cases lock their tasks.
 
 HR can record clearance after resolving every required task. An Administrator
-must finalize, after the last working date. Current readiness checks include
-active employee status, required tasks, active direct reports, open attendance,+pending requests filed for that employee and protected owner/self accounts.
-The existing account safeguards still apply. Finalization disables sign-in and
+must finalize, on or after the last working date. Current readiness checks include
+active employee status, required tasks, active direct reports, open attendance,
+pending requests filed for that employee and protected owner/self accounts.
+Readiness also blocks unfinished named leave approvals, active leave types naming
+the employee, open assigned onboarding/clearance tasks and scheduled interviews.
+Resolve or reassign those items before finalization; filed leave chains require
+cancellation and resubmission if their named approver must change. The existing
+account safeguards still apply. Finalization disables sign-in and
 archives the employee in the same transaction as the exit/history changes;
 an audit or archive failure rolls everything back. Accounts, employee records,
 contacts, documents and previous history are retained. Restoration/rehire is a
 separate deliberate workflow. No email or external message is sent.
 
-Before release, add native readiness explanations, employee/task navigation,
-guarded drafts, scoped transport tests and actual Auth checks. Verify assigned
-approval handovers and company-specific exit requirements explicitly; the
-initial readiness projection is not a complete offboarding compliance check.
+Finalized cases remain read-only; cancelled cases retain their checklist and
+history without changing employment or sign-in. Reopen a cleared case before
+editing tasks or exit details. A new case may follow a cancelled case while the
+employee remains active. Restoration/rehire is separate from exit finalization.
+
+The company-specific legal, document and payroll requirements still need a
+human checklist. This prototype does not send external notifications, calculate
+final pay, delete Auth accounts or automatically revoke unrelated application
+credentials. General named-approver delegation is not implemented; filed leave
+plans remain immutable. Readiness is a set of recorded checks, not a complete
+compliance assessment. Local tests cover late-audit rollback; hosted Auth/RLS and
+native previews are verified separately from signed-in native button automation.

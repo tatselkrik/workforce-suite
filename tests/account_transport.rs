@@ -27,6 +27,19 @@ fn reply(prefix: impl Into<String>, status: u16, body: Value) -> Reply {
         mime: "application/json",
     }
 }
+fn response_at<'a>(replies: &'a mut [Reply], prefix: &str) -> &'a mut Reply {
+    replies
+        .iter_mut()
+        .find(|r| r.prefix.starts_with(prefix))
+        .expect("Expected fixture response")
+}
+fn request_at<'a>(requests: &'a [Request], prefix: &str, n: usize) -> &'a Request {
+    requests
+        .iter()
+        .filter(|r| r.line.starts_with(prefix))
+        .nth(n)
+        .expect("Expected request")
+}
 struct Request {
     line: String,
     headers: String,
@@ -79,7 +92,12 @@ fn applicant_creation_retries_one_identity_after_saved_write_and_failed_refresh(
             r.body = serde_json::to_vec(&demo.data.hiring.events).unwrap();
         }
     }
-    replies.extend(after.into_iter().skip(1).take(45));
+    replies.extend(
+        after
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -189,8 +207,14 @@ fn notification_read_operations_use_own_guarded_rpc_and_reload_composite_key_sta
         saved.clone(),
     ));
     let mut after = baseline(&company);
-    after[45].body = serde_json::to_vec(&json!([saved])).unwrap();
-    replies.extend(after.into_iter().skip(1).take(45));
+    response_at(&mut after, "GET /rest/v1/notification_read_state?").body =
+        serde_json::to_vec(&json!([saved])).unwrap();
+    replies.extend(
+        after
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -456,7 +480,7 @@ fn invalid_report_metadata_does_not_break_sign_in_or_change_membership() {
         json!({"role":"administrator","employee_id":"arbitrary"});
     let mut replies = baseline(&company);
     replies[0].body = serde_json::to_vec(&token(malicious.clone(), "profile-jwt")).unwrap();
-    replies[46].body = serde_json::to_vec(&malicious).unwrap();
+    response_at(&mut replies, "GET /auth/v1/user ").body = serde_json::to_vec(&malicious).unwrap();
     let (config, server, _) = fixture(replies);
     let (client, data) = CloudClient::connect(
         config,
@@ -487,7 +511,7 @@ fn a_late_legacy_view_is_offered_until_saved_and_an_empty_database_row_never_rev
     account["user_metadata"]["hris_report_views"] = json!([legacy]);
     let mut replies = baseline(&company);
     replies[0].body = serde_json::to_vec(&token(account.clone(), "profile-jwt")).unwrap();
-    replies[46].body = serde_json::to_vec(&account).unwrap();
+    response_at(&mut replies, "GET /auth/v1/user ").body = serde_json::to_vec(&account).unwrap();
     let empty = json!({"user_id":company.owner_id,"company_id":company.id,"views":[],"revision":1});
     replies.extend([
         reply("GET /rest/v1/report_preferences?", 200, json!([])),
@@ -552,7 +576,12 @@ fn employee_import_retries_the_same_batch_after_a_saved_write_with_failed_refres
         created_at: chrono::Utc::now(),
     };
     let mut replies = baseline(&company);
-    replies.extend(baseline(&company).into_iter().skip(1).take(45));
+    replies.extend(
+        baseline(&company)
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
     replies.push(reply(
         "POST /rest/v1/rpc/import_employees ",
         200,
@@ -579,13 +608,23 @@ fn employee_import_retries_the_same_batch_after_a_saved_write_with_failed_refres
         }
         r
     };
-    replies.extend(after().into_iter().skip(1).take(45));
+    replies.extend(
+        after()
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
     replies.push(reply(
         "POST /rest/v1/rpc/import_employees ",
         200,
         json!(preview.id),
     ));
-    replies.extend(after().into_iter().skip(1).take(45));
+    replies.extend(
+        after()
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
     let (config, server, requests) = fixture(replies);
     let (mut client, initial) = CloudClient::connect(
         config,
@@ -636,7 +675,12 @@ fn report_export_reloads_scoped_data_and_rechecks_access_before_creating_csv() {
     let mut changed = store.data.employees[0].clone();
     changed.full_name = "Synthetic refreshed report employee".into();
     fresh[3] = reply("GET /rest/v1/employees?", 200, json!([changed]));
-    initial.extend(fresh.into_iter().skip(1).take(45));
+    initial.extend(
+        fresh
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
     initial.push(reply("POST /rest/v1/rpc/my_hris_access ",200,json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]})));
     let (config, server, requests) = fixture(initial);
     let (mut client, _) = CloudClient::connect(
@@ -672,7 +716,8 @@ fn report_export_reloads_scoped_data_and_rechecks_access_before_creating_csv() {
                 || r.line
                     .starts_with("POST /rest/v1/rpc/list_company_accounts ")
                 || r.line
-                    .starts_with("POST /rest/v1/rpc/recruiting_interviewers "))
+                    .starts_with("POST /rest/v1/rpc/recruiting_interviewers ")
+                || r.line.starts_with("POST /rest/v1/rpc/exit_readiness_list "))
     );
 }
 
@@ -681,7 +726,12 @@ fn report_access_changed_during_loading_prevents_local_export() {
     use hris_desktop::reports::{Filter, Kind};
     let company = Company::default();
     let mut replies = baseline(&company);
-    replies.extend(baseline(&company).into_iter().skip(1).take(45));
+    replies.extend(
+        baseline(&company)
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
     replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,json!({"company_id":company.id,"user_id":company.owner_id,"role":"manager","employee_id":null,"direct_reports":[]})));
     let (config, server, _) = fixture(replies);
     let (mut client, _) = CloudClient::connect(
@@ -786,7 +836,12 @@ fn attendance_requests_use_guarded_rpc_and_reload_proposals_and_decision_history
         200,
         json!(id),
     ));
-    replies.extend(prepare(&store.data).into_iter().skip(1).take(45));
+    replies.extend(
+        prepare(&store.data)
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
     replies.push(reply(
         "POST /rest/v1/rpc/attendance_request ",
         409,
@@ -1015,6 +1070,10 @@ fn baseline(company: &Company) -> Vec<Reply> {
         reply("GET /rest/v1/onboarding_cases?", 200, json!([])),
         reply("GET /rest/v1/onboarding_tasks?", 200, json!([])),
         reply("GET /rest/v1/onboarding_events?", 200, json!([])),
+        reply("GET /rest/v1/exit_cases?", 200, json!([])),
+        reply("POST /rest/v1/rpc/exit_readiness_list ", 200, json!([])),
+        reply("GET /rest/v1/clearance_tasks?", 200, json!([])),
+        reply("GET /rest/v1/exit_events?", 200, json!([])),
         reply("GET /rest/v1/notification_read_state?", 200, json!([])),
         reply("GET /auth/v1/user ", 200, user(company)),
         reply(
@@ -1048,7 +1107,12 @@ fn leave_writes_use_revisioned_rpcs_accept_scalar_results_and_reload_saved_charg
     let mut after = baseline(&company);
     after[3] = reply("GET /rest/v1/employees?", 200, json!(store.data.employees));
     after[7] = reply("GET /rest/v1/leave_requests?", 200, json!([row]));
-    replies.extend(after.into_iter().skip(1).take(45));
+    replies.extend(
+        after
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
     replies.push(reply(
         "POST /rest/v1/rpc/cancel_leave ",
         409,
@@ -1120,7 +1184,12 @@ fn policy_saves_require_the_loaded_revision_and_refresh_the_authoritative_policy
     let mut server_policy = policy.clone();
     server_policy.revision = 1;
     after[15] = reply("GET /rest/v1/leave_policies?", 200, json!([server_policy]));
-    replies.extend(after.into_iter().skip(1).take(45));
+    replies.extend(
+        after
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -1228,7 +1297,7 @@ fn employee_document_upload_reserves_private_path_finalizes_and_reloads_protecte
             f.baseline(vec![ready.clone()], f.store.data.document_events.clone())
                 .into_iter()
                 .skip(1)
-                .take(45),
+                .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
         );
         let (config, server, requests) = fixture(replies);
         let (mut client, current) = CloudClient::connect(
@@ -1384,7 +1453,7 @@ fn private_document_download_verifies_bytes_before_writing_a_user_selected_copy(
                 f.baseline(vec![ready.clone()], vec![])
                     .into_iter()
                     .skip(1)
-                    .take(45),
+                    .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
             );
         }
         let (config, server, requests) = fixture(replies);
@@ -1441,7 +1510,7 @@ fn archiving_documents_uses_revisioned_rpc_and_reloads_retained_files() {
         f.baseline(vec![archived.clone()], vec![])
             .into_iter()
             .skip(1)
-            .take(45),
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
     );
     let (config, server, requests) = fixture(replies);
     let (mut client, current) = CloudClient::connect(
@@ -1515,7 +1584,12 @@ fn employment_history_is_reloaded_with_company_scope_and_never_supplied_by_the_w
     let mut after = baseline(&company);
     after[3] = reply("GET /rest/v1/employees?", 200, json!([saved]));
     after[12] = reply("GET /rest/v1/employment_history?", 200, json!(events));
-    replies.extend(after.into_iter().skip(1).take(45));
+    replies.extend(
+        after
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
     let (config, server, requests) = fixture(replies);
     let (mut client, current) = CloudClient::connect(
         config,
@@ -1604,7 +1678,12 @@ fn attendance_correction_uses_the_guarded_rpc_and_reloads_immutable_history() {
     after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
     after[5] = reply("GET /rest/v1/attendance?", 200, json!([row]));
     after[6] = reply("GET /rest/v1/attendance_corrections?", 200, json!([event]));
-    replies.extend(after.into_iter().skip(1).take(45));
+    replies.extend(
+        after
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
     let (config, server, requests) = fixture(replies);
     let (mut client, current) = CloudClient::connect(
         config,
@@ -1668,7 +1747,12 @@ fn employment_options_use_guarded_rpc_and_reload_inactive_labels_without_changin
     revised[0].revision = 1;
     revised[0].name = "Main office renamed".into();
     after[11] = reply("GET /rest/v1/work_locations?", 200, json!(revised));
-    replies.extend(after.into_iter().skip(1).take(45));
+    replies.extend(
+        after
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
     let (config, server, requests) = fixture(replies);
     let (mut client, current) = CloudClient::connect(
         config,
@@ -1757,7 +1841,12 @@ fn editing_staff_saves_the_same_employee_contacts_and_role_in_one_rpc() {
     ));
     let mut after = baseline(&company);
     after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
-    replies.extend(after.into_iter().skip(1).take(45));
+    replies.extend(
+        after
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -1835,7 +1924,13 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
     ));
     let mut after = baseline(&revised);
     after.remove(0);
-    after.truncate(44);
+    let after: Vec<_> = after
+        .into_iter()
+        .take_while(|r| {
+            !r.prefix
+                .starts_with("GET /rest/v1/notification_read_state?")
+        })
+        .collect();
     replies.extend(after);
     replies.push(Reply {
         prefix: "GET /storage/v1/object/authenticated/company-branding/".into(),
@@ -1848,7 +1943,12 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
         200,
         json!([]),
     ));
-    replies.extend(baseline(&revised).into_iter().skip(1).take(45));
+    replies.extend(
+        baseline(&revised)
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
     replies.push(reply(
         "DELETE /storage/v1/object/company-branding ",
         200,
@@ -1859,7 +1959,12 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
         200,
         Value::Null,
     ));
-    replies.extend(baseline(&company).into_iter().skip(1).take(45));
+    replies.extend(
+        baseline(&company)
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -1961,6 +2066,8 @@ fn manager_desktop_sign_in_does_not_request_administrator_account_data() {
         !r.prefix.contains("/hiring_offer")
             && !r.prefix.contains("/hire_conversions?")
             && !r.prefix.contains("/onboarding_cases?")
+            && !r.prefix.contains("/exit_cases?")
+            && !r.prefix.contains("/rpc/exit_readiness_list ")
             && !r.prefix.contains("/applicant_document")
             && !r.prefix.contains("/rpc/recruiting_interviewers ")
             && !r.prefix.contains("/employee_import_")
@@ -2018,7 +2125,7 @@ fn employee_contacts_save_and_reload_separately_with_scoped_updates_and_zero_row
         snapshot_replies(vec![normalized.clone()])
             .into_iter()
             .skip(1)
-            .take(45),
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
     );
     let mut updated = normalized.clone();
     updated.address = "Updated fictional address".into();
@@ -2031,7 +2138,7 @@ fn employee_contacts_save_and_reload_separately_with_scoped_updates_and_zero_row
         snapshot_replies(vec![updated.clone()])
             .into_iter()
             .skip(1)
-            .take(45),
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
     );
     replies.push(reply("PATCH /rest/v1/employee_contacts?", 200, json!([])));
     let (config, server, observed) = fixture(replies);
@@ -2103,7 +2210,12 @@ fn unified_employee_save_uses_one_transaction_rpc_instead_of_separate_partial_wr
     ));
     let mut after = baseline(&company);
     after[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
-    initial.extend(after.into_iter().skip(1).take(45));
+    initial.extend(
+        after
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
     let (config, server, requests) = fixture(initial);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -2216,7 +2328,12 @@ fn account_provisioning_preserves_disabled_access_and_sends_password_only_to_the
         201,
         json!({"confirmation_sent":false}),
     ));
-    replies.extend(baseline(&company).into_iter().skip(1).take(45));
+    replies.extend(
+        baseline(&company)
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
     let (config, server, requests) = fixture(replies);
     let (mut client, data) = CloudClient::connect(
         config,
@@ -2236,13 +2353,17 @@ fn account_provisioning_preserves_disabled_access_and_sends_password_only_to_the
     assert!(message.contains("planned portal"));
     server.join().unwrap();
     let requests = requests.lock().unwrap();
-    let body = requests[48].json();
+    let body = request_at(&requests, "POST /functions/v1/account-admin ", 0).json();
     assert_eq!(body["active"], false);
     assert_eq!(body["role"], "employee");
     assert!(body["employee_id"].is_null());
     assert_eq!(body["password"], "synthetic initial passphrase");
     assert!(!body.to_string().contains("confirmation"));
-    assert!(requests[48].headers.contains("profile-jwt"));
+    assert!(
+        request_at(&requests, "POST /functions/v1/account-admin ", 0)
+            .headers
+            .contains("profile-jwt")
+    );
     assert!(
         requests
             .iter()
@@ -2326,21 +2447,33 @@ fn personal_details_preferences_and_private_photo_roundtrip_use_only_the_signed_
     server.join().unwrap();
     let requests = requests.lock().unwrap();
     assert_eq!(
-        requests[48].json(),
+        request_at(&requests, "PUT /auth/v1/user ", 0).json(),
         json!({"data":{"hris_profile":{"full_name":"Alex Morgan","preferred_name":"Morgan","contact_phone":""}}})
     );
-    assert!(requests[49].json().get("app_metadata").is_none());
     assert!(
-        requests[50]
+        request_at(&requests, "PUT /auth/v1/user ", 1)
+            .json()
+            .get("app_metadata")
+            .is_none()
+    );
+    assert!(
+        request_at(&requests, "POST /storage/v1/object/profile-photos/", 0)
             .headers
             .to_lowercase()
             .contains("x-upsert: true")
     );
     assert_eq!(
-        image::load_from_memory(&requests[50].body).unwrap().width(),
+        image::load_from_memory(
+            &request_at(&requests, "POST /storage/v1/object/profile-photos/", 0).body
+        )
+        .unwrap()
+        .width(),
         256
     );
-    assert_eq!(requests[53].json(), json!({"prefixes":[path]}));
+    assert_eq!(
+        request_at(&requests, "DELETE /storage/v1/object/profile-photos ", 0).json(),
+        json!({"prefixes":[path]})
+    );
     for request in &requests[1..] {
         assert!(
             request
@@ -2459,21 +2592,21 @@ fn password_and_email_changes_reauthenticate_and_keep_email_pending_until_confir
     server.join().unwrap();
     let requests = requests.lock().unwrap();
     assert_eq!(
-        requests[49].json(),
+        request_at(&requests, "PUT /auth/v1/user ", 0).json(),
         json!({"password":"new synthetic passphrase","current_password":"old synthetic passphrase"})
     );
     assert!(
-        requests[49]
+        request_at(&requests, "PUT /auth/v1/user ", 0)
             .headers
             .to_lowercase()
             .contains("authorization: bearer fresh-password-jwt")
     );
     assert_eq!(
-        requests[51].json(),
+        request_at(&requests, "PUT /auth/v1/user ", 1).json(),
         json!({"email":"updated@example.invalid"})
     );
     assert!(
-        requests[51]
+        request_at(&requests, "PUT /auth/v1/user ", 1)
             .headers
             .to_lowercase()
             .contains("authorization: bearer fresh-email-jwt")
@@ -2622,4 +2755,94 @@ fn sign_out_everywhere_clears_local_account_data_even_when_the_server_is_unreach
         hris_desktop::domain::Mode::SignedOut
     );
     assert!(signed_out.account.is_none());
+}
+
+#[test]
+fn exit_creation_retries_original_payload_after_saved_write_and_failed_refresh() {
+    use hris_desktop::{domain::Action, exits::*};
+    let mut demo = DemoStore::new();
+    let person = demo
+        .data
+        .employees
+        .iter()
+        .find(|e| Some(e.id) != demo.data.access.employee_id)
+        .unwrap()
+        .id;
+    let mut draft = CaseDraft::new(&demo.data, Some(person));
+    draft.reason = "Synthetic exit".into();
+    let a = ExitAction::CaseSave(draft);
+    let before = demo.data.clone();
+    demo.execute(Action::Exit(a.clone())).unwrap();
+    let saved = demo.data.exits.cases[0].clone();
+    let prepare = |data: &hris_desktop::domain::Snapshot| {
+        let mut r = baseline(&data.company);
+        for response in &mut r {
+            let value = match response.prefix.as_str() {
+                "POST /rest/v1/rpc/my_hris_access " => Some(
+                    json!({"company_id":data.company.id,"user_id":data.access.user_id,"employee_id":data.access.employee_id,"role":data.access.role,"direct_reports":data.access.direct_reports}),
+                ),
+                p if p.starts_with("GET /rest/v1/employees?") => Some(json!(data.employees)),
+                p if p.starts_with("GET /rest/v1/exit_cases?") => Some(json!(data.exits.cases)),
+                p if p.starts_with("GET /rest/v1/clearance_tasks?") => {
+                    Some(json!(data.exits.tasks))
+                }
+                p if p.starts_with("GET /rest/v1/exit_events?") => Some(json!(data.exits.events)),
+                "POST /rest/v1/rpc/exit_readiness_list " => Some(json!(
+                    data.exits
+                        .cases
+                        .iter()
+                        .filter_map(|c| readiness(data, c.id))
+                        .collect::<Vec<_>>()
+                )),
+                _ => None,
+            };
+            if let Some(v) = value {
+                response.body = serde_json::to_vec(&v).unwrap();
+            }
+        }
+        r
+    };
+    let mut replies = prepare(&before);
+    replies.push(reply("POST /rest/v1/rpc/manage_exit ", 200, json!(saved)));
+    replies.push(reply(
+        "POST /rest/v1/rpc/my_hris_access ",
+        500,
+        json!({"message":"Synthetic refresh failure"}),
+    ));
+    replies.push(reply("POST /rest/v1/rpc/manage_exit ", 200, json!(saved)));
+    replies.extend(
+        prepare(&demo.data)
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
+    let (config, server, requests) = fixture(replies);
+    let (mut client, current) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert!(
+        client
+            .execute(Action::Exit(a.clone()), &current)
+            .unwrap_err()
+            .to_string()
+            .contains("refresh failed")
+    );
+    let next = client.execute(Action::Exit(a.clone()), &current).unwrap();
+    assert!(a.saved(&next));
+    assert_eq!(next.exits.tasks.len(), 5);
+    server.join().unwrap();
+    let req = requests.lock().unwrap();
+    let writes: Vec<_> = req
+        .iter()
+        .filter(|r| r.line.starts_with("POST /rest/v1/rpc/manage_exit "))
+        .collect();
+    assert_eq!(writes.len(), 2);
+    assert_eq!(writes[0].json(), writes[1].json());
+    assert!(
+        !req.iter()
+            .any(|r| r.line.starts_with("PATCH /rest/v1/exit_cases"))
+    );
 }

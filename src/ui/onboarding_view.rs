@@ -769,7 +769,7 @@ impl HrisApp {
             self.send_onboarding(HiringAction::TaskSave(d));
         }
     }
-    fn hiring_events(&self, ui: &mut Ui, events: &[onboarding::Event]) {
+    pub(super) fn hiring_events(&self, ui: &mut Ui, events: &[onboarding::Event]) {
         if events.is_empty() {
             ui.label("No recorded changes.");
         }

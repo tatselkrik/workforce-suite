@@ -9,6 +9,7 @@ pub mod corrections;
 pub mod documents;
 pub mod domain;
 pub mod employment;
+pub mod exits;
 pub mod hiring;
 pub mod history;
 pub mod imports;

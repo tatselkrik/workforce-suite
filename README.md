@@ -27,7 +27,7 @@ The interface uses `egui`/`eframe`. The domain rules and Supabase Auth/REST adap
 
 ## Try it
 
-The private Windows setup installs version 0.1.27 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection and update-verification profiles, but no account password or session.
+The private Windows setup installs version 0.1.28 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection and update-verification profiles, but no account password or session.
 
 Open **HRIS Desktop** and sign in with an assigned Administrator, HR Generalist or Manager account. Ordinary Employee accounts are reserved for a future mobile-friendly portal and cannot sign into this desktop app. Its company database is already selected by the installation. Account login remains necessary to access HR records; database setup is not part of that login.
 
@@ -136,3 +136,5 @@ $env:HRIS_SCREENSHOT_TO = 'C:\absolute\path\hris-preview.png'
 Implementation references: [eframe native applications](https://docs.rs/eframe/0.37.0/eframe/), [Supabase row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security), [Supabase publishable API keys](https://supabase.com/docs/guides/getting-started/api-keys), [Supabase password authentication](https://supabase.com/docs/guides/auth/passwords), and [PGlite extensions](https://pglite.dev/extensions/).
 
 Shift schedules and dated employee assignments are under **Attendance**. See [shift schedules](docs/SHIFT-SCHEDULES.md) for overnight handling, preserved history and role scope. Add paid/unpaid rules when editing a shift, then open **Daily attendance > Breaks** for actual times, HR corrections and history. See [attendance breaks](docs/ATTENDANCE-BREAKS.md). Open **Time calculations** for saved rules, lateness, early departure and overtime candidates; Administrators configure company rules here or through Settings. See [attendance calculations](docs/ATTENDANCE-CALCULATIONS.md).
+
+Employee exits and assigned clearance tasks are described in [Exit and clearance](docs/EXIT-CLEARANCE.md). Administrator finalization preserves accounts, files and history while disabling company sign-in and archiving the employee.

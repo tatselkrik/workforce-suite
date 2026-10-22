@@ -29,6 +29,7 @@ mod imports_view;
 mod leave_view;
 mod notifications_view;
 mod onboarding_view;
+mod exits_view;
 mod organization_view;
 mod overtime_view;
 mod recruiting_view;
@@ -53,6 +54,7 @@ enum Page {
     Leave,
     Reports,
     Hiring,
+    Exits,
     Accounts,
     Settings,
     Profile,
@@ -60,13 +62,14 @@ enum Page {
 }
 
 impl Page {
-    const ALL: [Self; 8] = [
+    const ALL: [Self; 9] = [
         Self::Overview,
         Self::Employees,
         Self::Attendance,
         Self::Leave,
         Self::Reports,
         Self::Hiring,
+        Self::Exits,
         Self::Accounts,
         Self::Settings,
     ];
@@ -78,6 +81,7 @@ impl Page {
             Self::Leave => "Leave",
             Self::Reports => "Reports",
             Self::Hiring => "Hiring",
+            Self::Exits => "Exit & clearance",
             Self::Accounts => "Account Manager",
             Self::Settings => "Settings",
             Self::Profile => "Profile",
@@ -134,6 +138,7 @@ pub struct HrisApp {
     hiring_state: hiring_view::State,
     recruiting_state: recruiting_view::State,
     onboarding_state: onboarding_view::State,
+    exit_state: exits_view::State,
     department: String,
     employment_type_filter: EmploymentFilter,
     work_location_filter: EmploymentFilter,
@@ -359,6 +364,7 @@ impl HrisApp {
             hiring_state: hiring_view::State::default(),
             recruiting_state: Default::default(),
             onboarding_state: Default::default(),
+            exit_state: Default::default(),
             department: String::new(),
             employment_type_filter: EmploymentFilter::All,
             work_location_filter: EmploymentFilter::All,
@@ -421,6 +427,7 @@ impl HrisApp {
                 Ok("leave") => app.page = Page::Leave,
                 Ok("reports") => app.page = Page::Reports,
                 Ok("hiring") => app.page = Page::Hiring,
+                Ok("exits") => app.page = Page::Exits,
                 Ok("notifications") => app.page = Page::Notifications,
                 Ok("settings") => app.page = Page::Settings,
                 Ok("profile") => app.page = Page::Profile,
@@ -982,6 +989,7 @@ impl HrisApp {
             app.prepare_hiring_preview();
             app.prepare_recruiting_preview();
             app.prepare_onboarding_preview();
+            app.prepare_exit_preview();
             if std::env::var("HRIS_PREVIEW_PAGE").as_deref() == Ok("sign-in") {
                 app.login_branding = branding::LoginBranding {
                     company_name: app.data.company.name.clone(),
@@ -1064,6 +1072,7 @@ impl HrisApp {
                         self.hiring_state = hiring_view::State::default();
                         self.recruiting_state = Default::default();
                         self.onboarding_state = Default::default();
+                        self.exit_state = Default::default();
                         self.import_state = imports_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
@@ -1092,6 +1101,7 @@ impl HrisApp {
                         self.hiring_state = hiring_view::State::default();
                         self.recruiting_state = Default::default();
                         self.onboarding_state = Default::default();
+                        self.exit_state = Default::default();
                         self.import_state = imports_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
@@ -1174,7 +1184,8 @@ impl HrisApp {
                     let hiring_record_saved = self.hiring_state.accept(&data);
                     let recruiting_saved = self.recruiting_state.accept(&data);
                     let onboarding_saved = self.onboarding_state.accept(&data);
-                    let hiring_saved = hiring_record_saved && recruiting_saved && onboarding_saved;
+                    let exit_saved = self.exit_state.accept(&data);
+                    let hiring_saved = hiring_record_saved && recruiting_saved && onboarding_saved && exit_saved;
                     self.data = data;
                     self.notification_state.invalidate();
                     if !self.data.active().any(|e| {
@@ -1228,7 +1239,7 @@ impl HrisApp {
                         self.document_form = None;
                     }
                     if !hiring_saved {
-                        self.notice = Some(("The saved application has changed. Your draft is preserved; reload the saved record before continuing.".into(), true));
+                        self.notice = Some(("The saved record has changed. Your draft is preserved; reload the saved record before continuing.".into(), true));
                     } else if !update.message.is_empty() {
                         self.notice = Some((update.message, false));
                     }
@@ -1236,6 +1247,7 @@ impl HrisApp {
                 Err(error) => {
                     self.hiring_state.pending = None;
                     self.onboarding_state.pending = None;
+                    self.exit_state.pending = None;
                     self.recruiting_state.pending = None;
                     self.recruiting_state.resume_pending = None;
                     self.report_state.pending_views = None;
@@ -1586,15 +1598,16 @@ impl HrisApp {
     }
 
     fn sidebar(&mut self, ui: &mut Ui) {
-        ui.add_space(12.0);
+        let compact = ui.available_height() < 600.0;
+        ui.add_space(if compact { 4.0 } else { 12.0 });
         ui.vertical_centered(|ui| {
             company_logo(
                 ui,
                 self.company_logo.as_ref(),
                 &self.data.company.name,
-                72.0,
+                if compact { 54.0 } else { 72.0 },
             );
-            ui.add_space(10.0);
+            ui.add_space(if compact { 6.0 } else { 10.0 });
             ui.add(
                 egui::Label::new(
                     RichText::new(&self.data.company.name)
@@ -1605,15 +1618,19 @@ impl HrisApp {
                 .wrap(),
             );
         });
-        ui.add_space(28.0);
-        let compact = ui.available_height() < 445.0;
+        ui.add_space(if compact { 14.0 } else { 28.0 });
         let nav_height = (ui.available_height() - 112.0).max(70.0);
+        let page_count = Page::ALL.iter().filter(|p| **p != Page::Accounts || self.data.access.role.manages_accounts()).count() as f32;
+        let nav_gap = if compact { 4.0 } else { ui.spacing().item_spacing.y };
+        let button_height = ((nav_height - nav_gap * (page_count - 1.0)) / page_count).clamp(28.0, 42.0);
         egui::ScrollArea::vertical()
             .id_salt("sidebar_navigation")
             .max_height(nav_height)
             .show(ui, |ui| {
                 if compact {
                     ui.spacing_mut().item_spacing.y = 4.0;
+                    ui.spacing_mut().button_padding.y = 3.0;
+                    ui.spacing_mut().interact_size.y = 28.0;
                 }
                 for page in Page::ALL {
                     if page == Page::Accounts && !self.data.access.role.manages_accounts() {
@@ -1634,7 +1651,7 @@ impl HrisApp {
                         .corner_radius(8);
                     if ui
                         .add_sized(
-                            [ui.available_width(), if compact { 34.0 } else { 42.0 }],
+                            [ui.available_width(), button_height],
                             button,
                         )
                         .clicked()
@@ -1770,6 +1787,7 @@ impl HrisApp {
                 "Hiring",
                 "Manage applications, interviews and hiring workflows.",
             ),
+            Page::Exits => ("Exit & clearance", "Manage employee handover, clearance and protected exit finalization."),
             Page::Reports => (
                 "Reports",
                 "Attendance, filed leave charges and employee totals within your access.",
@@ -1860,6 +1878,7 @@ impl HrisApp {
             || self.import_state.editing()
             || self.hiring_state.editing()
             || self.onboarding_state.editing()
+            || self.exit_state.editing()
             || self.recruiting_state.editing()
             || self.report_state.view_draft.is_some()
             || self.account_form.is_some()
@@ -3913,7 +3932,7 @@ impl eframe::App for HrisApp {
         };
         ctx.set_theme(theme.preference());
         if (self.page == Page::Accounts && !self.data.access.role.manages_accounts())
-            || (self.page == Page::Hiring && !self.data.access.role.uses_desktop())
+            || (matches!(self.page, Page::Hiring | Page::Exits) && !self.data.access.role.uses_desktop())
         {
             self.navigate(Page::Overview, &ctx);
         }
@@ -3942,7 +3961,8 @@ impl eframe::App for HrisApp {
                             && self.employee_form.is_none()
                             && !self.hiring_state.editing()
                             && !self.recruiting_state.editing()
-                            && !self.onboarding_state.editing(),
+                            && !self.onboarding_state.editing()
+                            && !self.exit_state.editing(),
                         |ui| self.sidebar(ui),
                     );
                 });
@@ -3978,6 +3998,7 @@ impl eframe::App for HrisApp {
                                 Page::Leave => self.leave(ui),
                                 Page::Reports => self.reports(ui),
                                 Page::Hiring => self.hiring(ui),
+                                Page::Exits => self.exits(ui),
                                 Page::Accounts if self.data.access.role.manages_accounts() => {
                                     self.accounts(ui)
                                 }

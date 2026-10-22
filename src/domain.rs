@@ -322,6 +322,7 @@ pub enum Mode {
 
 #[derive(Clone, Debug)]
 pub struct Snapshot {
+    pub exits: crate::exits::Setup,
     pub onboarding: crate::onboarding::Setup,
     pub recruiting: crate::recruiting::Setup,
     pub hiring: crate::hiring::Setup,
@@ -357,6 +358,7 @@ impl Snapshot {
         Self {
             recruiting: Default::default(),
             onboarding: Default::default(),
+            exits: Default::default(),
             hiring: Default::default(),
             notification_reads: Default::default(),
             imports: Default::default(),
@@ -438,6 +440,7 @@ impl Snapshot {
 
 #[derive(Clone, Debug)]
 pub enum Action {
+    Exit(crate::exits::ExitAction),
     Onboarding(crate::onboarding::HiringAction),
     Interview(crate::recruiting::InterviewAction),
     Hiring(crate::hiring::HiringAction),
@@ -599,6 +602,7 @@ impl DemoStore {
             data: Snapshot {
                 recruiting: Default::default(),
                 onboarding: Default::default(),
+            exits: Default::default(),
                 hiring: Default::default(),
                 notification_reads: crate::notifications::ReadState {
                     company_id: company.id,
@@ -722,6 +726,7 @@ impl DemoStore {
     fn apply(&mut self, action: Action) -> Result<()> {
         self.data.access.authorize(&action, &self.data)?;
         match action {
+            Action::Exit(action) => { crate::exits::apply_demo(&mut self.data, &action, chrono::Utc::now())?; }
             Action::Onboarding(action) => {
                 crate::onboarding::apply_demo(&mut self.data, &action, chrono::Utc::now())?
             }

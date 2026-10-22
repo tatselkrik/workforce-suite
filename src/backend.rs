@@ -916,6 +916,7 @@ impl CloudClient {
         };
         let recruiting = self.recruiting_snapshot(&access)?;
         let onboarding = self.onboarding_snapshot(&access)?;
+        let exits = self.exits_snapshot(&access)?;
         let (logo_png, logo_warning) = self.company_logo(&company);
         let mut notification_rows: Vec<crate::notifications::ReadState> =
             self.rows("notification_read_state", Some(company.id))?;
@@ -933,6 +934,7 @@ impl CloudClient {
                 });
         notification_reads.validate(access.user_id, company.id)?;
         Ok(Snapshot {
+            exits,
             onboarding,
             recruiting,
             hiring,
@@ -1095,6 +1097,12 @@ impl CloudClient {
 
     pub fn execute(&mut self, action: Action, current: &Snapshot) -> Result<Snapshot> {
         current.access.authorize(&action, current)?;
+        if let Action::Exit(action) = &action {
+            let payload=action.payload(current)?;
+            let saved:Value=decode(self.request(Method::POST,"rpc/manage_exit")?.json(&payload).send()?)?;
+            ensure!(saved["company_id"]==json!(current.company.id)&&saved["id"]==payload["p_record"]["id"],"Exit response did not match the current company and record.");
+            return self.snapshot().context("Exit or clearance change saved, but refresh failed. Keep your draft and Refresh before retrying.");
+        }
         if let Action::Onboarding(action) = &action {
             let payload = action.payload(current)?;
             let saved: Value = decode(
@@ -1353,6 +1361,7 @@ impl CloudClient {
                 .context("Contacts saved, but refresh failed. Click Refresh before trying again.");
         }
         let (method, table, id, body) = match action {
+            Action::Exit(_) => unreachable!("Exit changes return above"),
             Action::Onboarding(_) => unreachable!("Hiring workflow changes return above"),
             Action::Interview(_) => unreachable!("Interview changes return above"),
             Action::Hiring(_) => unreachable!("Applicant changes return above"),
