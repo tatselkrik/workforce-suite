@@ -91,7 +91,7 @@ and submit a corrected request instead of editing history.
 
 Attendance uses the current calendar for non-workday labels and saved approved
 charge dates for full/half-day leave labels. Missing check-ins still do not
-establish absence. Individual schedules are configured separately under Attendance; they do not recalculate leave charges. Lateness, breaks and overtime are subsequent modules.
+establish absence. Individual schedules are configured separately under Attendance; they do not recalculate leave charges. Break tracking and time calculations are available under Attendance; see [attendance calculations](ATTENDANCE-CALCULATIONS.md).
 
 ## Deployment and permissions
 

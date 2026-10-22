@@ -60,7 +60,9 @@ try {
   const deferred=[];
   const shiftMigrations=[];
   const breakMigrations=[];
+  const calculationMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_attendance_calculations.sql')) {calculationMigrations.push(filename);continue;}
     if(filename.endsWith('_attendance_breaks.sql')) {breakMigrations.push(filename);continue;}
     if(filename.endsWith('_shift_schedules.sql')) {shiftMigrations.push(filename);continue;}
     if(filename.endsWith('_leave_policies_and_approval_chains.sql')||filename.endsWith('_leave_policy_tracking_start.sql')||filename.endsWith('_leave_client_compatibility.sql')) {deferred.push(filename);continue;}
@@ -212,6 +214,14 @@ try {
   eq((await db.query('select id,employee_id,work_date,checked_in_at,checked_out_at,revision,planned_shift from public.attendance order by id')).rows,beforeBreaks,'Break migration preserves existing attendance and saved plans');
   const {runBreakTests}=await import('./breaks.test.mjs');
   await runBreakTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
+  console.log(`Passed ${checks} schema assertions before calculation migration.`);
+  await db.exec('reset role');
+  const beforeCalculations=(await db.query('select to_jsonb(a) as original from public.attendance a order by id')).rows.map(r=>r.original);
+  for(const filename of calculationMigrations) {await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version) values($1)',[filename.split('_')[0]]);}
+  eq((await db.query("select to_jsonb(a)-'calculation_snapshot' as original from public.attendance a order by id")).rows.map(r=>r.original),beforeCalculations,'Calculation migration preserves all previous attendance values');
+  eq((await db.query('select count(*)::int n from public.attendance where calculation_snapshot is not null')).rows[0].n,0,'No historical calculation snapshot is invented');
+  const {runCalculationTests}=await import('./calculations.test.mjs');
+  await runCalculationTests({db,eq,deny,session,employee,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

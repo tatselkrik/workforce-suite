@@ -187,6 +187,7 @@ fn roster_uses_individual_days_and_does_not_rewrite_leave_or_existing_punches() 
     let at = Utc.with_ymd_and_hms(2027, 1, 4, 15, 0, 0).unwrap();
     let plan = s.data.shifts.plan(e, date("2027-01-04")).cloned();
     s.data.attendance.push(Attendance {
+        calculation_snapshot: None,
         planned_shift: plan.clone(),
         id: uuid::Uuid::new_v4(),
         company_id: s.data.company.id,

@@ -636,7 +636,7 @@ impl CloudClient {
                 ("select", "*"),
                 (
                     "order",
-                    if table == "leave_policies" {
+                    if matches!(table, "leave_policies" | "attendance_calculation_policies") {
                         "company_id.asc"
                     } else {
                         "id.asc"
@@ -776,8 +776,14 @@ impl CloudClient {
                 Vec::new()
             },
         };
+        let calculations=crate::calculations::CalculationSetup {
+            policy:self.rows::<crate::calculations::CalculationPolicy>("attendance_calculation_policies",Some(company.id))?.into_iter().next().ok_or_else(||anyhow::anyhow!("Attendance calculation rules are not configured. Ask the deployment administrator to apply the required migration."))?,
+            policy_events:if access.role.manages_hr(){self.rows("attendance_calculation_policy_events",Some(company.id))?}else{Vec::new()},
+            attendance_events:if access.role.manages_hr(){self.rows("attendance_calculation_events",Some(company.id))?}else{Vec::new()},
+        };
         let (logo_png, logo_warning) = self.company_logo(&company);
         Ok(Snapshot {
+            calculations,
             breaks,
             shifts,
             leave_setup: crate::leave::LeaveSetup {
@@ -932,6 +938,23 @@ impl CloudClient {
 
     pub fn execute(&mut self, action: Action, current: &Snapshot) -> Result<Snapshot> {
         current.access.authorize(&action, current)?;
+        let calculation_write = match &action {
+            Action::SaveCalculationPolicy(draft) => Some((
+                "rpc/save_attendance_calculation_policy",
+                json!({"p_policy":draft.payload(current)?}),
+            )),
+            Action::ApplyCalculationPolicy(change) => Some((
+                "rpc/apply_attendance_calculation_policy",
+                json!({"p_change":change.payload(current)?}),
+            )),
+            _ => None,
+        };
+        if let Some((rpc, payload)) = calculation_write {
+            let _:Uuid=decode(self.request(Method::POST,rpc)?.json(&payload).send().context("Could not save calculation rules. Check your connection and refresh before retrying.")?)?;
+            return self.snapshot().context(
+                "Calculation rules saved, but refresh failed. Click Refresh before trying again.",
+            );
+        }
         if let Action::AttendanceBreak(action) = &action {
             let (operation, payload, _) = action.prepare(current, Utc::now())?;
             let _: Uuid = decode(self.request(Method::POST,"rpc/manage_attendance_break")?.json(&json!({"p_operation":operation,"p_break":payload})).send().context("Could not save the break. Check your connection and refresh before retrying.")?)?;
@@ -1083,6 +1106,9 @@ impl CloudClient {
                 .context("Contacts saved, but refresh failed. Click Refresh before trying again.");
         }
         let (method, table, id, body) = match action {
+            Action::SaveCalculationPolicy(_) | Action::ApplyCalculationPolicy(_) => {
+                unreachable!("Calculation saves return above")
+            }
             Action::AttendanceBreak(_) => unreachable!("Break operations return above"),
             Action::SaveShiftTemplate(_) | Action::AssignShift(_) => {
                 unreachable!("Schedule saves return above")

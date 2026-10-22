@@ -9,8 +9,9 @@ Choose working days, start/end times in 24-hour format, and whether company
 holidays are scheduled workdays. An end before the start finishes the next day;
 equal times and shifts of 24 hours or longer are rejected. Paid/unpaid break
 rules and actual break recording are available; see [attendance breaks](ATTENDANCE-BREAKS.md).
-Lateness, undertime and overtime calculations follow separately. Elapsed
-attendance still includes breaks and is not payable time.
+Lateness, undertime/early departure and overtime candidates are available in
+**Time calculations**; see [attendance calculations](ATTENDANCE-CALCULATIONS.md).
+Elapsed attendance still includes breaks and is not payable time.
 
 ## Assignments and history
 

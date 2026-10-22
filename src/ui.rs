@@ -23,6 +23,7 @@ const BG: Color32 = Color32::from_rgb(245, 247, 250);
 const LINE: Color32 = Color32::from_rgb(226, 232, 238);
 
 mod breaks_view;
+mod calculations_view;
 mod leave_view;
 mod organization_view;
 mod shifts_view;
@@ -106,6 +107,7 @@ pub struct HrisApp {
     leave_state: leave_view::State,
     shift_state: shifts_view::State,
     break_state: breaks_view::State,
+    calculation_state: calculations_view::State,
     department: String,
     employment_type_filter: EmploymentFilter,
     work_location_filter: EmploymentFilter,
@@ -321,6 +323,7 @@ impl HrisApp {
             leave_state: leave_view::State::default(),
             shift_state: shifts_view::State::default(),
             break_state: breaks_view::State::default(),
+            calculation_state: calculations_view::State::default(),
             department: String::new(),
             employment_type_filter: EmploymentFilter::All,
             work_location_filter: EmploymentFilter::All,
@@ -932,6 +935,7 @@ impl HrisApp {
             app.prepare_leave_preview();
             app.prepare_shift_preview();
             app.prepare_break_preview();
+            app.prepare_calculation_preview();
             if std::env::var("HRIS_PREVIEW_PAGE").as_deref() == Ok("sign-in") {
                 app.login_branding = branding::LoginBranding {
                     company_name: app.data.company.name.clone(),
@@ -1006,6 +1010,7 @@ impl HrisApp {
                         self.leave_state = leave_view::State::default();
                         self.shift_state = shifts_view::State::default();
                         self.break_state = breaks_view::State::default();
+                        self.calculation_state = calculations_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
                         self.account_form = None;
@@ -1025,6 +1030,7 @@ impl HrisApp {
                         self.leave_state = leave_view::State::default();
                         self.shift_state = shifts_view::State::default();
                         self.break_state = breaks_view::State::default();
+                        self.calculation_state = calculations_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
                         self.clear_profile_secrets(ctx);
@@ -1106,6 +1112,11 @@ impl HrisApp {
                         self.break_state.reason.clear();
                         self.break_state.saving = false;
                     }
+                    if self.calculation_state.saving {
+                        self.calculation_state.draft = None;
+                        self.calculation_state.apply = None;
+                        self.calculation_state.saving = false;
+                    }
                     if self.shift_state.saving {
                         self.shift_state.template = None;
                         self.shift_state.assignment = None;
@@ -1132,6 +1143,7 @@ impl HrisApp {
                     self.leave_state.saving_revision = None;
                     self.shift_state.saving = false;
                     self.break_state.saving = false;
+                    self.calculation_state.saving = false;
                     self.notice = Some((error, true));
                 }
             }
@@ -1620,6 +1632,7 @@ impl HrisApp {
                         shifts_view::Tab::Shifts => "Shift schedules",
                         shifts_view::Tab::Assignments => "Employee schedules",
                         shifts_view::Tab::History => "Schedule history",
+                        shifts_view::Tab::Calculations => "Time calculations",
                     }
                 },
                 "Review attendance and manage employee work schedules.",
@@ -1704,6 +1717,7 @@ impl HrisApp {
             || self.shift_state.assignment.is_some()
             || self.break_state.form.is_some()
             || self.break_state.void_target.is_some()
+            || self.calculation_state.editing()
             || self.account_form.is_some()
             || !company_fields_equal(&self.company_draft, &self.data.company)
             || self.profile_contacts_draft.as_ref().is_some_and(|draft| {
@@ -2653,6 +2667,14 @@ impl HrisApp {
                 if ui.button("Manage leave policies").clicked() {
                     self.page = Page::Leave;
                     self.leave_state.view = leave_view::View::Policies;
+                }
+                ui.add_space(8.0);
+                ui.label(RichText::new("Attendance calculation rules").strong());
+                ui.label("Configure grace allowances, overtime minimum and rounding.");
+                if ui.button("Manage calculation rules").clicked() {
+                    self.page = Page::Attendance;
+                    self.shift_state.tab = shifts_view::Tab::Calculations;
+                    self.calculation_state.policy = true;
                 }
             });
             ui.add_space(12.0);

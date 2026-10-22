@@ -81,7 +81,7 @@ impl ShiftPlan {
             end_date.and_then(|d| d.and_hms_opt(self.end_minute / 60, self.end_minute % 60, 0));
         start.zip(end).is_some_and(|(s, e)| local >= s && local < e)
     }
-    fn boundary(&self, date: NaiveDate, end: bool) -> Result<DateTime<Utc>> {
+    pub(crate) fn boundary(&self, date: NaiveDate, end: bool) -> Result<DateTime<Utc>> {
         let tz: chrono_tz::Tz = self.timezone.parse()?;
         let date = if end && self.overnight() {
             date.succ_opt()

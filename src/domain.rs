@@ -174,6 +174,8 @@ impl EmployeeDraft {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Attendance {
     #[serde(default)]
+    pub calculation_snapshot: Option<crate::calculations::CalculationSnapshot>,
+    #[serde(default)]
     pub planned_shift: Option<crate::shifts::ShiftPlan>,
     pub id: Uuid,
     pub company_id: Uuid,
@@ -320,6 +322,7 @@ pub enum Mode {
 
 #[derive(Clone, Debug)]
 pub struct Snapshot {
+    pub calculations: crate::calculations::CalculationSetup,
     pub breaks: crate::breaks::BreakSetup,
     pub shifts: crate::shifts::ShiftSetup,
     pub leave_setup: crate::leave::LeaveSetup,
@@ -345,6 +348,7 @@ pub struct Snapshot {
 impl Snapshot {
     pub fn signed_out() -> Self {
         Self {
+            calculations: Default::default(),
             breaks: Default::default(),
             shifts: Default::default(),
             leave_setup: Default::default(),
@@ -420,6 +424,8 @@ impl Snapshot {
 
 #[derive(Clone, Debug)]
 pub enum Action {
+    SaveCalculationPolicy(crate::calculations::PolicyDraft),
+    ApplyCalculationPolicy(crate::calculations::ApplyPolicy),
     AttendanceBreak(crate::breaks::BreakAction),
     SaveShiftTemplate(crate::shifts::ShiftTemplateDraft),
     AssignShift(crate::shifts::ShiftAssignmentDraft),
@@ -530,6 +536,7 @@ impl DemoStore {
             .take(5)
             .enumerate()
             .map(|(i, e)| Attendance {
+                calculation_snapshot: None,
                 planned_shift: None,
                 revision: 0,
                 id: Uuid::from_u128(200 + i as u128),
@@ -569,6 +576,13 @@ impl DemoStore {
         .collect();
         let mut store = Self {
             data: Snapshot {
+                calculations: crate::calculations::CalculationSetup {
+                    policy: crate::calculations::CalculationPolicy {
+                        company_id: company.id,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
                 breaks: Default::default(),
                 shifts: Default::default(),
                 leave_setup: crate::leave::LeaveSetup {
@@ -674,6 +688,12 @@ impl DemoStore {
     fn apply(&mut self, action: Action) -> Result<()> {
         self.data.access.authorize(&action, &self.data)?;
         match action {
+            Action::SaveCalculationPolicy(draft) => {
+                crate::calculations::save_demo_policy(&mut self.data, draft)?
+            }
+            Action::ApplyCalculationPolicy(change) => {
+                crate::calculations::apply_demo_policy(&mut self.data, change)?
+            }
             Action::AttendanceBreak(action) => crate::breaks::apply_demo(&mut self.data, action)?,
             Action::SaveShiftTemplate(draft) => {
                 crate::shifts::save_demo_template(&mut self.data, draft)?
@@ -704,7 +724,20 @@ impl DemoStore {
                         .then(a.id.cmp(&b.id))
                 });
             }
-            Action::CorrectAttendance(change) => {
+            Action::CorrectAttendance(mut change) => {
+                change.record.calculation_snapshot = if let Some(old) = self
+                    .data
+                    .attendance
+                    .iter()
+                    .find(|a| a.id == change.record.id)
+                {
+                    old.calculation_snapshot.clone()
+                } else {
+                    Some(crate::calculations::CalculationSnapshot::capture(
+                        &self.data,
+                        &change.record,
+                    ))
+                };
                 change.validate(&self.data, Utc::now())?;
                 crate::breaks::validate_attendance(&self.data, &change.record)?;
                 let before_record = self
@@ -856,7 +889,8 @@ impl DemoStore {
                         .any(|a| a.employee_id == id && a.checked_out_at.is_none()),
                     "Close the employee's previous open attendance record first."
                 );
-                self.data.attendance.push(Attendance {
+                let mut row = Attendance {
+                    calculation_snapshot: None,
                     planned_shift: self.data.shifts.plan(id, today).cloned(),
                     revision: 0,
                     id: Uuid::new_v4(),
@@ -865,7 +899,11 @@ impl DemoStore {
                     work_date: today,
                     checked_in_at: Utc::now(),
                     checked_out_at: None,
-                });
+                };
+                row.calculation_snapshot = Some(crate::calculations::CalculationSnapshot::capture(
+                    &self.data, &row,
+                ));
+                self.data.attendance.push(row);
             }
             Action::CheckOut(id) => {
                 ensure!(

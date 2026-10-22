@@ -21,7 +21,7 @@ fn auth_fixture(
     let address = listener.local_addr().unwrap();
     let requests = Arc::new(Mutex::new(Vec::new()));
     let observed = requests.clone();
-    let expected_requests = if companies.is_empty() { 2 } else { 24 };
+    let expected_requests = if companies.is_empty() { 2 } else { 27 };
     let user_id = companies
         .first()
         .map(|company| company.owner_id)
@@ -95,6 +95,15 @@ fn auth_fixture(
                     }])
                     .to_string(),
                 )
+            } else if first.starts_with("GET /rest/v1/attendance_calculation_policies?") {
+                (
+                    "200 OK",
+                    json!([hris_desktop::calculations::CalculationPolicy {
+                        company_id,
+                        ..Default::default()
+                    }])
+                    .to_string(),
+                )
             } else if first.starts_with("GET /rest/v1/companies?") {
                 ("200 OK", company_json.clone())
             } else {
@@ -160,6 +169,14 @@ fn supabase_auth_uses_publishable_apikey_and_user_bearer_for_rls_requests() {
             .iter()
             .any(|r| r.starts_with("GET /rest/v1/leave_requests?"))
     );
+    for table in ["leave_policies", "attendance_calculation_policies"] {
+        let request = requests
+            .iter()
+            .find(|r| r.starts_with(&format!("GET /rest/v1/{table}?")))
+            .unwrap();
+        assert!(request.contains("order=company_id.asc"));
+        assert!(!request.contains("order=id.asc"));
+    }
 }
 
 #[test]

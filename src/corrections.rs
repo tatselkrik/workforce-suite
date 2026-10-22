@@ -95,8 +95,12 @@ impl CorrectionDraft {
                 data.company.tz(),
             )?)
         };
-        let change = CorrectionChange {
+        let mut change = CorrectionChange {
             record: Attendance {
+                calculation_snapshot: self
+                    .original
+                    .as_ref()
+                    .and_then(|a| a.calculation_snapshot.clone()),
                 planned_shift: self
                     .original
                     .as_ref()
@@ -122,6 +126,11 @@ impl CorrectionDraft {
             expected_revision: self.original.as_ref().map(|a| a.revision),
             reason: self.reason.trim().into(),
         };
+        if self.original.is_none() {
+            change.record.calculation_snapshot = Some(
+                crate::calculations::CalculationSnapshot::capture(data, &change.record),
+            );
+        }
         change.validate(data, now)?;
         Ok(change)
     }
