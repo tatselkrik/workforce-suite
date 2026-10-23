@@ -6,6 +6,8 @@ Application identifier: `io.github.tatselkrik.hrisdesktop`.
 
 ## What works
 
+- **Training and certifications:** Employees > Development holds assigned training, scoped progress, HR-recorded completion/outcomes/minutes, certificate expiry/revocation/archive and private links to existing employee 201 files. Managers receive team details and progress controls; private file bindings stay HR-only. See [learning records](docs/LEARNING.md).
+
 - **Goals and appraisals:** Employees > Development holds goals/progress, review cycles, assigned reviewer assessments and HR publication with immutable submitted goal facts. Private HR notes stay separate; reassignment removes former Manager access and resets unfinished feedback. See [performance](docs/PERFORMANCE.md).
 
 - **Hiring and onboarding:** private HR/Admin applicant records, résumé/application files, interview scheduling and assessments, Administrator-approved offers and accepted-offer employee creation. Required onboarding tasks have responsible staff, due dates, completion/waiver history and guarded case closure. Managers see only assigned interviews, their own assessments and assigned tasks. See [hiring workflows](docs/HIRING.md).

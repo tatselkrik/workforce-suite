@@ -1,10 +1,8 @@
-# Training and certifications - under development
+# Training and certifications
 
-Local candidate migration `20261023003106` is not deployed. Rust transport and
-desktop screens are implemented locally and native QA passed. Hosted verification
-and a release remain in progress. The current private update is 0.1.29; this learning candidate is not shipped.
+Implemented in version 0.1.30 with migration `20261023003106`.
 
-The intended location is Employees > Development, alongside Goals/Appraisals.
+The location is Employees > Development, alongside Goals/Appraisals.
 HR/Admin define training, dates/provider, required flag and completion/outcome
 with optional learning minutes. Current staff can record progress on their own
 training; Managers also record current-report progress. HR records completion,
@@ -31,3 +29,8 @@ by the server. Existing records survive employee archive; no new training or
 certificate is created for an archived employee. HR can correct retained facts.
 Career plans, catalog/bulk enrollment, course providers/invitations, external
 accreditation checks, performance inbox reminders and portal UI remain later.
+
+Verification is recorded in VERIFICATION.md and the versioned release report.
+Local PostgreSQL tests simulate Auth/Storage metadata; actual Auth/Rust/REST
+checks separately verify protected access and a private empty evidence binding.
+No new S3 upload test is claimed; the existing 201 pipeline is unchanged.

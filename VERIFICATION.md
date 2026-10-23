@@ -1,27 +1,39 @@
 # Prototype verification — 2026-10-23
 
-## Training and certifications - local candidate 0.1.30
-
-This candidate is not deployed or published. Migration `20261023003106` remains
-local. The private update feed currently offers 0.1.29.
+## Training and certifications - version 0.1.30
 
 - 295 Rust tests passed, followed by96targeted library/learning/HTTP tests after
-  QA-only and confirmation-label refinements. One real installer test remains
-  intentionally ignored until a new installer is prepared.
-- 1556 local PostgreSQL assertions passed, including103new learning checks for
-  current-report/own-progress scopes, HR-only completion, certification archive/
-  validity retention, canonical private file links, strict revisions, actor-bound
-  retries, immutable audit, disabled JWT simulation and atomic audit rollback.
-  This harness simulates Auth/Storage metadata; it does not perform S3 uploads.
+  QA-only and confirmation-label refinements. One real installer test is run
+  separately after the installer is prepared.
+- 1556 local PostgreSQL assertions passed, including103learning checks for
+  current-report/own-progress scope, HR-only completion, archive/validity retention,
+  canonical private file bindings, strict revisions, actor-bound retries, immutable
+  audit, disabled-session simulation and atomic audit rollback. This harness
+  simulates Auth/Storage metadata and does not perform S3 uploads.
+- Migration `20261023003106` deployed; all32local/hosted versions match exactly.
+  Immediate before/after19sets of existing HR-table/Auth digests matched. Four
+  public tables use RLS, invoker RPC/protected private writers and immutable
+  history; direct client writes and anonymous reads/execution are revoked.
+  Private retry rows have no client grants and intentional no-policy/defaultdeny
+  RLS (INFO). No new security warning or foreign-key finding. No Edge Function
+  change. Existing password-protection warning remains unchanged.
+- Actual Admin/HR/Manager Auth through Rust/REST verified training creation/retry,
+  scoped progress, reporting-change revocation, HR completion, certification
+  revoke/archive/restore, HR-only private EMPTY binding records/events, own future
+  portal reads, Employee desktop/RPC denial, direct/history/anonymous/forged Auth
+  metadata denials and disabled valid-JWT reads. Unrelated employment, attendance,
+  leave, files, onboarding, exits and performance records matched. Synthetic
+  fixtures remain disabled/archived; all exact verification sessions revoked.
+  No real password changed. No new S3 upload is claimed.
 - 16 distinct fictional native views inspected, including normal/dark125%, forms,
   completion, private evidence, history, Manager scope and existing appraisal
-  tabs. Certificate archive/revoke confirmations were recaptured after adding
-  employee/title labels. This does not automate signed-in native buttons.
-- Source/binary privacy and normal configured sign-in startup/close passed.
-  The normal binary excludes QA controls and company connection values. A
-  real-Auth probe is built and its harness syntax checked; neither has run on
-  hosted learning tables. Hosted migration/execution, packaging, exact installer,
-  private publication and installation are pending.
+  tabs. Certificate archive/revoke confirmations were recaptured with subject
+  labels. Normal configured sign-in startup/close and source/binary privacy passed;
+  QA controls and company connection values are excluded from the normal binary.
+  Packaging/exact installer, private publication and installation are recorded
+  separately in the versioned report. No signed-in native-button, actual parallel
+  transaction timing, Authenticode, remote CI, other-PC or running-parent update
+  timing claim.
 
 ## Goals and appraisals - version 0.1.29
 

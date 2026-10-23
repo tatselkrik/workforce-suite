@@ -31,9 +31,10 @@ leaving employee. A protected late guard also rejects finalization for older
 clients, rolling back membership deactivation and employee archiving together.
 The deployed exit migration is unchanged; its replacement readiness function
 and new trigger live in this performance migration. Performance inbox messages,
-360 feedback, training/certifications and career records remain separate work.
+360 feedback and career records remain separate work. Training/certifications
+are available through the separate [learning module](LEARNING.md).
 
 Verification evidence is recorded in VERIFICATION.md and the separate versioned
 release report. Local PostgreSQL tests simulate Auth; actual Auth/RLS checks and
 native screenshots are verified separately. Performance inbox messages, 360
-feedback and training/certification/career records remain future modules.
+feedback and career records remain future modules.
