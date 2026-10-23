@@ -36,8 +36,9 @@ Basic entitlement and shared-cap allocation are automatic. **Supplementary /
 cumulative withholding and month-level contribution adjustments are explicitly
 reviewed inputs in this increment.** Review notes and checkboxes are required
 even for zero. There is no standalone bonus-tax shortcut or assumed extra full
-monthly government contribution. Automatic annualization/prior-employer tax
-reconciliation is the next increment; this one does not claim to replace it.
+monthly government contribution. Annual compensation tax/prior-employer reconciliation is implemented separately
+in [Annual tax](PAYROLL-ANNUAL-TAX.md). It uses recorded actual payment facts;
+this13th-month worksheet still requires explicit in-year supplementary review.
 
 The run as-of date describes earned records only. HR must review the24December
 payment requirement and any employer-funded advance. A later actual-basic

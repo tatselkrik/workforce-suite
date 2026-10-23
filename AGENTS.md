@@ -74,3 +74,10 @@ account role. Preserve source/revision/independent-approval and earlier-payout
 locks, shared-cap floors, private evidence and immutable own slips. Withholding
 and contribution adjustments are explicitly reviewed inputs in this increment;
 automatic annualization/prior-employer tax reconciliation remains separate.
+
+Annual compensation tax rules are in docs/PAYROLL-ANNUAL-TAX.md. Use recorded
+paid dates, net certified prior-employer withholding, nonoverlapping evidenced
+openings and one shared benefit exclusion. Preserve paid-source freshness,
+independent approval, earlier-settlement credits, immutable own aggregate advice
+and HR-only certificate/source evidence. Tax advice is not a last-pay injection,
+transfer, filing or official2316. Portal remains paused.

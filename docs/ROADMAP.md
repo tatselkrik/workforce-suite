@@ -51,8 +51,10 @@ current source. See [payroll cutoffs](PAYROLL-CUTOFFS.md) and versioned release
 evidence for hosted deployment and installation. Actual13th-month payouts are implemented in the0.1.35 source with reviewed
 opening coverage, installments, shared benefit exclusion and independent approval;
 see [13th-month pay](PAYROLL-THIRTEENTH.md). Withholding/contribution adjustments
-remain explicit reviewed inputs. Next is automatic year-end tax reconciliation
-and prior-employer balances, then final pay. Expanded reporting/data exchange follows. Portal work is paused.
+remain explicit reviewed inputs. Implemented in the0.1.36 source: automatic annual compensation-tax reconciliation,
+evidenced prior-employer balances, shared annual benefit reconciliation,
+independent approval and immutable aggregate PDF/CSV advice; see
+[annual tax](PAYROLL-ANNUAL-TAX.md). Next is final pay. Expanded reporting/data exchange follows. Portal work is paused.
 
 ## Deferred — Separate employee portal (paused)
 

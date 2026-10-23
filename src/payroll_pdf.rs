@@ -82,6 +82,16 @@ pub fn build_thirteenth(s: &crate::payroll_thirteenth::Slip) -> Result<Vec<u8>> 
     );
     render_lines(lines)
 }
+pub fn build_tax(s:&crate::payroll_tax::Slip)->Result<Vec<u8>> {
+    let mut lines=vec![];
+    for t in [s.company_name.clone(),format!("ANNUAL COMPENSATION TAX ADVICE | {} | {}",s.year,s.kind.replace('_'," ")),
+        format!("Payment as of: {} | Service end: {}",s.as_of,s.service_end),format!("Employee: {} - {}",s.employee_code,s.employee_name),
+        format!("Department: {}",s.department),format!("Approved: {} UTC",s.approved_at.format("%Y-%m-%d %H:%M")),format!("Rule pack: {}",s.rule_version),String::new()] {wrap(&t,&mut lines);}
+    for(label,n)in crate::payroll_tax::totals_rows(&s.totals){wrap(&format!("{label:<42} {:>20}",money(n)),&mut lines);}
+    wrap("",&mut lines);wrap("Approved tax advice. Settlement recorded separately; no money moved.",&mut lines);
+    wrap("Tax advice only; not Form 2316, a filed return or proof of remittance.",&mut lines);
+    render_titled_lines(lines,"ANNUAL TAX ADVICE")
+}
 fn build_period(s: &Slip, period: &str) -> Result<Vec<u8>> {
     let mut lines = vec![];
     for text in [
@@ -135,6 +145,9 @@ fn build_period(s: &Slip, period: &str) -> Result<Vec<u8>> {
     render_lines(lines)
 }
 fn render_lines(lines: Vec<String>) -> Result<Vec<u8>> {
+    render_titled_lines(lines,"PAYSLIP")
+}
+fn render_titled_lines(lines: Vec<String>,title:&str) -> Result<Vec<u8>> {
     let chunks: Vec<_> = lines.chunks(47).collect();
     let page_ids: Vec<_> = (0..chunks.len()).map(|i| 5 + i * 2).collect();
     let mut objects = vec![
@@ -155,8 +168,8 @@ fn render_lines(lines: Vec<String>) -> Result<Vec<u8>> {
     ];
     for (n, chunk) in chunks.iter().enumerate() {
         let page = page_ids[n];
-        let mut stream = String::from(
-            "0.07 0.25 0.29 rg 0 780 595 62 re f\n1 1 1 rg BT /F2 18 Tf 36 805 Td (PAYSLIP) Tj ET\n0.12 0.17 0.21 rg BT /F1 10.5 Tf 14 TL 36 756 Td\n",
+        let mut stream = format!(
+            "0.07 0.25 0.29 rg 0 780 595 62 re f\n1 1 1 rg BT /F2 18 Tf 36 805 Td {} Tj ET\n0.12 0.17 0.21 rg BT /F1 10.5 Tf 14 TL 36 756 Td\n",literal(title)?
         );
         for line in *chunk {
             stream.push_str(&format!("{} Tj T*\n", literal(line)?));

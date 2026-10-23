@@ -65,6 +65,7 @@ try {
   const portalMigrations=[];
   const cutoffMigrations=[];
   const thirteenthMigrations=[];
+  const annualTaxMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -78,6 +79,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_payroll_annual_tax_engine.sql')||filename.endsWith('_payroll_annual_tax_workflow.sql')||filename.endsWith('_payroll_annual_tax_receipt_index.sql')){annualTaxMigrations.push(filename);continue;}
     if(filename.endsWith('_payroll_thirteenth_engine.sql')||filename.endsWith('_payroll_thirteenth_workflow.sql')){thirteenthMigrations.push(filename);continue;}
     if(filename.endsWith('_payroll_cutoffs.sql')||filename.endsWith('_payroll_cutoff_read_policy.sql')||filename.endsWith('_payroll_cutoff_ot_reconciliation.sql')){cutoffMigrations.push(filename);continue;}
     if(filename.endsWith('_philippine_payroll_benefits.sql')||filename.endsWith('_payroll_payslip_read_policy.sql')||filename.endsWith('_payroll_double_holiday_monthly.sql')){payrollMigrations.push(filename);continue;}
@@ -355,6 +357,12 @@ try {
   await runThirteenthEngineTests({db,eq,deny,session,owner:uidA,unassigned:uidB});
   const {runThirteenthWorkflowTests}=await import('./thirteenth-workflow.test.mjs');
   await runThirteenthWorkflowTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
+  await db.exec('reset role');
+  for(const filename of annualTaxMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  const {runAnnualTaxEngineTests}=await import('./annual-tax.test.mjs');
+  await runAnnualTaxEngineTests({db,eq,deny,session,owner:uidA,unassigned:uidB});
+  const {runAnnualTaxWorkflowTests}=await import('./annual-tax-workflow.test.mjs');
+  await runAnnualTaxWorkflowTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

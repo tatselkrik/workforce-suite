@@ -7,6 +7,7 @@ use serde_json::Value;
 use serde_json::json;
 #[derive(Default)]
 pub(super) struct State {
+    pub(super) tax: super::tax_view::State,
     pub(super) thirteenth: super::thirteenth_view::State,
     pub(super) cutoffs: super::cutoff_view::State,
     tab: usize,
@@ -197,7 +198,7 @@ struct Decision {
 }
 impl State {
     pub fn editing(&self) -> bool {
-        self.thirteenth.editing() || self.profile.is_some()
+        self.tax.editing() || self.thirteenth.editing() || self.profile.is_some()
             || self.cutoffs.editing()
             || self.holiday.is_some()
             || self.run.is_some()
@@ -211,6 +212,7 @@ impl State {
         if !a.saved(data) {
             return false;
         }
+        if a.operation.starts_with("tax_") {self.tax.accept(&a,data);return true;}
         if a.operation.starts_with("thirteenth_") {self.thirteenth.accept(&a,data);return true;}
         if a.operation == "item_refresh" || a.operation == "cutoff_item_refresh" {
             if let (Some(f), Some(item)) = (
@@ -408,6 +410,7 @@ impl HrisApp {
         self.send(Command::Change(Action::Payroll(a)));
     }
     pub(super) fn payroll(&mut self, ui: &mut Ui) {
+        if self.payroll_state.tax.editing() {self.payroll_tax_forms(ui);return;}
         if self.payroll_state.thirteenth.editing() {self.payroll_thirteenth_forms(ui);return;}
         if self.payroll_state.cutoffs.editing() {
             self.payroll_cutoff_forms(ui);
@@ -421,7 +424,7 @@ impl HrisApp {
             return;
         }
         let hr = self.data.access.role.manages_hr();
-        if !hr && ![3, 6, 7].contains(&self.payroll_state.tab) {
+        if !hr && ![3, 6, 7, 8].contains(&self.payroll_state.tab) {
             self.payroll_state.tab = 3;
         }
         ui.horizontal_wrapped(|ui| {
@@ -434,11 +437,12 @@ impl HrisApp {
                 "Statutory rules",
                 "Cutoffs",
                 "13th-month pay",
+                "Annual tax",
             ]
             .iter()
             .enumerate()
             {
-                if (hr || i == 3 || i == 6 || i == 7)
+                if (hr || i == 3 || i == 6 || i == 7 || i == 8)
                     && ui
                         .selectable_label(
                             self.payroll_state.tab == i,
@@ -461,6 +465,7 @@ impl HrisApp {
             4 => self.payroll_reports(ui),
             6 => self.payroll_cutoffs(ui),
             7 => self.payroll_thirteenth(ui),
+            8 => self.payroll_tax(ui),
             _ => {
                 card(ui, |ui| {
                     ui.heading("Philippine private-sector payroll");
@@ -472,7 +477,7 @@ impl HrisApp {
                     ui.separator();
                     ui.label("Ordinary OT:125%. Rest/special day:130%; special + rest:150%; regular holiday:200%/260% on rest; double regular:300%/390%. Nonordinary OT multiplies by130%. Night differential adds10% of the applicable normal/OT rate for22:00–06:00.");
                     ui.label("SSS:5% employee /10% employer on MSC5,000–35,000 plus employer-only EC. PhilHealth:5% fixed monthly basic,10,000–100,000, equally shared. Pag-IBIG:1%/2% employee,2% employer, fund salary capped10,000. Monthly BIR table:2023 onwards.");
-                    ui.label("Rice and laundry use monthly caps2,500 and400 respectively. Other allowances default taxable. Regional minimum wages, unusual coverage, annual tax adjustments, prior-employer balances, fringe-benefit tax and13th-month payouts need separate review. Basic pay /12 is shown as an accrual memo only.");
+                    ui.label("Rice and laundry use monthly caps2,500 and400 respectively. Other allowances default taxable. Regional minimum wages, unusual coverage and fringe-benefit tax need separate review. Use13th-month pay for actual benefit payouts and Annual tax for recorded-pay closing reconciliation; monthly basic pay /12 remains an accrual memo.");
                     for (title, url) in payroll::SOURCES {
                         ui.hyperlink_to(*title, *url);
                     }
@@ -1347,6 +1352,7 @@ impl HrisApp {
             return;
         }
         self.page = Page::Payroll;
+        if form.starts_with("payroll-tax") {self.payroll_state.tab=8;self.prepare_tax_preview(&form);return;}
         if form.starts_with("payroll-thirteenth") {self.payroll_state.tab=7;self.prepare_thirteenth_preview(&form);return;}
         if form.starts_with("payroll-cutoff") {
             self.payroll_state.tab = 6;

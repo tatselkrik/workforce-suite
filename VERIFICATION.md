@@ -1,4 +1,42 @@
-# Prototype verification — 2026-10-23
+# Prototype verification — 2026-10-24
+
+## Annual compensation tax — version0.1.36
+
+-358normalRust tests passed after annual-tax/backend/transport/native draft wiring.
+ After the saved-evidence contrast and PDF-header fixes, the3annual workflow/
+ centavo/export tests and existingPDFencoding test passed again.2,173local
+ PostgreSQL assertions pass, including29new SQL/Rust vectors (99combined payroll,
+ cutoff,13th and annual vectors), tax brackets/refunds, successive prior employers,
+ shared-cap reclassification, paid-source receipt years, cutoff/13th amounts,
+ incomplete openings, review/revision/conflicting-approval guards, private scopes,
+ immutable slips and transactional audit failure.
+-Three additive migrations are deployed through `20261023191233`:45hosted
+ versions.73existingpublic record sets were preserved across the engine/workflow
+ deployment and75across the covering-index deployment. Two newRLS/SELECT-only
+ tables, invoker wrapper and protected/private helpers passed grants checks.
+ Advisors show0newannualWARN/ERROR and0unindexedFK;5unused-indexINFO remain.
+-Eleven actual hostedAuth/nativeRust/REST proof groups pass: guarded creation
+ retries, centavo refunds/prior-employer/shared-cap calculation, Administrator
+ self-approval denial/independent approval, concurrent-source rejection/new reviews,
+ earlier settled credits, immutable aggregate receipts, Managerown-only records,
+ freshCSV/PDF exports, settlement recording, Employee desktop denial and
+ REST409/403/anonymous denials.19unrelated record sets and all existing monthly,
+ cutoff and13th slips matched across verification. Six synthetic roles/dates were
+ restored, memberships disabled, employees archived and Auth sessions removed.
+ Earlier fixture-harness cleanup required repair; isolated recipient accounts
+ were then created through normal account provisioning and the full checks passed.
+-16unique fictional native views and one corrected one-pagePDF were inspected,
+ including readable saved evidence, missing-balance blockers, refund/deficiency,
+ ownManageradvice and dark125percent layout. Normal configured release startup
+ was responsive and closed normally. Current normalexeSHA256:
+ `fdb9ef1ca2524e9d732acb1b6203369edeb17d9900ad1a0cac4a3c6838357c1b`.
+ The normal binary excludes QA controls and embedded company connection values.
+-Exact installer/recovery, signing, private publication and actual installation
+ are recorded in the versioned release evidence after packaging. No publicGit/CI,
+ Authenticode, actual signed-in-native-button, other-PC, transfer, government
+ filing, remittance or official2316 claim is made. This module issues closing
+ advice from recorded payments, not an automatic unpaid-last-pay adjustment.
+ See [annual tax](docs/PAYROLL-ANNUAL-TAX.md) and its review checklist. Portalpaused.
 
 ## 13th-month pay — version0.1.35
 

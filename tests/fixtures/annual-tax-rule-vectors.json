@@ -1,0 +1,1767 @@
+[
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 0,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 0,
+      "adjustment_cents": 0,
+      "annual_tax_cents": 0,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 0,
+      "current_withheld_cents": 0,
+      "employer_advance_cents": 0,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 0,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 0,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 24999999,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 24999999,
+      "adjustment_cents": 0,
+      "annual_tax_cents": 0,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 24999999,
+      "current_withheld_cents": 0,
+      "employer_advance_cents": 0,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 0,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 0,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 25000000,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 25000000,
+      "adjustment_cents": 0,
+      "annual_tax_cents": 0,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 25000000,
+      "current_withheld_cents": 0,
+      "employer_advance_cents": 0,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 0,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 0,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 25000001,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 25000001,
+      "adjustment_cents": 0,
+      "annual_tax_cents": 0,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 25000001,
+      "current_withheld_cents": 0,
+      "employer_advance_cents": 0,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 0,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 0,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 25000004,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 25000004,
+      "adjustment_cents": 1,
+      "annual_tax_cents": 1,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 25000004,
+      "current_withheld_cents": 0,
+      "employer_advance_cents": 0,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 1,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 1,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 39999999,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 39999999,
+      "adjustment_cents": 2250000,
+      "annual_tax_cents": 2250000,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 39999999,
+      "current_withheld_cents": 0,
+      "employer_advance_cents": 1750000,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 500000,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 2250000,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 40000000,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 40000000,
+      "adjustment_cents": 2250000,
+      "annual_tax_cents": 2250000,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 40000000,
+      "current_withheld_cents": 0,
+      "employer_advance_cents": 1750000,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 500000,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 2250000,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 40000005,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 40000005,
+      "adjustment_cents": 2250001,
+      "annual_tax_cents": 2250001,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 40000005,
+      "current_withheld_cents": 0,
+      "employer_advance_cents": 1750001,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 500000,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 2250001,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 80000000,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 80000000,
+      "adjustment_cents": 10250000,
+      "annual_tax_cents": 10250000,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 80000000,
+      "current_withheld_cents": 0,
+      "employer_advance_cents": 9750000,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 500000,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 10250000,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 80000002,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 80000002,
+      "adjustment_cents": 10250001,
+      "annual_tax_cents": 10250001,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 80000002,
+      "current_withheld_cents": 0,
+      "employer_advance_cents": 9750001,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 500000,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 10250001,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 200000000,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 200000000,
+      "adjustment_cents": 40250000,
+      "annual_tax_cents": 40250000,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 200000000,
+      "current_withheld_cents": 0,
+      "employer_advance_cents": 39750000,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 500000,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 40250000,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 200000002,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 200000002,
+      "adjustment_cents": 40250001,
+      "annual_tax_cents": 40250001,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 200000002,
+      "current_withheld_cents": 0,
+      "employer_advance_cents": 39750001,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 500000,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 40250001,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 800000000,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 800000000,
+      "adjustment_cents": 220250000,
+      "annual_tax_cents": 220250000,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 800000000,
+      "current_withheld_cents": 0,
+      "employer_advance_cents": 219750000,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 500000,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 220250000,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 800000002,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 800000002,
+      "adjustment_cents": 220250001,
+      "annual_tax_cents": 220250001,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 800000002,
+      "current_withheld_cents": 0,
+      "employer_advance_cents": 219750001,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 500000,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 220250001,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 1000000000,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 1000000000,
+      "adjustment_cents": 290250000,
+      "annual_tax_cents": 290250000,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 1000000000,
+      "current_withheld_cents": 0,
+      "employer_advance_cents": 289750000,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 500000,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 290250000,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 30000000,
+          "withholding_cents": 1500000,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 750000,
+      "coverage_gaps": [],
+      "taxable_cents": 30000000,
+      "adjustment_cents": -750000,
+      "annual_tax_cents": 750000,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 30000000,
+      "current_withheld_cents": 1500000,
+      "employer_advance_cents": 0,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 0,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 0,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 30000000,
+          "withholding_cents": 1500000,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [
+        {
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-06-30",
+          "employer": "Synthetic former employer",
+          "taxable_cents": 30000000,
+          "withholding_cents": 1500000,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "reference": "PRIVATE_TAX_2316"
+        }
+      ],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 60000000,
+      "adjustment_cents": 3250000,
+      "annual_tax_cents": 6250000,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 30000000,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 1500000,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 30000000,
+      "current_withheld_cents": 1500000,
+      "employer_advance_cents": 2750000,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 500000,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 3250000,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 30000000,
+          "withholding_cents": 1500000,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        },
+        {
+          "id": "thirteenth:synthetic-one",
+          "starts_on": null,
+          "ends_on": null,
+          "taxable_cents": 0,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 6000000,
+          "benefit_exempt_cents": 6000000,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [
+        {
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-06-30",
+          "employer": "Synthetic former employer",
+          "taxable_cents": 30000000,
+          "withholding_cents": 1500000,
+          "benefit_gross_cents": 6000000,
+          "benefit_exempt_cents": 6000000,
+          "reference": "PRIVATE_TAX_2316"
+        }
+      ],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 63000000,
+      "adjustment_cents": 3850000,
+      "annual_tax_cents": 6850000,
+      "benefit_gross_cents": 12000000,
+      "prior_taxable_cents": 30000000,
+      "benefit_exempt_cents": 9000000,
+      "prior_withheld_cents": 1500000,
+      "benefit_taxable_cents": 3000000,
+      "current_taxable_cents": 30000000,
+      "current_withheld_cents": 1500000,
+      "employer_advance_cents": 3350000,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 500000,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 3850000,
+      "benefit_basis_adjustment_cents": 3000000
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 30000000,
+          "withholding_cents": 1500000,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 3000000,
+      "classification_note": "PRIVATE_TAX_BENEFIT_RECLASS",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 1200000,
+      "coverage_gaps": [],
+      "taxable_cents": 27000000,
+      "adjustment_cents": -1200000,
+      "annual_tax_cents": 300000,
+      "benefit_gross_cents": 3000000,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 3000000,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 30000000,
+      "current_withheld_cents": 1500000,
+      "employer_advance_cents": 0,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 0,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 0,
+      "benefit_basis_adjustment_cents": -3000000
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 0,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        },
+        {
+          "id": "thirteenth:synthetic-one",
+          "starts_on": null,
+          "ends_on": null,
+          "taxable_cents": 0,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 6000000,
+          "benefit_exempt_cents": 6000000,
+          "contribution_cents": 50000
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 0,
+      "adjustment_cents": 0,
+      "annual_tax_cents": 0,
+      "benefit_gross_cents": 6000000,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 6000000,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 0,
+      "current_withheld_cents": 0,
+      "employer_advance_cents": 0,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 0,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 0,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 30000000,
+          "withholding_cents": 1500000,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": -750000,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 30000000,
+      "adjustment_cents": 0,
+      "annual_tax_cents": 750000,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 30000000,
+      "current_withheld_cents": 1500000,
+      "employer_advance_cents": 0,
+      "prior_adjustment_cents": -750000,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 0,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 0,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 30000000,
+          "withholding_cents": 1500000,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 100000,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 850000,
+      "coverage_gaps": [],
+      "taxable_cents": 30000000,
+      "adjustment_cents": -850000,
+      "annual_tax_cents": 750000,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 30000000,
+      "current_withheld_cents": 1500000,
+      "employer_advance_cents": 0,
+      "prior_adjustment_cents": 100000,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 0,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 0,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [
+        {
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 30000000,
+          "withholding_cents": 1500000,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "reference": "PRIVATE_TAX_OPENING"
+        }
+      ],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 750000,
+      "coverage_gaps": [],
+      "taxable_cents": 30000000,
+      "adjustment_cents": -750000,
+      "annual_tax_cents": 750000,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 30000000,
+      "current_withheld_cents": 1500000,
+      "employer_advance_cents": 0,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 0,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 0,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [
+        {
+          "ends_on": "2026-09-30",
+          "starts_on": "2026-07-01"
+        }
+      ],
+      "taxable_cents": 0,
+      "adjustment_cents": 0,
+      "annual_tax_cents": 0,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 0,
+      "current_withheld_cents": 0,
+      "employer_advance_cents": 0,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 0,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 0,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 100000,
+      "other_benefits_floor": 200000
+    },
+    "worksheet": {
+      "openings": [
+        {
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 30000000,
+          "withholding_cents": 1500000,
+          "benefit_gross_cents": 300000,
+          "benefit_exempt_cents": 300000,
+          "reference": "PRIVATE_TAX_OPENING"
+        }
+      ],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 750000,
+      "coverage_gaps": [],
+      "taxable_cents": 30000000,
+      "adjustment_cents": -750000,
+      "annual_tax_cents": 750000,
+      "benefit_gross_cents": 300000,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 300000,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 30000000,
+      "current_withheld_cents": 1500000,
+      "employer_advance_cents": 0,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 0,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 0,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 30000000,
+          "withholding_cents": 1500000,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": -100000,
+      "adjustment_note": "PRIVATE_TAX_CORRECTION",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 765000,
+      "coverage_gaps": [],
+      "taxable_cents": 29900000,
+      "adjustment_cents": -765000,
+      "annual_tax_cents": 735000,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 30000000,
+      "current_withheld_cents": 1500000,
+      "employer_advance_cents": 0,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": -100000,
+      "available_deduction_cents": 0,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 0,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 30000000,
+          "withholding_cents": 1500000,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 100000,
+      "adjustment_note": "PRIVATE_TAX_CORRECTION",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 735000,
+      "coverage_gaps": [],
+      "taxable_cents": 30100000,
+      "adjustment_cents": -735000,
+      "annual_tax_cents": 765000,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 30000000,
+      "current_withheld_cents": 1500000,
+      "employer_advance_cents": 0,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 100000,
+      "available_deduction_cents": 0,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 0,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 30000000,
+          "withholding_cents": 1500000,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        },
+        {
+          "id": "cutoff:synthetic-one",
+          "starts_on": null,
+          "ends_on": null,
+          "taxable_cents": 1,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 750000,
+      "coverage_gaps": [],
+      "taxable_cents": 30000001,
+      "adjustment_cents": -750000,
+      "annual_tax_cents": 750000,
+      "benefit_gross_cents": 0,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 0,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 0,
+      "current_taxable_cents": 30000001,
+      "current_withheld_cents": 1500000,
+      "employer_advance_cents": 0,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 0,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 0,
+      "benefit_basis_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-07-01",
+      "service_end": "2026-09-30",
+      "as_of": "2026-09-30",
+      "income": [
+        {
+          "id": "monthly:synthetic-one",
+          "starts_on": "2026-07-01",
+          "ends_on": "2026-09-30",
+          "taxable_cents": 30000000,
+          "withholding_cents": 1500000,
+          "benefit_gross_cents": 0,
+          "benefit_exempt_cents": 0,
+          "contribution_cents": 0
+        },
+        {
+          "id": "thirteenth:synthetic-one",
+          "starts_on": null,
+          "ends_on": null,
+          "taxable_cents": 6000000,
+          "withholding_cents": 0,
+          "benefit_gross_cents": 15000000,
+          "benefit_exempt_cents": 9000000,
+          "contribution_cents": 50000
+        }
+      ],
+      "prior_adjustment_cents": 0,
+      "pending_payments": 0,
+      "pending_adjustments": 0,
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "previous_employers": [],
+      "reclassified_benefit_cents": 0,
+      "classification_note": "",
+      "taxable_adjustment_cents": 0,
+      "adjustment_note": "",
+      "last_pay_available_cents": 500000,
+      "settlement_note": "PRIVATE_TAX_SETTLEMENT",
+      "final_compensation_reviewed": true,
+      "previous_employers_reviewed": true,
+      "benefits_reviewed": true,
+      "review_note": "PRIVATE_TAX_REVIEW"
+    },
+    "result": {
+      "refund_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 35950000,
+      "adjustment_cents": 142500,
+      "annual_tax_cents": 1642500,
+      "benefit_gross_cents": 15000000,
+      "prior_taxable_cents": 0,
+      "benefit_exempt_cents": 9000000,
+      "prior_withheld_cents": 0,
+      "benefit_taxable_cents": 6000000,
+      "current_taxable_cents": 36000000,
+      "current_withheld_cents": 1500000,
+      "employer_advance_cents": 0,
+      "prior_adjustment_cents": 0,
+      "taxable_adjustment_cents": 0,
+      "available_deduction_cents": 142500,
+      "unreconciled_benefits_cents": 0,
+      "additional_withholding_cents": 142500,
+      "benefit_basis_adjustment_cents": 0
+    }
+  }
+]

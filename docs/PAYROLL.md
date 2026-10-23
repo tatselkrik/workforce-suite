@@ -57,9 +57,8 @@ export, and existing files are never overwritten.
 
 Local CSV registers, statutory contribution/withholding worksheets and annual
 summaries support reconciliation. They are not filed government returns, official
-2316 certificates, SSS/PhilHealth/Pag-IBIG uploads or proof of remittance. Annual tax
-adjustments, prior-employer balances, fringe-benefit tax, unusual coverage,
-13th-month payouts and regional minimum-wage compliance need separate review;
+2316 certificates, SSS/PhilHealth/Pag-IBIG uploads or proof of remittance. Fringe-benefit tax, unusual coverage and regional minimum-wage compliance need
+separate review;
 the module shows a basic-pay/12 accrual memo rather than silently paying it.
 
-Actual13th-month payouts are described in [13th-month pay](PAYROLL-THIRTEENTH.md). Their entitlement/shared-cap engine is separate from monthly accrual memos. Supplementary withholding and contribution adjustments currently require explicit review; automatic annual tax/prior-employer reconciliation follows separately.
+Actual13th-month payouts are described in [13th-month pay](PAYROLL-THIRTEENTH.md). Their entitlement/shared-cap engine is separate from monthly accrual memos. Supplementary withholding and contribution adjustments currently require explicit review; [annual compensation tax/prior-employer reconciliation](PAYROLL-ANNUAL-TAX.md) now uses actual recorded payments and separate closing advice.
