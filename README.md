@@ -9,6 +9,7 @@ Application identifier: `io.github.tatselkrik.hrisdesktop`.
 - **Separate employee portal:** the first local portal milestone provides own employment/contact details, server-timed attendance and approved payslips with CSV/browser printing. It has a separate Rust server and responsive browser interface; it does not change desktop Employee restrictions. Public hosting and additional request flows remain later increments. See [employee portal](docs/EMPLOYEE-PORTAL.md).
 
 - **Payroll and benefits:** open **Payroll** for effective salary profiles, reviewed monthly worksheets, Philippine overtime/holiday/night premiums, allowances, deductions and employer benefit memos. Another Administrator approves a submitted register; approved payslips are retained and export to PDF/CSV. Contribution and withholding worksheets support local reconciliation. Payment recording does not move money or file government returns. See [payroll rules and limits](docs/PAYROLL.md).
+- **Payroll cutoffs:** **Payroll → Cutoffs** provides 1st–15th / 16th–month-end runs, planned pay dates, reviewed worksheets, second-cutoff contribution reconciliation, semi-monthly withholding, independent approval and private PDF/CSV payslips. Issued monthly registers and cutoffs cannot overlap for the same employee/month. See [cutoff policy and workflow](docs/PAYROLL-CUTOFFS.md).
 
 - **Career development:** Employees > Development > Career plans holds shared aspirations, skills and required/optional milestones. Independent staff review completion, HR can waive, and closure retains milestone/context facts without changing employment or source learning records. See [career plans](docs/CAREER-DEVELOPMENT.md).
 
@@ -37,7 +38,7 @@ The interface uses `egui`/`eframe`. The domain rules and Supabase Auth/REST adap
 
 ## Try it
 
-The private Windows setup installs version 0.1.33 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection and update-verification profiles, but no account password or session. Exact release and installation evidence belongs to the versioned verification report.
+The private Windows setup installs version 0.1.34 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection and update-verification profiles, but no account password or session. Exact release and installation evidence belongs to the versioned verification report.
 
 Open **HRIS Desktop** and sign in with an assigned Administrator, HR Generalist or Manager account. Ordinary Employee accounts are reserved for a future mobile-friendly portal and cannot sign into this desktop app. Its company database is already selected by the installation. Account login remains necessary to access HR records; database setup is not part of that login.
 

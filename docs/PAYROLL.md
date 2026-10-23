@@ -7,6 +7,12 @@ payslips. A monthly register is a calculation period, not permission to pay only
 once a month. Record interim salary payments as advances; actual bank transfers,
 government submissions and payment-frequency compliance remain with the employer.
 
+The cutoff increment adds separate semi-monthly runs, planned pay dates, monthly
+contribution/cap reconciliation and per-cutoff payslips; see
+[payroll cutoffs](PAYROLL-CUTOFFS.md). Use that workflow for the two regular
+cutoff calculations. The monthly register and cutoff issue paths cannot overlap
+for an employee/month.
+
 ## Rules and sources checked on 23 October 2026
 
 - [DOLE monetary benefits handbook, 2024 edition](https://nwpc.dole.gov.ph/wp-content/uploads/2024/11/Workers-Statutory-Monetary-Benefits-Handbook-2024-Edition.pdf), guide computations pp. 2–3 and chapters 2–5: ordinary OT 125%; rest/special day 130%, special plus rest 150%; regular holiday 200%, regular holiday plus rest 260%; double regular holiday 300%/390%. Nonordinary overtime is another 30% of that day's hourly rate. Night differential is an additional 10% of the applicable normal/OT hourly rate for actual work from 22:00 to 06:00. Double special days use 150%/195%. Special working holidays use ordinary rates. [DOLE's August 2026 advisory explanation](https://dole.gov.ph/news/dole-sets-August-holiday-pay-rules-/) confirms the regular/special distinction and preceding-day eligibility for unworked regular holidays.

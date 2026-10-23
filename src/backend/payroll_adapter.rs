@@ -6,12 +6,15 @@ impl CloudClient {
             slips: self.rows("payroll_slips", company)?,
             ..Default::default()
         };
+        setup.cutoffs.slips = self.rows("payroll_cutoff_slips", company)?;
         if a.role.manages_hr() {
             setup.profiles = self.rows("payroll_profiles", company)?;
             setup.holidays = self.rows("payroll_holidays", company)?;
             setup.runs = self.rows("payroll_runs", company)?;
             setup.items = self.rows("payroll_items", company)?;
             setup.events = self.rows("payroll_events", company)?;
+            setup.cutoffs.runs = self.rows("payroll_cutoff_runs", company)?;
+            setup.cutoffs.items = self.rows("payroll_cutoff_items", company)?;
         }
         // Approved slips deliberately omit the private attendance/leave source bundle.
         for s in &setup.slips {
@@ -23,6 +26,25 @@ impl CloudClient {
                     && s.item.id == s.id
                     && (a.role.manages_hr() || Some(s.employee_id) == a.employee_id),
                 "Payslip is outside your current access."
+            );
+        }
+        for s in &setup.cutoffs.slips {
+            let p = &s.base;
+            ensure!(
+                p.company_id == a.company_id
+                    && p.item.company_id == p.company_id
+                    && p.item.employee_id == p.employee_id
+                    && p.item.run_id == p.run_id
+                    && p.item.id == p.id
+                    && (a.role.manages_hr() || Some(p.employee_id) == a.employee_id),
+                "Cutoff payslip is outside your current access."
+            );
+            ensure!(
+                crate::payroll_cutoffs::bounds(p.month, s.part)? == (s.starts_on, s.ends_on)
+                    && s.calculation.month == p.month
+                    && s.calculation.part == s.part
+                    && s.calculation.totals == p.item.totals,
+                "Cutoff payslip facts do not reconcile."
             );
         }
         Ok(setup)

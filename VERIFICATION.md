@@ -1,5 +1,43 @@
 # Prototype verification — 2026-10-23
 
+## Semi-monthly payroll cutoffs — version 0.1.34
+
+- 337 Rust tests and 1,983 local PostgreSQL assertions passed after the final
+  overtime safeguard. 18 cutoff vectors plus 34 legacy statutory/premium vectors
+  compare exact SQL/Rust centavos. Tests cover monthly residual cents/caps,
+  semi-monthly tax boundaries, contributions on cutoff2, proration, source and
+  revision guards, independent approval, overlap prevention and audit rollback.
+- Three additive migrations are deployed through version `20261023150310`;
+  40 hosted migration versions match local history. Across the final migration,
+  all 70 existing public record sets retained their immediate counts/digests.
+  Three new tables have RLS/read-only client grants, public invoker wrappers and
+  protected writers/helpers. No new cutoff WARN/ERROR remains in advisors;
+  informational unused-index suggestions are retained for the new scoped tables.
+- Eleven actual hosted Auth/Rust/REST proof groups passed again after the final
+  safeguard: creation retry and calculation parity, stale-source rejection and
+  refresh/review, first-before-second reconciliation, actual Administrator
+  self-approval denial and independent approval, own Manager slips/private draft
+  denial, redaction/immutability, refreshed-scope CSV/PDF exports, payment recording,
+  Employee desktop denial and REST409/403/anonymous checks. Seventeen unrelated
+  record sets and all existing monthly slips matched. Synthetic roles were
+  restored, access disabled, employees archived and Auth sessions removed.
+- Ten fictional native screens were inspected across aligned normal/light,
+  dark125%, worksheet/decision/detail and own-slip previews. A rendered one-page
+  synthetic PDF fits with aligned amounts and exact period/pay date. Final labels
+  and private HR review display have a subsequent release capture. These are not
+  actual signed-in native form/button automation.
+- Normal configured startup, clean source/privacy, exact installer/recovery,
+  signing, private feed/download and installation checks are recorded separately
+  with exact revision/artifact hashes after packaging. Earlier test counts alone
+  do not establish those gates. No public CI, Authenticode, real bank transfer,
+  government filing, remittance, other-PC or physical-phone claim is made.
+- Rule references were checked on23October2026. The fixed halves/second-cutoff
+  contribution timing are stated prototype policies. Actual company pay schedules
+  still need review. Monthly-register annual exports exclude cutoff records;
+  cutoff reconciliation identifies included halves and incomplete months. The
+  paused employee portal has not added cutoff slips. Actual13th-month payout,
+  year-end/prior-employer adjustment and final pay are subsequent milestones.
+
 ## Philippine payroll and benefits — version 0.1.33
 
 - 327 Rust tests passed, with the prepared-installer integration test intentionally

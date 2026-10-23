@@ -37,10 +37,22 @@ fn wrap(s: &str, out: &mut Vec<String>) {
     }
 }
 pub fn build(s: &Slip) -> Result<Vec<u8>> {
+    build_period(s, &format!("Pay period: {}", s.month.format("%B %Y")))
+}
+pub fn build_cutoff(s: &crate::payroll_cutoffs::Slip) -> Result<Vec<u8>> {
+    build_period(
+        &s.base,
+        &format!(
+            "Pay period: {} to {} | Cutoff {} | Pay date: {}",
+            s.starts_on, s.ends_on, s.part, s.pay_date
+        ),
+    )
+}
+fn build_period(s: &Slip, period: &str) -> Result<Vec<u8>> {
     let mut lines = vec![];
     for text in [
         s.company_name.clone(),
-        format!("Pay period: {}", s.month.format("%B %Y")),
+        period.to_string(),
         format!(
             "Employee: {} - {}",
             s.item.employee_code, s.item.employee_name

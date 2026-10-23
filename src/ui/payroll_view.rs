@@ -7,6 +7,7 @@ use serde_json::Value;
 use serde_json::json;
 #[derive(Default)]
 pub(super) struct State {
+    pub(super) cutoffs: super::cutoff_view::State,
     tab: usize,
     selected: Option<Uuid>,
     slip: Option<Uuid>,
@@ -15,10 +16,10 @@ pub(super) struct State {
     profile: Option<ProfileForm>,
     holiday: Option<HolidayForm>,
     run: Option<RunForm>,
-    item: Option<ItemForm>,
+    pub(super) item: Option<ItemForm>,
     decision: Option<Decision>,
     pub pending: Option<Change>,
-    warnings: Vec<String>,
+    pub(super) warnings: Vec<String>,
 }
 
 #[cfg(test)]
@@ -67,6 +68,7 @@ mod tests {
         );
         let mut state = State {
             item: Some(ItemForm {
+                cutoff: None,
                 item,
                 worksheet,
                 reason: "Unsaved reason".into(),
@@ -100,6 +102,58 @@ mod tests {
         assert!(state.accept(&store.data));
         assert_eq!(state.profile.unwrap().reason, "Unsaved");
     }
+    #[test]
+    fn cutoff_source_refresh_preserves_unsaved_adjustments_and_period() {
+        let (mut store, monthly) = fixture();
+        let run = Uuid::new_v4();
+        let item = Uuid::new_v4();
+        let mon = NaiveDate::from_ymd_opt(2026, 9, 1).unwrap();
+        for a in [
+            Change::new(
+                "cutoff_run_create",
+                json!({"id":run,"month":mon,"part":1,"pay_date":"2026-09-15","title":"Synthetic cutoff","reason":"Synthetic period"}),
+            ),
+            Change::new(
+                "cutoff_item_add",
+                json!({"id":item,"run_id":run,"employee_id":monthly.employee_id,"reason":"Synthetic scope"}),
+            ),
+        ] {
+            store.execute(Action::Payroll(a)).unwrap();
+        }
+        let saved = store.data.payroll.cutoffs.items[0].base.clone();
+        let mut w = saved.worksheet.clone();
+        w.adjustments.push(Component {
+            label: "Unsaved cutoff allowance".into(),
+            kind: "taxable_allowance".into(),
+            amount_cents: 1234,
+            reference: String::new(),
+        });
+        w.reviewed = true;
+        w.review_note = "Previous review".into();
+        let a = Change::new(
+            "cutoff_item_refresh",
+            json!({"id":item,"expected_revision":saved.revision,"reason":"Synthetic source refresh"}),
+        );
+        let mut state = State {
+            item: Some(ItemForm {
+                cutoff: Some((mon, 1)),
+                item: saved,
+                worksheet: w,
+                reason: "Unsaved reason".into(),
+                new_date: mon.to_string(),
+            }),
+            pending: Some(a.clone()),
+            ..Default::default()
+        };
+        store.execute(Action::Payroll(a)).unwrap();
+        assert!(state.accept(&store.data));
+        let f = state.item.unwrap();
+        assert_eq!(f.cutoff, Some((mon, 1)));
+        assert_eq!(f.worksheet.adjustments[0].amount_cents, 1234);
+        assert!(!f.worksheet.reviewed);
+        assert!(f.worksheet.review_note.is_empty());
+        assert_eq!(f.item.revision, 1);
+    }
 }
 struct ProfileForm {
     id: Uuid,
@@ -124,11 +178,12 @@ struct RunForm {
     title: String,
     reason: String,
 }
-struct ItemForm {
-    item: Item,
-    worksheet: Worksheet,
-    reason: String,
-    new_date: String,
+pub(super) struct ItemForm {
+    pub(super) cutoff: Option<(NaiveDate, u8)>,
+    pub(super) item: Item,
+    pub(super) worksheet: Worksheet,
+    pub(super) reason: String,
+    pub(super) new_date: String,
 }
 struct Decision {
     operation: String,
@@ -142,6 +197,7 @@ struct Decision {
 impl State {
     pub fn editing(&self) -> bool {
         self.profile.is_some()
+            || self.cutoffs.editing()
             || self.holiday.is_some()
             || self.run.is_some()
             || self.item.is_some()
@@ -154,13 +210,23 @@ impl State {
         if !a.saved(data) {
             return false;
         }
-        if a.operation == "item_refresh" {
+        if a.operation == "item_refresh" || a.operation == "cutoff_item_refresh" {
             if let (Some(f), Some(item)) = (
                 self.item.as_mut(),
-                data.payroll
-                    .items
-                    .iter()
-                    .find(|i| Some(i.id) == a.record["id"].as_str().and_then(|s| s.parse().ok())),
+                if a.operation == "cutoff_item_refresh" {
+                    data.payroll
+                        .cutoffs
+                        .items
+                        .iter()
+                        .map(|i| &i.base)
+                        .find(|i| {
+                            Some(i.id) == a.record["id"].as_str().and_then(|s| s.parse().ok())
+                        })
+                } else {
+                    data.payroll.items.iter().find(|i| {
+                        Some(i.id) == a.record["id"].as_str().and_then(|s| s.parse().ok())
+                    })
+                },
             ) {
                 f.item = item.clone();
                 f.worksheet.reviewed = false;
@@ -172,6 +238,10 @@ impl State {
         if a.operation == "run_create" {
             self.selected = a.record["id"].as_str().and_then(|s| s.parse().ok());
         }
+        if a.operation == "cutoff_run_create" {
+            self.cutoffs.selected = a.record["id"].as_str().and_then(|s| s.parse().ok());
+        }
+        self.cutoffs.close_forms();
         self.profile = None;
         self.holiday = None;
         self.run = None;
@@ -181,7 +251,7 @@ impl State {
         true
     }
 }
-fn amount(ui: &mut Ui, label: &str, cents: &mut i64) {
+pub(super) fn amount(ui: &mut Ui, label: &str, cents: &mut i64) {
     ui.horizontal_wrapped(|ui| {
         ui.label(label);
         ui.add(
@@ -211,11 +281,11 @@ fn amount(ui: &mut Ui, label: &str, cents: &mut i64) {
         );
     });
 }
-fn field(ui: &mut Ui, label: &str, s: &mut String) {
+pub(super) fn field(ui: &mut Ui, label: &str, s: &mut String) {
     ui.label(label);
     ui.add(egui::TextEdit::singleline(s).desired_width(420.0));
 }
-fn note(ui: &mut Ui, label: &str, s: &mut String) {
+pub(super) fn note(ui: &mut Ui, label: &str, s: &mut String) {
     ui.label(label);
     ui.add(
         egui::TextEdit::multiline(s)
@@ -238,7 +308,7 @@ fn choice(
             }
         });
 }
-fn footer(ui: &mut Ui, a: &Change, data: &Snapshot, label: &str) -> (bool, bool) {
+pub(super) fn footer(ui: &mut Ui, a: &Change, data: &Snapshot, label: &str) -> (bool, bool) {
     let valid = a.payload(data);
     if let Err(e) = &valid {
         ui.label(RichText::new(e.to_string()).color(muted(ui)));
@@ -252,7 +322,7 @@ fn footer(ui: &mut Ui, a: &Change, data: &Snapshot, label: &str) -> (bool, bool)
     });
     x
 }
-fn employee_choice(ui: &mut Ui, data: &Snapshot, id: &str, selected: &mut Option<Uuid>) {
+pub(super) fn employee_choice(ui: &mut Ui, data: &Snapshot, id: &str, selected: &mut Option<Uuid>) {
     egui::ComboBox::from_id_salt(id)
         .width(340.0)
         .selected_text(
@@ -311,7 +381,7 @@ fn components(ui: &mut Ui, id: &str, cs: &mut Vec<Component>) {
         });
     }
 }
-fn totals(ui: &mut Ui, t: &payroll::Totals, id: impl std::hash::Hash + std::fmt::Debug) {
+pub(super) fn totals(ui: &mut Ui, t: &payroll::Totals, id: impl std::hash::Hash + std::fmt::Debug) {
     egui::Grid::new(id)
         .num_columns(2)
         .spacing([32.0, 7.0])
@@ -331,11 +401,15 @@ fn totals(ui: &mut Ui, t: &payroll::Totals, id: impl std::hash::Hash + std::fmt:
         });
 }
 impl HrisApp {
-    fn send_payroll(&mut self, a: Change) {
+    pub(super) fn send_payroll(&mut self, a: Change) {
         self.payroll_state.pending = Some(a.clone());
         self.send(Command::Change(Action::Payroll(a)));
     }
     pub(super) fn payroll(&mut self, ui: &mut Ui) {
+        if self.payroll_state.cutoffs.editing() {
+            self.payroll_cutoff_forms(ui);
+            return;
+        }
         if self.payroll_state.year == 0 {
             self.payroll_state.year = self.data.company.today().year();
         }
@@ -344,24 +418,28 @@ impl HrisApp {
             return;
         }
         let hr = self.data.access.role.manages_hr();
-        if !hr {
+        if !hr && ![3, 6].contains(&self.payroll_state.tab) {
             self.payroll_state.tab = 3;
         }
         ui.horizontal_wrapped(|ui| {
             for (i, label) in [
-                "Payroll runs",
+                "Monthly registers",
                 "Salaries & benefits",
                 "Payroll holidays",
                 "My payslips",
                 "Reports",
                 "Statutory rules",
+                "Cutoffs",
             ]
             .iter()
             .enumerate()
             {
-                if (hr || i == 3)
+                if (hr || i == 3 || i == 6)
                     && ui
-                        .selectable_label(self.payroll_state.tab == i, if i==3&&hr{"Payslips"}else{*label})
+                        .selectable_label(
+                            self.payroll_state.tab == i,
+                            if i == 3 && hr { "Payslips" } else { *label },
+                        )
                         .clicked()
                 {
                     self.payroll_state.tab = i;
@@ -377,6 +455,7 @@ impl HrisApp {
             2 => self.payroll_holidays(ui),
             3 => self.payroll_slips(ui),
             4 => self.payroll_reports(ui),
+            6 => self.payroll_cutoffs(ui),
             _ => {
                 card(ui, |ui| {
                     ui.heading("Philippine private-sector payroll");
@@ -674,6 +753,7 @@ impl HrisApp {
                     }
                     if r.status == "draft" && ui.button("Open worksheet").clicked() {
                         self.payroll_state.item = Some(ItemForm {
+                            cutoff: None,
                             worksheet: i.worksheet.clone(),
                             item: i.clone(),
                             reason: String::new(),
@@ -816,7 +896,15 @@ impl HrisApp {
             return;
         }
         if let Some(mut f) = self.payroll_state.decision.take() {
-            ui.heading(match f.operation.as_str(){"run_submit"=>"Submit payroll for approval","run_approve"=>"Approve payroll and issue payslips","run_paid"=>"Record payroll payment","run_return"=>"Return payroll to draft","run_cancel"=>"Cancel unissued payroll","item_remove"=>"Remove employee from draft",_=>"Review payroll action"});
+            ui.heading(match f.operation.as_str() {
+                "run_submit" => "Submit payroll for approval",
+                "run_approve" => "Approve payroll and issue payslips",
+                "run_paid" => "Record payroll payment",
+                "run_return" => "Return payroll to draft",
+                "run_cancel" => "Cancel unissued payroll",
+                "item_remove" => "Remove employee from draft",
+                _ => "Review payroll action",
+            });
             ui.label("Approval issues immutable payslips; payment recording does not transfer funds. An approved run cannot be overwritten or cancelled. Correct differences through a later documented adjustment.");
             if f.operation == "run_submit" {
                 let included: Vec<_> = self
@@ -888,20 +976,28 @@ impl HrisApp {
             f.item.employee_code, f.item.employee_name
         ));
         ui.label(format!(
-            "Saved salary{} {} · version{}",
+            "Saved salary {} {} · version {}",
             payroll::money(f.item.profile.pay.rate_cents),
             f.item.profile.pay.basis,
             f.item.profile.effective_on
         ));
-        let mon = self
-            .data
-            .payroll
-            .runs
-            .iter()
-            .find(|r| r.id == f.item.run_id)
-            .map(|r| r.month)
-            .unwrap_or_else(|| payroll::month_start(self.data.company.today()));
-        ui.horizontal_wrapped(|ui|{if ui.button("Replace days with attendance proposal").clicked(){let(ds,warnings)=payroll::attendance_proposal(&self.data,f.item.employee_id,mon);f.worksheet.days=ds;f.worksheet.reviewed=false;self.payroll_state.warnings=warnings;}if ui.button("Refresh source & require new review").clicked(){let a=Change::new("item_refresh",json!({"id":f.item.id,"expected_revision":f.item.revision,"reason":"Refresh payroll source facts and require a fresh review"}));self.send_payroll(a);}});
+        let mon = f.cutoff.map(|c| c.0).unwrap_or_else(|| {
+            self.data
+                .payroll
+                .runs
+                .iter()
+                .find(|r| r.id == f.item.run_id)
+                .map(|r| r.month)
+                .unwrap_or_else(|| payroll::month_start(self.data.company.today()))
+        });
+        let (lo, hi) = f
+            .cutoff
+            .and_then(|(m, p)| crate::payroll_cutoffs::bounds(m, p).ok())
+            .unwrap_or((mon, payroll::month_end(mon)));
+        if let Some((_, part)) = f.cutoff {
+            ui.label(format!("Cutoff {part}: {lo} to {hi}. Monthly government contributions are settled on cutoff 2. Recurring amounts are allocated once across the two halves."));
+        }
+        ui.horizontal_wrapped(|ui|{if ui.button("Replace days with attendance proposal").clicked(){let(ds,warnings)=payroll::attendance_proposal(&self.data,f.item.employee_id,mon);f.worksheet.days=ds.into_iter().filter(|d|d.date>=lo&&d.date<=hi).collect();f.worksheet.reviewed=false;self.payroll_state.warnings=warnings;}if ui.button("Refresh source & require new review").clicked(){let a=Change::new(if f.cutoff.is_some(){"cutoff_item_refresh"}else{"item_refresh"},json!({"id":f.item.id,"expected_revision":f.item.revision,"reason":"Refresh payroll source facts and require a fresh review"}));self.send_payroll(a);}});
         ui.label("Proposal only. Review statutory8-hour workdays, midnight holiday boundaries, break times and approved OT. Missing days are not automatically unpaid. The server checks source changes before submission and approval.");
         for w in &self.payroll_state.warnings {
             ui.label(RichText::new(w).color(muted(ui)));
@@ -918,23 +1014,30 @@ impl HrisApp {
                             remove = Some(i);
                         }
                     });
-                    for (label, n) in [
-                        ("Regular worked minutes", &mut d.regular_minutes),
-                        ("OT minutes", &mut d.overtime_minutes),
-                        ("Night regular subset", &mut d.night_regular),
-                        ("Night OT subset", &mut d.night_overtime),
-                        ("Paid leave minutes (daily pay)", &mut d.paid_leave_minutes),
-                        (
-                            "Unworked regular-holiday minutes (eligible daily pay)",
-                            &mut d.unworked_holiday_minutes,
-                        ),
-                        ("Unpaid minutes (monthly deduction)", &mut d.unpaid_minutes),
-                    ] {
-                        ui.horizontal_wrapped(|ui| {
-                            ui.label(label);
-                            ui.add(egui::DragValue::new(n).range(0..=960));
+                    egui::Grid::new(("worksheet_minutes", i))
+                        .num_columns(2)
+                        .spacing([16.0, 7.0])
+                        .show(ui, |ui| {
+                            for (label, n) in [
+                                ("Regular worked minutes", &mut d.regular_minutes),
+                                ("OT minutes", &mut d.overtime_minutes),
+                                ("Night regular subset", &mut d.night_regular),
+                                ("Night OT subset", &mut d.night_overtime),
+                                ("Paid leave minutes (daily pay)", &mut d.paid_leave_minutes),
+                                (
+                                    "Unworked regular-holiday minutes (eligible daily pay)",
+                                    &mut d.unworked_holiday_minutes,
+                                ),
+                                ("Unpaid minutes (monthly deduction)", &mut d.unpaid_minutes),
+                            ] {
+                                ui.vertical(|ui| {
+                                    ui.set_width(260.0);
+                                    ui.label(label);
+                                });
+                                ui.add(egui::DragValue::new(n).range(0..=960));
+                                ui.end_row();
+                            }
                         });
-                    }
                 });
             });
         }
@@ -947,9 +1050,7 @@ impl HrisApp {
             ui.text_edit_singleline(&mut f.new_date);
             if ui.button("Add reviewed day row").clicked() {
                 if let Ok(date) = f.new_date.parse::<NaiveDate>() {
-                    if date >= mon
-                        && date <= payroll::month_end(mon)
-                        && !f.worksheet.days.iter().any(|d| d.date == date)
+                    if date >= lo && date <= hi && !f.worksheet.days.iter().any(|d| d.date == date)
                     {
                         let kind = self
                             .data
@@ -971,7 +1072,7 @@ impl HrisApp {
             }
         });
         ui.collapsing("Proration and contribution-basis overrides", |ui| {
-            for (label, n) in [
+            for (index, (label, n)) in [
                 (
                     "Prorated monthly basic",
                     &mut f.worksheet.basic_override_cents,
@@ -988,7 +1089,13 @@ impl HrisApp {
                     "Pag-IBIG monthly fund salary",
                     &mut f.worksheet.pagibig_basis_override,
                 ),
-            ] {
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                if index > 0 && f.cutoff.is_some_and(|c| c.1 == 1) {
+                    continue;
+                }
                 let mut enabled = n.is_some();
                 if ui.checkbox(&mut enabled, label).changed() {
                     *n = if enabled { Some(0) } else { None };
@@ -998,7 +1105,11 @@ impl HrisApp {
                 }
             }
         });
-        ui.heading("This month's adjustments / advances");
+        ui.heading(if f.cutoff.is_some() {
+            "This cutoff's adjustments / advances"
+        } else {
+            "This month's adjustments / advances"
+        });
         components(ui, "adjustments", &mut f.worksheet.adjustments);
         note(
             ui,
@@ -1015,7 +1126,22 @@ impl HrisApp {
             "I reviewed dates, coverage, pay, holiday eligibility, deductions and employee scope",
         );
         note(ui, "Save reason", &mut f.reason);
-        match payroll::calculate(&f.item.profile.pay, &f.worksheet, mon) {
+        let preview = if let Some((_, part)) = f.cutoff {
+            crate::payroll_cutoffs::previous(&f.item)
+                .and_then(|p| {
+                    crate::payroll_cutoffs::calculate(
+                        &f.item.profile.pay,
+                        &f.worksheet,
+                        mon,
+                        part,
+                        p.as_ref(),
+                    )
+                })
+                .map(|c| c.totals)
+        } else {
+            payroll::calculate(&f.item.profile.pay, &f.worksheet, mon)
+        };
+        match preview {
             Ok(t) => {
                 card(ui, |ui| {
                     ui.heading("Calculation preview");
@@ -1035,7 +1161,11 @@ impl HrisApp {
             }
         }
         let a = Change::new(
-            "item_save",
+            if f.cutoff.is_some() {
+                "cutoff_item_save"
+            } else {
+                "item_save"
+            },
             json!({"id":f.item.id,"expected_revision":f.item.revision,"worksheet":f.worksheet,"reason":f.reason}),
         );
         let (save, cancel) = footer(ui, &a, &self.data, "Save employee worksheet");
@@ -1044,6 +1174,7 @@ impl HrisApp {
         }
         if !cancel {
             self.payroll_state.item = Some(ItemForm {
+                cutoff: f.cutoff,
                 item: f.item.clone(),
                 worksheet: f.worksheet.clone(),
                 reason: f.reason.clone(),
@@ -1139,11 +1270,14 @@ impl HrisApp {
         }
     }
     fn payroll_reports(&mut self, ui: &mut Ui) {
-        ui.label("Local reconciliation worksheets only. No government upload/filing or remittance occurs. Annual summaries cover approved recorded months; they do not annualize tax or fill prior-employer/opening balances.");
+        ui.label("Monthly-register reconciliation only. Cutoff totals are exported from Cutoffs. No government upload/filing or remittance occurs. Annual summaries here cover approved monthly registers; they do not annualize tax or fill prior-employer/opening balances.");
         ui.horizontal(|ui| {
             ui.label("Annual summary year");
             ui.add(egui::DragValue::new(&mut self.payroll_state.year).range(2026..=2200));
-            if ui.button("Export annual approved totals CSV").clicked() {
+            if ui
+                .button("Export annual monthly-register totals CSV")
+                .clicked()
+            {
                 self.payroll_export("annual", None);
             }
         });
@@ -1162,14 +1296,15 @@ impl HrisApp {
             });
         }
     }
-    fn payroll_export(&mut self, kind: &str, id: Option<Uuid>) {
-        let extension = if kind == "payslip_pdf" { "pdf" } else { "csv" };
+    pub(super) fn payroll_export(&mut self, kind: &str, id: Option<Uuid>) {
+        let pdf = kind.ends_with("payslip_pdf");
+        let extension = if pdf { "pdf" } else { "csv" };
         let name = format!(
             "HRIS-payroll-{kind}-{}.{extension}",
             id.map(|id| id.to_string())
                 .unwrap_or_else(|| self.payroll_state.year.to_string())
         );
-        match crate::reports::choose_export_as(&name, kind == "payslip_pdf") {
+        match crate::reports::choose_export_as(&name, pdf) {
             Ok(Some(destination)) => self.send(Command::PayrollExport {
                 kind: kind.into(),
                 record_id: id,
@@ -1180,7 +1315,7 @@ impl HrisApp {
             Err(e) => self.notice = Some((e.to_string(), true)),
         }
     }
-    fn payroll_history(&self, ui: &mut Ui, id: Uuid) {
+    pub(super) fn payroll_history(&self, ui: &mut Ui, id: Uuid) {
         ui.collapsing("Payroll audit history", |ui| {
             for e in self
                 .data
@@ -1207,6 +1342,11 @@ impl HrisApp {
             return;
         }
         self.page = Page::Payroll;
+        if form.starts_with("payroll-cutoff") {
+            self.payroll_state.tab = 6;
+            self.prepare_cutoff_preview(&form);
+            return;
+        }
         let month = NaiveDate::from_ymd_opt(2026, 9, 1).unwrap();
         let employee = self.data.employees[1].id;
         let profile = Profile {
@@ -1286,6 +1426,7 @@ impl HrisApp {
             }
             "payroll-worksheet" => {
                 self.payroll_state.item = Some(ItemForm {
+                    cutoff: None,
                     item: item.clone(),
                     worksheet: w,
                     reason: String::new(),

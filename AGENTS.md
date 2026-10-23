@@ -54,6 +54,12 @@ monthly-only wage payment. Missing attendance never implies an absence deduction
 payment recording is not a bank transfer or government filing. Rule packs need
 explicit effective dates and current official Philippine sources.
 
+Cutoff payroll rules are in docs/PAYROLL-CUTOFFS.md. Keep its separate period
+tables compatible with monthly clients. Preserve both-direction per-employee
+overlap guards, exact first/second allocation, issued-first inputs to monthly
+contribution/cap reconciliation, semi-monthly withholding and immutable slips.
+Portal work is currently paused; native payroll work does not resume it.
+
 The separate employee-portal/ Rust application is described in
 docs/EMPLOYEE-PORTAL.md and has its own nested instructions, Cargo.lock and release
 lifecycle. Keep upstream Auth tokens and server session state in memory, the

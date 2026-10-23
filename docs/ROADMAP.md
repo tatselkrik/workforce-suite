@@ -42,9 +42,17 @@ Implemented: employee/current-report goals with reasoned progress and retained h
 
 ## Stage 9 — Payroll and benefits
 
-Implemented in version 0.1.33: effective salary profiles, reviewed monthly reconciliation worksheets, private-sector Philippine overtime/holiday/night premiums, recurring and per-run allowances/deductions, employer benefit memos, independently approved immutable payslips, recorded payments and PDF/CSV reconciliation exports. Contribution and withholding rules were checked against official sources on 23 October 2026. See [payroll](PAYROLL.md) for effective dates and limits. This module does not transfer money, file government returns or replace company payroll reconciliation. Annual tax adjustment, prior-employer balances, 13th-month payouts, regional wage compliance, final pay and actual cutoff disbursements remain later work.
+Implemented in version 0.1.33: effective salary profiles, reviewed monthly reconciliation worksheets, private-sector Philippine overtime/holiday/night premiums, recurring and per-run allowances/deductions, employer benefit memos, independently approved immutable payslips, recorded payments and PDF/CSV reconciliation exports. Contribution and withholding rules were checked against official sources on 23 October 2026. See [payroll](PAYROLL.md) for effective dates and limits. This module does not transfer money, file government returns or replace company payroll reconciliation. Annual tax adjustment, prior-employer balances, 13th-month payouts, regional wage compliance, final pay remain later work.
 
-## Next — Separate employee portal
+Implemented in version0.1.34: separate1st–15th/16th–month-end runs, planned pay dates, reviewed
+worksheets, independent approval, immutable period payslips, recorded payments,
+CSV/PDF and monthly contribution/exemption reconciliation are implemented in the
+current source. See [payroll cutoffs](PAYROLL-CUTOFFS.md) and versioned release
+evidence for hosted deployment and installation. Next payroll work is actual
+13th-month payouts, followed by year-end adjustments/prior-employer balances and
+final pay. Expanded reporting/data exchange follows. Portal work is paused.
+
+## Deferred — Separate employee portal (paused)
 
 Build a mobile-friendly employee application against the same protected company memberships. Start with own employment/contact details, attendance and breaks, leave/correction/overtime requests, own approved payslips, notifications and account security. Keep payroll drafts, team salaries, recruiting, private HR notes and administrative controls outside employee access. The native desktop remains the staff application. Device and external-service connections remain unconfigured until the necessary company and hardware choices are available.
 

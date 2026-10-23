@@ -544,6 +544,7 @@ pub struct Event {
 }
 #[derive(Clone, Debug, Default)]
 pub struct Setup {
+    pub cutoffs: crate::payroll_cutoffs::Setup,
     pub profiles: Vec<Profile>,
     pub holidays: Vec<Holiday>,
     pub runs: Vec<Run>,
@@ -572,6 +573,9 @@ impl PayrollAction {
         }
     }
     pub fn payload(&self, data: &Snapshot) -> Result<Value> {
+        if self.operation.starts_with("cutoff_") {
+            return crate::payroll_cutoffs::payload(self, data);
+        }
         ensure!(
             data.mode != Mode::SignedOut
                 && data.access.role.manages_hr()
@@ -793,7 +797,7 @@ pub fn totals_rows(t: &Totals) -> Vec<(&'static str, i64)> {
     ]
 }
 
-fn demo_basis(data: &Snapshot, eid: Uuid, mon: NaiveDate) -> Result<Value> {
+pub(crate) fn demo_basis(data: &Snapshot, eid: Uuid, mon: NaiveDate) -> Result<Value> {
     let e = data
         .employees
         .iter()
@@ -815,6 +819,9 @@ pub fn apply_demo(data: &mut Snapshot, a: &PayrollAction) -> Result<()> {
     Ok(())
 }
 fn demo_change(data: &mut Snapshot, a: &PayrollAction) -> Result<()> {
+    if a.operation.starts_with("cutoff_") {
+        return crate::payroll_cutoffs::apply_demo(data, a);
+    }
     let v = &a.record;
     let id: Uuid = serde_json::from_value(v["id"].clone())?;
     let expected = v["expected_revision"].as_i64();
@@ -1065,6 +1072,16 @@ fn demo_change(data: &mut Snapshot, a: &PayrollAction) -> Result<()> {
                         );
                         r.status = "approved".into();
                         r.approved_by = Some(actor);
+                        ensure!(
+                            !items
+                                .iter()
+                                .any(|i| data.payroll.cutoffs.slips.iter().any(|s| s
+                                    .base
+                                    .employee_id
+                                    == i.employee_id
+                                    && s.base.month == r.month)),
+                            "An employee already has issued cutoff pay for this month."
+                        );
                         for mut item in items {
                             item.source_basis = Value::Null;
                             item.profile.pay.coverage_note.clear();
