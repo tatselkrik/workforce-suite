@@ -1,4 +1,5 @@
 //! Own-record portal. No service key, token-bearing browser storage or arbitrary proxy.
+mod self_service;
 use anyhow::{Context, Result, ensure};
 use axum::{
     Json, Router,
@@ -329,6 +330,7 @@ impl Portal {
             .route("/", get(index))
             .route("/app.css", get(styles))
             .route("/app.js", get(script))
+            .route("/self-service.js", get(self_service_script))
             .route("/api/sign-in", post(sign_in))
             .route("/api/sign-out", post(sign_out))
             .route("/api/me", get(me))
@@ -338,6 +340,7 @@ impl Portal {
             .route("/api/attendance/check-out", post(check_out))
             .route("/api/payslips", get(payslips))
             .route("/api/payslips/{id}", get(payslip))
+            .merge(self_service::routes())
             .layer(DefaultBodyLimit::max(8192))
             .layer(middleware::from_fn_with_state(self.clone(), security))
             .with_state(self.clone())
@@ -355,6 +358,11 @@ impl Portal {
             .header("apikey", &self.config.key)
             .header("Cache-Control", "no-cache")
             .header("Prefer", "return=representation");
+        // Older desktop clients cannot decode custom/cancelled leave. Opt into
+        // the existing read contract without changing its authorization rules.
+        if path.starts_with("/rest/v1/leave_requests?") {
+            r = r.header("x-hris-leave-contract", "2");
+        }
         if let Some(t) = token {
             r = r.bearer_auth(t);
         }
@@ -571,6 +579,12 @@ async fn script() -> impl IntoResponse {
     (
         [(header::CONTENT_TYPE, "text/javascript; charset=utf-8")],
         include_str!("../web/app.js"),
+    )
+}
+async fn self_service_script() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "text/javascript; charset=utf-8")],
+        include_str!("../web/self-service.js"),
     )
 }
 async fn sign_in(

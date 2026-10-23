@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>HRIS · Employee portal</title><link rel="stylesheet" href="/app.css"><script src="/app.js" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>HRIS · Employee portal</title><link rel="stylesheet" href="/app.css"><script src="/self-service.js" defer></script><script src="/app.js" defer></script></head>
 <body>
 <main id="sign-in-page" class="sign-in-page">
   <section class="sign-in-card" aria-labelledby="welcome">
@@ -17,7 +17,7 @@
 <div id="workspace" class="workspace" hidden>
  <aside class="sidebar">
   <div class="company-brand"><div id="company-initials" class="brand-mark" aria-hidden="true">HR</div><strong id="company-name">Employee portal</strong><span>EMPLOYEE SELF-SERVICE</span></div>
-  <nav id="navigation" aria-label="Main navigation"><button data-page="home" aria-current="page">Home</button><button data-page="attendance">Attendance</button><button data-page="pay">Payslips</button><button data-page="profile">My profile</button></nav>
+  <nav id="navigation" aria-label="Main navigation"><button data-page="home" aria-current="page">Home</button><button data-page="attendance">Attendance</button><button data-page="leave">Leave</button><button data-page="pay">Payslips</button><button data-page="profile">My profile</button></nav>
   <div class="session"><span class="status-dot"></span>Private company connection<button id="sign-out" class="quiet">Sign out</button></div>
  </aside>
  <main class="content">
@@ -25,14 +25,27 @@
   <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
   <section id="page-home" class="page" aria-labelledby="home-heading">
    <p class="eyebrow">YOUR DAY</p><h1 id="home-heading">Good to see you</h1><p id="welcome-name" class="intro" data-private></p>
-   <div class="hero"><div><span class="eyebrow">TODAY'S ATTENDANCE</span><h2 id="today-status" data-private>Ready when you are</h2><p id="today-times" data-private></p></div><div id="home-clock-actions" class="actions" data-private></div></div>
+   <div class="hero"><div><span class="eyebrow">MY ATTENDANCE</span><h2 id="today-status" data-private>Ready when you are</h2><p id="today-times" data-private></p></div><div id="home-clock-actions" class="actions" data-private></div></div>
    <div class="grid two"><article class="card"><p class="eyebrow">EMPLOYMENT</p><h2 id="home-job" data-private></h2><p id="home-department" class="muted" data-private></p><button class="text-link" data-go="profile">View my details →</button></article><article class="card"><p class="eyebrow">LATEST PAYSLIP</p><div id="latest-payslip" data-private></div><button class="text-link" data-go="pay">View payslips →</button></article></div>
    <p class="fine">Attendance, contact updates and payslips here are your own records. HR manages your employment details and reviews attendance disputes.</p>
   </section>
   <section id="page-attendance" class="page" aria-labelledby="attendance-heading" hidden>
    <p class="eyebrow">MY TIME</p><h1 id="attendance-heading">Attendance</h1><p class="intro">Check in when you start. Check out when your shift ends.</p>
    <article class="card"><div class="row"><div><h2 id="attendance-status" data-private></h2><p id="attendance-times" class="muted" data-private></p></div><div id="attendance-clock-actions" class="actions" data-private></div></div><p class="fine">Times come from the company server. If a time is wrong, contact HR to request a correction.</p></article>
+   <article class="card"><h2>My shift breaks</h2><div id="break-controls" data-private></div><p class="fine">Use the break rules saved for this shift. Only completed actual unpaid breaks reduce recorded work time; a missing break never causes an automatic deduction.</p></article>
    <article class="card"><div class="row"><h2>My recent records</h2><label class="date-filter" for="attendance-date">Choose date<input type="date" id="attendance-date"></label></div><div id="attendance-list" data-private></div><p class="fine">Shows 93 recent recorded work dates plus any open shift. A missing record alone does not establish an absence.</p></article>
+  </section>
+  <section id="page-leave" class="page" aria-labelledby="leave-heading" hidden>
+   <p class="eyebrow">TIME AWAY</p><h1 id="leave-heading">My leave</h1><p class="intro">Plan time away and follow your request’s progress.</p>
+   <form id="leave-form" class="card"><h2>Request leave</h2>
+    <label for="leave-type">Leave type</label><select id="leave-type" required></select>
+    <div class="grid two"><div><label for="leave-start">From</label><input id="leave-start" type="date" required></div><div><label for="leave-end">To</label><input id="leave-end" type="date" required></div></div>
+    <label for="leave-part">Day portion</label><select id="leave-part"><option value="full">Full day(s)</option><option value="am">Morning half-day</option><option value="pm">Afternoon half-day</option></select>
+    <div id="leave-estimate" class="estimate" data-private></div>
+    <label for="leave-reason">Reason (optional)</label><textarea id="leave-reason" maxlength="500" rows="3"></textarea>
+    <div class="form-footer"><button id="leave-submit" class="primary" type="submit">Submit leave request</button><span class="fine">Submission reserves the filed days while your approvers review it.</span></div>
+   </form>
+   <h2>My requests</h2><div id="leave-list" data-private></div><p class="fine">Recent 200 requests. Filed charges and approval receipts retain their saved facts. Cancelled requests stay in history.</p>
   </section>
   <section id="page-pay" class="page" aria-labelledby="pay-heading" hidden>
    <p class="eyebrow">MY PAY</p><h1 id="pay-heading">Payslips</h1><p class="intro">Approved calculations, kept for your records.</p>

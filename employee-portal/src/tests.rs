@@ -122,7 +122,13 @@ async fn host_origin_csrf_and_private_cache_are_enforced() {
 #[tokio::test]
 async fn unauthenticated_record_reads_clear_cookie_without_hr_requests() {
     let p = Portal::new(config()).unwrap();
-    for path in ["/api/me", "/api/attendance", "/api/payslips"] {
+    for path in [
+        "/api/me",
+        "/api/attendance",
+        "/api/payslips",
+        "/api/leave",
+        "/api/leave/context",
+    ] {
         let r = p
             .router()
             .oneshot(
@@ -173,6 +179,8 @@ struct Mock {
     requests: Arc<Mutex<Vec<(String, String, Value)>>>,
     disabled: Arc<std::sync::atomic::AtomicBool>,
     foreign: Arc<std::sync::atomic::AtomicBool>,
+    break_state: Arc<std::sync::atomic::AtomicU8>,
+    leave_cancelled: Arc<std::sync::atomic::AtomicBool>,
 }
 fn uid() -> Uuid {
     Uuid::from_u128(101)
@@ -189,23 +197,39 @@ fn aid() -> Uuid {
 fn pid() -> Uuid {
     Uuid::from_u128(105)
 }
+fn lid() -> Uuid {
+    Uuid::from_u128(107)
+}
+fn bid() -> Uuid {
+    Uuid::from_u128(108)
+}
+fn rule_id() -> Uuid {
+    Uuid::from_u128(109)
+}
 async fn fake(State(m): State<Mock>, request: Request) -> Response {
     use std::sync::atomic::Ordering;
     let method = request.method().to_string();
     let uri = request.uri().to_string();
     let path = request.uri().path().to_string();
+    let modern_leave = request
+        .headers()
+        .get("x-hris-leave-contract")
+        .and_then(|v| v.to_str().ok())
+        == Some("2");
     let body = to_bytes(request.into_body(), 8192).await.unwrap();
     let b: Value = serde_json::from_slice(&body).unwrap_or(Value::Null);
     m.requests
         .lock()
         .await
-        .push((method.clone(), uri.clone(), b));
+        .push((method.clone(), uri.clone(), b.clone()));
     let person = if m.foreign.load(Ordering::SeqCst) {
         Uuid::from_u128(999)
     } else {
         eid()
     };
     let mut row = json!({"id":aid(),"company_id":cid(),"employee_id":person,"work_date":"2026-09-01","checked_in_at":"2026-09-01T01:00:00Z","checked_out_at":null,"hr_note":"PRIVATE_SENTINEL"});
+    row["revision"] = json!(0);
+    row["planned_shift"] = json!({"break_rules":[{"id":rule_id(),"name":"Standard break","minutes":15,"paid":false,"required":false,"private":"PRIVATE_SENTINEL"}]});
     let data = match path.as_str() {
         "/auth/v1/token" => {
             json!({"user":{"id":uid()},"access_token":"upstream-only-access","refresh_token":"upstream-only-refresh","expires_in":3600})
@@ -214,6 +238,38 @@ async fn fake(State(m): State<Mock>, request: Request) -> Response {
             json!({"id":uid(),"email":"portal-staff@example.invalid","user_metadata":{"role":"administrator","secret":"PRIVATE_SENTINEL"}})
         }
         "/auth/v1/logout" => json!({}),
+        "/rest/v1/rpc/portal_leave_context" => {
+            json!({"company_id":cid(),"employee_id":person,"policy_revision":7,"asof":b["p_asof"].as_str().unwrap_or("2026-11-02"),"workweek":[1,2,3,4,5],"holidays":[],"types":[{"code":"annual","name":"Annual leave","paid":true,"unlimited":false,"approval_chain":"PRIVATE_SENTINEL","balance":{"earned_units":30,"carryover_units":0,"used_units":2,"reserved_units":1,"available_units":27,"private":"PRIVATE_SENTINEL"}}]})
+        }
+        "/rest/v1/rpc/portal_submit_leave" => json!(lid()),
+        "/rest/v1/rpc/portal_cancel_leave" => {
+            m.leave_cancelled.store(true, Ordering::SeqCst);
+            json!(lid())
+        }
+        "/rest/v1/leave_requests" => {
+            if m.leave_cancelled.load(Ordering::SeqCst) && !modern_leave {
+                return Json(json!([])).into_response();
+            }
+            json!([{"id":lid(),"company_id":cid(),"employee_id":person,"type_code":"annual","type_name":"Annual leave","starts_on":"2026-11-02","ends_on":"2026-11-02","day_part":"am","reason":"Fictional leave","status":if m.leave_cancelled.load(Ordering::SeqCst){"cancelled"}else{"pending"},"charged_units":1,"charged_dates":[{"date":"2026-11-02","units":1}],"revision":2,"policy_revision":7,"approval_steps":[{"kind":"hr","employee_id":Uuid::from_u128(999),"approved_by":null,"approved_at":null,"private":"PRIVATE_SENTINEL"}],"private":"PRIVATE_SENTINEL"}])
+        }
+        "/rest/v1/rpc/manage_attendance_break" => {
+            if b["p_break"]["expected_parent_revision"] != 0 {
+                return (StatusCode::CONFLICT, Json(json!({"error":"stale"}))).into_response();
+            }
+            m.break_state.store(
+                if b["p_operation"] == "start" { 1 } else { 2 },
+                Ordering::SeqCst,
+            );
+            json!(bid())
+        }
+        "/rest/v1/attendance_breaks" => {
+            let n = m.break_state.load(Ordering::SeqCst);
+            if n == 0 {
+                json!([])
+            } else {
+                json!([{"id":bid(),"company_id":cid(),"employee_id":person,"attendance_id":aid(),"rule_id":rule_id(),"name":"Standard break","paid":false,"required":false,"expected_minutes":15,"started_at":"2026-09-01T01:30:00Z","ended_at":if n==2{Some("2026-09-01T01:45:00Z")}else{None},"revision":0,"private":"PRIVATE_SENTINEL"}])
+            }
+        }
         "/rest/v1/rpc/my_hris_access" => {
             if m.disabled.load(Ordering::SeqCst) {
                 return (StatusCode::FORBIDDEN, Json(json!({"error":"disabled"}))).into_response();
@@ -241,7 +297,7 @@ async fn fake(State(m): State<Mock>, request: Request) -> Response {
             json!([row])
         }
         "/rest/v1/payroll_slips" => {
-            json!([{"id":pid(),"company_id":cid(),"employee_id":person,"month":"2026-09-01","company_name":"Sample Company","approved_at":"2026-10-01T00:00:00Z","rule_version":"TEST","item":{"company_id":cid(),"employee_id":person,"employee_name":"Sample Employee","employee_code":"EMP-TEST","department":"Operations","source_basis":{"secret":"PRIVATE_SENTINEL"},"profile":{"pay":{"coverage_note":"PRIVATE_SENTINEL","components":[{"label":"Loan","kind":"deduction","amount_cents":10000,"reference":"PRIVATE_SENTINEL"}]}},"worksheet":{"review_note":"PRIVATE_SENTINEL","adjustments":[]},"totals":{"net":123456,"basic":130000,"private_hr":"PRIVATE_SENTINEL"}}}])
+            json!([{"id":pid(),"company_id":cid(),"employee_id":person,"month":"2026-09-01","company_name":"Sample Company","approved_at":"2026-10-01T00:00:00Z","rule_version":"TEST","item":{"company_id":cid(),"employee_id":person,"employee_name":"Sample Employee","employee_code":"EMP-TEST","department":"Operations","source_basis":{"secret":"PRIVATE_SENTINEL"},"profile":{"pay":{"coverage_note":"PRIVATE_SENTINEL","components":[{"label":"Loan","kind":"deduction","amount_cents":6544,"reference":"PRIVATE_SENTINEL"}]}},"worksheet":{"review_note":"PRIVATE_SENTINEL","adjustments":[]},"totals":{"net":123456,"basic":130000,"gross":130000,"voluntary_deductions":6544,"private_hr":"PRIVATE_SENTINEL"}}}])
         }
         _ => return StatusCode::NOT_FOUND.into_response(),
     };
@@ -524,4 +580,155 @@ async fn visual_preview_server() {
         .await
         .unwrap();
     portal.close().await;
+}
+
+#[tokio::test]
+async fn leave_context_and_history_are_own_only_and_project_staff_targets() {
+    let f = fixture().await;
+    let (cookie, _) = login(&f).await;
+    for path in ["/api/leave/context?asof=2026-11-02", "/api/leave"] {
+        let (s, _, v) = request(&f.portal, path, None, Some(&cookie), None).await;
+        assert_eq!(s, StatusCode::OK);
+        let text = v.to_string();
+        assert!(!text.contains("PRIVATE_SENTINEL"));
+        assert!(!text.contains("employee_id"));
+    }
+    f.mock
+        .foreign
+        .store(true, std::sync::atomic::Ordering::SeqCst);
+    let (s, _, _) = request(&f.portal, "/api/leave/context", None, Some(&cookie), None).await;
+    assert_eq!(s, StatusCode::BAD_GATEWAY);
+}
+#[tokio::test]
+async fn leave_submit_has_no_client_identity_and_cancellation_keeps_revision() {
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    let draft = json!({"type_code":"annual","starts_on":"2026-11-02","ends_on":"2026-11-02","day_part":"am","reason":"Fictional filing","policy_revision":7});
+    let mut forged = draft.clone();
+    forged["employee_id"] = json!(Uuid::from_u128(999));
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/leave/request",
+            Some(forged),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/leave/request",
+            Some(draft),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/leave/cancel",
+            Some(json!({"id":lid(),"revision":2,"reason":"Fictional cancellation"})),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let (status, _, history) = request(&f.portal, "/api/leave", None, Some(&cookie), None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(history[0]["status"], "cancelled");
+    let seen = f.mock.requests.lock().await;
+    let (_, _, body) = seen
+        .iter()
+        .find(|(_, p, _)| p == "/rest/v1/rpc/portal_submit_leave")
+        .unwrap();
+    assert!(body.get("p_employee").is_none());
+    assert_eq!(body["p_policy_revision"], 7);
+    assert_eq!(body["p_part"], "am");
+    let (_, _, body) = seen
+        .iter()
+        .find(|(_, p, _)| p == "/rest/v1/rpc/portal_cancel_leave")
+        .unwrap();
+    assert_eq!(body["p_revision"], 2);
+}
+#[tokio::test]
+async fn break_controls_use_saved_rules_preserve_revisions_and_reject_time_overrides() {
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    let path = format!("/api/breaks/{}", aid());
+    let (s, _, v) = request(&f.portal, &path, None, Some(&cookie), None).await;
+    assert_eq!(s, StatusCode::OK);
+    assert!(!v.to_string().contains("PRIVATE_SENTINEL"));
+    assert_eq!(v["rules"][0]["id"], json!(rule_id()));
+    let body = json!({"attendance_id":aid(),"rule_id":rule_id(),"parent_revision":0});
+    let mut bad = body.clone();
+    bad["started_at"] = json!("2000-01-01");
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/breaks/start",
+            Some(bad),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+    let mut stale = body.clone();
+    stale["parent_revision"] = json!(9);
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/breaks/start",
+            Some(stale),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::CONFLICT
+    );
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/breaks/start",
+            Some(body),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/breaks/end",
+            Some(json!({"attendance_id":aid(),"id":bid(),"parent_revision":0,"revision":0})),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let (_, _, v) = request(&f.portal, &path, None, Some(&cookie), None).await;
+    assert!(v["records"][0]["ended_at"].is_string());
+    let seen = f.mock.requests.lock().await;
+    for (_, _, body) in seen
+        .iter()
+        .filter(|(_, p, _)| p == "/rest/v1/rpc/manage_attendance_break")
+    {
+        assert!(body["p_break"].get("started_at").is_none());
+        assert!(body["p_break"].get("paid").is_none());
+    }
 }

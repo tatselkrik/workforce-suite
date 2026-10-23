@@ -53,8 +53,14 @@ shows only their own read-only employment/contact records, saves their contacts,
 records server-timed attendance and reads issued payslips with CSV/browser
 printing. Fourteen local Auth/HTTP/security tests and ten actual hosted Auth/API
 proofs passed; phone-width browser checks use fictional records. No schema change
-was needed. Next add leave, breaks, correction/overtime requests, notifications,
-profile/security controls and company branding, then prepare public HTTPS hosting.
+was needed. The0.1.1 source adds own leave types/balances, full/half-day filing,
+cancellation/history and saved-rule server-timed breaks. Seventeen Rust tests,
+1,891 database assertions and fictional phone-width checks pass; the additive
+leave migration is deployed with67 public record sets preserved. Eight additional
+actual hostedAuth/API proofs cover leave filing/cancellation and access guards.
+Private build/package records are separate from these source checks. Next add correction/overtime requests,
+notifications, profile/security controls and company branding, then prepare
+public HTTPS hosting.
 See [employee portal](EMPLOYEE-PORTAL.md).
 
 The sequence may change when the company has a more urgent requirement. Payroll, biometric devices and external integrations require company-specific decisions; they are not generic plug-ins already working in this prototype.

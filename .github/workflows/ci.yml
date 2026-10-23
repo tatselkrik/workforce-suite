@@ -23,7 +23,9 @@ jobs:
         with:
           node-version: '22'
       - name: Check browser script syntax
-        run: node --check employee-portal/web/app.js
+        run: |
+          node --check employee-portal/web/app.js
+          node --check employee-portal/web/self-service.js
       - name: Test payslip CSV cell safety
         run: node --test employee-portal/tests/browser.test.mjs
 
