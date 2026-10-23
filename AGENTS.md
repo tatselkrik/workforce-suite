@@ -66,3 +66,11 @@ lifecycle. Keep upstream Auth tokens and server session state in memory, the
 browser cookie opaque/HttpOnly and CSRF tokens in page memory. Limit APIs to the
 current person's records even for staff roles. Portal work must not weaken native
 Employee admission or mutate a published desktop release.
+
+13th-month payout rules are in docs/PAYROLL-THIRTEENTH.md. Use current-employer
+issued earned basic plus evidenced nonoverlapping opening intervals, never salary
+projections or rounded memos. Eligibility follows actual duties/service, not the
+account role. Preserve source/revision/independent-approval and earlier-payout
+locks, shared-cap floors, private evidence and immutable own slips. Withholding
+and contribution adjustments are explicitly reviewed inputs in this increment;
+automatic annualization/prior-employer tax reconciliation remains separate.

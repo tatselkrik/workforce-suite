@@ -1,5 +1,37 @@
 # Prototype verification — 2026-10-23
 
+## 13th-month pay — version0.1.35
+
+-353Rust tests passed after native workflow/export/draft preservation wiring.
+ 2,060local PostgreSQL assertions passed;18new SQL/Rust vectors plus52earlier
+ payroll/cutoff vectors agree in exact centavos. Tests cover earned coverage,
+ missing/overlapping openings, prior payments, shared cap, independent approval,
+ source revisions/concurrent installments, redaction, immutable slips, disabled
+ scopes and transactional audit failure. Exact-installer testing follows packaging.
+-Two additive migrations are deployed through `20261023155000`:42hosted
+ versions. All70existing public record sets matched immediately across deployment.
+ Three new RLS tables have read-only client grants; public invoker routes call
+ protected writers and eight private helpers. No new annual-benefit WARN/ERROR
+ remains in advisors; informational unused-index suggestions are retained.
+-Eleven actual hostedAuth/nativeRust/REST proof groups passed: creation retries,
+ SQL/Rust amounts, actual Administrator self-approval denial and independent
+ approval, concurrent-source rejection and three new reviews, immutable/private
+ slips, Manager own-only scopes, fresh CSV/PDF exports, payment recording,
+ Employee desktop denial and REST409/403/anonymous rejection.19unrelated record
+ sets and all existing monthly/cutoff slips matched. Synthetic roles were restored,
+ access disabled, employee records archived and Auth sessions removed.
+-Fourteen fictional native screens and a rendered one-page benefit slip were
+ inspected, including dark125%, missing basis, saved approver evidence and Manager
+ own slip. The final QA-only fixture preparation followed the normal suite.
+ These are not actual signed-in native-button automation. Normal configured
+ startup, source privacy, exact installer/recovery, Ed25519 signing, private
+ feed/download and installation have separate revision/hash evidence after packaging.
+-Entitlement and shared annual benefit exemption are automatic. Withholding and
+ contribution adjustments are explicitly reviewed inputs, including zero.
+ Automatic annualization/prior-employer reconciliation follows separately.
+ No transfer, government filing, remittance, publicCI, Authenticode, other-PC or
+ physical-phone verification is claimed. Employee portal remains paused.
+
 ## Semi-monthly payroll cutoffs — version 0.1.34
 
 - 337 Rust tests and 1,983 local PostgreSQL assertions passed after the final

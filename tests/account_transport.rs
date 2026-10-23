@@ -1088,6 +1088,7 @@ fn baseline(company: &Company) -> Vec<Reply> {
         reply("GET /rest/v1/career_events?", 200, json!([])),
         reply("GET /rest/v1/payroll_slips?",200,json!([])),
         reply("GET /rest/v1/payroll_cutoff_slips?",200,json!([])),
+        reply("GET /rest/v1/payroll_thirteenth_slips?",200,json!([])),
         reply("GET /rest/v1/payroll_profiles?",200,json!([])),
         reply("GET /rest/v1/payroll_holidays?",200,json!([])),
         reply("GET /rest/v1/payroll_runs?",200,json!([])),
@@ -1095,6 +1096,8 @@ fn baseline(company: &Company) -> Vec<Reply> {
         reply("GET /rest/v1/payroll_events?",200,json!([])),
         reply("GET /rest/v1/payroll_cutoff_runs?",200,json!([])),
         reply("GET /rest/v1/payroll_cutoff_items?",200,json!([])),
+        reply("GET /rest/v1/payroll_thirteenth_runs?",200,json!([])),
+        reply("GET /rest/v1/payroll_thirteenth_items?",200,json!([])),
         reply("GET /rest/v1/notification_read_state?", 200, json!([])),
         reply("GET /auth/v1/user ", 200, user(company)),
         reply(
@@ -2103,6 +2106,8 @@ fn manager_desktop_sign_in_does_not_request_administrator_account_data() {
             && !r.prefix.contains("/payroll_events?")
             && !r.prefix.contains("/payroll_cutoff_runs?")
             && !r.prefix.contains("/payroll_cutoff_items?")
+            && !r.prefix.contains("/payroll_thirteenth_runs?")
+            && !r.prefix.contains("/payroll_thirteenth_items?")
     });
     replies.remove(6); // Correction reasons are HR-only, including their loading path.
     replies.retain(|r| !r.prefix.contains("/employment_history?"));
@@ -3283,4 +3288,25 @@ fn cutoff_creation_uses_its_guarded_rpc_and_retries_one_identity_after_refresh_f
     let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
     assert!(client.execute(Action::Payroll(action.clone()),&data).unwrap_err().to_string().contains("refresh failed"));let result=client.execute(Action::Payroll(action.clone()),&data).unwrap();assert!(action.saved(&result));server.join().unwrap();
     let req=requests.lock().unwrap();let writes:Vec<_>=req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/manage_payroll_cutoff ")).collect();assert_eq!(writes.len(),2);assert_eq!(writes[0].json(),writes[1].json());assert_eq!(writes[0].json()["p_operation"],"run_create");assert!(!req.iter().any(|r|r.line.starts_with("POST /rest/v1/payroll_cutoff_runs")));
+}
+
+#[test]
+fn thirteenth_creation_uses_its_guarded_rpc_and_retries_one_identity_after_refresh_failure(){
+    use hris_desktop::{domain::Action,payroll::PayrollAction};
+    let mut demo=DemoStore::new();let action=PayrollAction::new("thirteenth_run_create",json!({"id":uuid::Uuid::new_v4(),"year":2026,"as_of":"2026-09-30","pay_date":"2026-10-01","title":"Synthetic annual benefit transport","reason":"Synthetic creation"}));
+    let before=demo.data.clone();demo.execute(Action::Payroll(action.clone())).unwrap();let saved=demo.data.payroll.thirteenth.runs[0].clone();
+    let prepare=|data:&hris_desktop::domain::Snapshot|{
+        let mut r=baseline(&data.company);for response in &mut r{
+            let value=match response.prefix.as_str(){
+                "POST /rest/v1/rpc/my_hris_access "=>Some(json!({"company_id":data.company.id,"user_id":data.access.user_id,"employee_id":data.access.employee_id,"role":data.access.role,"direct_reports":data.access.direct_reports})),
+                p if p.starts_with("GET /rest/v1/employees?")=>Some(json!(data.employees)),
+                p if p.starts_with("GET /rest/v1/payroll_thirteenth_runs?")=>Some(json!(data.payroll.thirteenth.runs)),
+                p if p.starts_with("GET /rest/v1/payroll_events?")=>Some(json!(data.payroll.events)),_=>None
+            };if let Some(v)=value{response.body=serde_json::to_vec(&v).unwrap();}
+        }r
+    };
+    let mut replies=prepare(&before);replies.push(reply("POST /rest/v1/rpc/manage_payroll_thirteenth ",200,json!(saved)));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",500,json!({"message":"Synthetic refresh failure"})));replies.push(reply("POST /rest/v1/rpc/manage_payroll_thirteenth ",200,json!(saved)));replies.extend(prepare(&demo.data).into_iter().skip(1).take_while(|r|!r.prefix.starts_with("GET /auth/v1/user ")));
+    let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
+    assert!(client.execute(Action::Payroll(action.clone()),&data).unwrap_err().to_string().contains("refresh failed"));let result=client.execute(Action::Payroll(action.clone()),&data).unwrap();assert!(action.saved(&result));server.join().unwrap();
+    let req=requests.lock().unwrap();let writes:Vec<_>=req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/manage_payroll_thirteenth ")).collect();assert_eq!(writes.len(),2);assert_eq!(writes[0].json(),writes[1].json());assert_eq!(writes[0].json()["p_operation"],"run_create");assert!(!req.iter().any(|r|r.line.starts_with("POST /rest/v1/payroll_thirteenth_runs")));
 }

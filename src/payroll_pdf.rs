@@ -48,6 +48,40 @@ pub fn build_cutoff(s: &crate::payroll_cutoffs::Slip) -> Result<Vec<u8>> {
         ),
     )
 }
+pub fn build_thirteenth(s: &crate::payroll_thirteenth::Slip) -> Result<Vec<u8>> {
+    let mut lines = vec![];
+    for t in [
+        s.company_name.clone(),
+        format!(
+            "13TH-MONTH PAY | Year {} | Earned through {}",
+            s.year, s.as_of
+        ),
+        format!("Planned pay date: {}", s.pay_date),
+        format!(
+            "Employee: {} - {}",
+            s.item.employee_code, s.item.employee_name
+        ),
+        format!("Department: {}", s.item.department),
+        format!("Approved: {} UTC", s.approved_at.format("%Y-%m-%d %H:%M")),
+        format!("Rule pack: {}", s.rule_version),
+        String::new(),
+    ] {
+        wrap(&t, &mut lines);
+    }
+    for (label, n) in crate::payroll_thirteenth::totals_rows(&s.item.totals) {
+        wrap(&format!("{label:<42} {:>20}", money(n)), &mut lines);
+    }
+    wrap("", &mut lines);
+    wrap(
+        "Approved 13th-month payout; payment is recorded separately.",
+        &mut lines,
+    );
+    wrap(
+        "Tax and contribution adjustments were explicitly reviewed by HR.",
+        &mut lines,
+    );
+    render_lines(lines)
+}
 fn build_period(s: &Slip, period: &str) -> Result<Vec<u8>> {
     let mut lines = vec![];
     for text in [
@@ -98,6 +132,9 @@ fn build_period(s: &Slip, period: &str) -> Result<Vec<u8>> {
             );
         }
     }
+    render_lines(lines)
+}
+fn render_lines(lines: Vec<String>) -> Result<Vec<u8>> {
     let chunks: Vec<_> = lines.chunks(47).collect();
     let page_ids: Vec<_> = (0..chunks.len()).map(|i| 5 + i * 2).collect();
     let mut objects = vec![

@@ -1,0 +1,1170 @@
+[
+  {
+    "source": {
+      "starts_on": "2026-01-01",
+      "as_of": "2026-09-30",
+      "periods": [
+        {
+          "id": "00000000-0000-4000-8000-000000150001",
+          "starts_on": "2026-02-01",
+          "ends_on": "2026-09-30",
+          "basic_cents": 24000000
+        }
+      ],
+      "prior": [],
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [
+        {
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-01-31",
+          "basic_cents": 3000000,
+          "reference": "Reviewed January ledger"
+        }
+      ],
+      "classification": "rank_and_file",
+      "eligibility_note": "Actual coverage reviewed",
+      "served_one_month": true,
+      "basic_adjustment_cents": 0,
+      "adjustment_note": "",
+      "policy_topup_cents": 0,
+      "policy_note": "",
+      "external_thirteenth_cents": 0,
+      "other_benefits_cents": 0,
+      "opening_note": "",
+      "requested_gross_cents": null,
+      "withholding_cents": 0,
+      "tax_reviewed": true,
+      "tax_note": "Supplementary withholding reviewed",
+      "sss_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "contributions_reviewed": true,
+      "contribution_note": "Monthly contribution reconciliation reviewed",
+      "reviewed": true,
+      "review_note": "Sources reconciled"
+    },
+    "result": {
+      "net_cents": 2250000,
+      "basic_cents": 27000000,
+      "gross_cents": 2250000,
+      "exempt_cents": 2250000,
+      "coverage_gaps": [],
+      "taxable_cents": 0,
+      "remaining_cents": 2250000,
+      "entitlement_cents": 2250000,
+      "overpayment_cents": 0,
+      "withholding_cents": 0,
+      "prior_company_cents": 0,
+      "sss_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-01-01",
+      "as_of": "2026-09-30",
+      "periods": [
+        {
+          "id": "00000000-0000-4000-8000-000000150001",
+          "starts_on": "2026-02-01",
+          "ends_on": "2026-09-30",
+          "basic_cents": 24000000
+        }
+      ],
+      "prior": [],
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [],
+      "classification": "rank_and_file",
+      "eligibility_note": "Actual coverage reviewed",
+      "served_one_month": true,
+      "basic_adjustment_cents": 0,
+      "adjustment_note": "",
+      "policy_topup_cents": 0,
+      "policy_note": "",
+      "external_thirteenth_cents": 0,
+      "other_benefits_cents": 0,
+      "opening_note": "",
+      "requested_gross_cents": null,
+      "withholding_cents": 0,
+      "tax_reviewed": true,
+      "tax_note": "Supplementary withholding reviewed",
+      "sss_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "contributions_reviewed": true,
+      "contribution_note": "Monthly contribution reconciliation reviewed",
+      "reviewed": true,
+      "review_note": "Sources reconciled"
+    },
+    "result": {
+      "net_cents": 2000000,
+      "basic_cents": 24000000,
+      "gross_cents": 2000000,
+      "exempt_cents": 2000000,
+      "coverage_gaps": [
+        {
+          "ends_on": "2026-01-31",
+          "starts_on": "2026-01-01"
+        }
+      ],
+      "taxable_cents": 0,
+      "remaining_cents": 2000000,
+      "entitlement_cents": 2000000,
+      "overpayment_cents": 0,
+      "withholding_cents": 0,
+      "prior_company_cents": 0,
+      "sss_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-01-01",
+      "as_of": "2026-09-30",
+      "periods": [
+        {
+          "id": "00000000-0000-4000-8000-000000150001",
+          "starts_on": "2026-02-01",
+          "ends_on": "2026-09-30",
+          "basic_cents": 24000000
+        }
+      ],
+      "prior": [],
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [
+        {
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-01-31",
+          "basic_cents": 0,
+          "reference": "Reviewed zero interval"
+        }
+      ],
+      "classification": "rank_and_file",
+      "eligibility_note": "Actual coverage reviewed",
+      "served_one_month": true,
+      "basic_adjustment_cents": 0,
+      "adjustment_note": "",
+      "policy_topup_cents": 0,
+      "policy_note": "",
+      "external_thirteenth_cents": 0,
+      "other_benefits_cents": 0,
+      "opening_note": "",
+      "requested_gross_cents": null,
+      "withholding_cents": 0,
+      "tax_reviewed": true,
+      "tax_note": "Supplementary withholding reviewed",
+      "sss_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "contributions_reviewed": true,
+      "contribution_note": "Monthly contribution reconciliation reviewed",
+      "reviewed": true,
+      "review_note": "Sources reconciled"
+    },
+    "result": {
+      "net_cents": 2000000,
+      "basic_cents": 24000000,
+      "gross_cents": 2000000,
+      "exempt_cents": 2000000,
+      "coverage_gaps": [],
+      "taxable_cents": 0,
+      "remaining_cents": 2000000,
+      "entitlement_cents": 2000000,
+      "overpayment_cents": 0,
+      "withholding_cents": 0,
+      "prior_company_cents": 0,
+      "sss_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-01-01",
+      "as_of": "2026-09-30",
+      "periods": [
+        {
+          "id": "00000000-0000-4000-8000-000000150001",
+          "starts_on": "2026-02-01",
+          "ends_on": "2026-09-30",
+          "basic_cents": 24000000
+        }
+      ],
+      "prior": [
+        {
+          "id": "00000000-0000-4000-8000-000000150002",
+          "gross_cents": 1000000,
+          "exempt_cents": 1000000
+        }
+      ],
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [
+        {
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-01-31",
+          "basic_cents": 3000000,
+          "reference": "Reviewed January ledger"
+        }
+      ],
+      "classification": "rank_and_file",
+      "eligibility_note": "Actual coverage reviewed",
+      "served_one_month": true,
+      "basic_adjustment_cents": 0,
+      "adjustment_note": "",
+      "policy_topup_cents": 0,
+      "policy_note": "",
+      "external_thirteenth_cents": 0,
+      "other_benefits_cents": 0,
+      "opening_note": "",
+      "requested_gross_cents": null,
+      "withholding_cents": 0,
+      "tax_reviewed": true,
+      "tax_note": "Supplementary withholding reviewed",
+      "sss_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "contributions_reviewed": true,
+      "contribution_note": "Monthly contribution reconciliation reviewed",
+      "reviewed": true,
+      "review_note": "Sources reconciled"
+    },
+    "result": {
+      "net_cents": 1250000,
+      "basic_cents": 27000000,
+      "gross_cents": 1250000,
+      "exempt_cents": 1250000,
+      "coverage_gaps": [],
+      "taxable_cents": 0,
+      "remaining_cents": 1250000,
+      "entitlement_cents": 2250000,
+      "overpayment_cents": 0,
+      "withholding_cents": 0,
+      "prior_company_cents": 1000000,
+      "sss_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-01-01",
+      "as_of": "2026-09-30",
+      "periods": [
+        {
+          "id": "00000000-0000-4000-8000-000000150001",
+          "starts_on": "2026-02-01",
+          "ends_on": "2026-09-30",
+          "basic_cents": 24000000
+        }
+      ],
+      "prior": [
+        {
+          "id": "00000000-0000-4000-8000-000000150002",
+          "gross_cents": 1000000,
+          "exempt_cents": 1000000
+        }
+      ],
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [
+        {
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-01-31",
+          "basic_cents": 3000000,
+          "reference": "Reviewed January ledger"
+        }
+      ],
+      "classification": "rank_and_file",
+      "eligibility_note": "Actual coverage reviewed",
+      "served_one_month": true,
+      "basic_adjustment_cents": 0,
+      "adjustment_note": "",
+      "policy_topup_cents": 0,
+      "policy_note": "",
+      "external_thirteenth_cents": 0,
+      "other_benefits_cents": 7500000,
+      "opening_note": "Reviewed shared benefits",
+      "requested_gross_cents": null,
+      "withholding_cents": 0,
+      "tax_reviewed": true,
+      "tax_note": "Supplementary withholding reviewed",
+      "sss_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "contributions_reviewed": true,
+      "contribution_note": "Monthly contribution reconciliation reviewed",
+      "reviewed": true,
+      "review_note": "Sources reconciled"
+    },
+    "result": {
+      "net_cents": 1250000,
+      "basic_cents": 27000000,
+      "gross_cents": 1250000,
+      "exempt_cents": 500000,
+      "coverage_gaps": [],
+      "taxable_cents": 750000,
+      "remaining_cents": 1250000,
+      "entitlement_cents": 2250000,
+      "overpayment_cents": 0,
+      "withholding_cents": 0,
+      "prior_company_cents": 1000000,
+      "sss_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-01-01",
+      "as_of": "2026-09-30",
+      "periods": [
+        {
+          "id": "00000000-0000-4000-8000-000000150001",
+          "starts_on": "2026-02-01",
+          "ends_on": "2026-09-30",
+          "basic_cents": 24000000
+        }
+      ],
+      "prior": [
+        {
+          "id": "00000000-0000-4000-8000-000000150002",
+          "gross_cents": 3000000,
+          "exempt_cents": 3000000
+        }
+      ],
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [
+        {
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-01-31",
+          "basic_cents": 3000000,
+          "reference": "Reviewed January ledger"
+        }
+      ],
+      "classification": "rank_and_file",
+      "eligibility_note": "Actual coverage reviewed",
+      "served_one_month": true,
+      "basic_adjustment_cents": 0,
+      "adjustment_note": "",
+      "policy_topup_cents": 0,
+      "policy_note": "",
+      "external_thirteenth_cents": 0,
+      "other_benefits_cents": 0,
+      "opening_note": "",
+      "requested_gross_cents": null,
+      "withholding_cents": 0,
+      "tax_reviewed": true,
+      "tax_note": "Supplementary withholding reviewed",
+      "sss_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "contributions_reviewed": true,
+      "contribution_note": "Monthly contribution reconciliation reviewed",
+      "reviewed": true,
+      "review_note": "Sources reconciled"
+    },
+    "result": {
+      "net_cents": 0,
+      "basic_cents": 27000000,
+      "gross_cents": 0,
+      "exempt_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 0,
+      "remaining_cents": 0,
+      "entitlement_cents": 2250000,
+      "overpayment_cents": 750000,
+      "withholding_cents": 0,
+      "prior_company_cents": 3000000,
+      "sss_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-01-01",
+      "as_of": "2026-09-30",
+      "periods": [
+        {
+          "id": "00000000-0000-4000-8000-000000150001",
+          "starts_on": "2026-02-01",
+          "ends_on": "2026-09-30",
+          "basic_cents": 24000000
+        }
+      ],
+      "prior": [],
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [
+        {
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-01-31",
+          "basic_cents": 3000000,
+          "reference": "Reviewed January ledger"
+        }
+      ],
+      "classification": "rank_and_file",
+      "eligibility_note": "Actual coverage reviewed",
+      "served_one_month": true,
+      "basic_adjustment_cents": 0,
+      "adjustment_note": "",
+      "policy_topup_cents": 0,
+      "policy_note": "",
+      "external_thirteenth_cents": 0,
+      "other_benefits_cents": 0,
+      "opening_note": "",
+      "requested_gross_cents": null,
+      "withholding_cents": 0,
+      "tax_reviewed": true,
+      "tax_note": "Supplementary withholding reviewed",
+      "sss_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "contributions_reviewed": true,
+      "contribution_note": "Monthly contribution reconciliation reviewed",
+      "reviewed": true,
+      "review_note": "Sources reconciled"
+    },
+    "result": {
+      "net_cents": 2250000,
+      "basic_cents": 27000000,
+      "gross_cents": 2250000,
+      "exempt_cents": 2250000,
+      "coverage_gaps": [],
+      "taxable_cents": 0,
+      "remaining_cents": 2250000,
+      "entitlement_cents": 2250000,
+      "overpayment_cents": 0,
+      "withholding_cents": 0,
+      "prior_company_cents": 0,
+      "sss_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-01-01",
+      "as_of": "2026-09-30",
+      "periods": [
+        {
+          "id": "00000000-0000-4000-8000-000000150001",
+          "starts_on": "2026-02-01",
+          "ends_on": "2026-09-30",
+          "basic_cents": 24000000
+        }
+      ],
+      "prior": [],
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [
+        {
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-01-31",
+          "basic_cents": 3000001,
+          "reference": "Reviewed January ledger"
+        }
+      ],
+      "classification": "rank_and_file",
+      "eligibility_note": "Actual coverage reviewed",
+      "served_one_month": true,
+      "basic_adjustment_cents": 0,
+      "adjustment_note": "",
+      "policy_topup_cents": 0,
+      "policy_note": "",
+      "external_thirteenth_cents": 0,
+      "other_benefits_cents": 0,
+      "opening_note": "",
+      "requested_gross_cents": null,
+      "withholding_cents": 0,
+      "tax_reviewed": true,
+      "tax_note": "Supplementary withholding reviewed",
+      "sss_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "contributions_reviewed": true,
+      "contribution_note": "Monthly contribution reconciliation reviewed",
+      "reviewed": true,
+      "review_note": "Sources reconciled"
+    },
+    "result": {
+      "net_cents": 2250000,
+      "basic_cents": 27000001,
+      "gross_cents": 2250000,
+      "exempt_cents": 2250000,
+      "coverage_gaps": [],
+      "taxable_cents": 0,
+      "remaining_cents": 2250000,
+      "entitlement_cents": 2250000,
+      "overpayment_cents": 0,
+      "withholding_cents": 0,
+      "prior_company_cents": 0,
+      "sss_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-01-01",
+      "as_of": "2026-09-30",
+      "periods": [
+        {
+          "id": "00000000-0000-4000-8000-000000150001",
+          "starts_on": "2026-02-01",
+          "ends_on": "2026-09-30",
+          "basic_cents": 24000000
+        }
+      ],
+      "prior": [],
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [
+        {
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-01-31",
+          "basic_cents": 3000005,
+          "reference": "Reviewed January ledger"
+        }
+      ],
+      "classification": "rank_and_file",
+      "eligibility_note": "Actual coverage reviewed",
+      "served_one_month": true,
+      "basic_adjustment_cents": 0,
+      "adjustment_note": "",
+      "policy_topup_cents": 0,
+      "policy_note": "",
+      "external_thirteenth_cents": 0,
+      "other_benefits_cents": 0,
+      "opening_note": "",
+      "requested_gross_cents": null,
+      "withholding_cents": 0,
+      "tax_reviewed": true,
+      "tax_note": "Supplementary withholding reviewed",
+      "sss_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "contributions_reviewed": true,
+      "contribution_note": "Monthly contribution reconciliation reviewed",
+      "reviewed": true,
+      "review_note": "Sources reconciled"
+    },
+    "result": {
+      "net_cents": 2250000,
+      "basic_cents": 27000005,
+      "gross_cents": 2250000,
+      "exempt_cents": 2250000,
+      "coverage_gaps": [],
+      "taxable_cents": 0,
+      "remaining_cents": 2250000,
+      "entitlement_cents": 2250000,
+      "overpayment_cents": 0,
+      "withholding_cents": 0,
+      "prior_company_cents": 0,
+      "sss_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-01-01",
+      "as_of": "2026-09-30",
+      "periods": [
+        {
+          "id": "00000000-0000-4000-8000-000000150001",
+          "starts_on": "2026-02-01",
+          "ends_on": "2026-09-30",
+          "basic_cents": 24000000
+        }
+      ],
+      "prior": [],
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [
+        {
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-01-31",
+          "basic_cents": 3000006,
+          "reference": "Reviewed January ledger"
+        }
+      ],
+      "classification": "rank_and_file",
+      "eligibility_note": "Actual coverage reviewed",
+      "served_one_month": true,
+      "basic_adjustment_cents": 0,
+      "adjustment_note": "",
+      "policy_topup_cents": 0,
+      "policy_note": "",
+      "external_thirteenth_cents": 0,
+      "other_benefits_cents": 0,
+      "opening_note": "",
+      "requested_gross_cents": null,
+      "withholding_cents": 0,
+      "tax_reviewed": true,
+      "tax_note": "Supplementary withholding reviewed",
+      "sss_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "contributions_reviewed": true,
+      "contribution_note": "Monthly contribution reconciliation reviewed",
+      "reviewed": true,
+      "review_note": "Sources reconciled"
+    },
+    "result": {
+      "net_cents": 2250001,
+      "basic_cents": 27000006,
+      "gross_cents": 2250001,
+      "exempt_cents": 2250001,
+      "coverage_gaps": [],
+      "taxable_cents": 0,
+      "remaining_cents": 2250001,
+      "entitlement_cents": 2250001,
+      "overpayment_cents": 0,
+      "withholding_cents": 0,
+      "prior_company_cents": 0,
+      "sss_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-01-01",
+      "as_of": "2026-09-30",
+      "periods": [
+        {
+          "id": "00000000-0000-4000-8000-000000150001",
+          "starts_on": "2026-02-01",
+          "ends_on": "2026-09-30",
+          "basic_cents": 24000000
+        }
+      ],
+      "prior": [],
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [
+        {
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-01-31",
+          "basic_cents": 3000011,
+          "reference": "Reviewed January ledger"
+        }
+      ],
+      "classification": "rank_and_file",
+      "eligibility_note": "Actual coverage reviewed",
+      "served_one_month": true,
+      "basic_adjustment_cents": 0,
+      "adjustment_note": "",
+      "policy_topup_cents": 0,
+      "policy_note": "",
+      "external_thirteenth_cents": 0,
+      "other_benefits_cents": 0,
+      "opening_note": "",
+      "requested_gross_cents": null,
+      "withholding_cents": 0,
+      "tax_reviewed": true,
+      "tax_note": "Supplementary withholding reviewed",
+      "sss_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "contributions_reviewed": true,
+      "contribution_note": "Monthly contribution reconciliation reviewed",
+      "reviewed": true,
+      "review_note": "Sources reconciled"
+    },
+    "result": {
+      "net_cents": 2250001,
+      "basic_cents": 27000011,
+      "gross_cents": 2250001,
+      "exempt_cents": 2250001,
+      "coverage_gaps": [],
+      "taxable_cents": 0,
+      "remaining_cents": 2250001,
+      "entitlement_cents": 2250001,
+      "overpayment_cents": 0,
+      "withholding_cents": 0,
+      "prior_company_cents": 0,
+      "sss_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-01-01",
+      "as_of": "2026-09-30",
+      "periods": [
+        {
+          "id": "00000000-0000-4000-8000-000000150001",
+          "starts_on": "2026-02-01",
+          "ends_on": "2026-09-30",
+          "basic_cents": 24000000
+        }
+      ],
+      "prior": [],
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [
+        {
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-01-31",
+          "basic_cents": 3000012,
+          "reference": "Reviewed January ledger"
+        }
+      ],
+      "classification": "rank_and_file",
+      "eligibility_note": "Actual coverage reviewed",
+      "served_one_month": true,
+      "basic_adjustment_cents": 0,
+      "adjustment_note": "",
+      "policy_topup_cents": 0,
+      "policy_note": "",
+      "external_thirteenth_cents": 0,
+      "other_benefits_cents": 0,
+      "opening_note": "",
+      "requested_gross_cents": null,
+      "withholding_cents": 0,
+      "tax_reviewed": true,
+      "tax_note": "Supplementary withholding reviewed",
+      "sss_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "contributions_reviewed": true,
+      "contribution_note": "Monthly contribution reconciliation reviewed",
+      "reviewed": true,
+      "review_note": "Sources reconciled"
+    },
+    "result": {
+      "net_cents": 2250001,
+      "basic_cents": 27000012,
+      "gross_cents": 2250001,
+      "exempt_cents": 2250001,
+      "coverage_gaps": [],
+      "taxable_cents": 0,
+      "remaining_cents": 2250001,
+      "entitlement_cents": 2250001,
+      "overpayment_cents": 0,
+      "withholding_cents": 0,
+      "prior_company_cents": 0,
+      "sss_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-01-01",
+      "as_of": "2026-09-30",
+      "periods": [
+        {
+          "id": "00000000-0000-4000-8000-000000150001",
+          "starts_on": "2026-02-01",
+          "ends_on": "2026-09-30",
+          "basic_cents": 24000000
+        }
+      ],
+      "prior": [],
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [
+        {
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-01-31",
+          "basic_cents": 3000000,
+          "reference": "Reviewed January ledger"
+        }
+      ],
+      "classification": "rank_and_file",
+      "eligibility_note": "Actual coverage reviewed",
+      "served_one_month": true,
+      "basic_adjustment_cents": 0,
+      "adjustment_note": "",
+      "policy_topup_cents": 0,
+      "policy_note": "",
+      "external_thirteenth_cents": 0,
+      "other_benefits_cents": 8999999,
+      "opening_note": "Boundary reviewed",
+      "requested_gross_cents": null,
+      "withholding_cents": 0,
+      "tax_reviewed": true,
+      "tax_note": "Supplementary withholding reviewed",
+      "sss_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "contributions_reviewed": true,
+      "contribution_note": "Monthly contribution reconciliation reviewed",
+      "reviewed": true,
+      "review_note": "Sources reconciled"
+    },
+    "result": {
+      "net_cents": 2250000,
+      "basic_cents": 27000000,
+      "gross_cents": 2250000,
+      "exempt_cents": 1,
+      "coverage_gaps": [],
+      "taxable_cents": 2249999,
+      "remaining_cents": 2250000,
+      "entitlement_cents": 2250000,
+      "overpayment_cents": 0,
+      "withholding_cents": 0,
+      "prior_company_cents": 0,
+      "sss_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-01-01",
+      "as_of": "2026-09-30",
+      "periods": [
+        {
+          "id": "00000000-0000-4000-8000-000000150001",
+          "starts_on": "2026-02-01",
+          "ends_on": "2026-09-30",
+          "basic_cents": 24000000
+        }
+      ],
+      "prior": [],
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [
+        {
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-01-31",
+          "basic_cents": 3000000,
+          "reference": "Reviewed January ledger"
+        }
+      ],
+      "classification": "rank_and_file",
+      "eligibility_note": "Actual coverage reviewed",
+      "served_one_month": true,
+      "basic_adjustment_cents": 0,
+      "adjustment_note": "",
+      "policy_topup_cents": 0,
+      "policy_note": "",
+      "external_thirteenth_cents": 0,
+      "other_benefits_cents": 9000000,
+      "opening_note": "Boundary reviewed",
+      "requested_gross_cents": null,
+      "withholding_cents": 0,
+      "tax_reviewed": true,
+      "tax_note": "Supplementary withholding reviewed",
+      "sss_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "contributions_reviewed": true,
+      "contribution_note": "Monthly contribution reconciliation reviewed",
+      "reviewed": true,
+      "review_note": "Sources reconciled"
+    },
+    "result": {
+      "net_cents": 2250000,
+      "basic_cents": 27000000,
+      "gross_cents": 2250000,
+      "exempt_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 2250000,
+      "remaining_cents": 2250000,
+      "entitlement_cents": 2250000,
+      "overpayment_cents": 0,
+      "withholding_cents": 0,
+      "prior_company_cents": 0,
+      "sss_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-01-01",
+      "as_of": "2026-09-30",
+      "periods": [
+        {
+          "id": "00000000-0000-4000-8000-000000150001",
+          "starts_on": "2026-02-01",
+          "ends_on": "2026-09-30",
+          "basic_cents": 24000000
+        }
+      ],
+      "prior": [],
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [
+        {
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-01-31",
+          "basic_cents": 3000000,
+          "reference": "Reviewed January ledger"
+        }
+      ],
+      "classification": "rank_and_file",
+      "eligibility_note": "Actual coverage reviewed",
+      "served_one_month": true,
+      "basic_adjustment_cents": 0,
+      "adjustment_note": "",
+      "policy_topup_cents": 0,
+      "policy_note": "",
+      "external_thirteenth_cents": 0,
+      "other_benefits_cents": 9000001,
+      "opening_note": "Boundary reviewed",
+      "requested_gross_cents": null,
+      "withholding_cents": 0,
+      "tax_reviewed": true,
+      "tax_note": "Supplementary withholding reviewed",
+      "sss_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "contributions_reviewed": true,
+      "contribution_note": "Monthly contribution reconciliation reviewed",
+      "reviewed": true,
+      "review_note": "Sources reconciled"
+    },
+    "result": {
+      "net_cents": 2250000,
+      "basic_cents": 27000000,
+      "gross_cents": 2250000,
+      "exempt_cents": 0,
+      "coverage_gaps": [],
+      "taxable_cents": 2250000,
+      "remaining_cents": 2250000,
+      "entitlement_cents": 2250000,
+      "overpayment_cents": 0,
+      "withholding_cents": 0,
+      "prior_company_cents": 0,
+      "sss_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-01-01",
+      "as_of": "2026-09-30",
+      "periods": [
+        {
+          "id": "00000000-0000-4000-8000-000000150001",
+          "starts_on": "2026-02-01",
+          "ends_on": "2026-09-30",
+          "basic_cents": 24000000
+        }
+      ],
+      "prior": [],
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [
+        {
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-01-31",
+          "basic_cents": 3000000,
+          "reference": "Reviewed January ledger"
+        }
+      ],
+      "classification": "rank_and_file",
+      "eligibility_note": "Actual coverage reviewed",
+      "served_one_month": true,
+      "basic_adjustment_cents": 0,
+      "adjustment_note": "",
+      "policy_topup_cents": 0,
+      "policy_note": "",
+      "external_thirteenth_cents": 0,
+      "other_benefits_cents": 0,
+      "opening_note": "",
+      "requested_gross_cents": 100000,
+      "withholding_cents": 10000,
+      "tax_reviewed": true,
+      "tax_note": "Supplementary withholding reviewed",
+      "sss_adjustment_cents": 1000,
+      "philhealth_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "contributions_reviewed": true,
+      "contribution_note": "Monthly contribution reconciliation reviewed",
+      "reviewed": true,
+      "review_note": "Sources reconciled"
+    },
+    "result": {
+      "net_cents": 89000,
+      "basic_cents": 27000000,
+      "gross_cents": 100000,
+      "exempt_cents": 100000,
+      "coverage_gaps": [],
+      "taxable_cents": 0,
+      "remaining_cents": 2250000,
+      "entitlement_cents": 2250000,
+      "overpayment_cents": 0,
+      "withholding_cents": 10000,
+      "prior_company_cents": 0,
+      "sss_adjustment_cents": 1000,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-01-01",
+      "as_of": "2026-09-30",
+      "periods": [
+        {
+          "id": "00000000-0000-4000-8000-000000150001",
+          "starts_on": "2026-02-01",
+          "ends_on": "2026-09-30",
+          "basic_cents": 24000000
+        }
+      ],
+      "prior": [],
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [
+        {
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-01-31",
+          "basic_cents": 3000000,
+          "reference": "Reviewed January ledger"
+        }
+      ],
+      "classification": "rank_and_file",
+      "eligibility_note": "Actual coverage reviewed",
+      "served_one_month": true,
+      "basic_adjustment_cents": 0,
+      "adjustment_note": "",
+      "policy_topup_cents": 10000,
+      "policy_note": "More favorable company policy",
+      "external_thirteenth_cents": 0,
+      "other_benefits_cents": 0,
+      "opening_note": "",
+      "requested_gross_cents": null,
+      "withholding_cents": 0,
+      "tax_reviewed": true,
+      "tax_note": "Supplementary withholding reviewed",
+      "sss_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "contributions_reviewed": true,
+      "contribution_note": "Monthly contribution reconciliation reviewed",
+      "reviewed": true,
+      "review_note": "Sources reconciled"
+    },
+    "result": {
+      "net_cents": 2260000,
+      "basic_cents": 27000000,
+      "gross_cents": 2260000,
+      "exempt_cents": 2260000,
+      "coverage_gaps": [],
+      "taxable_cents": 0,
+      "remaining_cents": 2260000,
+      "entitlement_cents": 2260000,
+      "overpayment_cents": 0,
+      "withholding_cents": 0,
+      "prior_company_cents": 0,
+      "sss_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    }
+  },
+  {
+    "source": {
+      "starts_on": "2026-01-01",
+      "as_of": "2026-09-30",
+      "periods": [
+        {
+          "id": "00000000-0000-4000-8000-000000150001",
+          "starts_on": "2026-02-01",
+          "ends_on": "2026-09-30",
+          "basic_cents": 24000000
+        }
+      ],
+      "prior": [],
+      "external_thirteenth_floor": 0,
+      "other_benefits_floor": 0
+    },
+    "worksheet": {
+      "openings": [
+        {
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-01-31",
+          "basic_cents": 3000000,
+          "reference": "Reviewed January ledger"
+        }
+      ],
+      "classification": "rank_and_file",
+      "eligibility_note": "Actual coverage reviewed",
+      "served_one_month": true,
+      "basic_adjustment_cents": -3000000,
+      "adjustment_note": "Documented basic correction",
+      "policy_topup_cents": 0,
+      "policy_note": "",
+      "external_thirteenth_cents": 0,
+      "other_benefits_cents": 0,
+      "opening_note": "",
+      "requested_gross_cents": null,
+      "withholding_cents": 0,
+      "tax_reviewed": true,
+      "tax_note": "Supplementary withholding reviewed",
+      "sss_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "contributions_reviewed": true,
+      "contribution_note": "Monthly contribution reconciliation reviewed",
+      "reviewed": true,
+      "review_note": "Sources reconciled"
+    },
+    "result": {
+      "net_cents": 2000000,
+      "basic_cents": 24000000,
+      "gross_cents": 2000000,
+      "exempt_cents": 2000000,
+      "coverage_gaps": [],
+      "taxable_cents": 0,
+      "remaining_cents": 2000000,
+      "entitlement_cents": 2000000,
+      "overpayment_cents": 0,
+      "withholding_cents": 0,
+      "prior_company_cents": 0,
+      "sss_adjustment_cents": 0,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    }
+  }
+]

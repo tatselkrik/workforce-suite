@@ -37,5 +37,6 @@ pub mod career;
 
 pub mod payroll;
 pub mod payroll_cutoffs;
+pub mod payroll_thirteenth;
 
 pub mod payroll_pdf;

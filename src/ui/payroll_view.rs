@@ -7,6 +7,7 @@ use serde_json::Value;
 use serde_json::json;
 #[derive(Default)]
 pub(super) struct State {
+    pub(super) thirteenth: super::thirteenth_view::State,
     pub(super) cutoffs: super::cutoff_view::State,
     tab: usize,
     selected: Option<Uuid>,
@@ -196,7 +197,7 @@ struct Decision {
 }
 impl State {
     pub fn editing(&self) -> bool {
-        self.profile.is_some()
+        self.thirteenth.editing() || self.profile.is_some()
             || self.cutoffs.editing()
             || self.holiday.is_some()
             || self.run.is_some()
@@ -210,6 +211,7 @@ impl State {
         if !a.saved(data) {
             return false;
         }
+        if a.operation.starts_with("thirteenth_") {self.thirteenth.accept(&a,data);return true;}
         if a.operation == "item_refresh" || a.operation == "cutoff_item_refresh" {
             if let (Some(f), Some(item)) = (
                 self.item.as_mut(),
@@ -293,7 +295,7 @@ pub(super) fn note(ui: &mut Ui, label: &str, s: &mut String) {
             .desired_width(f32::INFINITY),
     );
 }
-fn choice(
+pub(super) fn choice(
     ui: &mut Ui,
     id: impl std::hash::Hash + std::fmt::Debug,
     label: &str,
@@ -406,6 +408,7 @@ impl HrisApp {
         self.send(Command::Change(Action::Payroll(a)));
     }
     pub(super) fn payroll(&mut self, ui: &mut Ui) {
+        if self.payroll_state.thirteenth.editing() {self.payroll_thirteenth_forms(ui);return;}
         if self.payroll_state.cutoffs.editing() {
             self.payroll_cutoff_forms(ui);
             return;
@@ -418,7 +421,7 @@ impl HrisApp {
             return;
         }
         let hr = self.data.access.role.manages_hr();
-        if !hr && ![3, 6].contains(&self.payroll_state.tab) {
+        if !hr && ![3, 6, 7].contains(&self.payroll_state.tab) {
             self.payroll_state.tab = 3;
         }
         ui.horizontal_wrapped(|ui| {
@@ -430,11 +433,12 @@ impl HrisApp {
                 "Reports",
                 "Statutory rules",
                 "Cutoffs",
+                "13th-month pay",
             ]
             .iter()
             .enumerate()
             {
-                if (hr || i == 3 || i == 6)
+                if (hr || i == 3 || i == 6 || i == 7)
                     && ui
                         .selectable_label(
                             self.payroll_state.tab == i,
@@ -456,6 +460,7 @@ impl HrisApp {
             3 => self.payroll_slips(ui),
             4 => self.payroll_reports(ui),
             6 => self.payroll_cutoffs(ui),
+            7 => self.payroll_thirteenth(ui),
             _ => {
                 card(ui, |ui| {
                     ui.heading("Philippine private-sector payroll");
@@ -1342,6 +1347,7 @@ impl HrisApp {
             return;
         }
         self.page = Page::Payroll;
+        if form.starts_with("payroll-thirteenth") {self.payroll_state.tab=7;self.prepare_thirteenth_preview(&form);return;}
         if form.starts_with("payroll-cutoff") {
             self.payroll_state.tab = 6;
             self.prepare_cutoff_preview(&form);

@@ -1,4 +1,5 @@
 use super::*;
+use chrono::Datelike;
 impl CloudClient {
     pub(super) fn payroll_snapshot(&mut self, a: &Access) -> Result<crate::payroll::Setup> {
         let company = Some(a.company_id);
@@ -7,6 +8,7 @@ impl CloudClient {
             ..Default::default()
         };
         setup.cutoffs.slips = self.rows("payroll_cutoff_slips", company)?;
+        setup.thirteenth.slips = self.rows("payroll_thirteenth_slips", company)?;
         if a.role.manages_hr() {
             setup.profiles = self.rows("payroll_profiles", company)?;
             setup.holidays = self.rows("payroll_holidays", company)?;
@@ -15,6 +17,8 @@ impl CloudClient {
             setup.events = self.rows("payroll_events", company)?;
             setup.cutoffs.runs = self.rows("payroll_cutoff_runs", company)?;
             setup.cutoffs.items = self.rows("payroll_cutoff_items", company)?;
+            setup.thirteenth.runs = self.rows("payroll_thirteenth_runs", company)?;
+            setup.thirteenth.items = self.rows("payroll_thirteenth_items", company)?;
         }
         // Approved slips deliberately omit the private attendance/leave source bundle.
         for s in &setup.slips {
@@ -45,6 +49,18 @@ impl CloudClient {
                     && s.calculation.part == s.part
                     && s.calculation.totals == p.item.totals,
                 "Cutoff payslip facts do not reconcile."
+            );
+        }
+        for s in &setup.thirteenth.slips {
+            ensure!(
+                s.company_id == a.company_id
+                    && s.item.company_id == s.company_id
+                    && s.item.id == s.id
+                    && s.item.employee_id == s.employee_id
+                    && s.item.run_id == s.run_id
+                    && (a.role.manages_hr() || Some(s.employee_id) == a.employee_id)
+                    && s.year == s.as_of.year(),
+                "Annual benefit slip is outside your current access."
             );
         }
         Ok(setup)

@@ -61,3 +61,5 @@ summaries support reconciliation. They are not filed government returns, officia
 adjustments, prior-employer balances, fringe-benefit tax, unusual coverage,
 13th-month payouts and regional minimum-wage compliance need separate review;
 the module shows a basic-pay/12 accrual memo rather than silently paying it.
+
+Actual13th-month payouts are described in [13th-month pay](PAYROLL-THIRTEENTH.md). Their entitlement/shared-cap engine is separate from monthly accrual memos. Supplementary withholding and contribution adjustments currently require explicit review; automatic annual tax/prior-employer reconciliation follows separately.

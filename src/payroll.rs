@@ -544,6 +544,7 @@ pub struct Event {
 }
 #[derive(Clone, Debug, Default)]
 pub struct Setup {
+    pub thirteenth: crate::payroll_thirteenth::Setup,
     pub cutoffs: crate::payroll_cutoffs::Setup,
     pub profiles: Vec<Profile>,
     pub holidays: Vec<Holiday>,
@@ -573,6 +574,7 @@ impl PayrollAction {
         }
     }
     pub fn payload(&self, data: &Snapshot) -> Result<Value> {
+        if self.operation.starts_with("thirteenth_") { return crate::payroll_thirteenth::payload(self,data); }
         if self.operation.starts_with("cutoff_") {
             return crate::payroll_cutoffs::payload(self, data);
         }
@@ -819,6 +821,7 @@ pub fn apply_demo(data: &mut Snapshot, a: &PayrollAction) -> Result<()> {
     Ok(())
 }
 fn demo_change(data: &mut Snapshot, a: &PayrollAction) -> Result<()> {
+    if a.operation.starts_with("thirteenth_") { return crate::payroll_thirteenth::apply_demo(data,a); }
     if a.operation.starts_with("cutoff_") {
         return crate::payroll_cutoffs::apply_demo(data, a);
     }

@@ -48,9 +48,11 @@ Implemented in version0.1.34: separate1st–15th/16th–month-end runs, planned 
 worksheets, independent approval, immutable period payslips, recorded payments,
 CSV/PDF and monthly contribution/exemption reconciliation are implemented in the
 current source. See [payroll cutoffs](PAYROLL-CUTOFFS.md) and versioned release
-evidence for hosted deployment and installation. Next payroll work is actual
-13th-month payouts, followed by year-end adjustments/prior-employer balances and
-final pay. Expanded reporting/data exchange follows. Portal work is paused.
+evidence for hosted deployment and installation. Actual13th-month payouts are implemented in the0.1.35 source with reviewed
+opening coverage, installments, shared benefit exclusion and independent approval;
+see [13th-month pay](PAYROLL-THIRTEENTH.md). Withholding/contribution adjustments
+remain explicit reviewed inputs. Next is automatic year-end tax reconciliation
+and prior-employer balances, then final pay. Expanded reporting/data exchange follows. Portal work is paused.
 
 ## Deferred — Separate employee portal (paused)
 
