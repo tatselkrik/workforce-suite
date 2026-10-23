@@ -1,5 +1,26 @@
 # Prototype verification — 2026-10-23
 
+## Training and certifications - local candidate 0.1.30
+
+This candidate is not deployed or published. Migration `20261023003106` remains
+local. The private update feed currently offers 0.1.29.
+
+- 295 Rust tests passed, followed by96targeted library/learning/HTTP tests after
+  QA-only and confirmation-label refinements. One real installer test remains
+  intentionally ignored until a new installer is prepared.
+- 1556 local PostgreSQL assertions passed, including103new learning checks for
+  current-report/own-progress scopes, HR-only completion, certification archive/
+  validity retention, canonical private file links, strict revisions, actor-bound
+  retries, immutable audit, disabled JWT simulation and atomic audit rollback.
+  This harness simulates Auth/Storage metadata; it does not perform S3 uploads.
+- 16 distinct fictional native views inspected, including normal/dark125%, forms,
+  completion, private evidence, history, Manager scope and existing appraisal
+  tabs. Certificate archive/revoke confirmations were recaptured after adding
+  employee/title labels. This does not automate signed-in native buttons.
+- Source privacy scan passed. A real-Auth probe/harness is prepared separately;
+  hosted execution, normal release binary/startup checks, packaging, exact
+  installer, private publication and installation are still pending.
+
 ## Goals and appraisals - version 0.1.29
 
 - 283 Rust tests and 1453 local PostgreSQL assertions passed. Coverage includes

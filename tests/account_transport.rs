@@ -1079,6 +1079,10 @@ fn baseline(company: &Company) -> Vec<Reply> {
         reply("GET /rest/v1/performance_reviews?", 200, json!([])),
         reply("GET /rest/v1/performance_hr_notes?", 200, json!([])),
         reply("GET /rest/v1/performance_events?", 200, json!([])),
+        reply("GET /rest/v1/employee_training?", 200, json!([])),
+        reply("GET /rest/v1/employee_certifications?", 200, json!([])),
+        reply("GET /rest/v1/certification_evidence?", 200, json!([])),
+        reply("GET /rest/v1/learning_events?", 200, json!([])),
         reply("GET /rest/v1/notification_read_state?", 200, json!([])),
         reply("GET /auth/v1/user ", 200, user(company)),
         reply(
@@ -2073,6 +2077,7 @@ fn manager_desktop_sign_in_does_not_request_administrator_account_data() {
             && !r.prefix.contains("/onboarding_cases?")
             && !r.prefix.contains("/exit_cases?")
             && !r.prefix.contains("/performance_hr_notes?")
+            && !r.prefix.contains("/certification_evidence?")
             && !r.prefix.contains("/rpc/exit_readiness_list ")
             && !r.prefix.contains("/applicant_document")
             && !r.prefix.contains("/rpc/recruiting_interviewers ")
@@ -2976,5 +2981,92 @@ fn a_performance_save_response_for_another_company_is_rejected_before_refresh() 
             .unwrap()
             .line
             .starts_with("POST /rest/v1/rpc/manage_performance ")
+    );
+}
+
+#[test]
+fn learning_training_retries_original_id_after_saved_write_and_failed_refresh() {
+    use hris_desktop::{domain::Action, learning::*};
+    let mut demo = DemoStore::new();
+    let mut d = TrainingDraft::new(demo.data.access.employee_id);
+    d.title = "Synthetic transport goal".into();
+    d.reason = "Synthetic assigned goal".into();
+    let action = LearningAction::TrainingSave(d);
+    let before = demo.data.clone();
+    demo.execute(Action::Learning(action.clone())).unwrap();
+    let saved = demo.data.learning.training[0].clone();
+    let prepare = |data: &hris_desktop::domain::Snapshot| {
+        let mut r = baseline(&data.company);
+        for response in &mut r {
+            let v = match response.prefix.as_str() {
+                "POST /rest/v1/rpc/my_hris_access " => Some(
+                    json!({"company_id":data.company.id,"user_id":data.access.user_id,"employee_id":data.access.employee_id,"role":data.access.role,"direct_reports":data.access.direct_reports}),
+                ),
+                p if p.starts_with("GET /rest/v1/employees?") => Some(json!(data.employees)),
+                p if p.starts_with("GET /rest/v1/employee_training?") => {
+                    Some(json!(data.learning.training))
+                }
+                p if p.starts_with("GET /rest/v1/learning_events?") => {
+                    Some(json!(data.learning.events))
+                }
+                _ => None,
+            };
+            if let Some(v) = v {
+                response.body = serde_json::to_vec(&v).unwrap();
+            }
+        }
+        r
+    };
+    let mut replies = prepare(&before);
+    replies.push(reply(
+        "POST /rest/v1/rpc/manage_learning ",
+        200,
+        json!(saved),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/my_hris_access ",
+        500,
+        json!({"message":"Synthetic refresh failure"}),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/manage_learning ",
+        200,
+        json!(saved),
+    ));
+    replies.extend(
+        prepare(&demo.data)
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
+    let (config, server, requests) = fixture(replies);
+    let (mut client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert!(
+        client
+            .execute(Action::Learning(action.clone()), &data)
+            .unwrap_err()
+            .to_string()
+            .contains("refresh failed")
+    );
+    let result = client
+        .execute(Action::Learning(action.clone()), &data)
+        .unwrap();
+    assert!(action.saved(&result));
+    server.join().unwrap();
+    let req = requests.lock().unwrap();
+    let writes: Vec<_> = req
+        .iter()
+        .filter(|r| r.line.starts_with("POST /rest/v1/rpc/manage_learning "))
+        .collect();
+    assert_eq!(writes.len(), 2);
+    assert_eq!(writes[0].json(), writes[1].json());
+    assert!(
+        !req.iter()
+            .any(|r| r.line.starts_with("PATCH /rest/v1/employee_training"))
     );
 }

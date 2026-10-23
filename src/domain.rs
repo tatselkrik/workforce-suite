@@ -322,6 +322,7 @@ pub enum Mode {
 
 #[derive(Clone, Debug)]
 pub struct Snapshot {
+    pub learning: crate::learning::Setup,
     pub performance: crate::performance::Setup,
     pub exits: crate::exits::Setup,
     pub onboarding: crate::onboarding::Setup,
@@ -360,6 +361,7 @@ impl Snapshot {
             recruiting: Default::default(),
             onboarding: Default::default(),
             exits: Default::default(),
+            learning: Default::default(),
             performance: Default::default(),
             hiring: Default::default(),
             notification_reads: Default::default(),
@@ -442,6 +444,7 @@ impl Snapshot {
 
 #[derive(Clone, Debug)]
 pub enum Action {
+    Learning(crate::learning::LearningAction),
     Performance(crate::performance::PerformanceAction),
     Exit(crate::exits::ExitAction),
     Onboarding(crate::onboarding::HiringAction),
@@ -606,6 +609,7 @@ impl DemoStore {
                 recruiting: Default::default(),
                 onboarding: Default::default(),
             exits: Default::default(),
+            learning: Default::default(),
             performance: Default::default(),
                 hiring: Default::default(),
                 notification_reads: crate::notifications::ReadState {
@@ -730,6 +734,7 @@ impl DemoStore {
     fn apply(&mut self, action: Action) -> Result<()> {
         self.data.access.authorize(&action, &self.data)?;
         match action {
+            Action::Learning(action) => {crate::learning::apply_demo(&mut self.data,&action,chrono::Utc::now())?;}
             Action::Performance(action) => {crate::performance::apply_demo(&mut self.data,&action,chrono::Utc::now())?;}
             Action::Exit(action) => { crate::exits::apply_demo(&mut self.data, &action, chrono::Utc::now())?; }
             Action::Onboarding(action) => {

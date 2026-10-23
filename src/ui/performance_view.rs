@@ -9,6 +9,8 @@ enum Tab {
     Goals,
     Appraisals,
     Cycles,
+    Training,
+    Certifications,
 }
 #[derive(Default)]
 pub(super) struct State {
@@ -66,7 +68,7 @@ fn area(ui: &mut Ui, label: &str, value: &mut String, rows: usize) {
             .desired_width(f32::INFINITY),
     );
 }
-fn employee_choice(
+pub(super) fn employee_choice(
     ui: &mut Ui,
     id: &str,
     data: &Snapshot,
@@ -127,7 +129,10 @@ impl HrisApp {
         self.performance_state.pending = Some(a.clone());
         self.send(Command::Change(Action::Performance(a)));
     }
+    #[cfg(feature="qa-screenshot")]
+    pub(super) fn select_learning_tab(&mut self,certificates:bool){self.performance_state.tab=if certificates{Tab::Certifications}else{Tab::Training};}
     pub(super) fn performance(&mut self, ui: &mut Ui) {
+        if self.learning_state.editing(){self.learning(ui,self.learning_state.certificates);return;}
         if self.performance_decision(ui) {
             return;
         }
@@ -163,6 +168,8 @@ impl HrisApp {
                 Tab::Appraisals,
                 "Appraisals",
             );
+            ui.selectable_value(&mut self.performance_state.tab, Tab::Training, "Training");
+            ui.selectable_value(&mut self.performance_state.tab, Tab::Certifications, "Certifications");
             if hr {
                 ui.selectable_value(
                     &mut self.performance_state.tab,
@@ -182,6 +189,8 @@ impl HrisApp {
             Tab::Goals => self.performance_goals(ui),
             Tab::Appraisals => self.performance_reviews(ui),
             Tab::Cycles => self.performance_cycles(ui),
+            Tab::Training => self.learning(ui,false),
+            Tab::Certifications => self.learning(ui,true),
         }
     }
     fn performance_decision(&mut self, ui: &mut Ui) -> bool {

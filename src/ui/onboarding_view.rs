@@ -845,6 +845,10 @@ pub(super) fn record_change_fields(
                         "review_id",
                         "note_id",
                         "goal_id",
+                        "training_id",
+                        "certificate_id",
+                        "evidence_id",
+                        "document_id",
                     ]
                     .contains(&k.as_str())
                 }) {

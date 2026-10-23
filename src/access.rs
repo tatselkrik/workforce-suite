@@ -107,6 +107,7 @@ impl Access {
     }
     pub fn authorize(&self, action: &Action, data: &Snapshot) -> Result<()> {
         let allowed = match action {
+            Action::Learning(action) => action.payload(data).is_ok(),
             Action::Performance(action) => action.payload(data).is_ok(),
             Action::Exit(action) => action.payload(data).is_ok(),
             Action::Onboarding(action) => action.payload(data).is_ok(),

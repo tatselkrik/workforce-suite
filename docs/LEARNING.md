@@ -1,7 +1,8 @@
 # Training and certifications - under development
 
-Local candidate migration `20261023003106` is not deployed. Rust transport,
-desktop screens, hosted verification and a release remain to be implemented.
+Local candidate migration `20261023003106` is not deployed. Rust transport and
+desktop screens are implemented locally; native QA, hosted verification and a
+release remain in progress. The current private update is 0.1.29; this learning candidate is not shipped.
 
 The intended location is Employees > Development, alongside Goals/Appraisals.
 HR/Admin define training, dates/provider, required flag and completion/outcome
