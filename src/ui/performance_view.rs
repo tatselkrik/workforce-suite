@@ -11,6 +11,7 @@ enum Tab {
     Cycles,
     Training,
     Certifications,
+    Career,
 }
 #[derive(Default)]
 pub(super) struct State {
@@ -131,7 +132,10 @@ impl HrisApp {
     }
     #[cfg(feature="qa-screenshot")]
     pub(super) fn select_learning_tab(&mut self,certificates:bool){self.performance_state.tab=if certificates{Tab::Certifications}else{Tab::Training};}
+    #[cfg(feature="qa-screenshot")]
+    pub(super) fn select_career_tab(&mut self){self.performance_state.tab=Tab::Career;}
     pub(super) fn performance(&mut self, ui: &mut Ui) {
+        if self.career_state.editing(){self.career(ui);return;}
         if self.learning_state.editing(){self.learning(ui,self.learning_state.certificates);return;}
         if self.performance_decision(ui) {
             return;
@@ -170,6 +174,7 @@ impl HrisApp {
             );
             ui.selectable_value(&mut self.performance_state.tab, Tab::Training, "Training");
             ui.selectable_value(&mut self.performance_state.tab, Tab::Certifications, "Certifications");
+            ui.selectable_value(&mut self.performance_state.tab,Tab::Career,"Career plans");
             if hr {
                 ui.selectable_value(
                     &mut self.performance_state.tab,
@@ -191,6 +196,7 @@ impl HrisApp {
             Tab::Cycles => self.performance_cycles(ui),
             Tab::Training => self.learning(ui,false),
             Tab::Certifications => self.learning(ui,true),
+            Tab::Career => self.career(ui),
         }
     }
     fn performance_decision(&mut self, ui: &mut Ui) -> bool {

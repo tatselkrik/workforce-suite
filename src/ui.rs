@@ -32,6 +32,7 @@ mod onboarding_view;
 mod exits_view;
 mod performance_view;
 mod learning_view;
+mod career_view;
 mod organization_view;
 mod overtime_view;
 mod recruiting_view;
@@ -144,6 +145,7 @@ pub struct HrisApp {
     exit_state: exits_view::State,
     performance_state: performance_view::State,
     learning_state: learning_view::State,
+    career_state: career_view::State,
     department: String,
     employment_type_filter: EmploymentFilter,
     work_location_filter: EmploymentFilter,
@@ -372,6 +374,7 @@ impl HrisApp {
             exit_state: Default::default(),
             performance_state: Default::default(),
             learning_state: Default::default(),
+            career_state: Default::default(),
             department: String::new(),
             employment_type_filter: EmploymentFilter::All,
             work_location_filter: EmploymentFilter::All,
@@ -999,6 +1002,7 @@ impl HrisApp {
             app.prepare_exit_preview();
             app.prepare_performance_preview();
             app.prepare_learning_preview();
+            app.prepare_career_preview();
             if std::env::var("HRIS_PREVIEW_PAGE").as_deref() == Ok("sign-in") {
                 app.login_branding = branding::LoginBranding {
                     company_name: app.data.company.name.clone(),
@@ -1084,6 +1088,7 @@ impl HrisApp {
                         self.exit_state = Default::default();
                         self.performance_state = Default::default();
                         self.learning_state = Default::default();
+                        self.career_state = Default::default();
                         self.import_state = imports_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
@@ -1115,6 +1120,7 @@ impl HrisApp {
                         self.exit_state = Default::default();
                         self.performance_state = Default::default();
                         self.learning_state = Default::default();
+                        self.career_state = Default::default();
                         self.import_state = imports_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
@@ -1200,7 +1206,8 @@ impl HrisApp {
                     let exit_saved = self.exit_state.accept(&data);
                     let performance_saved = self.performance_state.accept(&data);
                     let learning_saved = self.learning_state.accept(&data);
-                    let hiring_saved = hiring_record_saved && recruiting_saved && onboarding_saved && exit_saved && performance_saved && learning_saved;
+                    let career_saved = self.career_state.accept(&data);
+                    let hiring_saved = hiring_record_saved && recruiting_saved && onboarding_saved && exit_saved && performance_saved && learning_saved && career_saved;
                     self.data = data;
                     self.notification_state.invalidate();
                     if !self.data.active().any(|e| {
@@ -1265,6 +1272,7 @@ impl HrisApp {
                     self.exit_state.pending = None;
                     self.performance_state.pending = None;
                     self.learning_state.pending = None;
+                    self.career_state.pending = None;
                     self.recruiting_state.pending = None;
                     self.recruiting_state.resume_pending = None;
                     self.report_state.pending_views = None;
@@ -1775,7 +1783,7 @@ impl HrisApp {
                 } else if self.employee_view == EmployeeView::Organization {
                     "Explore reporting relationships and open employee records."
                 } else if self.employee_view == EmployeeView::Development {
-                    "Goals, appraisals, training and certification records."
+                    "Goals, appraisals, learning and career development."
                 } else {
                     "Click an employee to open their record."
                 },
@@ -1900,7 +1908,7 @@ impl HrisApp {
             || self.hiring_state.editing()
             || self.onboarding_state.editing()
             || self.exit_state.editing()
-            || (self.performance_state.editing() || self.learning_state.editing())
+            || (self.performance_state.editing() || self.learning_state.editing() || self.career_state.editing())
             || self.recruiting_state.editing()
             || self.report_state.view_draft.is_some()
             || self.account_form.is_some()
@@ -2142,7 +2150,7 @@ impl HrisApp {
             self.employee_record(ui);
             return;
         }
-        if self.performance_state.editing() || self.learning_state.editing(){self.performance(ui);return;}
+        if self.performance_state.editing() || self.learning_state.editing() || self.career_state.editing(){self.performance(ui);return;}
         ui.horizontal_wrapped(|ui| {
             ui.selectable_value(
                 &mut self.employee_view,
@@ -3988,7 +3996,7 @@ impl eframe::App for HrisApp {
                             && !self.recruiting_state.editing()
                             && !self.onboarding_state.editing()
                             && !self.exit_state.editing()
-                            && !(self.performance_state.editing() || self.learning_state.editing()),
+                            && !(self.performance_state.editing() || self.learning_state.editing() || self.career_state.editing()),
                         |ui| self.sidebar(ui),
                     );
                 });

@@ -848,6 +848,10 @@ pub(super) fn record_change_fields(
                         "training_id",
                         "certificate_id",
                         "evidence_id",
+                        "plan_id",
+                        "milestone_id",
+                        "completed_by",
+                        "reviewed_by",
                         "document_id",
                     ]
                     .contains(&k.as_str())
@@ -904,6 +908,7 @@ fn history_preview() -> bool {
     }
 }
 fn history_value(key: &str, v: &serde_json::Value) -> String {
+    if key == "milestones_snapshot" {return format!("{} milestones saved at completion",v.as_array().map_or(0,Vec::len));}
     if key == "goals_snapshot" {
         return format!(
             "{} goals saved at submission",

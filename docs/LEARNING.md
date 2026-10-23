@@ -27,8 +27,10 @@ Current membership, role/reporting scope, company serialization, exact revision,
 strict payload fields, atomic audit and actor-bound birth retries are checked
 by the server. Existing records survive employee archive; no new training or
 certificate is created for an archived employee. HR can correct retained facts.
-Career plans, catalog/bulk enrollment, course providers/invitations, external
-accreditation checks, performance inbox reminders and portal UI remain later.
+Career plans now reference limited learning metadata without changing learning
+facts; see CAREER-DEVELOPMENT.md. Catalog/bulk enrollment, course providers/
+invitations, external accreditation checks, performance inbox reminders and
+portal UI remain later.
 
 Verification is recorded in VERIFICATION.md and the versioned release report.
 Local PostgreSQL tests simulate Auth/Storage metadata; actual Auth/Rust/REST

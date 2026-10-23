@@ -1,6 +1,6 @@
 # Career development plans
 
-Candidate for 0.1.31; migration is not deployed until verification succeeds.
+Implemented in 0.1.31 with deployed migration `20261023035021`.
 
 Employees > Development holds shared career plans and milestones. Target role,
 department, skills and coaching notes describe aspirations. They never change
@@ -37,3 +37,12 @@ serialization, exact revisions, strict payloads, actor-bound creation retries
 and atomic immutable audit. All schema changes are additive. Local PostgreSQL
 checks simulate Auth and do not prove hosted Auth, native clicks or concurrent
 transaction timing; those checks are recorded separately when performed.
+
+Verification: 309 full Rust tests, 101 final targeted tests, 1663 local PostgreSQL
+assertions and 16 fictional native views passed. Hosted checks matched all33
+migration versions and23immediate before/after HR/Auth data digests. ActualAuth/
+Rust/REST checks covered scopes, retries, independent reviews, waivers, immutable
+closure/reopen, limited same-employee context, Employee/direct/history/anonymous/
+forged-metadata denials and disabled valid JWTs. Synthetic fixtures are retained
+disabled/archived, open plans cancelled and verification sessions revoked.
+Normal build/update/installation evidence belongs to the versioned release report.

@@ -1,6 +1,7 @@
 mod recruiting_adapter;
 mod performance_adapter;
 mod learning_adapter;
+mod career_adapter;
 use crate::access::{Access, AccessEvent, AdminAction, ManagedAccount};
 use crate::account::{self, AccountAction, AccountProfile, DisplayPreferences, PersonalDetails};
 use crate::documents::{self, DocumentAction, DocumentState, EmployeeDocument};
@@ -921,6 +922,7 @@ impl CloudClient {
         let exits = self.exits_snapshot(&access)?;
         let performance = self.performance_snapshot(&access)?;
         let learning = self.learning_snapshot(&access)?;
+        let career = self.career_snapshot(&access)?;
         let (logo_png, logo_warning) = self.company_logo(&company);
         let mut notification_rows: Vec<crate::notifications::ReadState> =
             self.rows("notification_read_state", Some(company.id))?;
@@ -939,6 +941,7 @@ impl CloudClient {
         notification_reads.validate(access.user_id, company.id)?;
         Ok(Snapshot {
             learning,
+            career,
             performance,
             exits,
             onboarding,
@@ -1103,6 +1106,12 @@ impl CloudClient {
 
     pub fn execute(&mut self, action: Action, current: &Snapshot) -> Result<Snapshot> {
         current.access.authorize(&action, current)?;
+        if let Action::Career(action) = &action {
+            let payload = action.payload(current)?;
+            let saved:Value=decode(self.request(Method::POST,"rpc/manage_career")?.json(&payload).send()?)?;
+            ensure!(saved["company_id"]==json!(current.company.id)&&saved["id"]==payload["p_record"]["id"],"Career response did not match your company and record.");
+            return self.snapshot().context("Career change saved, but refresh failed. Keep your draft and Refresh before retrying.");
+        }
         if let Action::Learning(action) = &action {
             let payload=action.payload(current)?;
             let saved:Value=decode(self.request(Method::POST,"rpc/manage_learning")?.json(&payload).send()?)?;
@@ -1379,6 +1388,7 @@ impl CloudClient {
                 .context("Contacts saved, but refresh failed. Click Refresh before trying again.");
         }
         let (method, table, id, body) = match action {
+            Action::Career(_) => unreachable!("Career changes return above"),
             Action::Learning(_) => unreachable!("Learning changes return above"),
             Action::Performance(_) => unreachable!("Performance changes return above"),
             Action::Exit(_) => unreachable!("Exit changes return above"),

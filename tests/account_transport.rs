@@ -1083,6 +1083,9 @@ fn baseline(company: &Company) -> Vec<Reply> {
         reply("GET /rest/v1/employee_certifications?", 200, json!([])),
         reply("GET /rest/v1/certification_evidence?", 200, json!([])),
         reply("GET /rest/v1/learning_events?", 200, json!([])),
+        reply("GET /rest/v1/career_plans?", 200, json!([])),
+        reply("GET /rest/v1/career_milestones?", 200, json!([])),
+        reply("GET /rest/v1/career_events?", 200, json!([])),
         reply("GET /rest/v1/notification_read_state?", 200, json!([])),
         reply("GET /auth/v1/user ", 200, user(company)),
         reply(
@@ -3068,5 +3071,92 @@ fn learning_training_retries_original_id_after_saved_write_and_failed_refresh() 
     assert!(
         !req.iter()
             .any(|r| r.line.starts_with("PATCH /rest/v1/employee_training"))
+    );
+}
+
+#[test]
+fn career_plan_retries_original_id_after_saved_write_and_failed_refresh() {
+    use hris_desktop::{domain::Action, career::*};
+    let mut demo = DemoStore::new();
+    let mut d = PlanDraft::new(Some(demo.data.employees[1].id),demo.data.company.today());
+    d.title = "Synthetic transport goal".into();
+    d.reason = "Synthetic assigned goal".into();
+    let action = CareerAction::PlanSave(d);
+    let before = demo.data.clone();
+    demo.execute(Action::Career(action.clone())).unwrap();
+    let saved = demo.data.career.plans[0].clone();
+    let prepare = |data: &hris_desktop::domain::Snapshot| {
+        let mut r = baseline(&data.company);
+        for response in &mut r {
+            let v = match response.prefix.as_str() {
+                "POST /rest/v1/rpc/my_hris_access " => Some(
+                    json!({"company_id":data.company.id,"user_id":data.access.user_id,"employee_id":data.access.employee_id,"role":data.access.role,"direct_reports":data.access.direct_reports}),
+                ),
+                p if p.starts_with("GET /rest/v1/employees?") => Some(json!(data.employees)),
+                p if p.starts_with("GET /rest/v1/career_plans?") => {
+                    Some(json!(data.career.plans))
+                }
+                p if p.starts_with("GET /rest/v1/career_events?") => {
+                    Some(json!(data.career.events))
+                }
+                _ => None,
+            };
+            if let Some(v) = v {
+                response.body = serde_json::to_vec(&v).unwrap();
+            }
+        }
+        r
+    };
+    let mut replies = prepare(&before);
+    replies.push(reply(
+        "POST /rest/v1/rpc/manage_career ",
+        200,
+        json!(saved),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/my_hris_access ",
+        500,
+        json!({"message":"Synthetic refresh failure"}),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/manage_career ",
+        200,
+        json!(saved),
+    ));
+    replies.extend(
+        prepare(&demo.data)
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
+    let (config, server, requests) = fixture(replies);
+    let (mut client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert!(
+        client
+            .execute(Action::Career(action.clone()), &data)
+            .unwrap_err()
+            .to_string()
+            .contains("refresh failed")
+    );
+    let result = client
+        .execute(Action::Career(action.clone()), &data)
+        .unwrap();
+    assert!(action.saved(&result));
+    server.join().unwrap();
+    let req = requests.lock().unwrap();
+    let writes: Vec<_> = req
+        .iter()
+        .filter(|r| r.line.starts_with("POST /rest/v1/rpc/manage_career "))
+        .collect();
+    assert_eq!(writes.len(), 2);
+    assert_eq!(writes[0].json(), writes[1].json());
+    assert!(
+        !req.iter()
+            .any(|r| r.line.starts_with("PATCH /rest/v1/career_plans"))
     );
 }

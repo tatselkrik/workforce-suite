@@ -6,6 +6,8 @@ Application identifier: `io.github.tatselkrik.hrisdesktop`.
 
 ## What works
 
+- **Career development:** Employees > Development > Career plans holds shared aspirations, skills and required/optional milestones. Independent staff review completion, HR can waive, and closure retains milestone/context facts without changing employment or source learning records. See [career plans](docs/CAREER-DEVELOPMENT.md).
+
 - **Training and certifications:** Employees > Development holds assigned training, scoped progress, HR-recorded completion/outcomes/minutes, certificate expiry/revocation/archive and private links to existing employee 201 files. Managers receive team details and progress controls; private file bindings stay HR-only. See [learning records](docs/LEARNING.md).
 
 - **Goals and appraisals:** Employees > Development holds goals/progress, review cycles, assigned reviewer assessments and HR publication with immutable submitted goal facts. Private HR notes stay separate; reassignment removes former Manager access and resets unfinished feedback. See [performance](docs/PERFORMANCE.md).

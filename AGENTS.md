@@ -15,3 +15,9 @@ Exit and clearance rules are in docs/EXIT-CLEARANCE.md. Keep separation details 
 Performance rules are in docs/PERFORMANCE.md. Preserve current reporting/assignment scopes, separate HR notes, clean reassignment drafts and immutable published review/goal snapshots. The separate performance migration adds a late exit finalization guard for older clients; do not rewrite deployed exit migrations.
 
 Learning rules are described in docs/LEARNING.md. Keep certificate file bindings and their events HR/Admin-only; Manager/employee metadata must not contain private document IDs or storage keys. Learning progress is distinct from HR-recorded completion, and training dates do not create attendance, leave or exit blockers.
+
+Career rules are in docs/CAREER-DEVELOPMENT.md. Plans describe shared aspirations;
+never change canonical employment/pay or source goal/learning facts automatically.
+Preserve independent staff definition/review, own-staff progress, HR-only waivers,
+current reporting scope, same-employee metadata-only references and immutable
+completion snapshots. Career plans add no exit blocker or notification contract.

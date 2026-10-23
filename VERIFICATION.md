@@ -1,5 +1,39 @@
 # Prototype verification — 2026-10-23
 
+## Career development plans - version 0.1.31
+
+- 309 full Rust tests passed, followed by101final library/career/HTTP tests after
+  native label refinements.1663local PostgreSQL assertions include107new career
+  checks for independent/self/reporting scopes, bounded milestones, dates,
+  metadata-only sameemployee references, immutable closure/reopen, no employment
+  side effects, revisions/birth retries, archived retention, audit rollback and
+  direct/anonymous/private-birth denials. LocalPG simulates Auth/Storage metadata.
+- Migration `20261023035021` deployed;33local/hosted migration versions match.
+  Immediate before/after23sets of existing HR/Auth digests matched. Three public
+  tables use RLS/read-only grants, invoker public RPC/protected writer and immutable
+  events. Private birth data has no client grants/defaultdeny RLS. Its no-policy
+  INFO is intentional. No new security WARN or FK finding; existing advisories
+  remain unchanged. No Edge Function, Storage pipeline or existing data rewrite.
+- ActualAuth/Rust/REST verified actor-bound creation retries, own/currentManager
+  progress, independent review, reporting-change revocation, HR-only waiver,
+  completion snapshots, reasoned reopening and sameemployee context without
+  changing source learning or exposing private certificate references. Raw self/
+  Employee/directwrite/audit/anonymous/forgedmetadata denials and disabled valid
+  JWTs passed. Unrelated employment/attendance/leave/files/hiring/performance/
+  learning rows matched. Four synthetic actors remain disabled/archived with open
+  plans cancelled; all verification sessions revoked, no real password changed.
+-16fictional native views inspected: list/detail, light/dark125%, forms, progress,
+  review/waiver/plan completion, saved closure, aligned history, Manager scope and
+  existing learning tabs. A missing navigation glyph was replaced with plain text.
+  Normal startup, source/binary privacy, exact installer, private publication and
+  installation are recorded separately in the versioned release report. No
+  signed-in native-button automation, actual parallel transaction timing,
+  Authenticode, remoteCI, otherPC or running-parent update timing claim.
+- See [the requested review checklist](docs/REVIEW-CHECKLIST-2026-10-23.md) for
+  changes since Oct22at15:54local (versions19–31) and remaining roadmap. Development
+  stops after this milestone; the automatic-resume scheduler is PAUSED.
+
+
 ## Training and certifications - version 0.1.30
 
 - 295 Rust tests passed, followed by96targeted library/learning/HTTP tests after

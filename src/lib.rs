@@ -32,3 +32,5 @@ pub const APP_ID: &str = "io.github.tatselkrik.hrisdesktop";
 pub mod branding;
 
 pub mod learning;
+
+pub mod career;
