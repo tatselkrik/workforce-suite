@@ -2,6 +2,7 @@ mod recruiting_adapter;
 mod performance_adapter;
 mod learning_adapter;
 mod career_adapter;
+mod payroll_adapter;
 use crate::access::{Access, AccessEvent, AdminAction, ManagedAccount};
 use crate::account::{self, AccountAction, AccountProfile, DisplayPreferences, PersonalDetails};
 use crate::documents::{self, DocumentAction, DocumentState, EmployeeDocument};
@@ -923,6 +924,7 @@ impl CloudClient {
         let performance = self.performance_snapshot(&access)?;
         let learning = self.learning_snapshot(&access)?;
         let career = self.career_snapshot(&access)?;
+        let payroll = self.payroll_snapshot(&access)?;
         let (logo_png, logo_warning) = self.company_logo(&company);
         let mut notification_rows: Vec<crate::notifications::ReadState> =
             self.rows("notification_read_state", Some(company.id))?;
@@ -940,6 +942,7 @@ impl CloudClient {
                 });
         notification_reads.validate(access.user_id, company.id)?;
         Ok(Snapshot {
+            payroll,
             learning,
             career,
             performance,
@@ -1106,6 +1109,12 @@ impl CloudClient {
 
     pub fn execute(&mut self, action: Action, current: &Snapshot) -> Result<Snapshot> {
         current.access.authorize(&action, current)?;
+        if let Action::Payroll(action) = &action {
+            let payload=action.payload(current)?;
+            let saved:Value=decode(self.request(Method::POST,"rpc/manage_payroll")?.json(&payload).send()?)?;
+            ensure!(saved["company_id"]==json!(current.company.id)&&saved["id"]==payload["p_record"]["id"],"Payroll response did not match your company and record.");
+            return self.snapshot().context("Payroll change saved, but refresh failed. Keep your draft and Refresh before retrying.");
+        }
         if let Action::Career(action) = &action {
             let payload = action.payload(current)?;
             let saved:Value=decode(self.request(Method::POST,"rpc/manage_career")?.json(&payload).send()?)?;
@@ -1388,6 +1397,7 @@ impl CloudClient {
                 .context("Contacts saved, but refresh failed. Click Refresh before trying again.");
         }
         let (method, table, id, body) = match action {
+            Action::Payroll(_) => unreachable!("Payroll changes return above"),
             Action::Career(_) => unreachable!("Career changes return above"),
             Action::Learning(_) => unreachable!("Learning changes return above"),
             Action::Performance(_) => unreachable!("Performance changes return above"),
@@ -1703,6 +1713,7 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
 }
 
 pub enum Command {
+    PayrollExport { kind:String, record_id:Option<Uuid>, year:i32, destination:std::path::PathBuf },
     ImportErrors {
         preview: crate::imports::Preview,
         destination: std::path::PathBuf,
@@ -1876,6 +1887,17 @@ pub fn worker(
                         }
                         crate::reports::save_csv(&destination, &preview.error_csv()?)?;
                         Ok(current.clone())
+                    })()
+                }
+                Command::PayrollExport { kind,record_id,year,destination } => {
+                    (|| -> Result<Snapshot> {
+                        let data=match cloud.as_mut(){Some(client)=>client.snapshot()?,None=>demo.as_ref().context("Sign in to export payroll.")?.data.clone()};
+                        ensure!(data.access.company_id==current.access.company_id && data.access.user_id==current.access.user_id,"Your account scope changed. Sign in again.");
+                        let bytes=if kind=="payslip_pdf"{let slip=data.payroll.slips.iter().find(|s|Some(s.id)==record_id).context("Approved payslip not available.")?;ensure!(data.access.role.manages_hr()||data.access.employee_id==Some(slip.employee_id),"Only your own payslip is available.");crate::payroll_pdf::build(slip)?}else{crate::payroll::export_csv(&data,&kind,record_id,year)?};
+                        if let Some(client)=cloud.as_mut(){let access=client.current_access()?;if access!=data.access{return Err(AccessRevoked.into());}}
+                        if kind=="payslip_pdf"{crate::payroll_pdf::save(&destination,&bytes)?;}else{crate::reports::save_csv(&destination,&bytes)?;}
+                        message="Payroll export saved from freshly checked access. No payment or government filing was made.".into();
+                        Ok(data)
                     })()
                 }
                 Command::Report {

@@ -33,6 +33,7 @@ mod exits_view;
 mod performance_view;
 mod learning_view;
 mod career_view;
+mod payroll_view;
 mod organization_view;
 mod overtime_view;
 mod recruiting_view;
@@ -52,6 +53,7 @@ enum EmployeeView {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Page {
+    Payroll,
     Overview,
     Employees,
     Attendance,
@@ -66,11 +68,12 @@ enum Page {
 }
 
 impl Page {
-    const ALL: [Self; 9] = [
+    const ALL: [Self; 10] = [
         Self::Overview,
         Self::Employees,
         Self::Attendance,
         Self::Leave,
+        Self::Payroll,
         Self::Reports,
         Self::Hiring,
         Self::Exits,
@@ -83,6 +86,7 @@ impl Page {
             Self::Employees => "Employees",
             Self::Attendance => "Attendance",
             Self::Leave => "Leave",
+            Self::Payroll => "Payroll",
             Self::Reports => "Reports",
             Self::Hiring => "Hiring",
             Self::Exits => "Exit & clearance",
@@ -146,6 +150,7 @@ pub struct HrisApp {
     performance_state: performance_view::State,
     learning_state: learning_view::State,
     career_state: career_view::State,
+    payroll_state: payroll_view::State,
     department: String,
     employment_type_filter: EmploymentFilter,
     work_location_filter: EmploymentFilter,
@@ -375,6 +380,7 @@ impl HrisApp {
             performance_state: Default::default(),
             learning_state: Default::default(),
             career_state: Default::default(),
+            payroll_state: Default::default(),
             department: String::new(),
             employment_type_filter: EmploymentFilter::All,
             work_location_filter: EmploymentFilter::All,
@@ -435,6 +441,7 @@ impl HrisApp {
                 Ok("employees") => app.page = Page::Employees,
                 Ok("attendance") => app.page = Page::Attendance,
                 Ok("leave") => app.page = Page::Leave,
+                Ok("payroll") => app.page = Page::Payroll,
                 Ok("reports") => app.page = Page::Reports,
                 Ok("hiring") => app.page = Page::Hiring,
                 Ok("exits") => app.page = Page::Exits,
@@ -1003,6 +1010,7 @@ impl HrisApp {
             app.prepare_performance_preview();
             app.prepare_learning_preview();
             app.prepare_career_preview();
+            app.prepare_payroll_preview();
             if std::env::var("HRIS_PREVIEW_PAGE").as_deref() == Ok("sign-in") {
                 app.login_branding = branding::LoginBranding {
                     company_name: app.data.company.name.clone(),
@@ -1089,6 +1097,7 @@ impl HrisApp {
                         self.performance_state = Default::default();
                         self.learning_state = Default::default();
                         self.career_state = Default::default();
+                        self.payroll_state = Default::default();
                         self.import_state = imports_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
@@ -1121,6 +1130,7 @@ impl HrisApp {
                         self.performance_state = Default::default();
                         self.learning_state = Default::default();
                         self.career_state = Default::default();
+                        self.payroll_state = Default::default();
                         self.import_state = imports_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
@@ -1206,8 +1216,9 @@ impl HrisApp {
                     let exit_saved = self.exit_state.accept(&data);
                     let performance_saved = self.performance_state.accept(&data);
                     let learning_saved = self.learning_state.accept(&data);
+                    let payroll_saved = self.payroll_state.accept(&data);
                     let career_saved = self.career_state.accept(&data);
-                    let hiring_saved = hiring_record_saved && recruiting_saved && onboarding_saved && exit_saved && performance_saved && learning_saved && career_saved;
+                    let hiring_saved = hiring_record_saved && recruiting_saved && onboarding_saved && exit_saved && performance_saved && learning_saved && career_saved && payroll_saved;
                     self.data = data;
                     self.notification_state.invalidate();
                     if !self.data.active().any(|e| {
@@ -1273,6 +1284,7 @@ impl HrisApp {
                     self.performance_state.pending = None;
                     self.learning_state.pending = None;
                     self.career_state.pending = None;
+                    self.payroll_state.pending = None;
                     self.recruiting_state.pending = None;
                     self.recruiting_state.resume_pending = None;
                     self.report_state.pending_views = None;
@@ -1817,6 +1829,7 @@ impl HrisApp {
                 "Manage applications, interviews and hiring workflows.",
             ),
             Page::Exits => ("Exit & clearance", "Manage employee handover, clearance and protected exit finalization."),
+            Page::Payroll => ("Payroll & benefits", "Reviewed Philippine pay, private salary records and approved payslips."),
             Page::Reports => (
                 "Reports",
                 "Attendance, filed leave charges and employee totals within your access.",
@@ -1909,6 +1922,7 @@ impl HrisApp {
             || self.onboarding_state.editing()
             || self.exit_state.editing()
             || (self.performance_state.editing() || self.learning_state.editing() || self.career_state.editing())
+            || self.payroll_state.editing()
             || self.recruiting_state.editing()
             || self.report_state.view_draft.is_some()
             || self.account_form.is_some()
@@ -3996,6 +4010,7 @@ impl eframe::App for HrisApp {
                             && !self.recruiting_state.editing()
                             && !self.onboarding_state.editing()
                             && !self.exit_state.editing()
+                            && !self.payroll_state.editing()
                             && !(self.performance_state.editing() || self.learning_state.editing() || self.career_state.editing()),
                         |ui| self.sidebar(ui),
                     );
@@ -4030,6 +4045,7 @@ impl eframe::App for HrisApp {
                                 Page::Employees => self.employees(ui),
                                 Page::Attendance => self.attendance(ui),
                                 Page::Leave => self.leave(ui),
+                                Page::Payroll => self.payroll(ui),
                                 Page::Reports => self.reports(ui),
                                 Page::Hiring => self.hiring(ui),
                                 Page::Exits => self.exits(ui),

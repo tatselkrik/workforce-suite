@@ -6,6 +6,8 @@ Application identifier: `io.github.tatselkrik.hrisdesktop`.
 
 ## What works
 
+- **Payroll and benefits:** open **Payroll** for effective salary profiles, reviewed monthly worksheets, Philippine overtime/holiday/night premiums, allowances, deductions and employer benefit memos. Another Administrator approves a submitted register; approved payslips are retained and export to PDF/CSV. Contribution and withholding worksheets support local reconciliation. Payment recording does not move money or file government returns. See [payroll rules and limits](docs/PAYROLL.md).
+
 - **Career development:** Employees > Development > Career plans holds shared aspirations, skills and required/optional milestones. Independent staff review completion, HR can waive, and closure retains milestone/context facts without changing employment or source learning records. See [career plans](docs/CAREER-DEVELOPMENT.md).
 
 - **Training and certifications:** Employees > Development holds assigned training, scoped progress, HR-recorded completion/outcomes/minutes, certificate expiry/revocation/archive and private links to existing employee 201 files. Managers receive team details and progress controls; private file bindings stay HR-only. See [learning records](docs/LEARNING.md).
@@ -26,14 +28,14 @@ Application identifier: `io.github.tatselkrik.hrisdesktop`.
 - **Settings:** company defaults with shared logo upload/removal in the right column, Administrator-managed employment types/work locations, account display scale, 12/24-hour time and Light/Dark/System themes. Database configuration is handled during deployment.
 - **App updates:** the top right shows the installed version. Signed private updates are checked automatically only after successful sign-in; an available-update banner persists until restart or sign-out and offers Update now. Settings also provides a manual check. See [update deployment](docs/UPDATES.md).
 - **Profile:** read-only Employment matching the employee record; edit your contact and emergency details; upload/change/remove a private photo; verified and pending account email; password and email changes after current-password verification; and sign-out controls for this device, other devices or everywhere.
-- **Company sidebar:** a circular transparent company logo above the company name, also shown on sign-in, followed by Overview, Employees, Attendance, Leave, Reports, role-scoped Hiring, administrator-only Account Manager and Settings. The circular photo or initials at the bottom left opens the full Profile page in the main content area.
+- **Company sidebar:** a circular transparent company logo above the company name, also shown on sign-in, followed by Overview, Employees, Attendance, Leave, Payroll, Reports, role-scoped Hiring, administrator-only Account Manager and Settings. Managers use Payroll only for their own approved payslips. The circular photo or initials at the bottom left opens the full Profile page in the main content area.
 - **CI:** checked-in GitHub Actions workflow tests Rust behavior and database access rules and builds a Windows executable. It does not deploy a database or publish a release.
 
 The interface uses `egui`/`eframe`. The domain rules and Supabase Auth/REST adapter are also Rust. There is no browser UI, local web server, or SQLite database in the application. A Supabase Edge Function provisions accounts without exposing a server key to the desktop. Node.js runs the separate PostgreSQL and provisioning-handler tests.
 
 ## Try it
 
-The private Windows setup installs version 0.1.28 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection and update-verification profiles, but no account password or session.
+The private Windows setup installs version 0.1.33 for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection and update-verification profiles, but no account password or session. Exact release and installation evidence belongs to the versioned verification report.
 
 Open **HRIS Desktop** and sign in with an assigned Administrator, HR Generalist or Manager account. Ordinary Employee accounts are reserved for a future mobile-friendly portal and cannot sign into this desktop app. Its company database is already selected by the installation. Account login remains necessary to access HR records; database setup is not part of that login.
 

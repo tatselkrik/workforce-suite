@@ -21,3 +21,12 @@ never change canonical employment/pay or source goal/learning facts automaticall
 Preserve independent staff definition/review, own-staff progress, HR-only waivers,
 current reporting scope, same-employee metadata-only references and immutable
 completion snapshots. Career plans add no exit blocker or notification contract.
+
+Payroll rules and source dates are in docs/PAYROLL.md. Keep salary/draft/audit data
+HR/Admin-private, other staff limited to their own approved slips, and published
+slips free of private HR notes, raw source bundles and consent references. Preserve
+server centavo calculations, source/revision guards, independent Administrator
+approval and immutable slips/events. Monthly reconciliation does not authorize
+monthly-only wage payment. Missing attendance never implies an absence deduction;
+payment recording is not a bank transfer or government filing. Rule packs need
+explicit effective dates and current official Philippine sources.

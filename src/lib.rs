@@ -34,3 +34,7 @@ pub mod branding;
 pub mod learning;
 
 pub mod career;
+
+pub mod payroll;
+
+pub mod payroll_pdf;

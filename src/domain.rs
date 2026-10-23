@@ -322,6 +322,7 @@ pub enum Mode {
 
 #[derive(Clone, Debug)]
 pub struct Snapshot {
+    pub payroll: crate::payroll::Setup,
     pub learning: crate::learning::Setup,
     pub career: crate::career::Setup,
     pub performance: crate::performance::Setup,
@@ -363,6 +364,7 @@ impl Snapshot {
             onboarding: Default::default(),
             exits: Default::default(),
             learning: Default::default(),
+            payroll: Default::default(),
             career: Default::default(),
             performance: Default::default(),
             hiring: Default::default(),
@@ -446,6 +448,7 @@ impl Snapshot {
 
 #[derive(Clone, Debug)]
 pub enum Action {
+    Payroll(crate::payroll::PayrollAction),
     Learning(crate::learning::LearningAction),
     Career(crate::career::CareerAction),
     Performance(crate::performance::PerformanceAction),
@@ -613,6 +616,7 @@ impl DemoStore {
                 onboarding: Default::default(),
             exits: Default::default(),
             learning: Default::default(),
+            payroll: Default::default(),
             career: Default::default(),
             performance: Default::default(),
                 hiring: Default::default(),
@@ -738,6 +742,7 @@ impl DemoStore {
     fn apply(&mut self, action: Action) -> Result<()> {
         self.data.access.authorize(&action, &self.data)?;
         match action {
+            Action::Payroll(action) => {crate::payroll::apply_demo(&mut self.data, &action)?;}
             Action::Career(action) => {crate::career::apply_demo(&mut self.data,&action,chrono::Utc::now())?;}
             Action::Learning(action) => {crate::learning::apply_demo(&mut self.data,&action,chrono::Utc::now())?;}
             Action::Performance(action) => {crate::performance::apply_demo(&mut self.data,&action,chrono::Utc::now())?;}

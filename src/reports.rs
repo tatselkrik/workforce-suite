@@ -811,18 +811,21 @@ pub(crate) fn save_csv(path: &Path, bytes: &[u8]) -> Result<()> {
 }
 
 #[cfg(windows)]
-pub fn choose_export(filename: &str) -> Result<Option<PathBuf>> {
+pub fn choose_export(filename: &str) -> Result<Option<PathBuf>> { choose_export_as(filename,false) }
+
+#[cfg(windows)]
+pub fn choose_export_as(filename: &str,pdf:bool) -> Result<Option<PathBuf>> {
     use std::{ffi::OsString, os::windows::ffi::OsStringExt};
     use windows_sys::Win32::UI::{Controls::Dialogs::*, Input::KeyboardAndMouse::GetActiveWindow};
     let mut path = vec![0u16; 32768];
     for (slot, c) in path.iter_mut().zip(filename.encode_utf16()) {
         *slot = c
     }
-    let filter: Vec<u16> = "CSV spreadsheet (*.csv)\0*.csv\0\0"
+    let filter: Vec<u16> = (if pdf {"PDF payslip (*.pdf)\0*.pdf\0\0"}else{"CSV spreadsheet (*.csv)\0*.csv\0\0"})
         .encode_utf16()
         .collect();
     let title: Vec<u16> = "Save HRIS CSV to a new file\0".encode_utf16().collect();
-    let ext: Vec<u16> = "csv\0".encode_utf16().collect();
+    let ext: Vec<u16> = (if pdf{"pdf\0"}else{"csv\0"}).encode_utf16().collect();
     // SAFETY: the owned buffers remain valid throughout the synchronous dialog.
     let mut dialog: OPENFILENAMEW = unsafe { std::mem::zeroed() };
     dialog.lStructSize = std::mem::size_of::<OPENFILENAMEW>() as u32;
@@ -848,3 +851,6 @@ pub fn choose_export(filename: &str) -> Result<Option<PathBuf>> {
 pub fn choose_export(_: &str) -> Result<Option<PathBuf>> {
     anyhow::bail!("Report file selection currently supports Windows only.")
 }
+
+#[cfg(not(windows))]
+pub fn choose_export_as(name:&str,_:bool)->Result<Option<PathBuf>>{choose_export(name)}

@@ -42,6 +42,10 @@ Implemented: employee/current-report goals with reasoned progress and retained h
 
 ## Stage 9 — Payroll and benefits
 
-Add salary calculations, deductions, allowances, payslips, benefits and local reporting workflows after attendance/leave policies are stable. Verify current Philippine rules, effective dates, approval controls and reconciliation with a qualified payroll practitioner before workplace use. Do not infer statutory rates from prototype defaults.
+Implemented in version 0.1.33: effective salary profiles, reviewed monthly reconciliation worksheets, private-sector Philippine overtime/holiday/night premiums, recurring and per-run allowances/deductions, employer benefit memos, independently approved immutable payslips, recorded payments and PDF/CSV reconciliation exports. Contribution and withholding rules were checked against official sources on 23 October 2026. See [payroll](PAYROLL.md) for effective dates and limits. This module does not transfer money, file government returns or replace company payroll reconciliation. Annual tax adjustment, prior-employer balances, 13th-month payouts, regional wage compliance, final pay and actual cutoff disbursements remain later work.
+
+## Next — Separate employee portal
+
+Build a mobile-friendly employee application against the same protected company memberships. Start with own employment/contact details, attendance and breaks, leave/correction/overtime requests, own approved payslips, notifications and account security. Keep payroll drafts, team salaries, recruiting, private HR notes and administrative controls outside employee access. The native desktop remains the staff application. Device and external-service connections remain unconfigured until the necessary company and hardware choices are available.
 
 The sequence may change when the company has a more urgent requirement. Payroll, biometric devices and external integrations require company-specific decisions; they are not generic plug-ins already working in this prototype.

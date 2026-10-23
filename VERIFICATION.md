@@ -1,5 +1,50 @@
 # Prototype verification — 2026-10-23
 
+## Philippine payroll and benefits — version 0.1.33
+
+- 327 Rust tests passed, with the prepared-installer integration test intentionally
+  ignored until packaging. 1859 local PostgreSQL assertions passed after all three
+  new migrations; 34 statutory and premium vectors match exact SQL/Rust centavos.
+  Local PostgreSQL tests simulate Auth/Storage metadata. Final label refinements,
+  normal build/startup and the exact packaged installer have separate release
+  evidence; they are not implied by the earlier test counts.
+- Migrations `20261023082335`, `20261023090105` and `20261023092104` are applied; 36 hosted versions
+  match local history. Immediate before/after digests of 23 existing HR table
+  sets matched. Six public tables have RLS and read-only client grants, with a
+  protected writer, guarded revisions/source facts, actor-bound creation receipts
+  and immutable slips/events. The second migration folds equivalent payslip
+  predicates into one policy. No new payroll security WARN, multiple-policy WARN
+  or missing-FK finding remains; prior advisories remain. Private birth rows have
+  intentional default-deny RLS/no client grants.
+- Final review corrected the true-monthly unworked double-regular-holiday case:
+  add the second eligible day's pay above the day already included in salary.
+  Hosted calculation and new-run v2 default were checked; all six payroll table
+  counts/digests matched across this function/default migration. Issued pre-release
+  synthetic v1 slips were retained. Actual Auth workflow tests preceded this
+  isolated correction; the full local suite and hosted function checks cover v2.
+- Actual Auth/Rust/REST tests passed creation retries, server/Rust amount parity,
+  stale-source HTTP409, refresh/review, independent Administrator approval,
+  self-approval denial, Manager-only own issued payslips, and private-note/evidence
+  redaction. Anonymous/direct writes, forged account metadata and unauthorized
+  mutations were denied. Disabled memberships lost own-payslip access using
+  unexpired JWTs. CSV/PDF exports and payment recording preserved issued slips.
+  Eleven unrelated core record sets matched before/after. Test sessions were
+  revoked; synthetic identities are retained for audit and disabled after release
+  verification. No real password changed or money moved.
+- Fifteen fictional native payroll previews were inspected at compact size,
+  light/dark themes and 100/125% scale. A one-page fictional PDF was rendered and
+  checked for alignment, exact totals and supported Philippine Latin characters.
+  Unsupported PDF glyphs fail explicitly with UTF-8 CSV available. No signed-in
+  native-button automation or government filing was performed.
+- Official-source rule dates and payroll limits are in [PAYROLL.md](docs/PAYROLL.md).
+  The first module is a monthly reconciliation register, not a payment-frequency
+  authorization. Missing attendance never causes an automatic absence deduction.
+  Annual adjustment, prior employers, regional minimum wages, fringe-benefit tax,
+  actual 13th-month payouts, final pay and bank/government connections remain
+  separate work. Windows packaging, signature, update publication and installation
+  state are recorded in the versioned private release report. No Authenticode,
+  remote CI, other-PC or actual concurrent-client timing claim is made.
+
 ## Installer metadata correction - version 0.1.32
 
 The 0.1.31 real installation check verified all7payload hashes, then caught
