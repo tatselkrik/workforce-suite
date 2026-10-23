@@ -193,6 +193,8 @@ pub fn demo_basis(data: &Snapshot, r: &Record) -> Result<Value> {
                    exempt: i64,
                    contribution: i64,
                    coverage: bool| {
+        let (paid, received) = crate::payroll_payments::effective(data,kind,id,paid,status);
+        let status=if received {"paid"}else{status};
         if last > r.as_of {
             return;
         }
@@ -295,11 +297,11 @@ pub fn demo_basis(data: &Snapshot, r: &Record) -> Result<Value> {
                     + s.item.totals.pagibig_adjustment_cents,
                 false,
             );
+            let (paid, received) = crate::payroll_payments::effective(data,"thirteenth",s.id,run.paid_on,&run.status);
             if s.year == r.year
                 && s.as_of <= r.as_of
-                && run.status == "paid"
-                && run
-                    .paid_on
+                && received
+                && paid
                     .is_some_and(|p| p.year() == r.year && p <= r.as_of)
             {
                 ext = ext.max(s.item.worksheet.external_thirteenth_cents);

@@ -54,7 +54,7 @@ see [13th-month pay](PAYROLL-THIRTEENTH.md). Withholding/contribution adjustment
 remain explicit reviewed inputs. Implemented in the0.1.36 source: automatic annual compensation-tax reconciliation,
 evidenced prior-employer balances, shared annual benefit reconciliation,
 independent approval and immutable aggregate PDF/CSV advice; see
-[annual tax](PAYROLL-ANNUAL-TAX.md). Next is final pay. Expanded reporting/data exchange follows. Portal work is paused.
+[annual tax](PAYROLL-ANNUAL-TAX.md). Final pay is in progress: [individual payment records](PAYROLL-PAYMENTS.md) provide per-person receipts without marking coworkers paid. The final-pay worksheet and settlement follow. Expanded reporting/data exchange follows. Portal work is paused.
 
 ## Deferred — Separate employee portal (paused)
 

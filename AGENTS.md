@@ -81,3 +81,9 @@ openings and one shared benefit exclusion. Preserve paid-source freshness,
 independent approval, earlier-settlement credits, immutable own aggregate advice
 and HR-only certificate/source evidence. Tax advice is not a last-pay injection,
 transfer, filing or official2316. Portal remains paused.
+
+Individual payment rules are in docs/PAYROLL-PAYMENTS.md. Preserve immutable per-slip
+receipts and their actual received dates. One person's payment must not mark the
+whole batch paid. Legacy batch clients record outstanding recipients only; annual
+tax follows receipts even while a batch remains approved. Payment references stay
+HR/Admin-private; only active Administrators record actual full-slip payments.

@@ -527,12 +527,9 @@ impl HrisApp {
         }
     }
     fn cutoff_slips(&mut self, ui: &mut Ui) {
+        let visible:Vec<_>=self.data.payroll.cutoffs.slips.iter().filter(|s|s.base.company_id==self.data.company.id && (self.data.access.role.manages_hr() || self.data.access.employee_id==Some(s.base.employee_id))).cloned().collect();
         if let Some(id) = self.payroll_state.cutoffs.slip {
-            if let Some(s) = self
-                .data
-                .payroll
-                .cutoffs
-                .slips
+            if let Some(s) = visible
                 .iter()
                 .find(|s| s.base.id == id)
                 .cloned()
@@ -571,7 +568,7 @@ impl HrisApp {
         }
         ui.heading("Cutoff payslips");
         ui.label("HR/Admin can read issued employee slips. Other staff see only their own. Draft salaries and HR notes stay private.");
-        let mut slips = self.data.payroll.cutoffs.slips.clone();
+        let mut slips = visible;
         slips.sort_by_key(|s| std::cmp::Reverse((s.base.month, s.part)));
         for s in slips {
             card(ui, |ui| {

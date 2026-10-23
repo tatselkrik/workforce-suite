@@ -1,5 +1,38 @@
 # Prototype verification — 2026-10-24
 
+## Individual payroll payments — version0.1.37
+
+-361normal Rust tests and2,258local PostgreSQL assertions pass. Receipt cases cover
+ per-person/full issued amounts, exact retries, stale concurrent revisions,
+ remaining-batch compatibility, annual cash-date attribution, protected roles,
+ immutable sources and atomic rollback after an audit failure.
+-The additive receipt migration is deployed through `20261023202500`:
+46hosted versions. All75existing public record sets matched across deployment.
+ Prior paid-run dates/nets were backfilled without rewriting those rows or slips.
+ RLS/SELECT-only grants, public invoker wrapper, private source view, binding and
+ immutable triggers and the three old batch-client triggers passed checks.
+ No newWARN/ERROR or unindexed-FK findings; five unrelated FK-index INFO findings
+ already existed and remain outside this change.
+-Twelve actual hosted nativeRust/Auth/REST proof groups pass: independently
+ approved source payroll, per-person recording, sibling-outstanding behavior,
+ identical retries and stale rejection, later-batch preservation, annual receipt
+ dates, private HR evidence, HR write denial, Employee desktop denial, direct
+ REST403/409/anonymous denials, preservation and cleanup.19unrelated record sets,
+ all earlier published monthly/cutoff/13th/tax slips and all earlier receipts
+ matched. All six synthetic actors were restored, disabled, archived and session-free.
+-Eight unique fictional native views were inspected, including pending/partial
+ batches, saved history, unconfirmed/confirmed forms, footer and dark125percent
+ layout. Monthly/cutoff list/detail rendering now also filters own company/person
+ even if stale HR data remains in a view; corrected Manager preview shows one own
+ slip and no Payments tab. Invalid intermediate preview is excluded from delivery.
+-Normal release startup/source privacy, exact installer/signing/private publication
+ and installation state are recorded in the versioned release evidence after
+ packaging. No signed-in native-button, publicGit/CI, Authenticode, other-PC,
+ transfer, filing or remittance claim. Final-pay entitlements, prospective last-pay
+ annualization and final settlement remain a separate in-progress milestone.
+ See [individual payments](docs/PAYROLL-PAYMENTS.md) and its review checklist.
+ Portal work remains paused.
+
 ## Annual compensation tax — version0.1.36
 
 -358normalRust tests passed after annual-tax/backend/transport/native draft wiring.
@@ -14,7 +47,7 @@
  versions.73existingpublic record sets were preserved across the engine/workflow
  deployment and75across the covering-index deployment. Two newRLS/SELECT-only
  tables, invoker wrapper and protected/private helpers passed grants checks.
- Advisors show0newannualWARN/ERROR and0unindexedFK;5unused-indexINFO remain.
+ Advisors show0newannualWARN/ERROR or annual FK-index findings; unrelated INFO findings remain.
 -Eleven actual hostedAuth/nativeRust/REST proof groups pass: guarded creation
  retries, centavo refunds/prior-employer/shared-cap calculation, Administrator
  self-approval denial/independent approval, concurrent-source rejection/new reviews,

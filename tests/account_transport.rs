@@ -1100,6 +1100,7 @@ fn baseline(company: &Company) -> Vec<Reply> {
         reply("GET /rest/v1/payroll_thirteenth_runs?",200,json!([])),
         reply("GET /rest/v1/payroll_thirteenth_items?",200,json!([])),
         reply("GET /rest/v1/payroll_tax_reconciliations?",200,json!([])),
+        reply("GET /rest/v1/payroll_payment_receipts?",200,json!([])),
         reply("GET /rest/v1/notification_read_state?", 200, json!([])),
         reply("GET /auth/v1/user ", 200, user(company)),
         reply(
@@ -2111,6 +2112,7 @@ fn manager_desktop_sign_in_does_not_request_administrator_account_data() {
             && !r.prefix.contains("/payroll_thirteenth_runs?")
             && !r.prefix.contains("/payroll_thirteenth_items?")
             && !r.prefix.contains("/payroll_tax_reconciliations?")
+            && !r.prefix.contains("/payroll_payment_receipts?")
     });
     replies.remove(6); // Correction reasons are HR-only, including their loading path.
     replies.retain(|r| !r.prefix.contains("/employment_history?"));
@@ -2135,6 +2137,7 @@ fn manager_desktop_sign_in_does_not_request_administrator_account_data() {
             .iter()
             .any(|r| r.line.contains("list_company_accounts")
                 || r.line.contains("account_access_events")
+                || r.line.contains("payroll_payment_receipts")
                 || r.line.contains("payroll_profiles")
                 || r.line.contains("payroll_items")
                 || r.line.contains("payroll_runs"))

@@ -7,6 +7,7 @@ use serde_json::Value;
 use serde_json::json;
 #[derive(Default)]
 pub(super) struct State {
+    pub(super) payments: super::payment_view::State,
     pub(super) tax: super::tax_view::State,
     pub(super) thirteenth: super::thirteenth_view::State,
     pub(super) cutoffs: super::cutoff_view::State,
@@ -198,7 +199,7 @@ struct Decision {
 }
 impl State {
     pub fn editing(&self) -> bool {
-        self.tax.editing() || self.thirteenth.editing() || self.profile.is_some()
+        self.payments.editing() || self.tax.editing() || self.thirteenth.editing() || self.profile.is_some()
             || self.cutoffs.editing()
             || self.holiday.is_some()
             || self.run.is_some()
@@ -212,6 +213,7 @@ impl State {
         if !a.saved(data) {
             return false;
         }
+        if a.operation.starts_with("receipt_") {self.payments.accept();return true;}
         if a.operation.starts_with("tax_") {self.tax.accept(&a,data);return true;}
         if a.operation.starts_with("thirteenth_") {self.thirteenth.accept(&a,data);return true;}
         if a.operation == "item_refresh" || a.operation == "cutoff_item_refresh" {
@@ -410,6 +412,7 @@ impl HrisApp {
         self.send(Command::Change(Action::Payroll(a)));
     }
     pub(super) fn payroll(&mut self, ui: &mut Ui) {
+        if self.payroll_state.payments.editing() {self.payroll_payment_forms(ui);return;}
         if self.payroll_state.tax.editing() {self.payroll_tax_forms(ui);return;}
         if self.payroll_state.thirteenth.editing() {self.payroll_thirteenth_forms(ui);return;}
         if self.payroll_state.cutoffs.editing() {
@@ -438,6 +441,7 @@ impl HrisApp {
                 "Cutoffs",
                 "13th-month pay",
                 "Annual tax",
+                "Payments",
             ]
             .iter()
             .enumerate()
@@ -466,6 +470,7 @@ impl HrisApp {
             6 => self.payroll_cutoffs(ui),
             7 => self.payroll_thirteenth(ui),
             8 => self.payroll_tax(ui),
+            9 => self.payroll_payments(ui),
             _ => {
                 card(ui, |ui| {
                     ui.heading("Philippine private-sector payroll");
@@ -1193,8 +1198,9 @@ impl HrisApp {
         }
     }
     fn payroll_slips(&mut self, ui: &mut Ui) {
+        let visible:Vec<_>=self.data.payroll.slips.iter().filter(|s|s.company_id==self.data.company.id && (self.data.access.role.manages_hr() || self.data.access.employee_id==Some(s.employee_id))).cloned().collect();
         if let Some(id) = self.payroll_state.slip {
-            if let Some(s) = self.data.payroll.slips.iter().find(|s| s.id == id).cloned() {
+            if let Some(s) = visible.iter().find(|s| s.id == id).cloned() {
                 if ui.button("Back to payslips").clicked() {
                     self.payroll_state.slip = None;
                     return;
@@ -1257,7 +1263,7 @@ impl HrisApp {
             self.payroll_state.slip = None;
         }
         ui.label(if self.data.access.role.manages_hr(){"Approved payslips. HR/Admin can open any approved employee payslip; Managers see only their own."}else{"Your approved payslips. Salary profiles, draft payroll and team pay remain private to HR/Admin."});
-        let mut rows = self.data.payroll.slips.clone();
+        let mut rows = visible.clone();
         rows.sort_by_key(|s| std::cmp::Reverse(s.month));
         for s in rows {
             ui.horizontal_wrapped(|ui| {
@@ -1275,7 +1281,7 @@ impl HrisApp {
                 ui.strong(payroll::money(s.item.totals.net));
             });
         }
-        if self.data.payroll.slips.is_empty() {
+        if visible.is_empty() {
             empty(ui, "No approved payslips yet.");
         }
     }
@@ -1352,6 +1358,7 @@ impl HrisApp {
             return;
         }
         self.page = Page::Payroll;
+        if form.starts_with("payroll-payment") {self.payroll_state.tab=9;self.prepare_payment_preview(&form);return;}
         if form.starts_with("payroll-tax") {self.payroll_state.tab=8;self.prepare_tax_preview(&form);return;}
         if form.starts_with("payroll-thirteenth") {self.payroll_state.tab=7;self.prepare_thirteenth_preview(&form);return;}
         if form.starts_with("payroll-cutoff") {

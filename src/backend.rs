@@ -1111,7 +1111,7 @@ impl CloudClient {
         current.access.authorize(&action, current)?;
         if let Action::Payroll(action) = &action {
             let payload=action.payload(current)?;
-            let endpoint=if action.operation.starts_with("tax_"){ "rpc/manage_payroll_tax" }else if action.operation.starts_with("thirteenth_"){ "rpc/manage_payroll_thirteenth" }else if action.operation.starts_with("cutoff_"){ "rpc/manage_payroll_cutoff" }else{ "rpc/manage_payroll" };
+            let endpoint=if action.operation.starts_with("receipt_"){ "rpc/manage_payroll_receipt" }else if action.operation.starts_with("tax_"){ "rpc/manage_payroll_tax" }else if action.operation.starts_with("thirteenth_"){ "rpc/manage_payroll_thirteenth" }else if action.operation.starts_with("cutoff_"){ "rpc/manage_payroll_cutoff" }else{ "rpc/manage_payroll" };
             let saved:Value=decode(self.request(Method::POST,endpoint)?.json(&payload).send()?)?;
             ensure!(saved["company_id"]==json!(current.company.id)&&saved["id"]==payload["p_record"]["id"],"Payroll response did not match your company and record.");
             return self.snapshot().context("Payroll change saved, but refresh failed. Keep your draft and Refresh before retrying.");

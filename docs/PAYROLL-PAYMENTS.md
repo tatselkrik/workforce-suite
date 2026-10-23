@@ -1,0 +1,11 @@
+# Individual payroll payment records
+
+Open **Payroll → Payments**. HR/Admin see outstanding or all issued monthly, cutoff and13th-month payslips and can search employee names/codes, including departed employees. Only an active Administrator records an actual full-slip payment with a date, private reference, reason and confirmation. The server derives the exact issued net amount; partial cash installments are not included in this increment. This records a payment already made and never transfers money.
+
+A receipt belongs to exactly one issued payslip, employee and company. It remains immutable. The same actor can retry the identical creation request after a failed refresh; changed requests, duplicate receipts, stale run revisions and changed memberships are rejected. An audit failure rolls the entire operation back. HR-only references/reasons and the source view are unavailable to Managers and employees.
+
+One recipient's receipt does not mark coworkers paid. A run stays approved while recipients are outstanding, then becomes paid when the last receipt is recorded. Earlier batch-payment buttons and installed clients continue to work: they record only outstanding recipients and retain earlier individual receipts. A mixed batch's legacy paid date describes the last batch action; individual receipts are the authoritative received dates. The new native view shows those dates. Earlier paid runs receive additive legacy receipts without rewriting the runs, published slips or audit history.
+
+Annual tax uses the person's recorded received date even when the batch stays approved or is completed later. An unpaid sibling retains their outstanding-payment blocker. Shared benefit facts enter that person's annual source only after receipt. Existing issued tax advice and payslips remain unchanged; draft source/revision changes require review again.
+
+This is the payment foundation for final pay. The final-pay worksheet, leave conversion, separation/retirement amounts, prospective last-pay tax and final settlement statement follow separately. It does not change employee archive/access or clearance rules. An incorrect recorded payment needs a separately reviewed correction process; this increment does not silently edit financial history.

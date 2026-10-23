@@ -66,6 +66,7 @@ try {
   const cutoffMigrations=[];
   const thirteenthMigrations=[];
   const annualTaxMigrations=[];
+  const receiptMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -79,6 +80,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_payroll_individual_receipts.sql')){receiptMigrations.push(filename);continue;}
     if(filename.endsWith('_payroll_annual_tax_engine.sql')||filename.endsWith('_payroll_annual_tax_workflow.sql')||filename.endsWith('_payroll_annual_tax_receipt_index.sql')){annualTaxMigrations.push(filename);continue;}
     if(filename.endsWith('_payroll_thirteenth_engine.sql')||filename.endsWith('_payroll_thirteenth_workflow.sql')){thirteenthMigrations.push(filename);continue;}
     if(filename.endsWith('_payroll_cutoffs.sql')||filename.endsWith('_payroll_cutoff_read_policy.sql')||filename.endsWith('_payroll_cutoff_ot_reconciliation.sql')){cutoffMigrations.push(filename);continue;}
@@ -363,6 +365,12 @@ try {
   await runAnnualTaxEngineTests({db,eq,deny,session,owner:uidA,unassigned:uidB});
   const {runAnnualTaxWorkflowTests}=await import('./annual-tax-workflow.test.mjs');
   await runAnnualTaxWorkflowTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
+  await db.exec('reset role');
+  const beforeReceipts={};for(const table of ['payroll_runs','payroll_slips','payroll_cutoff_runs','payroll_cutoff_slips','payroll_thirteenth_runs','payroll_thirteenth_slips','payroll_tax_reconciliations','payroll_tax_slips'])beforeReceipts[table]=(await db.query(`select to_jsonb(r) r from public.${table} r order by id`)).rows;
+  for(const filename of receiptMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  for(const[table,rows]of Object.entries(beforeReceipts))eq((await db.query(`select to_jsonb(r) r from public.${table} r order by id`)).rows,rows,'Individual receipt migration preserves '+table);
+  const {runPaymentReceiptTests}=await import('./payment-receipts.test.mjs');
+  await runPaymentReceiptTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();
