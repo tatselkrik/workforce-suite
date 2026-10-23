@@ -48,4 +48,13 @@ Implemented in version 0.1.33: effective salary profiles, reviewed monthly recon
 
 Build a mobile-friendly employee application against the same protected company memberships. Start with own employment/contact details, attendance and breaks, leave/correction/overtime requests, own approved payslips, notifications and account security. Keep payroll drafts, team salaries, recruiting, private HR notes and administrative controls outside employee access. The native desktop remains the staff application. Device and external-service connections remain unconfigured until the necessary company and hardware choices are available.
 
+First local milestone implemented: the separate Rust portal signs in an employee,
+shows only their own read-only employment/contact records, saves their contacts,
+records server-timed attendance and reads issued payslips with CSV/browser
+printing. Fourteen local Auth/HTTP/security tests and ten actual hosted Auth/API
+proofs passed; phone-width browser checks use fictional records. No schema change
+was needed. Next add leave, breaks, correction/overtime requests, notifications,
+profile/security controls and company branding, then prepare public HTTPS hosting.
+See [employee portal](EMPLOYEE-PORTAL.md).
+
 The sequence may change when the company has a more urgent requirement. Payroll, biometric devices and external integrations require company-specific decisions; they are not generic plug-ins already working in this prototype.

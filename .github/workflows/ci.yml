@@ -9,6 +9,24 @@ permissions:
   contents: read
 
 jobs:
+  employee-portal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.95.0 --profile minimal --component rustfmt
+      - name: Check portal formatting
+        run: cargo fmt --manifest-path employee-portal/Cargo.toml -- --check
+      - name: Test portal authentication and own-record scopes
+        run: cargo test --manifest-path employee-portal/Cargo.toml --locked
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check browser script syntax
+        run: node --check employee-portal/web/app.js
+      - name: Test payslip CSV cell safety
+        run: node --test employee-portal/tests/browser.test.mjs
+
   desktop:
     runs-on: windows-latest
     steps:

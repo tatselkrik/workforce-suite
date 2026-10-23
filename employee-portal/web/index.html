@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>HRIS · Employee portal</title><link rel="stylesheet" href="/app.css"><script src="/app.js" defer></script></head>
+<body>
+<main id="sign-in-page" class="sign-in-page">
+  <section class="sign-in-card" aria-labelledby="welcome">
+    <div class="brand-mark" aria-hidden="true">HR</div><p class="eyebrow">EMPLOYEE PORTAL</p>
+    <h1 id="welcome">Welcome back</h1><p class="muted">Your workday, in one place.</p>
+    <form id="sign-in-form">
+      <label for="email">Company account email</label><input id="email" name="email" type="email" autocomplete="username" maxlength="254" required>
+      <label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" maxlength="512" required>
+      <button class="primary full" type="submit">Sign in</button>
+    </form>
+    <p class="fine">Use the account provided by HR. For account access or a forgotten password, contact your HR administrator.</p>
+  </section>
+</main>
+<div id="workspace" class="workspace" hidden>
+ <aside class="sidebar">
+  <div class="company-brand"><div id="company-initials" class="brand-mark" aria-hidden="true">HR</div><strong id="company-name">Employee portal</strong><span>EMPLOYEE SELF-SERVICE</span></div>
+  <nav id="navigation" aria-label="Main navigation"><button data-page="home" aria-current="page">Home</button><button data-page="attendance">Attendance</button><button data-page="pay">Payslips</button><button data-page="profile">My profile</button></nav>
+  <div class="session"><span class="status-dot"></span>Private company connection<button id="sign-out" class="quiet">Sign out</button></div>
+ </aside>
+ <main class="content">
+  <header><span class="eyebrow">MY WORKSPACE</span><div class="header-actions"><span id="today" class="muted"></span><button id="refresh" class="secondary">Refresh</button></div></header>
+  <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+  <section id="page-home" class="page" aria-labelledby="home-heading">
+   <p class="eyebrow">YOUR DAY</p><h1 id="home-heading">Good to see you</h1><p id="welcome-name" class="intro" data-private></p>
+   <div class="hero"><div><span class="eyebrow">TODAY'S ATTENDANCE</span><h2 id="today-status" data-private>Ready when you are</h2><p id="today-times" data-private></p></div><div id="home-clock-actions" class="actions" data-private></div></div>
+   <div class="grid two"><article class="card"><p class="eyebrow">EMPLOYMENT</p><h2 id="home-job" data-private></h2><p id="home-department" class="muted" data-private></p><button class="text-link" data-go="profile">View my details →</button></article><article class="card"><p class="eyebrow">LATEST PAYSLIP</p><div id="latest-payslip" data-private></div><button class="text-link" data-go="pay">View payslips →</button></article></div>
+   <p class="fine">Attendance, contact updates and payslips here are your own records. HR manages your employment details and reviews attendance disputes.</p>
+  </section>
+  <section id="page-attendance" class="page" aria-labelledby="attendance-heading" hidden>
+   <p class="eyebrow">MY TIME</p><h1 id="attendance-heading">Attendance</h1><p class="intro">Check in when you start. Check out when your shift ends.</p>
+   <article class="card"><div class="row"><div><h2 id="attendance-status" data-private></h2><p id="attendance-times" class="muted" data-private></p></div><div id="attendance-clock-actions" class="actions" data-private></div></div><p class="fine">Times come from the company server. If a time is wrong, contact HR to request a correction.</p></article>
+   <article class="card"><div class="row"><h2>My recent records</h2><label class="date-filter" for="attendance-date">Choose date<input type="date" id="attendance-date"></label></div><div id="attendance-list" data-private></div><p class="fine">Shows 93 recent recorded work dates plus any open shift. A missing record alone does not establish an absence.</p></article>
+  </section>
+  <section id="page-pay" class="page" aria-labelledby="pay-heading" hidden>
+   <p class="eyebrow">MY PAY</p><h1 id="pay-heading">Payslips</h1><p class="intro">Approved calculations, kept for your records.</p>
+   <div id="payslip-list" class="grid two" data-private></div><article id="payslip-detail" class="card payslip" data-private hidden></article>
+  </section>
+  <section id="page-profile" class="page" aria-labelledby="profile-heading" hidden>
+   <p class="eyebrow">MY DETAILS</p><h1 id="profile-heading">My profile</h1><p class="intro">Keep your contact information current.</p>
+   <article class="card"><div class="row"><h2>Employment</h2><span class="badge">Managed by HR</span></div><dl id="employment" class="facts" data-private></dl></article>
+   <form id="contacts-form" class="card">
+    <h2>Contact details</h2><p class="muted">These updates do not change your sign-in email.</p>
+    <div class="grid two"><div><label for="phone">Mobile / phone</label><input id="phone" name="phone" type="tel" maxlength="40" autocomplete="tel"></div><div><label for="personal_email">Personal email</label><input id="personal_email" name="personal_email" type="email" maxlength="254" autocomplete="email"></div></div>
+    <label for="address">Home address</label><textarea id="address" name="address" maxlength="500" rows="3" autocomplete="street-address"></textarea>
+    <h2 class="section-gap">Emergency contact</h2><p class="muted">Provide a name, relationship and primary phone together, or leave all emergency fields blank.</p>
+    <div class="grid two"><div><label for="emergency_name">Full name</label><input id="emergency_name" name="emergency_name" maxlength="120"></div><div><label for="emergency_relationship">Relationship</label><input id="emergency_relationship" name="emergency_relationship" maxlength="80"></div><div><label for="emergency_phone">Primary phone</label><input id="emergency_phone" name="emergency_phone" type="tel" maxlength="40"></div><div><label for="emergency_alternate_phone">Alternate phone</label><input id="emergency_alternate_phone" name="emergency_alternate_phone" type="tel" maxlength="40"></div></div>
+    <div class="form-footer"><button class="primary" type="submit">Save contact details</button><button id="contacts-discard" class="secondary" type="button">Discard changes</button><span class="fine">Employment changes go through HR.</span></div>
+   </form>
+   <article class="card"><h2>Account &amp; security</h2><p id="account-email" data-private></p><p class="fine">Your portal session ends after 30 minutes of inactivity. Sign out when using a shared device. Contact HR if you need a password reset.</p><button id="profile-sign-out" class="secondary">Sign out of this portal</button></article>
+  </section>
+ </main>
+</div>
+<div id="login-notice" class="login-notice" role="alert" hidden></div>
+</body></html>

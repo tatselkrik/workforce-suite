@@ -46,3 +46,9 @@ approval and immutable slips/events. Monthly reconciliation does not authorize
 monthly-only wage payment. Missing attendance never implies an absence deduction;
 payment recording is not a bank transfer or government filing. Rule packs need
 explicit effective dates and current official Philippine sources.
+
+The separate employee-portal/ Rust application is described in
+docs/EMPLOYEE-PORTAL.md and has its own nested instructions, Cargo.lock and release
+lifecycle. Keep its cookie/CSRF/Auth sessions memory-only and APIs limited to the
+current person's records even for staff roles. Portal work must not weaken native
+Employee admission or mutate a published desktop release.
