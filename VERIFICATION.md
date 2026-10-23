@@ -17,9 +17,11 @@ local. The private update feed currently offers 0.1.29.
   completion, private evidence, history, Manager scope and existing appraisal
   tabs. Certificate archive/revoke confirmations were recaptured after adding
   employee/title labels. This does not automate signed-in native buttons.
-- Source privacy scan passed. A real-Auth probe/harness is prepared separately;
-  hosted execution, normal release binary/startup checks, packaging, exact
-  installer, private publication and installation are still pending.
+- Source/binary privacy and normal configured sign-in startup/close passed.
+  The normal binary excludes QA controls and company connection values. A
+  real-Auth probe is built and its harness syntax checked; neither has run on
+  hosted learning tables. Hosted migration/execution, packaging, exact installer,
+  private publication and installation are pending.
 
 ## Goals and appraisals - version 0.1.29
 
