@@ -1,5 +1,17 @@
 # Prototype verification — 2026-10-23
 
+## Installer metadata correction - version 0.1.32
+
+The 0.1.31 real installation check verified all7payload hashes, then caught
+Windows Apps still reporting0.1.30. Installer resource and registration versions
+were hard-coded. Published31artifacts are retained immutable;32supersedes them.
+The installer now derives every version from its prepared BUILD.json, following
+[NSIS searchparse](https://nsis.sourceforge.io/Reference/%21searchparse). The exact
+installer/recovery test now checks the compiled setup's ProductVersion before
+installation. Final32native/startup/artifact/installer/registration checks are
+recorded in its versioned report. Career code/schema and its actualAuth31proofs
+are unchanged; no extra roadmap module was started. The scheduler stays PAUSED.
+
 ## Career development plans - version 0.1.31
 
 - 309 full Rust tests passed, followed by101final library/career/HTTP tests after
@@ -30,7 +42,7 @@
   signed-in native-button automation, actual parallel transaction timing,
   Authenticode, remoteCI, otherPC or running-parent update timing claim.
 - See [the requested review checklist](docs/REVIEW-CHECKLIST-2026-10-23.md) for
-  changes since Oct22at15:54local (versions19–31) and remaining roadmap. Development
+  changes since Oct22at15:54local (versions19–32) and remaining roadmap. Development
   stops after this milestone; the automatic-resume scheduler is PAUSED.
 
 

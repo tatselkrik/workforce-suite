@@ -13,6 +13,11 @@ Unicode true
   !error "SETUP_OUTPUT must name the output installer"
 !endif
 
+; Derive all installer/registration versions from the prepared bundle.
+; NSIS !searchparse fails compilation when the version line cannot be read.
+; https://nsis.sourceforge.io/Reference/%21searchparse
+!searchparse /file "${APP_BUNDLE}\BUILD.json" '"version": "' APP_VERSION '"'
+
 !define APP_ID "io.github.tatselkrik.hrisdesktop"
 !define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}"
 Name "HRIS Desktop"
@@ -20,11 +25,11 @@ OutFile "${SETUP_OUTPUT}"
 InstallDir "$LOCALAPPDATA\Programs\HRIS Desktop"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
-VIProductVersion "0.1.30.0"
+VIProductVersion "${APP_VERSION}.0"
 VIAddVersionKey /LANG=1033 "ProductName" "HRIS Desktop"
-VIAddVersionKey /LANG=1033 "ProductVersion" "0.1.30"
+VIAddVersionKey /LANG=1033 "ProductVersion" "${APP_VERSION}"
 VIAddVersionKey /LANG=1033 "FileDescription" "HRIS Desktop private prototype setup"
-VIAddVersionKey /LANG=1033 "FileVersion" "0.1.30.0"
+VIAddVersionKey /LANG=1033 "FileVersion" "${APP_VERSION}.0"
 VIAddVersionKey /LANG=1033 "LegalCopyright" ""
 
 !define MUI_ABORTWARNING
@@ -84,7 +89,7 @@ Section "HRIS Desktop"
   !ifdef UPDATE_ONLY
     ReadRegStr $0 HKCU "${UNINSTALL_KEY}" "InstallLocation"
     StrCmp $0 "$INSTDIR" 0 update_done
-    WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "0.1.30"
+    WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "${APP_VERSION}"
     update_done:
     Goto setup_done
   !else
@@ -98,7 +103,7 @@ Section "HRIS Desktop"
   CreateShortCut "$SMPROGRAMS\HRIS Desktop.lnk" "$INSTDIR\HRIS-Desktop.exe" "" "$INSTDIR\HRIS-Desktop.exe" 0
   CreateShortCut "$DESKTOP\HRIS Desktop.lnk" "$INSTDIR\HRIS-Desktop.exe" "" "$INSTDIR\HRIS-Desktop.exe" 0
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayName" "HRIS Desktop"
-  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "0.1.30"
+  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "${APP_VERSION}"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\HRIS-Desktop.exe"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "UninstallString" '$\"$INSTDIR\Uninstall.exe$\"'

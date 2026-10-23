@@ -1,10 +1,11 @@
 # Review checklist: October 22–23, 2026
 
 This covers changes committed after **October 22 at 3:54 p.m.**, through the
-career development milestone in **0.1.31** (local time, UTC+8). Earlier employee,
+career development milestone in **0.1.32** (local time, UTC+8). Earlier employee,
 201-file, organization, leave-policy, shift, break and time-calculation features
 are outside this change window. The list follows the actual release history,
-versions **0.1.19–0.1.31**.
+versions **0.1.19–0.1.32**. Version 0.1.32 fixes installer/Windows Apps version
+metadata; the career features were added in 0.1.31.
 
 These are suggested hands-on checks, not a requirement to repeat every automated
 test. Use synthetic records. Confirm the version at the top right before checking
@@ -81,6 +82,12 @@ HR, Administrators and Managers use this desktop.
   one done milestone and no required milestone remains open. Reopen and inspect
   the earlier saved milestone facts in history. Changing a related source later
   must not rewrite those facts or change the employee's actual job/department/pay.
+
+- [ ] **Installer version consistency — 0.1.32.** Confirm the version at the top
+  right and Windows Settings > Apps both show 0.1.32. The 0.1.31 install check
+  caught stale Windows metadata; the superseding patch derives installer and
+  registration versions from the bundle. Company connection/update settings stay
+  preserved. No new roadmap feature was added for this patch.
 
 ## A short cross-cutting check
 

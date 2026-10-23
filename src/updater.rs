@@ -642,9 +642,21 @@ mod tests {
             Foundation::CloseHandle,
             System::Threading::{OpenProcess, PROCESS_TERMINATE, TerminateProcess},
         };
-        let setup =
-            fs::read(std::env::var_os("HRIS_TEST_UPDATE_SETUP").expect("Update setup required"))
-                .unwrap();
+        let setup_path=std::env::var_os("HRIS_TEST_UPDATE_SETUP").expect("Update setup required");
+        // Check the real compiled artifact, so stale setup resources fail before any installation.
+        {
+            use std::os::windows::process::CommandExt;
+            let metadata=Command::new("powershell.exe")
+                .args(["-NoProfile","-NonInteractive","-Command",
+                    "(Get-Item -LiteralPath $env:HRIS_INSTALLER_VERSION_PATH).VersionInfo.ProductVersion"])
+                .env("HRIS_INSTALLER_VERSION_PATH",&setup_path)
+                .creation_flags(0x08000000)
+                .output().unwrap();
+            assert!(metadata.status.success(),"Installer metadata query failed");
+            assert_eq!(String::from_utf8(metadata.stdout).unwrap().trim(),VERSION,
+                "Installer resources must match the bundled application version");
+        }
+        let setup=fs::read(setup_path).unwrap();
         let new_exe =
             fs::read(std::env::var_os("HRIS_TEST_NEW_EXE").expect("New executable required"))
                 .unwrap();
