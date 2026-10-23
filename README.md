@@ -6,6 +6,8 @@ Application identifier: `io.github.tatselkrik.hrisdesktop`.
 
 ## What works
 
+- **Goals and appraisals:** Employees > Development holds goals/progress, review cycles, assigned reviewer assessments and HR publication with immutable submitted goal facts. Private HR notes stay separate; reassignment removes former Manager access and resets unfinished feedback. See [performance](docs/PERFORMANCE.md).
+
 - **Hiring and onboarding:** private HR/Admin applicant records, résumé/application files, interview scheduling and assessments, Administrator-approved offers and accepted-offer employee creation. Required onboarding tasks have responsible staff, due dates, completion/waiver history and guarded case closure. Managers see only assigned interviews, their own assessments and assigned tasks. See [hiring workflows](docs/HIRING.md).
 - **Notifications:** a private in-app inbox for eligible approvals, personal request decisions, upcoming leave, unfinished check-outs and HR document-expiry reminders. Read/unread markers persist across sign-ins; see [notifications](docs/NOTIFICATIONS.md).
 - **Reports:** date-filtered attendance detail, filed leave charges and employee summaries with role-scoped CSV exports and selectable ordered columns. Current headcount by department/location/type and daily/weekly/monthly attendance/leave charts are also available; see [workforce analysis](docs/WORKFORCE-ANALYSIS.md). Save up to 20 personal views with fixed dates or rolling 7-day, 30-day and month-to-date periods; apply, edit or delete them across sign-ins. See [reports](docs/REPORTS.md). HR/Admin can also preview and atomically import new employee/contact records from CSV, with row errors and retained batch history; see [employee imports](docs/EMPLOYEE-IMPORTS.md).

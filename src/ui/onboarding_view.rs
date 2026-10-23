@@ -797,21 +797,29 @@ impl HrisApp {
     }
 }
 fn change_fields(ui: &mut Ui, e: &onboarding::Event) -> egui::Rect {
-    let after = e.after_record.as_object();
+    record_change_fields(ui, e.id, e.before_record.as_ref(), &e.after_record)
+}
+pub(super) fn record_change_fields(
+    ui: &mut Ui,
+    id: Uuid,
+    before: Option<&serde_json::Value>,
+    after_value: &serde_json::Value,
+) -> egui::Rect {
+    let after = after_value.as_object();
     if let Some(after) = after {
-        let width = if e.before_record.is_some() {
+        let width = if before.is_some() {
             (ui.available_width() - 180.0) / 2.0
         } else {
             ui.available_width() - 170.0
         }
         .clamp(85.0, 320.0);
-        return egui::Grid::new(e.id)
-            .num_columns(if e.before_record.is_some() { 3 } else { 2 })
+        return egui::Grid::new(id)
+            .num_columns(if before.is_some() { 3 } else { 2 })
             .max_col_width(width)
             .spacing([20.0, 8.0])
             .show(ui, |ui| {
                 ui.strong("Field");
-                if e.before_record.is_some() {
+                if before.is_some() {
                     ui.strong("Before");
                 }
                 ui.strong("Saved value");
@@ -831,11 +839,17 @@ fn change_fields(ui: &mut Ui, e: &onboarding::Event) -> egui::Rect {
                         "applicant_id",
                         "offer_id",
                         "conversion_id",
+                        "reviewer_employee_id",
+                        "published_by",
+                        "cycle_id",
+                        "review_id",
+                        "note_id",
+                        "goal_id",
                     ]
                     .contains(&k.as_str())
                 }) {
-                    let old = e.before_record.as_ref().and_then(|b| b.get(key));
-                    if e.before_record.is_some() && old == Some(value) {
+                    let old = before.and_then(|b| b.get(key));
+                    if before.is_some() && old == Some(value) {
                         continue;
                     }
                     ui.vertical(|ui| {
@@ -851,7 +865,7 @@ fn change_fields(ui: &mut Ui, e: &onboarding::Event) -> egui::Rect {
                                 .unwrap_or_default()
                         });
                     });
-                    if e.before_record.is_some() {
+                    if before.is_some() {
                         ui.vertical(|ui| {
                             ui.set_width(width);
                             ui.add(
@@ -886,6 +900,12 @@ fn history_preview() -> bool {
     }
 }
 fn history_value(key: &str, v: &serde_json::Value) -> String {
+    if key == "goals_snapshot" {
+        return format!(
+            "{} goals saved at submission",
+            v.as_array().map_or(0, Vec::len)
+        );
+    }
     if key == "amount_minor" {
         if let Some(n) = v.as_i64() {
             return onboarding::money(n);

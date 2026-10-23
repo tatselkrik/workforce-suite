@@ -16,6 +16,7 @@ pub mod imports;
 pub mod leave;
 pub mod notifications;
 pub mod onboarding;
+pub mod performance;
 pub mod organization;
 pub mod overtime;
 pub mod recruiting;

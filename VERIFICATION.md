@@ -1,5 +1,38 @@
 # Prototype verification — 2026-10-23
 
+## Goals and appraisals - version 0.1.29
+
+- 283 Rust tests and 1453 local PostgreSQL assertions passed. Coverage includes
+  bounded goal progress, safe creation retries, strict saved receipts, preserved
+  drafts/refresh recovery, current reporting/assignment scopes, clean reassignment,
+  separate HR notes, no self-appraisal decisions and immutable publication facts.
+  Local tests simulate Auth and prove older exit finalization rolls back membership
+  deactivation and archiving when unfinished appraisals block it.
+- Migration `20261022231643` deployed. All31 local/hosted versions match exactly;
+  immediate before/after digests match across14existing tables including Auth.
+  Five new public tables use RLS, public invoker RPC/protected private writer,
+  direct-write revocations and immutable history/publication triggers. Private
+  original-retry rows have no client grants and default-deny RLS (intentional
+  no-policy INFO). No new security warning or foreign-key finding; pre-existing
+  leaked-password-protection warning remains. No Edge Function change.
+- Actual Admin/HR/Manager Auth through Rust and REST verified goal creation/retry,
+  progress, reporting/reviewer reassignment, draft privacy, assigned assessment,
+  submission, HR publication and independent private notes. Employee own-goal/
+  published-review reads worked while desktop sign-in was rejected. Direct writes,
+  history deletion, anonymous/forged-metadata access and privileged mutations were
+  denied; disabled unexpired JWTs lost all performance reads. Unrelated employee,
+  attendance, leave, document, onboarding and exit records matched. Synthetic
+  fixtures remain disabled/archived; exact verification sessions were revoked.
+  An initial REST expectation incorrectly excluded own goal-history events; the
+  corrected harness completed. No real password changed.
+- 19 final fictional native previews inspected: goals/progress, forms, review
+  cycles, assignments, assessments, submission/publication, private notes, history,
+  Manager scopes and dark125%. Normal configured sign-in startup/close passed.
+  Source/binary privacy, real account checks, exact installer/recovery, private
+  signature/feed/download and installation are recorded separately at packaging.
+- No signed-in native-button automation, real parallel-transaction timing,
+  Authenticode, remote CI, other-PC or running-parent update timing claim.
+
 ## Exit and clearance - version 0.1.28
 
 - 270 Rust tests passed, including exit lifecycle/permissions, original-ID retries,

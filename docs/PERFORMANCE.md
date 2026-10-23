@@ -1,11 +1,8 @@
-# Goals and appraisals — under development
+# Goals and appraisals
 
-This module is not in published version 0.1.28. Migration
-`20261022231643` is a local candidate; Rust transport, desktop screens and
-hosted account verification remain to be implemented. Do not apply it to a
-company deployment until the complete module is verified.
+Implemented in version 0.1.29 with migration `20261022231643`.
 
-The planned entry is Employees > Development, with Goals and Appraisals.
+The entry is Employees > Development, with Goals and Appraisals.
 HR/Admin assign company cycles and reviewers. Managers assign goals to current
 direct reports, report their own progress and assess only assigned current
 reports. Ordinary Employee accounts remain portal-only; database own-goal and
@@ -33,8 +30,10 @@ An exit-readiness projection adds unfinished reviews about/assigned to a
 leaving employee. A protected late guard also rejects finalization for older
 clients, rolling back membership deactivation and employee archiving together.
 The deployed exit migration is unchanged; its replacement readiness function
-and new trigger live in this candidate migration. Performance inbox messages,
+and new trigger live in this performance migration. Performance inbox messages,
 360 feedback, training/certifications and career records remain separate work.
 
-Local PostgreSQL tests simulate Auth. Native views, actual Auth/RLS, realistic
-parallel-transaction timing and a new installer have not been verified yet.
+Verification evidence is recorded in VERIFICATION.md and the separate versioned
+release report. Local PostgreSQL tests simulate Auth; actual Auth/RLS checks and
+native screenshots are verified separately. Performance inbox messages, 360
+feedback and training/certification/career records remain future modules.

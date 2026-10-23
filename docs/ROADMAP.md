@@ -38,7 +38,7 @@ Implemented: HR/Admin-only applicant records, search/stage filters, reasoned sta
 
 ## Stage 8 — Development and performance
 
-Add goals, appraisals, feedback, training, certifications and career development, with privacy appropriate to each record type.
+Implemented: employee/current-report goals with reasoned progress and retained history, company review cycles, eligible assigned reviewers, assessment/strengths/development feedback, HR publication, immutable submission-time goal facts and separate private HR notes. Reassignment resets unfinished assessments and protects prior reviewer drafts; current membership/reporting scopes apply. Unfinished appraisals block exit finalization, including older clients. See [performance](PERFORMANCE.md). Next: training, certifications and career development. Employee portal, 360 feedback and performance inbox reminders remain later work.
 
 ## Stage 9 — Payroll and benefits
 

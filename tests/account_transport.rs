@@ -1074,6 +1074,11 @@ fn baseline(company: &Company) -> Vec<Reply> {
         reply("POST /rest/v1/rpc/exit_readiness_list ", 200, json!([])),
         reply("GET /rest/v1/clearance_tasks?", 200, json!([])),
         reply("GET /rest/v1/exit_events?", 200, json!([])),
+        reply("GET /rest/v1/performance_goals?", 200, json!([])),
+        reply("GET /rest/v1/performance_cycles?", 200, json!([])),
+        reply("GET /rest/v1/performance_reviews?", 200, json!([])),
+        reply("GET /rest/v1/performance_hr_notes?", 200, json!([])),
+        reply("GET /rest/v1/performance_events?", 200, json!([])),
         reply("GET /rest/v1/notification_read_state?", 200, json!([])),
         reply("GET /auth/v1/user ", 200, user(company)),
         reply(
@@ -2067,6 +2072,7 @@ fn manager_desktop_sign_in_does_not_request_administrator_account_data() {
             && !r.prefix.contains("/hire_conversions?")
             && !r.prefix.contains("/onboarding_cases?")
             && !r.prefix.contains("/exit_cases?")
+            && !r.prefix.contains("/performance_hr_notes?")
             && !r.prefix.contains("/rpc/exit_readiness_list ")
             && !r.prefix.contains("/applicant_document")
             && !r.prefix.contains("/rpc/recruiting_interviewers ")
@@ -2844,5 +2850,131 @@ fn exit_creation_retries_original_payload_after_saved_write_and_failed_refresh()
     assert!(
         !req.iter()
             .any(|r| r.line.starts_with("PATCH /rest/v1/exit_cases"))
+    );
+}
+
+#[test]
+fn performance_goal_retries_original_id_after_saved_write_and_failed_refresh() {
+    use hris_desktop::{domain::Action, performance::*};
+    let mut demo = DemoStore::new();
+    let mut d = GoalDraft::new(&demo.data, demo.data.access.employee_id);
+    d.title = "Synthetic transport goal".into();
+    d.reason = "Synthetic assigned goal".into();
+    let action = PerformanceAction::GoalSave(d);
+    let before = demo.data.clone();
+    demo.execute(Action::Performance(action.clone())).unwrap();
+    let saved = demo.data.performance.goals[0].clone();
+    let prepare = |data: &hris_desktop::domain::Snapshot| {
+        let mut r = baseline(&data.company);
+        for response in &mut r {
+            let v = match response.prefix.as_str() {
+                "POST /rest/v1/rpc/my_hris_access " => Some(
+                    json!({"company_id":data.company.id,"user_id":data.access.user_id,"employee_id":data.access.employee_id,"role":data.access.role,"direct_reports":data.access.direct_reports}),
+                ),
+                p if p.starts_with("GET /rest/v1/employees?") => Some(json!(data.employees)),
+                p if p.starts_with("GET /rest/v1/performance_goals?") => {
+                    Some(json!(data.performance.goals))
+                }
+                p if p.starts_with("GET /rest/v1/performance_events?") => {
+                    Some(json!(data.performance.events))
+                }
+                _ => None,
+            };
+            if let Some(v) = v {
+                response.body = serde_json::to_vec(&v).unwrap();
+            }
+        }
+        r
+    };
+    let mut replies = prepare(&before);
+    replies.push(reply(
+        "POST /rest/v1/rpc/manage_performance ",
+        200,
+        json!(saved),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/my_hris_access ",
+        500,
+        json!({"message":"Synthetic refresh failure"}),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/manage_performance ",
+        200,
+        json!(saved),
+    ));
+    replies.extend(
+        prepare(&demo.data)
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
+    let (config, server, requests) = fixture(replies);
+    let (mut client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert!(
+        client
+            .execute(Action::Performance(action.clone()), &data)
+            .unwrap_err()
+            .to_string()
+            .contains("refresh failed")
+    );
+    let result = client
+        .execute(Action::Performance(action.clone()), &data)
+        .unwrap();
+    assert!(action.saved(&result));
+    server.join().unwrap();
+    let req = requests.lock().unwrap();
+    let writes: Vec<_> = req
+        .iter()
+        .filter(|r| r.line.starts_with("POST /rest/v1/rpc/manage_performance "))
+        .collect();
+    assert_eq!(writes.len(), 2);
+    assert_eq!(writes[0].json(), writes[1].json());
+    assert!(
+        !req.iter()
+            .any(|r| r.line.starts_with("PATCH /rest/v1/performance_goals"))
+    );
+}
+#[test]
+fn a_performance_save_response_for_another_company_is_rejected_before_refresh() {
+    use hris_desktop::{domain::Action, performance::*};
+    let demo = DemoStore::new();
+    let mut d = CycleDraft::new(&demo.data);
+    d.name = "Synthetic response check".into();
+    d.reason = "Synthetic cycle".into();
+    let id = d.id;
+    let mut replies = baseline(&demo.data.company);
+    replies.push(reply(
+        "POST /rest/v1/rpc/manage_performance ",
+        200,
+        json!({"id":id,"company_id":uuid::Uuid::new_v4()}),
+    ));
+    let (config, server, requests) = fixture(replies);
+    let (mut client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert!(
+        client
+            .execute(Action::Performance(PerformanceAction::CycleSave(d)), &data)
+            .unwrap_err()
+            .to_string()
+            .contains("company and record")
+    );
+    server.join().unwrap();
+    assert!(
+        requests
+            .lock()
+            .unwrap()
+            .last()
+            .unwrap()
+            .line
+            .starts_with("POST /rest/v1/rpc/manage_performance ")
     );
 }

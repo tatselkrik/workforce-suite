@@ -73,6 +73,8 @@ pub struct Readiness {
     pub open_onboarding_tasks: u64,
     pub open_clearance_tasks: u64,
     pub scheduled_interviews: u64,
+    #[serde(default)]
+    pub open_performance_reviews: u64,
     pub installation_owner: bool,
     pub own_account: bool,
 }
@@ -95,6 +97,10 @@ impl Readiness {
             v.push("Another Administrator must finalize your exit.".into());
         }
         for (n, label) in [
+            (
+                self.open_performance_reviews,
+                "unfinished appraisals about or assigned to this employee; resolve, cancel or reassign them",
+            ),
             (
                 self.open_required_tasks,
                 "required clearance tasks to finish or waive",
@@ -601,6 +607,7 @@ pub fn readiness(data: &Snapshot, id: Uuid) -> Option<Readiness> {
                     && i.status == crate::recruiting::InterviewStatus::Scheduled
             })
             .count() as u64,
+        open_performance_reviews: crate::performance::unfinished_reviews(data, person),
         installation_owner: data
             .accounts
             .iter()

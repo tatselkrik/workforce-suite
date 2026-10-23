@@ -30,6 +30,7 @@ mod leave_view;
 mod notifications_view;
 mod onboarding_view;
 mod exits_view;
+mod performance_view;
 mod organization_view;
 mod overtime_view;
 mod recruiting_view;
@@ -44,6 +45,7 @@ enum EmployeeView {
     #[default]
     Directory,
     Organization,
+    Development,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -139,6 +141,7 @@ pub struct HrisApp {
     recruiting_state: recruiting_view::State,
     onboarding_state: onboarding_view::State,
     exit_state: exits_view::State,
+    performance_state: performance_view::State,
     department: String,
     employment_type_filter: EmploymentFilter,
     work_location_filter: EmploymentFilter,
@@ -365,6 +368,7 @@ impl HrisApp {
             recruiting_state: Default::default(),
             onboarding_state: Default::default(),
             exit_state: Default::default(),
+            performance_state: Default::default(),
             department: String::new(),
             employment_type_filter: EmploymentFilter::All,
             work_location_filter: EmploymentFilter::All,
@@ -990,6 +994,7 @@ impl HrisApp {
             app.prepare_recruiting_preview();
             app.prepare_onboarding_preview();
             app.prepare_exit_preview();
+            app.prepare_performance_preview();
             if std::env::var("HRIS_PREVIEW_PAGE").as_deref() == Ok("sign-in") {
                 app.login_branding = branding::LoginBranding {
                     company_name: app.data.company.name.clone(),
@@ -1073,6 +1078,7 @@ impl HrisApp {
                         self.recruiting_state = Default::default();
                         self.onboarding_state = Default::default();
                         self.exit_state = Default::default();
+                        self.performance_state = Default::default();
                         self.import_state = imports_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
@@ -1102,6 +1108,7 @@ impl HrisApp {
                         self.recruiting_state = Default::default();
                         self.onboarding_state = Default::default();
                         self.exit_state = Default::default();
+                        self.performance_state = Default::default();
                         self.import_state = imports_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
@@ -1185,7 +1192,8 @@ impl HrisApp {
                     let recruiting_saved = self.recruiting_state.accept(&data);
                     let onboarding_saved = self.onboarding_state.accept(&data);
                     let exit_saved = self.exit_state.accept(&data);
-                    let hiring_saved = hiring_record_saved && recruiting_saved && onboarding_saved && exit_saved;
+                    let performance_saved = self.performance_state.accept(&data);
+                    let hiring_saved = hiring_record_saved && recruiting_saved && onboarding_saved && exit_saved && performance_saved;
                     self.data = data;
                     self.notification_state.invalidate();
                     if !self.data.active().any(|e| {
@@ -1248,6 +1256,7 @@ impl HrisApp {
                     self.hiring_state.pending = None;
                     self.onboarding_state.pending = None;
                     self.exit_state.pending = None;
+                    self.performance_state.pending = None;
                     self.recruiting_state.pending = None;
                     self.recruiting_state.resume_pending = None;
                     self.report_state.pending_views = None;
@@ -1748,6 +1757,8 @@ impl HrisApp {
                     "Employee record"
                 } else if self.employee_view == EmployeeView::Organization {
                     "Organization chart"
+                } else if self.employee_view == EmployeeView::Development {
+                    "Development"
                 } else {
                     "Employee directory"
                 },
@@ -1755,6 +1766,8 @@ impl HrisApp {
                     "Employment, reporting and private contacts in one record."
                 } else if self.employee_view == EmployeeView::Organization {
                     "Explore reporting relationships and open employee records."
+                } else if self.employee_view == EmployeeView::Development {
+                    "Goals, recorded progress and retained appraisal feedback."
                 } else {
                     "Click an employee to open their record."
                 },
@@ -1879,6 +1892,7 @@ impl HrisApp {
             || self.hiring_state.editing()
             || self.onboarding_state.editing()
             || self.exit_state.editing()
+            || self.performance_state.editing()
             || self.recruiting_state.editing()
             || self.report_state.view_draft.is_some()
             || self.account_form.is_some()
@@ -2120,6 +2134,7 @@ impl HrisApp {
             self.employee_record(ui);
             return;
         }
+        if self.performance_state.editing(){self.performance(ui);return;}
         ui.horizontal_wrapped(|ui| {
             ui.selectable_value(
                 &mut self.employee_view,
@@ -2131,8 +2146,10 @@ impl HrisApp {
                 EmployeeView::Organization,
                 "Organization chart",
             );
+            ui.selectable_value(&mut self.employee_view,EmployeeView::Development,"Development");
         });
         ui.add_space(10.0);
+        if self.employee_view == EmployeeView::Development {self.performance(ui);return;}
         if self.employee_view == EmployeeView::Organization {
             self.organization_chart(ui);
             return;
@@ -3962,7 +3979,8 @@ impl eframe::App for HrisApp {
                             && !self.hiring_state.editing()
                             && !self.recruiting_state.editing()
                             && !self.onboarding_state.editing()
-                            && !self.exit_state.editing(),
+                            && !self.exit_state.editing()
+                            && !self.performance_state.editing(),
                         |ui| self.sidebar(ui),
                     );
                 });
