@@ -60,6 +60,7 @@ try {
   const exitMigrations=[];
   const performanceMigrations=[];
   const learningMigrations=[];
+  const careerMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -73,6 +74,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_career_development_plans.sql')){careerMigrations.push(filename);continue;}
     if(filename.endsWith('_employee_learning_certifications.sql')){learningMigrations.push(filename);continue;}
     if(filename.endsWith('_performance_goals_appraisals.sql')){performanceMigrations.push(filename);continue;}
     if(filename.endsWith('_employee_exit_clearance.sql')){exitMigrations.push(filename);continue;}
@@ -323,6 +325,10 @@ try {
   for(const filename of learningMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
   const {runLearningTests}=await import('./learning.test.mjs');
   await runLearningTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
+  await db.exec('reset role');
+  for(const filename of careerMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  const {runCareerTests}=await import('./career.test.mjs');
+  await runCareerTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();
