@@ -88,6 +88,22 @@ impl CloudClient {
 }
 
 impl CloudClient {
+    pub fn government_payroll_sources(
+        &mut self,
+        current: &Snapshot,
+        month: chrono::NaiveDate,
+        agency: crate::payroll_government::Agency,
+    ) -> Result<crate::payroll_government::Wire> {
+        crate::payroll_reporting::authorize(current)?;
+        ensure!(month.day()==1 && month.year()>=2025 && month<=current.company.today(),"Choose an elapsed/current calendar month from2025 onward.");
+        let before=self.current_access()?;
+        if before!=current.access{return Err(AccessRevoked.into());}
+        let wire:crate::payroll_government::Wire=decode(self.request(Method::POST,"rpc/government_payroll_sources")?
+            .json(&json!({"p_month":month,"p_agency":agency})).send()?)?;
+        wire.validate(before.company_id,agency,month)?;
+        if self.current_access()?!=before{return Err(AccessRevoked.into());}
+        Ok(wire)
+    }
     pub fn consolidated_payroll_report(&mut self,current:&Snapshot,filter:&crate::payroll_reporting::Filter,destination:Option<&Path>)->Result<crate::payroll_reporting::Report>{
         crate::payroll_reporting::authorize(current)?;filter.validate()?;
         let before=self.current_access()?;

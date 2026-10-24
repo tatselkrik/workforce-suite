@@ -55,19 +55,28 @@ unconfigured external connection to a completed integration.
   tests,5JavaScript code checks,3,414database assertions and8actual hosted proof
   groups. Its additive migration preserves85priorrecordsets and235functions.
   Current notification/phone visual verification is pending because both UI
-  runtimes fail initialization. Pictures/security remain queued, so milestone1
+  runtimes fail initialization. Pictures/security followed in0.1.4/0.1.5; milestone1
   stays partial. Work and scheduling resumed after the completed storage cleanup.
 - Portal increment0.1.4 implements private own circular photos/preview/save/
   discard/removal and deployment-bound company sign-in branding.38Rust/9JS checks
   and9actual hosted proof groups pass. A stale-image removal issue was fixed with
-  fresh Storage origin reads. Current visual verification remains pending, and
-  password/email controls follow next; milestone1 stays open.
+  fresh Storage origin reads. Current visual verification remains pending;
+  password/email controls followed in0.1.5. Milestone1 stays open.
 - Portal increment0.1.5 implements own password/email status/changes and signing
   out other sessions.47Rust/13JS tests and9hosted proof groups pass, including a
   synthetic password change/restoration and retained foreign sessions/real Auth
   users. Actual email confirmation delivery and current UI visuals are unverified;
   milestone1 remains partial. Continue independent government-export work while
   these limitations remain recorded; no confirmation/provider rules are weakened.
+- Government milestone2 has started with official-source review and a separate
+  reconciliation engine passing11Rust checks, including PostgreSQL-vector decoding.
+  The local database suite passes3,591assertions. Source-v1 is deployed at57schema
+  versions with86recordsets/241functions preserved; hosted checks cover93facts,
+  four agency projections and current protected-role denial/revocation. All24prior
+  payroll table sets and earlier Auth users matched. Native library78tests pass;
+  allocations/remittance storage, native UI and file adapters remain outstanding.
+  No native release or government upload file is delivered yet. See
+  [government reporting boundaries](PAYROLL-GOVERNMENT.md).
 - Effective-date policies, balances and delegation follow the existing saved
   charges/plans and immutable history rules; they do not rewrite older requests.
 - Install each verified authorized desktop release, preserving unsaved work and

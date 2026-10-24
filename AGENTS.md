@@ -199,3 +199,14 @@ CARGO_PROFILE_DEV_DEBUG=0 and CARGO_PROFILE_TEST_DEBUG=0 in the command environm
 use one target directory per application (work/target or work/portal-target).
 Keep release profiles/lockfiles pinned. Enable extra debug symbols only when
 needed for a specific diagnostic, and remove obsolete output after verification.
+
+## Government payroll review foundations
+
+Rules/current source review are in docs/PAYROLL-GOVERNMENT.md. Keep source-v1
+HR/Admin-only and enforce current protected access on the server and before/after
+client requests. Preserve original slips/receipts and earned contribution months;
+BIR review follows individual received dates. An unknown contribution allocation,
+employer share or EC is unresolved, never silently zero. Postdated receipts retain
+their date and explicit review state. Final cash/source tax must not be counted
+twice. The source RPC/engine alone do not complete government files, remittance
+history, native UI or milestone2; deliver/install only after those scopes pass.
