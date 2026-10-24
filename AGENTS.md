@@ -152,9 +152,14 @@ is authorized. Keep actual biometric support disabled pending a selected protoco
 device and physical verification. Use the existing usage-reset follow-up/checkpoint
 to continue this queue; install each verified authorized desktop release.
 
-## Current stop boundary — 24 October 2026
+## Current continuation — 24 October 2026
 
-Kirk's latest instruction is to finish, verify and install 0.1.41, then stop.
-The usage-reset scheduler is PAUSED. Do not begin the employee portal or subsequent
-roadmap milestones after this version without a new human instruction to resume.
-The remaining queue above stays queued; it is not an active continuation request.
+Kirk explicitly resumed continuous work after0.1.41 and reactivated the existing
+usage-reset scheduler. The earlier stop-after0.1.41 boundary is superseded.
+Follow the approved order in docs/REMAINING-ROADMAP.md. Cross out each milestone
+only after implementation, proportionate verification and its authorized release/
+delivery requirements; retain partial status until then. Complete the local-only
+portal first, then the remaining ordered checklist. Preserve the deployment,
+financial, privacy and unresolved external-target boundaries above. Continue
+through usage resets using this task's checkpoint and the same follow-up, until
+Kirk stops the work, the scope is complete or a genuine handoff blocks progress.

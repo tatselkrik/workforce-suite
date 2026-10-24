@@ -1,5 +1,34 @@
 # Prototype verification — 2026-10-24
 
+## Separate local employee portal — version0.1.2
+
+-25 Rust portal tests, one CSV safety test, JavaScript syntax and3,275 local
+ PostgreSQL assertions passed. New routes support own correction/overtime
+ proposals, parent/break/candidate revisions, cancellation and redacted history.
+ Company-local times reject ambiguous/missing DST instants; no reviewer routes
+ are exposed. Existing desktop writers remain authoritative and unchanged.
+-The read-only migration `20261024133750` brings hosted history to55versions and
+ preserved all85 prior public record sets. Invoker/grant checks passed. Advisor
+ comparison found no new warnings/errors or unindexed FKs; three older warnings
+ and five older FK INFO remain. An initial advisor harness incorrectly expected
+ zero total warnings; comparison with the retained baseline resolved that check.
+-Seven actual hosted Auth/API proof groups passed: scoped context; validation,
+ CSRF/revision and no early punch writes; independent Manager correction/history;
+ saved-basis overtime with partial approval; missing-record proposal/cancellation;
+ staff own-only access/no review route; revoked membership denying an existing
+ cookie. Normal random credentials remained in memory. Synthetic accounts were
+ disabled/archived/session-free, retaining their history. Earlier harness attempts
+ were corrected for non-JSON422 responses and retained fixture-name uniqueness.
+-Fictional desktop browser checks covered aligned forms, own history, dirty-draft
+ navigation blocking and discard restoring date/overtime controls. A screenshot
+ is retained privately. Phone-width verification is pending after the browser
+ runtime failed to restart. Historical phone checks apply to prior increments.
+-Normal portal build/package/startup and exact source/hash evidence are retained
+ with its private artifacts. No public hosting, physical-phone, browser-print,
+ remoteCI or Authenticode result is claimed. Desktop0.1.41 stays installed.
+-The overall first milestone in `docs/REMAINING-ROADMAP.md` remains partial;
+ notifications, pictures and account-security controls continue next.
+
 ## Linked payroll amendments and cross-year final pay — version0.1.41
 
 -407 Rust tests and3,168 local PostgreSQL assertions passed. Fourteen checked-in

@@ -28,6 +28,7 @@ branding scope. Do not publicly host, tunnel or expose the server, or resume
 unrelated desktop employee access. Preserve the existing own-record/token/CSRF
 boundaries and nested release lifecycle.
 
-Kirk subsequently instructed this chat to stop after desktop0.1.41. Portal work is
-queued and PAUSED until a new human instruction resumes it; local-only deployment
-and all security boundaries remain in force.
+Kirk resumed this chat again after desktop0.1.41, approved the ordered checklist
+in ../docs/REMAINING-ROADMAP.md and reactivated the usage-reset scheduler. Complete
+the remaining local portal controls first; cross out the milestone only when all
+its scope is verified. Local-only deployment and all security boundaries remain.

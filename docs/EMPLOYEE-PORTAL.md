@@ -25,14 +25,21 @@ application identifier `io.github.tatselkrik.hrisportal`.
 - Own issued payslips, approved amounts, component descriptions, UTF-8 CSV and
   browser printing/Save as PDF. This portal does not calculate or change payroll.
   Payment remains separate from an approved calculation.
+- Own missing/incorrect attendance proposals for a selected past/current date,
+  with company-local timestamps, saved parent revision and required reason.
+  Recorded punches change only after another authorized desktop reviewer approves.
+- Own overtime requests within the protected saved-rule candidate, current
+  parent/break revisions, retained partial approvals and current approved minutes.
+  Changed attendance/break/leave facts withhold current authorization until reviewed.
+- Own pending-request cancellation and submission/decision history. The portal
+  exposes no reviewer controls or team records, including for staff accounts.
 
 Staff who use the portal receive the same own-record interface; their broader
 desktop role does not cause team records or approval/admin controls to load here.
 Employee desktop admission remains prohibited.
 
-Next increments add attendance-correction and overtime
-requests, notifications, company/profile pictures and account password/email
-controls. Public HTTPS deployment and physical phone/network checks remain
+Next increments add notifications, company/profile pictures and account password/
+email controls. Public HTTPS deployment and physical phone/network checks remain
 separate from localhost development. The current prototype has no public URL.
 
 ## Operator startup
@@ -94,6 +101,28 @@ and call protected routines; current employee identity is inferred server-side.
 The installed desktop's existing leave and break routines remain compatible.
 
 ## Verification
+
+The0.1.2 increment passes25 Rust portal tests, one CSV safety test, JavaScript
+syntax checks and3,275 local PostgreSQL assertions. Seven actual hosted Auth/API
+proof groups exercise own context, forged-field/CSRF/revision guards, no premature
+punch write, independent Manager correction and partial overtime approval, retained
+missing-day cancellation/history, own-only staff scope and revoked-account cookies.
+Synthetic histories remain with accounts disabled/archived and sessions removed.
+Earlier live harness attempts stopped on a plain-text422 response and a reused
+retained fixture shift name; corrected complete verification passed.
+
+The additive read-only context migration `20261024133750` is deployed (55versions),
+with all85 prior public record sets preserved and existing writers unchanged.
+There are no new advisor warnings/errors or unindexed foreign keys; three earlier
+warnings and five earlier FK INFO remain. Company-local input rejects nonexistent/
+ambiguous DST times. Desktop browser inspection verified form alignment, retained
+own history, draft navigation blocking and discard restoring controls. The new
+phone-width check remains pending because the browser runtime failed to restart;
+earlier phone-layout evidence below applies to earlier increments only.
+
+This portal release does not change the installed desktop0.1.41. Its normal
+executable excludes the fictional preview route and fixtures. Exact local package,
+startup and file-hash evidence are recorded with the private versioned artifacts.
 
 The Rust suite exercises request origin/host restrictions, HttpOnly/Secure cookie
 settings, CSRF, own-contact identity binding, actual local HTTP Auth/REST fixtures,

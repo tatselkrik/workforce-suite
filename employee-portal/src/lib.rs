@@ -1,4 +1,5 @@
 //! Own-record portal. No service key, token-bearing browser storage or arbitrary proxy.
+mod requests;
 mod self_service;
 use anyhow::{Context, Result, ensure};
 use axum::{
@@ -341,6 +342,8 @@ impl Portal {
             .route("/api/payslips", get(payslips))
             .route("/api/payslips/{id}", get(payslip))
             .merge(self_service::routes())
+            .merge(requests::routes())
+            .route("/time-requests.js", get(time_requests_script))
             .layer(DefaultBodyLimit::max(8192))
             .layer(middleware::from_fn_with_state(self.clone(), security))
             .with_state(self.clone())
@@ -585,6 +588,12 @@ async fn self_service_script() -> impl IntoResponse {
     (
         [(header::CONTENT_TYPE, "text/javascript; charset=utf-8")],
         include_str!("../web/self-service.js"),
+    )
+}
+async fn time_requests_script() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "text/javascript; charset=utf-8")],
+        include_str!("../web/time-requests.js"),
     )
 }
 async fn sign_in(

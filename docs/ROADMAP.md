@@ -37,8 +37,9 @@ and the private versioned delivery records.
     appraisal and training reminders, external email/push delivery and
     payroll/accounting/device connectors remain pending.
 
-Kirk requested stopping after finishing and installing0.1.41. The usage-reset
-scheduler is paused; remaining work is queued until explicitly resumed.
+Kirk resumed continuous work after0.1.41 and reactivated the existing usage-reset
+scheduler. The approved remaining order and completion checklist are in
+[REMAINING-ROADMAP.md](REMAINING-ROADMAP.md); mark verified milestones there.
 
 The HR workspace remains a native Rust desktop application for Administrators, HR Generalists, Managers and later assigned staff roles. Ordinary employees use a separate future mobile-friendly portal. Each company has its own dedicated Supabase deployment; the prototype is a reusable base for separately configured companies. Build and verify one module before moving to the next.
 
@@ -111,7 +112,7 @@ is invented. Consolidated report-v2 includes amendment cash once. Government
 exports/reconciliation and configured integrations remain queued. Work and the
 scheduler stop after finishing and installing this version.
 
-## Separate employee portal — local prototype, further work paused
+## Separate employee portal — local prototype, work resumed
 
 Build a mobile-friendly employee application against the same protected company memberships. Start with own employment/contact details, attendance and breaks, leave/correction/overtime requests, own approved payslips, notifications and account security. Keep payroll drafts, team salaries, recruiting, private HR notes and administrative controls outside employee access. The native desktop remains the staff application. Device and external-service connections remain unconfigured until the necessary company and hardware choices are available.
 

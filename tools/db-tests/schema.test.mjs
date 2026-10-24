@@ -71,6 +71,7 @@ try {
   const wageMigrations=[];
   const payrollReportMigrations=[];
   const amendmentMigrations=[];
+  const portalTimeMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -84,6 +85,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_employee_portal_attendance_context.sql')){portalTimeMigrations.push(filename);continue;}
     if(filename.includes('_payroll_cross_year_')||filename.includes('_payroll_amendments')){amendmentMigrations.push(filename);continue;}
     if(filename.includes('_expanded_payroll_reporting')){payrollReportMigrations.push(filename);continue;}
     if(filename.includes('_regional_wage_')){wageMigrations.push(filename);continue;}
@@ -413,6 +415,11 @@ try {
   await runCrossYearTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   const {runAmendmentTests}=await import('./payroll-amendments.test.mjs');
   await runAmendmentTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
+  await db.exec('reset role');const beforePortalTime={};const portalTimeTables=(await db.query("select tablename from pg_tables where schemaname='public'order by tablename")).rows.map(r=>r.tablename);
+  for(const t of portalTimeTables)beforePortalTime[t]=(await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows;
+  for(const filename of portalTimeMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  for(const t of portalTimeTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,beforePortalTime[t],'Own portal context preserves prior '+t+' records');
+  const{runPortalAttendanceTests}=await import('./portal-attendance.test.mjs');await runPortalAttendanceTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

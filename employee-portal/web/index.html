@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>HRIS · Employee portal</title><link rel="stylesheet" href="/app.css"><script src="/self-service.js" defer></script><script src="/app.js" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>HRIS Â· Employee portal</title><link rel="stylesheet" href="/app.css"><script src="/self-service.js" defer></script><script src="/time-requests.js" defer></script><script src="/app.js" defer></script></head>
 <body>
 <main id="sign-in-page" class="sign-in-page">
   <section class="sign-in-card" aria-labelledby="welcome">
@@ -26,17 +26,23 @@
   <section id="page-home" class="page" aria-labelledby="home-heading">
    <p class="eyebrow">YOUR DAY</p><h1 id="home-heading">Good to see you</h1><p id="welcome-name" class="intro" data-private></p>
    <div class="hero"><div><span class="eyebrow">MY ATTENDANCE</span><h2 id="today-status" data-private>Ready when you are</h2><p id="today-times" data-private></p></div><div id="home-clock-actions" class="actions" data-private></div></div>
-   <div class="grid two"><article class="card"><p class="eyebrow">EMPLOYMENT</p><h2 id="home-job" data-private></h2><p id="home-department" class="muted" data-private></p><button class="text-link" data-go="profile">View my details →</button></article><article class="card"><p class="eyebrow">LATEST PAYSLIP</p><div id="latest-payslip" data-private></div><button class="text-link" data-go="pay">View payslips →</button></article></div>
+   <div class="grid two"><article class="card"><p class="eyebrow">EMPLOYMENT</p><h2 id="home-job" data-private></h2><p id="home-department" class="muted" data-private></p><button class="text-link" data-go="profile">View my details â†’</button></article><article class="card"><p class="eyebrow">LATEST PAYSLIP</p><div id="latest-payslip" data-private></div><button class="text-link" data-go="pay">View payslips â†’</button></article></div>
    <p class="fine">Attendance, contact updates and payslips here are your own records. HR manages your employment details and reviews attendance disputes.</p>
   </section>
   <section id="page-attendance" class="page" aria-labelledby="attendance-heading" hidden>
    <p class="eyebrow">MY TIME</p><h1 id="attendance-heading">Attendance</h1><p class="intro">Check in when you start. Check out when your shift ends.</p>
-   <article class="card"><div class="row"><div><h2 id="attendance-status" data-private></h2><p id="attendance-times" class="muted" data-private></p></div><div id="attendance-clock-actions" class="actions" data-private></div></div><p class="fine">Times come from the company server. If a time is wrong, contact HR to request a correction.</p></article>
+   <article class="card"><div class="row"><div><h2 id="attendance-status" data-private></h2><p id="attendance-times" class="muted" data-private></p></div><div id="attendance-clock-actions" class="actions" data-private></div></div><p class="fine">Routine punches use company server time. Propose disputed or missing times below for review.</p></article>
    <article class="card"><h2>My shift breaks</h2><div id="break-controls" data-private></div><p class="fine">Use the break rules saved for this shift. Only completed actual unpaid breaks reduce recorded work time; a missing break never causes an automatic deduction.</p></article>
    <article class="card"><div class="row"><h2>My recent records</h2><label class="date-filter" for="attendance-date">Choose date<input type="date" id="attendance-date"></label></div><div id="attendance-list" data-private></div><p class="fine">Shows 93 recent recorded work dates plus any open shift. A missing record alone does not establish an absence.</p></article>
+   <article class="card"><h2>Request an attendance review</h2><label for="request-date">Work date<input id="request-date" type="date" required></label><div id="request-context" data-private></div><p id="request-zone" class="fine" data-private></p><button id="time-discard" class="secondary" type="button">Discard request draft</button></article>
+   <div class="grid two">
+    <form id="correction-form" class="card"><h2>Missing or incorrect punches</h2><fieldset id="correction-fields"><label for="correction-in">Requested check-in</label><input id="correction-in" type="datetime-local" step="1" required><label for="correction-out">Requested check-out (optional)</label><input id="correction-out" type="datetime-local" step="1"><label for="correction-reason">Reason</label><textarea id="correction-reason" maxlength="500" rows="3" required></textarea><div class="form-footer"><button id="correction-submit" class="primary" type="submit">Submit correction request</button></div></fieldset><p class="fine">Proposed times stay separate from recorded attendance until another authorized reviewer approves.</p></form>
+    <form id="overtime-form" class="card"><h2>Request overtime</h2><fieldset id="overtime-fields"><label for="overtime-minutes">Requested whole minutes</label><input id="overtime-minutes" type="number" min="1" step="1" required><label for="overtime-reason">Reason</label><textarea id="overtime-reason" maxlength="500" rows="3" required></textarea><div class="form-footer"><button id="overtime-submit" class="primary" type="submit">Submit overtime request</button></div></fieldset><p class="fine">Use a completed record with an available saved-rule candidate. Approval and payroll remain separate.</p></form>
+   </div>
+   <h2>My time requests</h2><div id="time-request-list" data-private></div><p class="fine">Recent 200 requests per type. Your manager or HR reviews requests in HRIS Desktop.</p>
   </section>
   <section id="page-leave" class="page" aria-labelledby="leave-heading" hidden>
-   <p class="eyebrow">TIME AWAY</p><h1 id="leave-heading">My leave</h1><p class="intro">Plan time away and follow your request’s progress.</p>
+   <p class="eyebrow">TIME AWAY</p><h1 id="leave-heading">My leave</h1><p class="intro">Plan time away and follow your requestâ€™s progress.</p>
    <form id="leave-form" class="card"><h2>Request leave</h2>
     <label for="leave-type">Leave type</label><select id="leave-type" required></select>
     <div class="grid two"><div><label for="leave-start">From</label><input id="leave-start" type="date" required></div><div><label for="leave-end">To</label><input id="leave-end" type="date" required></div></div>

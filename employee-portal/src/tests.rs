@@ -238,6 +238,31 @@ async fn fake(State(m): State<Mock>, request: Request) -> Response {
             json!({"id":uid(),"email":"portal-staff@example.invalid","user_metadata":{"role":"administrator","secret":"PRIVATE_SENTINEL"}})
         }
         "/auth/v1/logout" => json!({}),
+        "/rest/v1/rpc/portal_attendance_context" => {
+            json!({"company_id":cid(),"employee_id":person,"work_date":b["p_day"].as_str().unwrap_or("2026-09-01"),"timezone":"Asia/Manila","attendance":{"id":aid(),"revision":0,"work_date":"2026-09-01","checked_in_at":"2026-09-01T00:00:00Z","checked_out_at":"2026-09-01T10:30:00Z","secret":"PRIVATE_SENTINEL"},"candidate_minutes":90,"break_revisions":[{"id":bid(),"revision":0,"secret":"PRIVATE_SENTINEL"}],"correction_pending":false,"overtime_blocked":false,"current_approved_minutes":0,"secret":"PRIVATE_SENTINEL"})
+        }
+        "/rest/v1/rpc/attendance_request" | "/rest/v1/rpc/overtime_request" => {
+            if b["p_request"]["expected_revision"]
+                .as_i64()
+                .is_some_and(|r| r != 0)
+            {
+                return (
+                    StatusCode::CONFLICT,
+                    Json(json!({"secret":"PRIVATE_SENTINEL"})),
+                )
+                    .into_response();
+            }
+            json!(Uuid::from_u128(110))
+        }
+        "/rest/v1/attendance_requests" => {
+            json!([{"id":Uuid::from_u128(110),"company_id":cid(),"employee_id":person,"work_date":"2026-09-01","timezone":"Asia/Manila","proposed_in":"2026-09-01T00:30:00Z","proposed_out":"2026-09-01T10:30:00Z","revision":0,"status":"pending","reason":"Synthetic corrected punch","created_at":"2026-09-02T00:00:00Z","base_record":{"secret":"PRIVATE_SENTINEL"}}])
+        }
+        "/rest/v1/overtime_requests" => {
+            json!([{"id":Uuid::from_u128(110),"company_id":cid(),"employee_id":person,"work_date":"2026-09-01","requested_minutes":60,"approved_minutes":null,"revision":0,"status":"pending","reason":"Synthetic overtime","created_at":"2026-09-02T00:00:00Z","basis":{"secret":"PRIVATE_SENTINEL"}}])
+        }
+        "/rest/v1/attendance_request_events" | "/rest/v1/overtime_events" => {
+            json!([{"company_id":cid(),"employee_id":person,"request_id":Uuid::from_u128(110),"status":"pending","actor_name":"Synthetic staff","actor_role":"employee","reason":"Synthetic submission","created_at":"2026-09-02T00:00:00Z","before_record":{"secret":"PRIVATE_SENTINEL"}}])
+        }
         "/rest/v1/rpc/portal_leave_context" => {
             json!({"company_id":cid(),"employee_id":person,"policy_revision":7,"asof":b["p_asof"].as_str().unwrap_or("2026-11-02"),"workweek":[1,2,3,4,5],"holidays":[],"types":[{"code":"annual","name":"Annual leave","paid":true,"unlimited":false,"approval_chain":"PRIVATE_SENTINEL","balance":{"earned_units":30,"carryover_units":0,"used_units":2,"reserved_units":1,"available_units":27,"private":"PRIVATE_SENTINEL"}}]})
         }
@@ -731,4 +756,264 @@ async fn break_controls_use_saved_rules_preserve_revisions_and_reject_time_overr
         assert!(body["p_break"].get("started_at").is_none());
         assert!(body["p_break"].get("paid").is_none());
     }
+}
+
+#[tokio::test]
+async fn time_context_lists_and_history_project_only_own_safe_fields() {
+    let f = fixture().await;
+    let (cookie, _) = login(&f).await;
+    for path in [
+        "/api/time/context?day=2026-09-01",
+        "/api/time/requests",
+        "/api/time/history/correction/00000000-0000-0000-0000-00000000006e",
+        "/api/time/history/overtime/00000000-0000-0000-0000-00000000006e",
+    ] {
+        let (s, _, v) = request(&f.portal, path, None, Some(&cookie), None).await;
+        assert_eq!(s, StatusCode::OK, "{path}: {v}");
+        assert!(!v.to_string().contains("PRIVATE_SENTINEL"));
+        assert!(!v.to_string().contains("company_id"));
+        assert!(!v.to_string().contains("employee_id"));
+        assert!(!v.to_string().contains("actor_id"));
+    }
+    let seen = f.mock.requests.lock().await;
+    for (_, path, _) in seen.iter().filter(|(_, p, _)| {
+        p.starts_with("/rest/v1/attendance_requests?")
+            || p.starts_with("/rest/v1/overtime_requests?")
+    }) {
+        assert!(path.contains(&format!("employee_id=eq.{}", eid())));
+        assert!(path.contains(&format!("company_id=eq.{}", cid())));
+    }
+}
+fn correction_draft() -> Value {
+    json!({"work_date":"2026-09-01","timezone":"Asia/Manila","checked_in_local":"2026-09-01T08:30:00","checked_out_local":"2026-09-01T18:30:00","attendance_id":aid(),"parent_revision":0,"reason":" Synthetic correction "})
+}
+#[tokio::test]
+async fn correction_uses_company_zone_parent_revision_and_no_client_identity() {
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    let (s, _, v) = request(
+        &f.portal,
+        "/api/time/correction",
+        Some(correction_draft()),
+        Some(&cookie),
+        Some(&csrf),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK, "{v}");
+    let seen = f.mock.requests.lock().await;
+    let (_, _, b) = seen
+        .iter()
+        .find(|(_, p, _)| p == "/rest/v1/rpc/attendance_request")
+        .unwrap();
+    let b = &b["p_request"];
+    assert_eq!(b["checked_in_at"], "2026-09-01T00:30:00Z");
+    assert_eq!(b["checked_out_at"], "2026-09-01T10:30:00Z");
+    assert_eq!(b["expected_revision"], 0);
+    assert_eq!(b["operation"], "submit");
+    assert_eq!(b["reason"], "Synthetic correction");
+    assert!(b.get("employee_id").is_none());
+    assert!(b.get("status").is_none());
+}
+#[tokio::test]
+async fn correction_rejects_forged_fields_missing_csrf_and_stale_or_invalid_times() {
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    for key in ["employee_id", "operation", "status", "actor_id"] {
+        let mut b = correction_draft();
+        b[key] = json!("forged");
+        assert_eq!(
+            request(
+                &f.portal,
+                "/api/time/correction",
+                Some(b),
+                Some(&cookie),
+                Some(&csrf)
+            )
+            .await
+            .0,
+            StatusCode::UNPROCESSABLE_ENTITY
+        );
+    }
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/time/correction",
+            Some(correction_draft()),
+            Some(&cookie),
+            None
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    let mut b = correction_draft();
+    b["parent_revision"] = json!(9);
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/time/correction",
+            Some(b),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::CONFLICT
+    );
+    let mut b = correction_draft();
+    b["checked_out_local"] = json!("2026-09-01T07:30:00");
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/time/correction",
+            Some(b),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    let mut b = correction_draft();
+    b["attendance_id"] = Value::Null;
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/time/correction",
+            Some(b),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+}
+#[tokio::test]
+async fn overtime_retains_break_candidate_revisions_and_rejects_arbitrary_review() {
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    let b = json!({"attendance_id":aid(),"parent_revision":0,"expected_breaks":[{"id":bid(),"revision":0}],"candidate_minutes":90,"minutes":60,"reason":"Synthetic overtime"});
+    for minutes in [json!(0), json!(91), json!(1.5)] {
+        let mut bad = b.clone();
+        bad["minutes"] = minutes;
+        assert!(matches!(
+            request(
+                &f.portal,
+                "/api/time/overtime",
+                Some(bad),
+                Some(&cookie),
+                Some(&csrf)
+            )
+            .await
+            .0,
+            StatusCode::BAD_REQUEST | StatusCode::UNPROCESSABLE_ENTITY
+        ));
+    }
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/time/overtime",
+            Some(b),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/time/approve",
+            Some(json!({})),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::NOT_FOUND
+    );
+    let seen = f.mock.requests.lock().await;
+    let (_, _, b) = seen
+        .iter()
+        .find(|(_, p, _)| p == "/rest/v1/rpc/overtime_request")
+        .unwrap();
+    let b = &b["p_request"];
+    assert_eq!(b["expected_candidate_minutes"], 90);
+    assert_eq!(b["expected_breaks"][0]["id"], json!(bid()));
+    assert_eq!(b["operation"], "submit");
+    assert!(b.get("employee_id").is_none());
+}
+#[tokio::test]
+async fn time_cancellation_requires_owned_parent_and_saved_revision() {
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    let b = json!({"kind":"correction","id":Uuid::from_u128(110),"revision":0,"reason":"Synthetic cancellation"});
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/time/cancel",
+            Some(b.clone()),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let mut stale = b.clone();
+    stale["revision"] = json!(9);
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/time/cancel",
+            Some(stale),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::CONFLICT
+    );
+    let mut foreign = b;
+    foreign["id"] = json!(Uuid::from_u128(999));
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/time/cancel",
+            Some(foreign),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::BAD_GATEWAY
+    );
+}
+#[tokio::test]
+async fn foreign_context_or_revoked_membership_never_reaches_browser() {
+    let f = fixture().await;
+    let (cookie, _) = login(&f).await;
+    f.mock
+        .foreign
+        .store(true, std::sync::atomic::Ordering::SeqCst);
+    for path in ["/api/time/context", "/api/time/requests"] {
+        assert_eq!(
+            request(&f.portal, path, None, Some(&cookie), None).await.0,
+            StatusCode::BAD_GATEWAY
+        );
+    }
+    f.mock
+        .foreign
+        .store(false, std::sync::atomic::Ordering::SeqCst);
+    f.mock
+        .disabled
+        .store(true, std::sync::atomic::Ordering::SeqCst);
+    assert_eq!(
+        request(&f.portal, "/api/time/context", None, Some(&cookie), None)
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
 }
