@@ -1,7 +1,8 @@
 # Version 0.1.43 review checklist
 
-The registration increment is a release candidate until installation verification
-is recorded. Use fictional employee records for testing.
+The registration increment is installed and verified locally. See
+[release evidence](GOVERNMENT-0.1.43-VERIFICATION.md). Use fictional employee
+records for testing.
 
 1. Open **Payroll → Government → Registration details** as HR/Admin. Switch
    between Company registration and Employee registration, then load a record.

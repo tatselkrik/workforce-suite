@@ -1,6 +1,6 @@
 # Prototype verification — 2026-10-25
 
-## Private government registration — 0.1.43 candidate
+## Private government registration — 0.1.43 locally installed
 
 -428default Rust checks and3,974local PostgreSQL assertions pass, including safe
  retries, access revoked during fetch, private employee scope and retained drafts.
@@ -13,8 +13,10 @@
  facts are unchanged; synthetic accounts end disabled/archived/session-free.
 -Ten fictional native layouts were inspected, including compact/dark125percent,
  empty values, save area, history and Manager denial. These do not establish live
- signed-in button interaction or government validator acceptance. Packaging and
- installed-state evidence remain separate until completed.
+ signed-in button interaction or government validator acceptance. The signed
+ updater, exact installer/recovery and actual installation now pass; all payload
+ hashes, Windows Apps, preserved company files and normal launch/close are
+ verified. See [0.1.43 evidence](docs/GOVERNMENT-0.1.43-VERIFICATION.md).
 
 ## Native government reconciliation — source0.1.42
 

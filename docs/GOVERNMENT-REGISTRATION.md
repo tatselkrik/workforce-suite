@@ -1,8 +1,9 @@
-# Government registration records — 0.1.43 candidate
+# Government registration records — 0.1.43
 
-This increment is under verification. The installed desktop remains0.1.42 until
-the0.1.43 release and installation evidence is complete. Registration storage
-does not complete the government-file milestone.
+This increment is installed and verified locally. See the
+[release evidence](GOVERNMENT-0.1.43-VERIFICATION.md) and
+[review checklist](GOVERNMENT-0.1.43-CHECKLIST.md). Registration storage does not
+complete the government-file milestone.
 
 HR/Admin opens **Payroll → Government → Registration details**, then the single
 company record or a selected employee. Legal name parts, registered address and

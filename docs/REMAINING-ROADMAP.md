@@ -44,8 +44,8 @@ unconfigured external connection to a completed integration.
 
 ## Progress and boundaries
 
-- Desktop0.1.42 is installed and verified locally; retain0.1.41 as rollback.
-  Its signed private-channel upload awaits separate authorization after automatic
+- Desktop0.1.43 is installed and verified locally; retain0.1.42 as rollback.
+  Signed0.1.42/0.1.43 private-channel publication awaits authorization after automatic
   approval review blocked the new payload. Do not repeat local installation or
   bypass that external-upload boundary.
 - Portal milestone1: ~~own correction/overtime requests, cancellation and decision
@@ -87,9 +87,18 @@ unconfigured external connection to a completed integration.
   ~~Reviewed contribution allocations, remittance/void/correction history, native
   reconciliation screens and fresh review CSV~~ are delivered and locally installed
   in0.1.42. Eleven fictional layouts, exact installer inventory/recovery, installed
-  hashes/BUILD/Windows Apps and normal launch/close are verified. Legal identity/file adapters remain queued;
+  hashes/BUILD/Windows Apps and normal launch/close are verified. File adapters remain queued;
   the complete government milestone is partial. See
   [government reporting boundaries](PAYROLL-GOVERNMENT.md).
+- ~~HR-only legal identity/company registration records~~ are delivered and
+  installed in0.1.43. Explicit name parts, registered addresses/identifiers,
+  supporting review and immutable before/after history preserve employment,
+  company branding and issued payroll.428default Rust checks,3explicit vector
+  checks, the real installer/recovery test,3,974database assertions and fresh59
+  migration replay pass. Hosted checks validate3native-decoded snapshots and
+  current role/revision/idempotency guards. All24payroll sets, earlier Auth and
+  employer facts remain unchanged. See [0.1.43 evidence](GOVERNMENT-0.1.43-VERIFICATION.md).
+  Exact agency files/validator acceptance remain queued; milestone2 stays partial.
 - Effective-date policies, balances and delegation follow the existing saved
   charges/plans and immutable history rules; they do not rewrite older requests.
 - Install each verified authorized desktop release, preserving unsaved work and
