@@ -1,5 +1,21 @@
 # Prototype verification — 2026-10-25
 
+## Private government registration — 0.1.43 candidate
+
+-428default Rust checks and3,974local PostgreSQL assertions pass, including safe
+ retries, access revoked during fetch, private employee scope and retained drafts.
+ Fresh replay of59migrations passes. The additive deployment preserves90prior
+ public record sets and257existing functions; no payroll function is replaced.
+-Hosted real Auth/REST checks pass for HR/Admin edits, explicit review, exact
+ idempotency, stale revisions, immutable history, metadata forgery, current-role
+ denial and revocation. Three fresh private snapshots pass native validation in
+ memory. All24prior payroll sets, earlier Auth users and employer registration
+ facts are unchanged; synthetic accounts end disabled/archived/session-free.
+-Ten fictional native layouts were inspected, including compact/dark125percent,
+ empty values, save area, history and Manager denial. These do not establish live
+ signed-in button interaction or government validator acceptance. Packaging and
+ installed-state evidence remain separate until completed.
+
 ## Native government reconciliation — source0.1.42
 
 -423default Rust tests pass. Three gated checks are separate: both government
