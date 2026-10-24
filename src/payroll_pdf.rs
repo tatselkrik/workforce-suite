@@ -92,6 +92,16 @@ pub fn build_tax(s:&crate::payroll_tax::Slip)->Result<Vec<u8>> {
     wrap("Tax advice only; not Form 2316, a filed return or proof of remittance.",&mut lines);
     render_titled_lines(lines,"ANNUAL TAX ADVICE")
 }
+pub fn build_final(s:&crate::payroll_final::Slip,status:Option<&crate::payroll_final::Status>)->Result<Vec<u8>>{
+ let mut lines=vec![];
+ for t in [s.company_name.clone(),format!("Employee: {} - {}",s.employee_code,s.employee_name),format!("Department: {}",s.department),format!("Last working day: {} | Planned cash date: {}",s.service_end,s.cash_date),format!("Approved: {} UTC | {}",s.approved_at.format("%Y-%m-%d %H:%M"),s.rule_version),status.map(|p|format!("Recorded {}: {}",p.kind,p.recorded_on)).unwrap_or("Approved statement; actual final cash not yet recorded.".into()),String::new()]{wrap(&t,&mut lines);}
+ for(label,n)in crate::payroll_final::totals_rows(&s.totals){wrap(&format!("{label:<42} {:>20}",money(n)),&mut lines);}
+ wrap("",&mut lines);wrap("SOURCE PAYSLIPS (included above, not additional cash)",&mut lines);
+ for source in s.sources.as_array().into_iter().flatten(){wrap(&format!("{} | through {} | {}",source["kind"].as_str().unwrap_or(""),source["ends_on"].as_str().unwrap_or(""),money(source["amount_cents"].as_i64().unwrap_or(0))),&mut lines);}
+ for l in s.components.as_array().into_iter().flatten(){wrap(&format!("{}: {}",l["label"].as_str().unwrap_or(""),money(l["amount_cents"].as_i64().unwrap_or(0))),&mut lines);}
+ wrap("",&mut lines);wrap("Original payslips remain unchanged. Actual combined cash is shown once.",&mut lines);wrap("Employer tax handling is not an automatic employee debt.",&mut lines);wrap("This record is not a bank transfer, Form2316, filing or remittance.",&mut lines);
+ render_titled_lines(lines,"FINAL PAY STATEMENT")
+}
 fn build_period(s: &Slip, period: &str) -> Result<Vec<u8>> {
     let mut lines = vec![];
     for text in [

@@ -42,7 +42,7 @@ Implemented: employee/current-report goals with reasoned progress and retained h
 
 ## Stage 9 — Payroll and benefits
 
-Implemented in version 0.1.33: effective salary profiles, reviewed monthly reconciliation worksheets, private-sector Philippine overtime/holiday/night premiums, recurring and per-run allowances/deductions, employer benefit memos, independently approved immutable payslips, recorded payments and PDF/CSV reconciliation exports. Contribution and withholding rules were checked against official sources on 23 October 2026. See [payroll](PAYROLL.md) for effective dates and limits. This module does not transfer money, file government returns or replace company payroll reconciliation. Annual tax adjustment, prior-employer balances, 13th-month payouts, regional wage compliance, final pay remain later work.
+Implemented in version 0.1.33: effective salary profiles, reviewed monthly reconciliation worksheets, private-sector Philippine overtime/holiday/night premiums, recurring and per-run allowances/deductions, employer benefit memos, independently approved immutable payslips, recorded payments and PDF/CSV reconciliation exports. Contribution and withholding rules were checked against official sources on 23 October 2026. See [payroll](PAYROLL.md) for effective dates and limits. This module does not transfer money, file government returns or replace company payroll reconciliation. Subsequent implemented increments are described below; regional wage compliance and broader reporting remain queued.
 
 Implemented in version0.1.34: separate1st–15th/16th–month-end runs, planned pay dates, reviewed
 worksheets, independent approval, immutable period payslips, recorded payments,
@@ -54,7 +54,7 @@ see [13th-month pay](PAYROLL-THIRTEENTH.md). Withholding/contribution adjustment
 remain explicit reviewed inputs. Implemented in the0.1.36 source: automatic annual compensation-tax reconciliation,
 evidenced prior-employer balances, shared annual benefit reconciliation,
 independent approval and immutable aggregate PDF/CSV advice; see
-[annual tax](PAYROLL-ANNUAL-TAX.md). Final pay is in progress: [individual payment records](PAYROLL-PAYMENTS.md) provide per-person receipts without marking coworkers paid. The final-pay worksheet and settlement follow. Expanded reporting/data exchange follows. Portal work is paused.
+[annual tax](PAYROLL-ANNUAL-TAX.md). Implemented in0.1.38: [final-pay reviews and settlement](PAYROLL-FINAL-PAY.md), with reviewed vacation/separation/retirement amounts, prospective last-compensation tax, independent approval, immutable own statements, source-net offsets and unpaid withdrawal. [Individual payment records](PAYROLL-PAYMENTS.md) remain compatible. Same-year2026 is the first pack; cross-year/amendments remain separate. Regional wage compliance, expanded payroll reporting/data exchange and configured integrations remain queued. Kirk requested a stop after this milestone; automatic continuation and portal work are paused.
 
 ## Deferred — Separate employee portal (paused)
 

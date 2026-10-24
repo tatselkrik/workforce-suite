@@ -1,0 +1,4116 @@
+[
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "reference": "",
+        "daily_cents": 0,
+        "days_hundredths": 0,
+        "previous_days_hundredths": 0
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1250000,
+        "coverage_gaps": [],
+        "taxable_cents": 30000000,
+        "adjustment_cents": -1250000,
+        "annual_tax_cents": 750000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 30000000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 10250000,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 0,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 0,
+      "exempt_extras_cents": 0,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 0,
+      "cash_before_tax_cents": 9000000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 0,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "days_hundredths": 1300,
+        "daily_cents": 100000,
+        "previous_days_hundredths": 0,
+        "reference": "PRIVATE_VACATION"
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1250000,
+        "coverage_gaps": [],
+        "taxable_cents": 30000000,
+        "adjustment_cents": -1250000,
+        "annual_tax_cents": 750000,
+        "benefit_gross_cents": 100000,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 100000,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 30100000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": -100000
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 11550000,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 0,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 1300000,
+      "exempt_extras_cents": 1200000,
+      "shared_extras_cents": 100000,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 1300000,
+      "cash_before_tax_cents": 10300000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 1200000,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 100000,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          {
+            "id": "benefit:paid",
+            "starts_on": null,
+            "ends_on": null,
+            "taxable_cents": 0,
+            "withholding_cents": 0,
+            "benefit_gross_cents": 9000000,
+            "benefit_exempt_cents": 9000000,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "days_hundredths": 1300,
+        "daily_cents": 100000,
+        "previous_days_hundredths": 0,
+        "reference": "PRIVATE_VACATION"
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1235000,
+        "coverage_gaps": [],
+        "taxable_cents": 30100000,
+        "adjustment_cents": -1235000,
+        "annual_tax_cents": 765000,
+        "benefit_gross_cents": 9100000,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 9000000,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 100000,
+        "current_taxable_cents": 30100000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 11535000,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 0,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 1300000,
+      "exempt_extras_cents": 1200000,
+      "shared_extras_cents": 100000,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 1300000,
+      "cash_before_tax_cents": 10300000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 1200000,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 100000,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          {
+            "id": "benefit:paid",
+            "starts_on": null,
+            "ends_on": null,
+            "taxable_cents": 0,
+            "withholding_cents": 0,
+            "benefit_gross_cents": 9000000,
+            "benefit_exempt_cents": 9000000,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "days_hundredths": 1300,
+        "daily_cents": 100000,
+        "previous_days_hundredths": 1250,
+        "reference": "PRIVATE_VACATION"
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1055000,
+        "coverage_gaps": [],
+        "taxable_cents": 31300000,
+        "adjustment_cents": -1055000,
+        "annual_tax_cents": 945000,
+        "benefit_gross_cents": 10300000,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 9000000,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 1300000,
+        "current_taxable_cents": 31300000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 11355000,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 0,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 1300000,
+      "exempt_extras_cents": 0,
+      "shared_extras_cents": 1300000,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 1300000,
+      "cash_before_tax_cents": 10300000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 0,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 1300000,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "days_hundredths": 0,
+        "daily_cents": 123457,
+        "previous_days_hundredths": 0,
+        "reference": "PRIVATE_VACATION"
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1250000,
+        "coverage_gaps": [],
+        "taxable_cents": 30000000,
+        "adjustment_cents": -1250000,
+        "annual_tax_cents": 750000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 30000000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 10250000,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 0,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 0,
+      "exempt_extras_cents": 0,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 0,
+      "cash_before_tax_cents": 9000000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 0,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "days_hundredths": 1,
+        "daily_cents": 123457,
+        "previous_days_hundredths": 0,
+        "reference": "PRIVATE_VACATION"
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1250000,
+        "coverage_gaps": [],
+        "taxable_cents": 30000000,
+        "adjustment_cents": -1250000,
+        "annual_tax_cents": 750000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 30000000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 10251235,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 0,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 1235,
+      "exempt_extras_cents": 1235,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 1235,
+      "cash_before_tax_cents": 9001235,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 1235,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "days_hundredths": 50,
+        "daily_cents": 123457,
+        "previous_days_hundredths": 0,
+        "reference": "PRIVATE_VACATION"
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1250000,
+        "coverage_gaps": [],
+        "taxable_cents": 30000000,
+        "adjustment_cents": -1250000,
+        "annual_tax_cents": 750000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 30000000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 10311729,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 0,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 61729,
+      "exempt_extras_cents": 61729,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 61729,
+      "cash_before_tax_cents": 9061729,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 61729,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "days_hundredths": 1199,
+        "daily_cents": 123457,
+        "previous_days_hundredths": 0,
+        "reference": "PRIVATE_VACATION"
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1250000,
+        "coverage_gaps": [],
+        "taxable_cents": 30000000,
+        "adjustment_cents": -1250000,
+        "annual_tax_cents": 750000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 30000000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 11730249,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 0,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 1480249,
+      "exempt_extras_cents": 1480249,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 1480249,
+      "cash_before_tax_cents": 10480249,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 1480249,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "days_hundredths": 1200,
+        "daily_cents": 123457,
+        "previous_days_hundredths": 0,
+        "reference": "PRIVATE_VACATION"
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1250000,
+        "coverage_gaps": [],
+        "taxable_cents": 30000000,
+        "adjustment_cents": -1250000,
+        "annual_tax_cents": 750000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 30000000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 11731484,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 0,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 1481484,
+      "exempt_extras_cents": 1481484,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 1481484,
+      "cash_before_tax_cents": 10481484,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 1481484,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "days_hundredths": 1201,
+        "daily_cents": 123457,
+        "previous_days_hundredths": 0,
+        "reference": "PRIVATE_VACATION"
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1250000,
+        "coverage_gaps": [],
+        "taxable_cents": 30000000,
+        "adjustment_cents": -1250000,
+        "annual_tax_cents": 750000,
+        "benefit_gross_cents": 1235,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 1235,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 30001235,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": -1235
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 11732719,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 0,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 1482719,
+      "exempt_extras_cents": 1481484,
+      "shared_extras_cents": 1235,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 1482719,
+      "cash_before_tax_cents": 10482719,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 1481484,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 1235,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "days_hundredths": 36599,
+        "daily_cents": 123457,
+        "previous_days_hundredths": 0,
+        "reference": "PRIVATE_VACATION"
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 0,
+        "coverage_gaps": [],
+        "taxable_cents": 64702543,
+        "adjustment_cents": 5190509,
+        "annual_tax_cents": 7190509,
+        "benefit_gross_cents": 43702543,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 9000000,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 34702543,
+        "current_taxable_cents": 73702543,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 5190509,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 5190509,
+        "benefit_basis_adjustment_cents": -9000000
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 48993518,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 0,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 45184027,
+      "exempt_extras_cents": 1481484,
+      "shared_extras_cents": 43702543,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 45184027,
+      "cash_before_tax_cents": 54184027,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 1481484,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 43702543,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "days_hundredths": 36600,
+        "daily_cents": 123457,
+        "previous_days_hundredths": 0,
+        "reference": "PRIVATE_VACATION"
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 0,
+        "coverage_gaps": [],
+        "taxable_cents": 64703778,
+        "adjustment_cents": 5190756,
+        "annual_tax_cents": 7190756,
+        "benefit_gross_cents": 43703778,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 9000000,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 34703778,
+        "current_taxable_cents": 73703778,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 5190756,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 5190756,
+        "benefit_basis_adjustment_cents": -9000000
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 48994506,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 0,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 45185262,
+      "exempt_extras_cents": 1481484,
+      "shared_extras_cents": 43703778,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 45185262,
+      "cash_before_tax_cents": 54185262,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 1481484,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 43703778,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "reference": "",
+        "daily_cents": 0,
+        "days_hundredths": 0,
+        "previous_days_hundredths": 0
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "retrenchment",
+        "monthly_basic_cents": 3000000,
+        "regular_allowances_cents": 500000,
+        "total_award_cents": 12250000,
+        "previously_paid_cents": 2250000,
+        "tax_exempt": true,
+        "reference": "PRIVATE_SEPARATION"
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1250000,
+        "coverage_gaps": [],
+        "taxable_cents": 30000000,
+        "adjustment_cents": -1250000,
+        "annual_tax_cents": 750000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 30000000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 20250000,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 10000000,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 10000000,
+      "exempt_extras_cents": 10000000,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 0,
+      "cash_before_tax_cents": 19000000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 0,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 12250000,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "reference": "",
+        "daily_cents": 0,
+        "days_hundredths": 0,
+        "previous_days_hundredths": 0
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "redundancy",
+        "monthly_basic_cents": 3000000,
+        "regular_allowances_cents": 500000,
+        "total_award_cents": 24500000,
+        "previously_paid_cents": 0,
+        "tax_exempt": true,
+        "reference": "PRIVATE_SEPARATION"
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1250000,
+        "coverage_gaps": [],
+        "taxable_cents": 30000000,
+        "adjustment_cents": -1250000,
+        "annual_tax_cents": 750000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 30000000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 34750000,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 24500000,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 24500000,
+      "exempt_extras_cents": 24500000,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 0,
+      "cash_before_tax_cents": 33500000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 0,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 24500000,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "reference": "",
+        "daily_cents": 0,
+        "days_hundredths": 0,
+        "previous_days_hundredths": 0
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "labor_saving_devices",
+        "monthly_basic_cents": 3000000,
+        "regular_allowances_cents": 500000,
+        "total_award_cents": 24500000,
+        "previously_paid_cents": 0,
+        "tax_exempt": true,
+        "reference": "PRIVATE_SEPARATION"
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1250000,
+        "coverage_gaps": [],
+        "taxable_cents": 30000000,
+        "adjustment_cents": -1250000,
+        "annual_tax_cents": 750000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 30000000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 34750000,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 24500000,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 24500000,
+      "exempt_extras_cents": 24500000,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 0,
+      "cash_before_tax_cents": 33500000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 0,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 24500000,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "reference": "",
+        "daily_cents": 0,
+        "days_hundredths": 0,
+        "previous_days_hundredths": 0
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "resignation",
+        "monthly_basic_cents": 3000000,
+        "regular_allowances_cents": 500000,
+        "total_award_cents": 12250000,
+        "previously_paid_cents": 2250000,
+        "tax_exempt": false,
+        "reference": "PRIVATE_SEPARATION"
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 0,
+        "coverage_gaps": [],
+        "taxable_cents": 40000000,
+        "adjustment_cents": 250000,
+        "annual_tax_cents": 2250000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 40000000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 250000,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 250000,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 18750000,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 10000000,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 10000000,
+      "exempt_extras_cents": 0,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 10000000,
+      "vacation_gross_cents": 0,
+      "cash_before_tax_cents": 19000000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 0,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "reference": "",
+        "daily_cents": 0,
+        "days_hundredths": 0,
+        "previous_days_hundredths": 0
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "just_cause",
+        "monthly_basic_cents": 3000000,
+        "regular_allowances_cents": 500000,
+        "total_award_cents": 12250000,
+        "previously_paid_cents": 2250000,
+        "tax_exempt": false,
+        "reference": "PRIVATE_SEPARATION"
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 0,
+        "coverage_gaps": [],
+        "taxable_cents": 40000000,
+        "adjustment_cents": 250000,
+        "annual_tax_cents": 2250000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 40000000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 250000,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 250000,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 18750000,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 10000000,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 10000000,
+      "exempt_extras_cents": 0,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 10000000,
+      "vacation_gross_cents": 0,
+      "cash_before_tax_cents": 19000000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 0,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "reference": "",
+        "daily_cents": 0,
+        "days_hundredths": 0,
+        "previous_days_hundredths": 0
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "company_policy",
+        "monthly_basic_cents": 3000000,
+        "regular_allowances_cents": 500000,
+        "total_award_cents": 12250000,
+        "previously_paid_cents": 2250000,
+        "tax_exempt": false,
+        "reference": "PRIVATE_SEPARATION"
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 0,
+        "coverage_gaps": [],
+        "taxable_cents": 40000000,
+        "adjustment_cents": 250000,
+        "annual_tax_cents": 2250000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 40000000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 250000,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 250000,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 18750000,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 10000000,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 10000000,
+      "exempt_extras_cents": 0,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 10000000,
+      "vacation_gross_cents": 0,
+      "cash_before_tax_cents": 19000000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 0,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2021-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "reference": "",
+        "daily_cents": 0,
+        "days_hundredths": 0,
+        "previous_days_hundredths": 0
+      },
+      "retirement": {
+        "method": "statutory",
+        "reference": "PRIVATE_RETIREMENT",
+        "birth_date": "1966-01-01",
+        "tax_treatment": "statutory_no_plan",
+        "plan_award_cents": 14000000,
+        "daily_basic_cents": 100000,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 500000,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": true
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1250000,
+        "coverage_gaps": [],
+        "taxable_cents": 30000000,
+        "adjustment_cents": -1250000,
+        "annual_tax_cents": 750000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 30000000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 23750000,
+      "planned_late": false,
+      "retirement_cents": 13500000,
+      "separation_cents": 0,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 13500000,
+      "exempt_extras_cents": 13500000,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 0,
+      "cash_before_tax_cents": 22500000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 0,
+      "credited_service_years": 6,
+      "retirement_floor_cents": 13500000,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "reference": "",
+        "daily_cents": 0,
+        "days_hundredths": 0,
+        "previous_days_hundredths": 0
+      },
+      "retirement": {
+        "method": "statutory",
+        "reference": "PRIVATE_RETIREMENT",
+        "birth_date": "1966-01-01",
+        "tax_treatment": "taxable",
+        "plan_award_cents": 14000000,
+        "daily_basic_cents": 100000,
+        "employee_plan_covered": true,
+        "previously_paid_cents": 500000,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": true
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 0,
+        "coverage_gaps": [],
+        "taxable_cents": 45250000,
+        "adjustment_cents": 1300000,
+        "annual_tax_cents": 3300000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 45250000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 1300000,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 1300000,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 22950000,
+      "planned_late": false,
+      "retirement_cents": 15250000,
+      "separation_cents": 0,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 15250000,
+      "exempt_extras_cents": 0,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 15250000,
+      "vacation_gross_cents": 0,
+      "cash_before_tax_cents": 24250000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 0,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 15750000,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2010-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "reference": "",
+        "daily_cents": 0,
+        "days_hundredths": 0,
+        "previous_days_hundredths": 0
+      },
+      "retirement": {
+        "method": "plan",
+        "reference": "PRIVATE_RETIREMENT",
+        "birth_date": "1976-01-01",
+        "tax_treatment": "qualified_plan",
+        "plan_award_cents": 14000000,
+        "daily_basic_cents": 100000,
+        "employee_plan_covered": true,
+        "previously_paid_cents": 500000,
+        "qualified_plan_reviewed": true,
+        "first_qualified_availment": true,
+        "ordinary_statutory_coverage": true
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1250000,
+        "coverage_gaps": [],
+        "taxable_cents": 30000000,
+        "adjustment_cents": -1250000,
+        "annual_tax_cents": 750000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 30000000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 23750000,
+      "planned_late": false,
+      "retirement_cents": 13500000,
+      "separation_cents": 0,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 13500000,
+      "exempt_extras_cents": 13500000,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 0,
+      "cash_before_tax_cents": 22500000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 0,
+      "credited_service_years": 17,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2026-08-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-08-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-08-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "reference": "",
+        "daily_cents": 0,
+        "days_hundredths": 0,
+        "previous_days_hundredths": 0
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "retrenchment",
+        "monthly_basic_cents": 3000000,
+        "regular_allowances_cents": 500000,
+        "total_award_cents": 3500000,
+        "previously_paid_cents": 0,
+        "tax_exempt": true,
+        "reference": "PRIVATE_SEPARATION"
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1250000,
+        "coverage_gaps": [],
+        "taxable_cents": 30000000,
+        "adjustment_cents": -1250000,
+        "annual_tax_cents": 750000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 30000000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 13750000,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 3500000,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 3500000,
+      "exempt_extras_cents": 3500000,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 0,
+      "cash_before_tax_cents": 12500000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 0,
+      "credited_service_years": 0,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 3500000,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 40000000,
+            "withholding_cents": 0,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 0,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 100000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "reference": "",
+        "daily_cents": 0,
+        "days_hundredths": 0,
+        "previous_days_hundredths": 0
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 0,
+        "coverage_gaps": [],
+        "taxable_cents": 50000000,
+        "adjustment_cents": 4250000,
+        "annual_tax_cents": 4250000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 50000000,
+        "current_withheld_cents": 0,
+        "employer_advance_cents": 4150000,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 100000,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 4250000,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 0,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 0,
+      "source_net_cents": 100000,
+      "extras_gross_cents": 0,
+      "exempt_extras_cents": 0,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 0,
+      "cash_before_tax_cents": 100000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 0,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 40000000,
+            "withholding_cents": 0,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 0,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 100000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [
+        {
+          "label": "Evidenced amount",
+          "kind": "deposit_return",
+          "amount_cents": 1000000,
+          "reference": "PRIVATE_AMOUNT"
+        },
+        {
+          "label": "Evidenced amount",
+          "kind": "lawful_deduction",
+          "amount_cents": 100000,
+          "reference": "PRIVATE_AMOUNT"
+        }
+      ],
+      "vacation": {
+        "reference": "",
+        "daily_cents": 0,
+        "days_hundredths": 0,
+        "previous_days_hundredths": 0
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 50000,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 0,
+        "coverage_gaps": [],
+        "taxable_cents": 49950000,
+        "adjustment_cents": 4240000,
+        "annual_tax_cents": 4240000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 50000000,
+        "current_withheld_cents": 0,
+        "employer_advance_cents": 3290000,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 950000,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 4240000,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 0,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 0,
+      "source_net_cents": 100000,
+      "extras_gross_cents": 1000000,
+      "exempt_extras_cents": 0,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 0,
+      "cash_before_tax_cents": 950000,
+      "deposit_returns_cents": 1000000,
+      "vacation_exempt_cents": 0,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 100000,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 50000
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [
+        {
+          "label": "Evidenced amount",
+          "kind": "taxable",
+          "amount_cents": 1000000,
+          "reference": "PRIVATE_AMOUNT"
+        }
+      ],
+      "vacation": {
+        "reference": "",
+        "daily_cents": 0,
+        "days_hundredths": 0,
+        "previous_days_hundredths": 0
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1100000,
+        "coverage_gaps": [],
+        "taxable_cents": 31000000,
+        "adjustment_cents": -1100000,
+        "annual_tax_cents": 900000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 31000000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 11100000,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 0,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 1000000,
+      "exempt_extras_cents": 0,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 1000000,
+      "vacation_gross_cents": 0,
+      "cash_before_tax_cents": 10000000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 0,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [
+        {
+          "label": "Evidenced amount",
+          "kind": "shared_benefit",
+          "amount_cents": 1000000,
+          "reference": "PRIVATE_AMOUNT"
+        }
+      ],
+      "vacation": {
+        "reference": "",
+        "daily_cents": 0,
+        "days_hundredths": 0,
+        "previous_days_hundredths": 0
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1250000,
+        "coverage_gaps": [],
+        "taxable_cents": 30000000,
+        "adjustment_cents": -1250000,
+        "annual_tax_cents": 750000,
+        "benefit_gross_cents": 1000000,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 1000000,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 31000000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": -1000000
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 11250000,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 0,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 1000000,
+      "exempt_extras_cents": 0,
+      "shared_extras_cents": 1000000,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 0,
+      "cash_before_tax_cents": 10000000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 0,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-10-15",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-10-15",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [
+        {
+          "label": "Evidenced amount",
+          "kind": "lawful_deduction",
+          "amount_cents": 1000000,
+          "reference": "PRIVATE_AMOUNT"
+        }
+      ],
+      "vacation": {
+        "reference": "",
+        "daily_cents": 0,
+        "days_hundredths": 0,
+        "previous_days_hundredths": 0
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1250000,
+        "coverage_gaps": [],
+        "taxable_cents": 30000000,
+        "adjustment_cents": -1250000,
+        "annual_tax_cents": 750000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 30000000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 9250000,
+      "planned_late": false,
+      "retirement_cents": 0,
+      "separation_cents": 0,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 0,
+      "exempt_extras_cents": 0,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 0,
+      "cash_before_tax_cents": 8000000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 0,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 1000000,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  },
+  {
+    "source": {
+      "employment_start": "2020-01-01",
+      "service_end": "2026-09-30",
+      "cash_date": "2026-11-01",
+      "annual": {
+        "starts_on": "2026-01-01",
+        "service_end": "2026-09-30",
+        "as_of": "2026-11-01",
+        "income": [
+          {
+            "id": "monthly:paid",
+            "starts_on": "2026-01-01",
+            "ends_on": "2026-08-31",
+            "taxable_cents": 20000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          }
+        ],
+        "prior_adjustment_cents": 0,
+        "pending_payments": 1,
+        "pending_adjustments": 0,
+        "external_thirteenth_floor": 0,
+        "other_benefits_floor": 0
+      },
+      "outstanding": [
+        {
+          "id": "cutoff:owed",
+          "income": {
+            "id": "cutoff:owed",
+            "starts_on": "2026-09-01",
+            "ends_on": "2026-09-30",
+            "taxable_cents": 10000000,
+            "withholding_cents": 1000000,
+            "benefit_gross_cents": 0,
+            "benefit_exempt_cents": 0,
+            "contribution_cents": 0
+          },
+          "net_cents": 9000000
+        }
+      ],
+      "previous_vacation_days_hundredths": 0
+    },
+    "worksheet": {
+      "tax": {
+        "openings": [],
+        "review_note": "PRIVATE_FINAL_TAX_REVIEW",
+        "adjustment_note": "",
+        "settlement_note": "PRIVATE_FINAL_HANDLING",
+        "benefits_reviewed": true,
+        "previous_employers": [],
+        "classification_note": "",
+        "last_pay_available_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "reclassified_benefit_cents": 0,
+        "final_compensation_reviewed": true,
+        "previous_employers_reviewed": true
+      },
+      "lines": [],
+      "vacation": {
+        "reference": "",
+        "daily_cents": 0,
+        "days_hundredths": 0,
+        "previous_days_hundredths": 0
+      },
+      "retirement": {
+        "method": "none",
+        "reference": "",
+        "birth_date": null,
+        "tax_treatment": "taxable",
+        "plan_award_cents": 0,
+        "daily_basic_cents": 0,
+        "employee_plan_covered": false,
+        "previously_paid_cents": 0,
+        "qualified_plan_reviewed": false,
+        "first_qualified_availment": false,
+        "ordinary_statutory_coverage": false
+      },
+      "separation": {
+        "cause": "none",
+        "reference": "",
+        "tax_exempt": false,
+        "total_award_cents": 0,
+        "monthly_basic_cents": 0,
+        "previously_paid_cents": 0,
+        "regular_allowances_cents": 0
+      },
+      "review_note": "PRIVATE_FINAL_REVIEW",
+      "contribution_note": "PRIVATE_FINAL_CONTRIBUTIONS",
+      "release_within_days": 30,
+      "sss_adjustment_cents": 0,
+      "entitlements_reviewed": true,
+      "source_scope_reviewed": true,
+      "contributions_reviewed": true,
+      "pagibig_adjustment_cents": 0,
+      "philhealth_adjustment_cents": 0
+    },
+    "result": {
+      "tax": {
+        "refund_cents": 1250000,
+        "coverage_gaps": [],
+        "taxable_cents": 30000000,
+        "adjustment_cents": -1250000,
+        "annual_tax_cents": 750000,
+        "benefit_gross_cents": 0,
+        "prior_taxable_cents": 0,
+        "benefit_exempt_cents": 0,
+        "prior_withheld_cents": 0,
+        "benefit_taxable_cents": 0,
+        "current_taxable_cents": 30000000,
+        "current_withheld_cents": 2000000,
+        "employer_advance_cents": 0,
+        "prior_adjustment_cents": 0,
+        "taxable_adjustment_cents": 0,
+        "available_deduction_cents": 0,
+        "unreconciled_benefits_cents": 0,
+        "additional_withholding_cents": 0,
+        "benefit_basis_adjustment_cents": 0
+      },
+      "due_on": "2026-10-30",
+      "net_cents": 10250000,
+      "planned_late": true,
+      "retirement_cents": 0,
+      "separation_cents": 0,
+      "source_net_cents": 9000000,
+      "extras_gross_cents": 0,
+      "exempt_extras_cents": 0,
+      "shared_extras_cents": 0,
+      "taxable_extras_cents": 0,
+      "vacation_gross_cents": 0,
+      "cash_before_tax_cents": 9000000,
+      "deposit_returns_cents": 0,
+      "vacation_exempt_cents": 0,
+      "credited_service_years": 7,
+      "retirement_floor_cents": 0,
+      "separation_floor_cents": 0,
+      "lawful_deductions_cents": 0,
+      "retirement_overpaid_cents": 0,
+      "separation_overpaid_cents": 0,
+      "vacation_shared_benefit_cents": 0,
+      "additional_contributions_cents": 0
+    }
+  }
+]

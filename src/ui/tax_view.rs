@@ -136,7 +136,7 @@ fn numbers(ui: &mut Ui, c: &tax::Calculation) {
         );
     }
 }
-fn signed_amount(ui: &mut Ui, label: &str, n: &mut i64) {
+pub(super) fn signed_amount(ui: &mut Ui, label: &str, n: &mut i64) {
     ui.horizontal_wrapped(|ui| {
         ui.label(label);
         ui.add(

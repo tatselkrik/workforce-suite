@@ -544,6 +544,7 @@ pub struct Event {
 }
 #[derive(Clone, Debug, Default)]
 pub struct Setup {
+    pub finals: crate::payroll_final::Setup,
     pub receipts: Vec<crate::payroll_payments::Receipt>,
     pub tax: crate::payroll_tax::Setup,
     pub thirteenth: crate::payroll_thirteenth::Setup,
@@ -576,6 +577,8 @@ impl PayrollAction {
         }
     }
     pub fn payload(&self, data: &Snapshot) -> Result<Value> {
+        crate::payroll_final::guard_payment(data,self)?;
+        if self.operation.starts_with("final_"){return crate::payroll_final::payload(self,data);}
         if self.operation.starts_with("receipt_") { return crate::payroll_payments::payload(self,data); }
         if self.operation.starts_with("tax_") { return crate::payroll_tax::payload(self,data); }
         if self.operation.starts_with("thirteenth_") { return crate::payroll_thirteenth::payload(self,data); }
@@ -825,6 +828,7 @@ pub fn apply_demo(data: &mut Snapshot, a: &PayrollAction) -> Result<()> {
     Ok(())
 }
 fn demo_change(data: &mut Snapshot, a: &PayrollAction) -> Result<()> {
+    if a.operation.starts_with("final_"){return crate::payroll_final::apply_demo(data,a);}
     if a.operation.starts_with("receipt_") { return crate::payroll_payments::apply_demo(data,a); }
     if a.operation.starts_with("tax_") { return crate::payroll_tax::apply_demo(data,a); }
     if a.operation.starts_with("thirteenth_") { return crate::payroll_thirteenth::apply_demo(data,a); }

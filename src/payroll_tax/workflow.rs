@@ -333,9 +333,7 @@ pub fn demo_basis(data: &Snapshot, r: &Record) -> Result<Value> {
         }
     }
     previous.sort_by_key(|p| p["id"].as_str().unwrap().to_owned());
-    Ok(
-        json!({"employee":{"id":e.id,"full_name":e.full_name,"employee_code":e.employee_code,"department":e.department,"joined_on":e.joined_on,"status":e.status},"payments":payments,"previous":previous,"calculation_source":Source{starts_on:lo,service_end:r.service_end,as_of:r.as_of,income,prior_adjustment_cents:adjustment,pending_payments:pending,pending_adjustments,external_thirteenth_floor:ext,other_benefits_floor:other}}),
-    )
+    crate::payroll_final::augment_annual_demo_basis(data,r,json!({"employee":{"id":e.id,"full_name":e.full_name,"employee_code":e.employee_code,"department":e.department,"joined_on":e.joined_on,"status":e.status},"payments":payments,"previous":previous,"calculation_source":Source{starts_on:lo,service_end:r.service_end,as_of:r.as_of,income,prior_adjustment_cents:adjustment,pending_payments:pending,pending_adjustments,external_thirteenth_floor:ext,other_benefits_floor:other}}))
 }
 pub fn apply_demo(data: &mut Snapshot, a: &PayrollAction) -> Result<()> {
     payload(a, data)?;

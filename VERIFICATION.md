@@ -1,5 +1,46 @@
 # Prototype verification — 2026-10-24
 
+## Final-pay reviews and settlement — version0.1.38
+
+-378 normal Rust tests and2,483 local PostgreSQL assertions pass, including28
+ new Rust/PostgreSQL final-pay centavo vectors and99 earlier payroll vectors.
+ Cases cover calendar service and minima, eligibility/tax treatment, shared-cap
+ floors, original withholding, prospective tax, source freshness, exact retries,
+ independent approval, archived recipients, unpaid withdrawal and audit rollback.
+-Two additive migrations are deployed through20261024001000:48 hosted versions.
+ All76 earlier public record sets matched across deployment. RLS/SELECT-only
+ grants, invoker wrapper, private helpers/source view, immutable history and
+ source-receipt binding/reservation guards passed. No newWARN/ERROR or unindexed
+ foreign keys; five unrelated earlier FK-index INFO findings remain.
+-Fifteen actual hosted nativeRust/Auth/REST proof groups pass. Independently
+ approved final salary and earned13th sources, Rust/server centavo agreement,
+ combined settlement, exact retry, reserved-source and HR denials, unpaid
+ withdrawal, sibling-outstanding/remaining-batch behavior and annual income/tax
+ credit once were tested. Manager own statements/PDF/CSV exclude private evidence;
+ ordinary Employee desktop admission and anonymous/direct API access are denied.
+ The REST follow-up compared all19 unrelated HR sets and existing financial facts
+ before/after; original source slips were also compared in the native workflow.
+ Synthetic actors were retained disabled/archived with no Auth sessions. An
+ initial harness403 expectation was corrected to the actor-bound409 replay
+ contract; only remaining REST checks were repeated, without new payroll writes.
+-Ten unique fictional native views and a one-page statementPDF were inspected,
+ including worksheet top/footer, approval, unconfirmed settlement, withdrawn and
+ settled statements, own-only Manager view and dark125percent layout. The normal
+ release build excludes QA controls. Its isolated configured startup/normal close
+ and source/privacy evidence are recorded in versioned packaging records.
+-Exact installer/update preservation, failed-setup recovery, existing-key signing,
+ private feed/download/access proofs and installed state are recorded separately
+ after packaging. The current user's open app is preserved. No signed-in native
+ button automation, publicGit/CI, Authenticode, other-PC, actual transfer,
+ government filing or official2316 generation is claimed.
+-First pack: same-year2026 service end/cash dates from6January2026. Original source
+ nets are discharged inside combined cash and statutory offsets; they are not
+ another full-net cash payment. Cross-year settlements and settled amendments
+ remain queued. See [final-pay rules](docs/PAYROLL-FINAL-PAY.md) and the
+ [review checklist](docs/FINAL-PAY-REVIEW-CHECKLIST.md).
+-Kirk requested a stop after this milestone. Automatic continuation and portal
+ work remain paused; no next roadmap item has started.
+
 ## Individual payroll payments — version0.1.37
 
 -361normal Rust tests and2,258local PostgreSQL assertions pass. Receipt cases cover

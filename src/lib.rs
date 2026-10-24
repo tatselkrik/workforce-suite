@@ -39,6 +39,7 @@ pub mod payroll;
 pub mod payroll_cutoffs;
 pub mod payroll_thirteenth;
 pub mod payroll_tax;
+pub mod payroll_final;
 pub mod payroll_payments;
 
 pub mod payroll_pdf;

@@ -67,6 +67,7 @@ try {
   const thirteenthMigrations=[];
   const annualTaxMigrations=[];
   const receiptMigrations=[];
+  const finalPayMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -80,6 +81,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.includes('_payroll_final_pay_')){finalPayMigrations.push(filename);continue;}
     if(filename.endsWith('_payroll_individual_receipts.sql')){receiptMigrations.push(filename);continue;}
     if(filename.endsWith('_payroll_annual_tax_engine.sql')||filename.endsWith('_payroll_annual_tax_workflow.sql')||filename.endsWith('_payroll_annual_tax_receipt_index.sql')){annualTaxMigrations.push(filename);continue;}
     if(filename.endsWith('_payroll_thirteenth_engine.sql')||filename.endsWith('_payroll_thirteenth_workflow.sql')){thirteenthMigrations.push(filename);continue;}
@@ -371,6 +373,15 @@ try {
   for(const[table,rows]of Object.entries(beforeReceipts))eq((await db.query(`select to_jsonb(r) r from public.${table} r order by id`)).rows,rows,'Individual receipt migration preserves '+table);
   const {runPaymentReceiptTests}=await import('./payment-receipts.test.mjs');
   await runPaymentReceiptTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
+  await db.exec('reset role');
+  const finalPreservedTables=(await db.query("select tablename from pg_tables where schemaname='public'order by tablename")).rows.map(x=>x.tablename);
+  const finalPreserved={};for(const name of finalPreservedTables)finalPreserved[name]=(await db.query(`select to_jsonb(t)-'final_case_id' r from public.${name} t order by to_jsonb(t)::text`)).rows;
+  for(const filename of finalPayMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  for(const name of finalPreservedTables)eq((await db.query(`select to_jsonb(t)-'final_case_id' r from public.${name} t order by to_jsonb(t)::text`)).rows,finalPreserved[name],'Final-pay migrations preserve prior public '+name);
+  const {runFinalPayEngineTests}=await import('./final-pay.test.mjs');
+  await runFinalPayEngineTests({db,eq,deny,session,owner:uidA,unassigned:uidB});
+  const {runFinalPayWorkflowTests}=await import('./final-pay-workflow.test.mjs');
+  await runFinalPayWorkflowTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

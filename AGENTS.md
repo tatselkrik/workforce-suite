@@ -87,3 +87,13 @@ receipts and their actual received dates. One person's payment must not mark the
 whole batch paid. Legacy batch clients record outstanding recipients only; annual
 tax follows receipts even while a batch remains approved. Payment references stay
 HR/Admin-private; only active Administrators record actual full-slip payments.
+
+Final-pay rules are in docs/PAYROLL-FINAL-PAY.md. Preserve prospective received-plus-
+outstanding annualization, the one shared benefit cap, evidenced entitlement/plan
+classification, independent creator/preparer/submitter exclusion, per-person source
+reservations and atomic settlement. A final receipt discharges a source net through
+combined cash/offsets; it is not a second full-net cash payment. Keep own statements
+and terminal status aggregate-only, private references/evidence HR-only, unpaid
+withdrawal distinct from reversal, and same-employment duplicate guards. Do not gate
+owed pay on clearance, archiving or account access. The first reviewed pack supports
+same-year2026 separation/cash; cross-year settlements and amendments remain separate.

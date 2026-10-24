@@ -7,11 +7,12 @@ use serde_json::Value;
 use serde_json::json;
 #[derive(Default)]
 pub(super) struct State {
+    pub(super) finals: super::final_view::State,
     pub(super) payments: super::payment_view::State,
     pub(super) tax: super::tax_view::State,
     pub(super) thirteenth: super::thirteenth_view::State,
     pub(super) cutoffs: super::cutoff_view::State,
-    tab: usize,
+    pub(super) tab: usize,
     selected: Option<Uuid>,
     slip: Option<Uuid>,
     employee: Option<Uuid>,
@@ -199,7 +200,7 @@ struct Decision {
 }
 impl State {
     pub fn editing(&self) -> bool {
-        self.payments.editing() || self.tax.editing() || self.thirteenth.editing() || self.profile.is_some()
+        self.finals.editing() || self.payments.editing() || self.tax.editing() || self.thirteenth.editing() || self.profile.is_some()
             || self.cutoffs.editing()
             || self.holiday.is_some()
             || self.run.is_some()
@@ -213,6 +214,7 @@ impl State {
         if !a.saved(data) {
             return false;
         }
+        if a.operation.starts_with("final_"){self.finals.accept(&a,data);return true;}
         if a.operation.starts_with("receipt_") {self.payments.accept();return true;}
         if a.operation.starts_with("tax_") {self.tax.accept(&a,data);return true;}
         if a.operation.starts_with("thirteenth_") {self.thirteenth.accept(&a,data);return true;}
@@ -412,6 +414,7 @@ impl HrisApp {
         self.send(Command::Change(Action::Payroll(a)));
     }
     pub(super) fn payroll(&mut self, ui: &mut Ui) {
+        if self.payroll_state.finals.editing(){self.payroll_final_forms(ui);return;}
         if self.payroll_state.payments.editing() {self.payroll_payment_forms(ui);return;}
         if self.payroll_state.tax.editing() {self.payroll_tax_forms(ui);return;}
         if self.payroll_state.thirteenth.editing() {self.payroll_thirteenth_forms(ui);return;}
@@ -427,7 +430,7 @@ impl HrisApp {
             return;
         }
         let hr = self.data.access.role.manages_hr();
-        if !hr && ![3, 6, 7, 8].contains(&self.payroll_state.tab) {
+        if !hr && ![3, 6, 7, 8, 10].contains(&self.payroll_state.tab) {
             self.payroll_state.tab = 3;
         }
         ui.horizontal_wrapped(|ui| {
@@ -442,11 +445,12 @@ impl HrisApp {
                 "13th-month pay",
                 "Annual tax",
                 "Payments",
+                "Final pay",
             ]
             .iter()
             .enumerate()
             {
-                if (hr || i == 3 || i == 6 || i == 7 || i == 8)
+                if (hr || i == 3 || i == 6 || i == 7 || i == 8 || i == 10)
                     && ui
                         .selectable_label(
                             self.payroll_state.tab == i,
@@ -471,6 +475,7 @@ impl HrisApp {
             7 => self.payroll_thirteenth(ui),
             8 => self.payroll_tax(ui),
             9 => self.payroll_payments(ui),
+            10 => self.payroll_final(ui),
             _ => {
                 card(ui, |ui| {
                     ui.heading("Philippine private-sector payroll");
@@ -1313,7 +1318,7 @@ impl HrisApp {
         }
     }
     pub(super) fn payroll_export(&mut self, kind: &str, id: Option<Uuid>) {
-        let pdf = kind.ends_with("payslip_pdf");
+        let pdf = kind.ends_with("payslip_pdf")||kind=="final_statement_pdf";
         let extension = if pdf { "pdf" } else { "csv" };
         let name = format!(
             "HRIS-payroll-{kind}-{}.{extension}",
@@ -1358,6 +1363,7 @@ impl HrisApp {
             return;
         }
         self.page = Page::Payroll;
+        if form.starts_with("payroll-final"){self.prepare_final_preview(&form);return;}
         if form.starts_with("payroll-payment") {self.payroll_state.tab=9;self.prepare_payment_preview(&form);return;}
         if form.starts_with("payroll-tax") {self.payroll_state.tab=8;self.prepare_tax_preview(&form);return;}
         if form.starts_with("payroll-thirteenth") {self.payroll_state.tab=7;self.prepare_thirteenth_preview(&form);return;}

@@ -25,6 +25,8 @@ pub struct Receipt {
     pub origin: String,
     pub recorded_by: Option<Uuid>,
     pub recorded_at: DateTime<Utc>,
+    #[serde(default)]
+    pub final_case_id: Option<Uuid>,
 }
 #[derive(Clone, Debug)]
 pub struct Candidate {
@@ -306,6 +308,7 @@ pub fn apply_demo(data: &mut Snapshot, a: &PayrollAction) -> Result<()> {
         payment_reference: v["payment_reference"].as_str().unwrap().trim().into(),
         reason: v["reason"].as_str().unwrap().trim().into(),
         origin: "individual".into(),
+        final_case_id: None,
         recorded_by: Some(data.access.user_id),
         recorded_at: Utc::now(),
     };

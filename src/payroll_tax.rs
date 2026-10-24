@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 mod workflow;
 pub use workflow::{Record, Setup, Slip, apply_demo, payload, source};
+pub(crate) use workflow::demo_basis;
 mod exports;
 pub use exports::{export_csv, totals_rows};
 pub const RULE_VERSION: &str = "PH-annual-tax-2026-10-24-v1";

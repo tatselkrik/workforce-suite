@@ -9,6 +9,8 @@ impl CloudClient {
         };
         setup.cutoffs.slips = self.rows("payroll_cutoff_slips", company)?;
         setup.thirteenth.slips = self.rows("payroll_thirteenth_slips", company)?;
+        setup.finals.slips = self.rows("payroll_final_slips",company)?;
+        setup.finals.statuses = self.rows("payroll_final_status",company)?;
         setup.tax.slips = self.rows("payroll_tax_slips", company)?;
         if a.role.manages_hr() {
             setup.profiles = self.rows("payroll_profiles", company)?;
@@ -20,6 +22,7 @@ impl CloudClient {
             setup.cutoffs.items = self.rows("payroll_cutoff_items", company)?;
             setup.thirteenth.runs = self.rows("payroll_thirteenth_runs", company)?;
             setup.thirteenth.items = self.rows("payroll_thirteenth_items", company)?;
+            setup.finals.records = self.rows("payroll_final_cases",company)?;
             setup.tax.records = self.rows("payroll_tax_reconciliations", company)?;
             setup.receipts = self.rows("payroll_payment_receipts", company)?;
         }
@@ -69,6 +72,7 @@ impl CloudClient {
         for s in &setup.tax.slips {
             ensure!(s.company_id==a.company_id && s.year==s.as_of.year() && (a.role.manages_hr() || Some(s.employee_id)==a.employee_id), "Annual tax advice is outside your current access.");
         }
+        ensure!(setup.finals.slips.iter().all(|s|s.company_id==a.company_id&&(a.role.manages_hr()||a.employee_id==Some(s.employee_id)))&&setup.finals.statuses.iter().all(|s|s.company_id==a.company_id&&(a.role.manages_hr()||a.employee_id==Some(s.employee_id))),"Final pay is outside your current access.");
         ensure!(setup.receipts.iter().all(|r|r.company_id==a.company_id && a.role.manages_hr()), "Payment receipt is outside your current access.");
         Ok(setup)
     }
