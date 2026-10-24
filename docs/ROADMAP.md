@@ -147,7 +147,10 @@ for current scope/status rather than historical stop/resume paragraphs above.
 ~~Reviewed contribution allocations, immutable government remittance/void/linked
 correction records, native monthly reconciliation and fresh review CSV~~ are
 implemented, verified and locally installed. The government milestone remains
-partial: legal identities and exact agency formats/validators follow. Current
+partial: exact agency formats/validators follow. ~~HR-only legal identity/company
+registration records~~ are delivered and locally installed in0.1.43, with explicit
+names/identifiers, supporting review and retained revision history. See
+[0.1.43 evidence](GOVERNMENT-0.1.43-VERIFICATION.md). Current
 portal0.1.5 account controls are separately delivered, with actual email confirmation
 and current browser/phone visuals unverified. The ordered checklist is current;
 older stop/pause paragraphs above are historical. Work and scheduling remain active.
