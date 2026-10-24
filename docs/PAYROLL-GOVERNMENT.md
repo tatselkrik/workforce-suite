@@ -17,6 +17,15 @@ the explicit government-vector run includes its otherwise ignored conformance
 check. Native UI/delivery remain outstanding; a source API alone does not complete milestone2.
 Existing monthly statutory CSV files remain generic payroll worksheets.
 
+Post-deployment advisors report3warnings: Auth leaked-password protection disabled
+and2multiple-permissive-policy warnings. They also report5unindexed foreign-key
+INFO findings,5deny-by-default RLS INFO findings and105unused-index INFO findings.
+This function-only migration did not alter those tables or Auth settings. The
+private verification record retains exact findings. References:
+[password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection),
+[policy lint](https://supabase.com/docs/guides/database/database-linter?lint=0006_multiple_permissive_policies),
+[foreign-key lint](https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys).
+
 ## Source and money rules
 
 Use fresh protected HR/Admin snapshots, exact centavos and immutable issued
