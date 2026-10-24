@@ -44,7 +44,10 @@ unconfigured external connection to a completed integration.
 
 ## Progress and boundaries
 
-- Desktop0.1.41 is already installed and verified; do not repeat its release.
+- Desktop0.1.42 is installed and verified locally; retain0.1.41 as rollback.
+  Its signed private-channel upload awaits separate authorization after automatic
+  approval review blocked the new payload. Do not repeat local installation or
+  bypass that external-upload boundary.
 - Portal milestone1: ~~own correction/overtime requests, cancellation and decision
   history~~ are implemented in the0.1.2 increment, with25 Rust tests,3,275 database
   assertions and seven actual hosted proof groups. See [portal verification](EMPLOYEE-PORTAL.md).
@@ -81,8 +84,10 @@ unconfigured external connection to a completed integration.
   checks include independent approval, a concurrent duplicate-reference race,
   revocation and native validation of six snapshots/114source rows. All24prior
   payroll sets and earlier Auth users match; synthetic payments end voided.
-  Eleven fictional native screen layouts are inspected. Versioned desktop
-  packaging/installation is pending. Legal identity/file adapters remain queued;
+  ~~Reviewed contribution allocations, remittance/void/correction history, native
+  reconciliation screens and fresh review CSV~~ are delivered and locally installed
+  in0.1.42. Eleven fictional layouts, exact installer inventory/recovery, installed
+  hashes/BUILD/Windows Apps and normal launch/close are verified. Legal identity/file adapters remain queued;
   the complete government milestone is partial. See
   [government reporting boundaries](PAYROLL-GOVERNMENT.md).
 - Effective-date policies, balances and delegation follow the existing saved

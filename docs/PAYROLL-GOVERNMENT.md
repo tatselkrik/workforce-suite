@@ -6,6 +6,8 @@ government-reporting milestone: private legal identities and exact agency upload
 formats/validators remain outstanding. Delivery and installation are established
 separately by the versioned release evidence. Existing monthly statutory CSV files
 and the new government CSV are internal review worksheets, not official returns.
+The [0.1.42 delivery report](GOVERNMENT-0.1.42-VERIFICATION.md) confirms local
+installation. Private update-channel publication remains pending authorization.
 
 The additive workflow migration is deployed at58schema versions, preserving all86
 preexisting public record sets and243functions. The local PostgreSQL suite passes

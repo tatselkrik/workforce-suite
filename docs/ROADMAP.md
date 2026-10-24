@@ -142,4 +142,15 @@ automated/live checks and current visual verification still pending. Password/
 email controls follow next. Use [the ordered checklist](REMAINING-ROADMAP.md)
 for current scope/status rather than historical stop/resume paragraphs above.
 
+## Government reconciliation — locally installed0.1.42
+
+~~Reviewed contribution allocations, immutable government remittance/void/linked
+correction records, native monthly reconciliation and fresh review CSV~~ are
+implemented, verified and locally installed. The government milestone remains
+partial: legal identities and exact agency formats/validators follow. Current
+portal0.1.5 account controls are separately delivered, with actual email confirmation
+and current browser/phone visuals unverified. The ordered checklist is current;
+older stop/pause paragraphs above are historical. Work and scheduling remain active.
+See [0.1.42 delivery evidence](GOVERNMENT-0.1.42-VERIFICATION.md).
+
 The sequence may change when the company has a more urgent requirement. Payroll, biometric devices and external integrations require company-specific decisions; they are not generic plug-ins already working in this prototype.
