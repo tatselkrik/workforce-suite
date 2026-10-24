@@ -69,6 +69,35 @@ fn fixture() -> (f::Source, f::Worksheet) {
     (s, w)
 }
 #[test]
+fn prior_year_separation_uses_receipt_year_without_fabricating_service() {
+    let (mut s, mut w) = fixture();
+    s.service_end = date("2025-12-31");
+    s.annual.service_end = s.service_end;
+    s.annual.income.clear();
+    s.annual.pending_payments = 0;
+    s.outstanding.clear();
+    w.lines.push(f::Line { label:"Delayed earned pay".into(), kind:"taxable".into(), amount_cents:30_000_000, reference:"Fictional amount, not available or received in2025".into() });
+    assert!(f::ready(&s, &w).is_err());
+    w.cash_year_reviewed = true;
+    w.cash_year_note = "Fictional evidence: actual/constructive receipt only in2026; no previous withholding or other employer".into();
+    let c = f::ready(&s, &w).unwrap();
+    assert!(c.tax.coverage_gaps.is_empty());
+    assert_eq!((c.tax.taxable_cents,c.tax.annual_tax_cents,c.net_cents),(30_000_000,750_000,29_250_000));
+    assert_eq!(c.due_on,Some(date("2026-01-30")));
+    assert!(c.planned_late);
+    w.tax.openings.push(t::Opening { starts_on:date("2026-01-01"), ends_on:date("2026-01-01"), taxable_cents:0,withholding_cents:0,benefit_gross_cents:0,benefit_exempt_cents:0,reference:"Invented service is rejected".into() });
+    assert!(f::calculate(&s,&w).is_err());
+    w.tax.openings.clear();
+    w.tax.previous_employers.push(t::PreviousEmployer {starts_on:date("2026-01-01"),ends_on:date("2026-03-31"),employer:"Fictional later employer".into(),taxable_cents:20_000_000,withholding_cents:1_000_000,benefit_gross_cents:0,benefit_exempt_cents:0,reference:"Fictional certified income net of refund".into()});
+    let c=f::ready(&s,&w).unwrap();
+    assert_eq!((c.tax.taxable_cents,c.tax.annual_tax_cents,c.net_cents),(50_000_000,4_250_000,26_750_000));
+    w.tax.previous_employers[0].ends_on=date("2026-12-31");
+    assert!(f::calculate(&s,&w).is_err());
+    w.tax.previous_employers[0].ends_on=date("2026-03-31");
+    s.service_end=date("2024-12-31");s.annual.service_end=s.service_end;
+    assert!(f::calculate(&s,&w).unwrap_err().to_string().contains("historical"));
+}
+#[test]
 fn unpaid_source_enters_annual_once_and_refund_is_in_final_cash() {
     let (s, w) = fixture();
     let c = f::ready(&s, &w).unwrap();

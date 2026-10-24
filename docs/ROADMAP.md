@@ -1,5 +1,45 @@
 # HRIS development roadmap
 
+## Original roadmap status through0.1.41
+
+Strikethrough means implemented within the prototype's documented limits. It
+does not imply external filing, bank transfer, public portal hosting or verified
+physical-device support. Release/installation evidence is in VERIFICATION.md
+and the private versioned delivery records.
+
+1. ~~Multiple HR users, employee/manager roles, restricted permissions and
+   configurable leave approval chains.~~ The separate employee portal is partial
+   and local only; further requests, notifications and account controls remain.
+2. ~~Contact/emergency details, contracts, attachments, employment history and
+   digital201 files.~~ Contracts are private documents/metadata; electronic signing
+   and document approval are separate future features.
+3. ~~Reporting relationships, managers, organization charts, locations and
+   employment types.~~
+4. ~~Shift schedules, breaks, lateness, undertime, overtime, attendance corrections
+   and the visible disabled biometric control.~~ Actual biometric integration
+   remains pending selected hardware/protocol and physical verification.
+5. ~~Holiday calendars, custom workweeks, half-days, accrual, carryover,
+   cancellation and configurable leave types.~~ Further effective-date policy
+   versions, opening balances/credit adjustments and approval delegation remain.
+6. ~~Salary calculations, deductions, allowances, payslips, core benefits and
+   local payroll reports.~~ Includes Philippine premiums, cutoffs,13th-month pay,
+   annual tax, final pay, wage reviews and linked amendments. Government-specific
+   exports/reconciliation remain;2025 separation/2026 receipt is the reviewed
+   cross-year final-pay pack, not arbitrary historical/future-year coverage.
+7. ~~Applicant tracking, résumé attachments, interviews/feedback, offers,
+   onboarding checklists and exit/clearance workflows.~~
+8. ~~Goals, appraisals, feedback, training, certifications and career development.~~
+9. ~~Detailed attendance/leave reports, CSV exports, employee CSV imports,
+   custom report columns/saved views and workforce analysis.~~ Attendance/leave
+   imports and native XLSX workflows remain pending.
+10. ~~In-app approval/request notifications, attendance/leave reminders,
+    document-expiry/contract-end alerts and app-update notices.~~ Payroll,
+    appraisal and training reminders, external email/push delivery and
+    payroll/accounting/device connectors remain pending.
+
+Kirk requested stopping after finishing and installing0.1.41. The usage-reset
+scheduler is paused; remaining work is queued until explicitly resumed.
+
 The HR workspace remains a native Rust desktop application for Administrators, HR Generalists, Managers and later assigned staff roles. Ordinary employees use a separate future mobile-friendly portal. Each company has its own dedicated Supabase deployment; the prototype is a reusable base for separately configured companies. Build and verify one module before moving to the next.
 
 Broader product benchmarks combine many of these modules: [BambooHR](https://www.bamboohr.com/platform/) lists employee data/reporting, time, hiring, payroll and performance; [SAP HCM](https://www.sap.com/products/hcm.html) spans core HR, payroll and talent; [Sprout](https://sprout.ph/) combines HRIS, payroll, analytics and talent workflows. This roadmap is a development plan, not a claim of feature parity.
@@ -8,7 +48,7 @@ Broader product benchmarks combine many of these modules: [BambooHR](https://www
 
 Implemented: administrator-only Account Manager, above Settings. Initial roles are Administrator, HR Generalist, Manager and Employee. Every account receives an employee record; administrators assign roles, enable or disable access, and view access changes. Protected database memberships enforce permissions. Ordered leave approvals now use configurable per-type steps with protected reviewers; nobody approves their own leave. See [leave policies](LEAVE-POLICIES.md).
 
-Employee accounts are prepared for the portal and cannot sign into the desktop. Build the mobile-friendly portal separately for employee record access, attendance, leave requests, profile/security and notifications, using the same protected company membership scopes. A portal implementation is not part of this first desktop module.
+Employee accounts cannot sign into the desktop. The separate local portal now supports own records, contact updates, attendance/breaks, leave filing/cancellation and issued payslips. Its remaining requests, notifications, pictures and profile/security controls are queued separately; see [employee portal](EMPLOYEE-PORTAL.md).
 
 ## Stage 2 — Employee records and organization
 
@@ -42,7 +82,7 @@ Implemented: employee/current-report goals with reasoned progress and retained h
 
 ## Stage 9 — Payroll and benefits
 
-Implemented in version 0.1.33: effective salary profiles, reviewed monthly reconciliation worksheets, private-sector Philippine overtime/holiday/night premiums, recurring and per-run allowances/deductions, employer benefit memos, independently approved immutable payslips, recorded payments and PDF/CSV reconciliation exports. Contribution and withholding rules were checked against official sources on 23 October 2026. See [payroll](PAYROLL.md) for effective dates and limits. This module does not transfer money, file government returns or replace company payroll reconciliation. Subsequent implemented increments are described below; regional wage compliance and broader reporting remain queued.
+Implemented in version 0.1.33: effective salary profiles, reviewed monthly reconciliation worksheets, private-sector Philippine overtime/holiday/night premiums, recurring and per-run allowances/deductions, employer benefit memos, independently approved immutable payslips, recorded payments and PDF/CSV reconciliation exports. Contribution and withholding rules were checked against official sources on 23 October 2026. See [payroll](PAYROLL.md) for effective dates and limits. This module does not transfer money, file government returns or replace company payroll reconciliation. Subsequent implemented increments are described below.
 
 Implemented in version0.1.34: separate1st–15th/16th–month-end runs, planned pay dates, reviewed
 worksheets, independent approval, immutable period payslips, recorded payments,
@@ -54,9 +94,24 @@ see [13th-month pay](PAYROLL-THIRTEENTH.md). Withholding/contribution adjustment
 remain explicit reviewed inputs. Implemented in the0.1.36 source: automatic annual compensation-tax reconciliation,
 evidenced prior-employer balances, shared annual benefit reconciliation,
 independent approval and immutable aggregate PDF/CSV advice; see
-[annual tax](PAYROLL-ANNUAL-TAX.md). Implemented in0.1.38: [final-pay reviews and settlement](PAYROLL-FINAL-PAY.md), with reviewed vacation/separation/retirement amounts, prospective last-compensation tax, independent approval, immutable own statements, source-net offsets and unpaid withdrawal. [Individual payment records](PAYROLL-PAYMENTS.md) remain compatible. Same-year2026 is the first pack; cross-year/amendments remain separate. Regional wage compliance, expanded payroll reporting/data exchange and configured integrations remain queued. Kirk requested a stop after this milestone; automatic continuation and portal work are paused.
+[annual tax](PAYROLL-ANNUAL-TAX.md). Implemented in0.1.38: [final-pay reviews and settlement](PAYROLL-FINAL-PAY.md), with reviewed vacation/separation/retirement amounts, prospective last-compensation tax, independent approval, immutable own statements, source-net offsets and unpaid withdrawal. [Individual payment records](PAYROLL-PAYMENTS.md) remain compatible.
 
-## Deferred — Separate employee portal (paused)
+Implemented in0.1.39: [regional wage compliance](REGIONAL-WAGES.md), with
+evidenced effective classifications, independent approval, dated wage checks
+and optional Administrator enforcement. Implemented in0.1.40:
+[consolidated payroll reports](PAYROLL-REPORTING.md), separating immutable
+approved amounts, actual individual receipts, source offsets, combined final
+cash and current outstanding/reserved balances.
+
+Implemented in0.1.41: [linked amendments](PAYROLL-AMENDMENTS.md) preserve original
+payslips/receipts and independently approve supplemental cash or a separately
+reviewed discrepancy without automatic recovery. Reviewed2025 separations may
+retain actual2026 receipt dates; no service interval or earlier-year tax credit
+is invented. Consolidated report-v2 includes amendment cash once. Government
+exports/reconciliation and configured integrations remain queued. Work and the
+scheduler stop after finishing and installing this version.
+
+## Separate employee portal — local prototype, further work paused
 
 Build a mobile-friendly employee application against the same protected company memberships. Start with own employment/contact details, attendance and breaks, leave/correction/overtime requests, own approved payslips, notifications and account security. Keep payroll drafts, team salaries, recruiting, private HR notes and administrative controls outside employee access. The native desktop remains the staff application. Device and external-service connections remain unconfigured until the necessary company and hardware choices are available.
 
@@ -71,8 +126,8 @@ cancellation/history and saved-rule server-timed breaks. Seventeen Rust tests,
 leave migration is deployed with67 public record sets preserved. Eight additional
 actual hostedAuth/API proofs cover leave filing/cancellation and access guards.
 Private build/package records are separate from these source checks. Next add correction/overtime requests,
-notifications, profile/security controls and company branding, then prepare
-public HTTPS hosting.
+notifications, profile/security controls and company branding for local use only.
+Public HTTPS hosting requires separate authorization and is outside the current queue.
 See [employee portal](EMPLOYEE-PORTAL.md).
 
 The sequence may change when the company has a more urgent requirement. Payroll, biometric devices and external integrations require company-specific decisions; they are not generic plug-ins already working in this prototype.

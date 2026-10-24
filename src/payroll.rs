@@ -544,6 +544,7 @@ pub struct Event {
 }
 #[derive(Clone, Debug, Default)]
 pub struct Setup {
+    pub amendments: crate::payroll_amendments::Setup,
     pub wages: crate::payroll_wages::Setup,
     pub finals: crate::payroll_final::Setup,
     pub receipts: Vec<crate::payroll_payments::Receipt>,
@@ -578,6 +579,7 @@ impl PayrollAction {
         }
     }
     pub fn payload(&self, data: &Snapshot) -> Result<Value> {
+        if self.operation.starts_with("amendment_"){return crate::payroll_amendments::payload(self,data);}
         if self.operation.starts_with("wage_"){return crate::payroll_wages::payload(self,data);}
         crate::payroll_final::guard_payment(data,self)?;
         if self.operation.starts_with("final_"){return crate::payroll_final::payload(self,data);}
@@ -823,6 +825,7 @@ pub(crate) fn demo_basis(data: &Snapshot, eid: Uuid, mon: NaiveDate) -> Result<V
     )
 }
 pub fn apply_demo(data: &mut Snapshot, a: &PayrollAction) -> Result<()> {
+    if a.operation.starts_with("amendment_"){return crate::payroll_amendments::apply_demo(data,a);}
     a.payload(data)?;
     let mut copy = data.clone();
     demo_change(&mut copy, a)?;

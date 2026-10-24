@@ -39,6 +39,7 @@ mod thirteenth_view;
 mod tax_view;
 mod payment_view;
 mod final_view;
+mod amendment_view;
 mod wage_view;
 mod payroll_report_view;
 mod organization_view;

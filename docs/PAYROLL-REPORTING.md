@@ -1,7 +1,10 @@
 # Consolidated payroll reporting
 
-Payroll → Reports combines immutable monthly, cutoff,13th-month, annual-tax and
-final statements. Only current HR/Admin may generate or export company reports.
+Payroll → Reports combines immutable monthly, cutoff,13th-month, annual-tax,
+final and linked amendment statements. Source0.1.41 uses report-v2 for supplemental
+cash, original links, signed statutory adjustments and review-only discrepancies;
+the prior endpoint remains available to older installations. See
+[amendment boundaries](PAYROLL-AMENDMENTS.md). Only current HR/Admin may generate or export company reports.
 Managers retain their own slips but do not receive this report destination/API.
 
 Filter up to366inclusive days by actual approval date or actual recorded
@@ -19,7 +22,7 @@ again and displays that generation's time. No private evidence, worksheet/source
 bundles, bank/payment references, tax identifiers or actor IDs enter these reports.
 The existing explicit monthly statutory worksheets remain separate exports.
 
-Recorded payroll cash consists of direct salary/13th receipts plus the actual
+Recorded payroll cash consists of direct salary/13th and supplemental receipts plus the actual
 combined net of settled final cases. A source receipt with final_settlement origin
 discharges that source through the combined case; its net is an offset, never an
 additional full-net cash payment. Annual-tax advice and its settled signed

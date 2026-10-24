@@ -64,6 +64,7 @@ fn kind(k: &str) -> &str {
         "thirteenth" => "13th-month",
         "annual_tax" => "Annual tax advice",
         "final" => "Final statement",
+        "amendment" => "Linked amendments",
         _ => "All sources",
     }
 }
@@ -115,6 +116,7 @@ impl HrisApp {
                         "thirteenth",
                         "annual_tax",
                         "final",
+                        "amendment",
                     ] {
                         ui.selectable_value(&mut s.kind, k.into(), kind(k));
                     }
@@ -209,6 +211,8 @@ impl HrisApp {
         card(ui, |ui| {
             ui.vertical(|ui|{
                     amount(ui, "Recorded payroll cash", t.recorded_cash_cents);
+                    amount(ui,"Outstanding supplemental payouts",t.amendment_outstanding_cents);
+                    if t.overpayment_review_cents!=0{amount(ui,"Overpayment reviews (no automatic recovery)",t.overpayment_review_cents);}
                     amount(
                         ui,
                         "Source offsets included in final settlement",
@@ -292,6 +296,8 @@ impl HrisApp {
                         if let Some(net) = r.net_cents {
                             amount(ui, "Statement net", net);
                         }
+                        if let Some(id)=r.linked_id{entry(ui,"Linked original",&format!("{} · {id}",r.linked_kind.as_deref().unwrap_or("")));}
+                        if let Some(v)=r.review_amount_cents{amount(ui,"Discrepancy review only",v);}
                         amount(ui, "Recorded payroll cash", r.cash_cents);
                         if r.offset_cents > 0 {
                             amount(
@@ -307,7 +313,7 @@ impl HrisApp {
                             amount(ui, "Tax adjustment: withholding (+) / refund (-)", v);
                         }
                         if let Some(v) = r.outstanding_cents {
-                            amount(ui, "Current source outstanding", v);
+                            amount(ui, if r.kind=="amendment"{"Current supplemental outstanding"}else{"Current source outstanding"}, v);
                         }
                         if r.payment_state=="reserved" {
                             amount(ui, "Current reserved subset", r.reserved_cents);
@@ -321,7 +327,7 @@ impl HrisApp {
     }
     #[cfg(feature = "qa-screenshot")]
     pub(super) fn prepare_consolidated_report_preview(&mut self, form: &str) {
-        self.prepare_final_preview("payroll-final-settled");
+        if form.contains("amendment"){self.prepare_amendment_preview("payroll-amendment-paid");}else{self.prepare_final_preview("payroll-final-settled");}
         self.payroll_state.tab = 4;
         self.payroll_state.reports = State::default();
         self.payroll_state.reports.bind(&self.data);

@@ -152,8 +152,9 @@ pub fn calculate(s: &Source, w: &Worksheet) -> Result<Calculation> {
     ensure!(
         (2026..=2200).contains(&s.as_of.year())
             && s.starts_on.year() == s.as_of.year()
-            && s.service_end.year() == s.as_of.year()
-            && s.starts_on <= s.service_end
+            && s.service_end.year() >= 1900
+            && (s.starts_on <= s.service_end
+                || s.service_end < NaiveDate::from_ymd_opt(s.as_of.year(), 1, 1).unwrap())
             && s.service_end <= s.as_of
             && s.income.len() <= 120
             && w.openings.len() <= 32
@@ -264,8 +265,8 @@ pub fn calculate(s: &Source, w: &Worksheet) -> Result<Calculation> {
         ensure!(
             p.starts_on.year() == s.as_of.year()
                 && p.starts_on <= p.ends_on
-                && p.ends_on < s.starts_on,
-            "Prior-employer certificates must cover successive employment before the current hire, in this tax year."
+                && (if s.service_end < s.starts_on { p.ends_on <= s.as_of } else { p.ends_on < s.starts_on }),
+            "Certificates must fit successive employment in the payment year; later employment is allowed only when this employer's service ended before the year."
         );
         let mut d = p.starts_on;
         loop {
@@ -349,7 +350,7 @@ pub fn calculate(s: &Source, w: &Worksheet) -> Result<Calculation> {
         money(n)?;
     }
     let mut d = s.starts_on;
-    loop {
+    while d <= s.service_end {
         if !dates.contains(&d) {
             if let Some(g) = c
                 .coverage_gaps
@@ -363,9 +364,6 @@ pub fn calculate(s: &Source, w: &Worksheet) -> Result<Calculation> {
                     ends_on: d,
                 });
             }
-        }
-        if d == s.service_end {
-            break;
         }
         d = d.succ_opt().unwrap();
     }

@@ -33,6 +33,10 @@ pub struct Record {
     pub rule_version: String,
     pub source_basis: Value,
     pub worksheet: Worksheet,
+    #[serde(default)]
+    pub cash_year_reviewed: bool,
+    #[serde(default)]
+    pub cash_year_note: String,
     pub totals: Calculation,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -84,6 +88,7 @@ fn seed(s: &Source) -> Worksheet {
     w
 }
 pub fn reset_reviews(w: &mut Worksheet) {
+    w.cash_year_reviewed = false;
     w.entitlements_reviewed = false;
     w.source_scope_reviewed = false;
     w.contributions_reviewed = false;
@@ -159,11 +164,11 @@ pub fn payload(a: &PayrollAction, data: &Snapshot) -> Result<Value> {
         let end: NaiveDate = serde_json::from_value(v["service_end"].clone())?;
         let cash: NaiveDate = serde_json::from_value(v["cash_date"].clone())?;
         ensure!(
-            end.year() == 2026
+            end >= NaiveDate::from_ymd_opt(2025, 1, 1).unwrap()
                 && cash.year() == 2026
                 && cash >= NaiveDate::from_ymd_opt(2026, 1, 6).unwrap()
                 && end <= cash,
-            "Use the reviewed2026 same-year final-pay dates."
+            "Use a completed 2025/2026 separation and a reviewed2026 cash date from6January."
         );
         field(v, "title", 120, true)?;
     } else {
@@ -525,7 +530,10 @@ fn check(data: &Snapshot, r: &Record) -> Result<()> {
         "Final-pay income, payments or employment changed. Refresh a draft, or withdraw the unpaid issued statement and prepare a new review."
     );
     ensure!(
-        ready(&source(r)?, &r.worksheet)? == r.totals && r.rule_version == RULE_VERSION,
+        ready(&source(r)?, &r.worksheet)? == r.totals
+            && (r.rule_version == RULE_VERSION
+                || (r.service_end.year() == r.cash_date.year()
+                    && r.rule_version == "PH-final-pay-2026-10-24-v1")),
         "Final-pay totals changed."
     );
     ensure!(
@@ -624,6 +632,8 @@ fn inner(data: &mut Snapshot, a: &PayrollAction) -> Result<()> {
             payment_reference: String::new(),
             handling_reference: String::new(),
             rule_version: RULE_VERSION.into(),
+            cash_year_reviewed: false,
+            cash_year_note: String::new(),
             source_basis: Value::Null,
             worksheet: Worksheet::default(),
             totals: Calculation::default(),
@@ -682,6 +692,9 @@ fn inner(data: &mut Snapshot, a: &PayrollAction) -> Result<()> {
                 r.employee_code = e.employee_code.clone();
                 r.department = e.department.clone();
                 r.prepared_by = data.access.user_id;
+                r.rule_version = RULE_VERSION.into();
+                r.cash_year_reviewed = r.worksheet.cash_year_reviewed;
+                r.cash_year_note = r.worksheet.cash_year_note.clone();
             }
             "submit" | "approve" => {
                 ensure!(

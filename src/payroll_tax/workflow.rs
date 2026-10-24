@@ -72,8 +72,8 @@ fn required(v: &Value, k: &str, max: usize) -> Result<()> {
 }
 pub fn dates(year: i32, kind: &str, end: NaiveDate, asof: NaiveDate) -> Result<()> {
     ensure!(
-        (2026..=2200).contains(&year) && end.year() == year && asof.year() == year && end <= asof,
-        "Use a service end and payment as-of date in the same tax year."
+        (2026..=2200).contains(&year) && end.year() >= 1900 && asof.year() == year && end <= asof,
+        "Use the actual service end and a payment as-of date in the tax year."
     );
     ensure!(
         kind == "termination"
@@ -174,7 +174,7 @@ pub fn demo_basis(data: &Snapshot, r: &Record) -> Result<Value> {
         .unwrap_or(NaiveDate::from_ymd_opt(r.year, 1, 1).unwrap())
         .max(NaiveDate::from_ymd_opt(r.year, 1, 1).unwrap());
     ensure!(
-        lo <= r.service_end,
+        e.joined_on.is_none_or(|d| d <= r.service_end),
         "Employee joined after this close's service end."
     );
     let mut income = vec![];
@@ -333,7 +333,8 @@ pub fn demo_basis(data: &Snapshot, r: &Record) -> Result<Value> {
         }
     }
     previous.sort_by_key(|p| p["id"].as_str().unwrap().to_owned());
-    crate::payroll_final::augment_annual_demo_basis(data,r,json!({"employee":{"id":e.id,"full_name":e.full_name,"employee_code":e.employee_code,"department":e.department,"joined_on":e.joined_on,"status":e.status},"payments":payments,"previous":previous,"calculation_source":Source{starts_on:lo,service_end:r.service_end,as_of:r.as_of,income,prior_adjustment_cents:adjustment,pending_payments:pending,pending_adjustments,external_thirteenth_floor:ext,other_benefits_floor:other}}))
+    let b=crate::payroll_final::augment_annual_demo_basis(data,r,json!({"employee":{"id":e.id,"full_name":e.full_name,"employee_code":e.employee_code,"department":e.department,"joined_on":e.joined_on,"status":e.status},"payments":payments,"previous":previous,"calculation_source":Source{starts_on:lo,service_end:r.service_end,as_of:r.as_of,income,prior_adjustment_cents:adjustment,pending_payments:pending,pending_adjustments,external_thirteenth_floor:ext,other_benefits_floor:other}}))?;
+    crate::payroll_amendments::augment_annual(data,r,b)
 }
 pub fn apply_demo(data: &mut Snapshot, a: &PayrollAction) -> Result<()> {
     payload(a, data)?;

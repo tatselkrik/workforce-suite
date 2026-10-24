@@ -1091,7 +1091,10 @@ fn baseline(company: &Company) -> Vec<Reply> {
         reply("GET /rest/v1/payroll_thirteenth_slips?",200,json!([])),
         reply("GET /rest/v1/payroll_final_slips?",200,json!([])),
         reply("GET /rest/v1/payroll_final_status?",200,json!([])),
+        reply("GET /rest/v1/payroll_amendment_slips?",200,json!([])),
+        reply("GET /rest/v1/payroll_amendment_status?",200,json!([])),
         reply("GET /rest/v1/payroll_tax_slips?",200,json!([])),
+        reply("GET /rest/v1/payroll_amendment_cases?",200,json!([])),
         reply("GET /rest/v1/payroll_wage_classifications?",200,json!([])),
         reply("GET /rest/v1/payroll_wage_settings?",200,json!([])),
         reply("GET /rest/v1/payroll_wage_check_index?",200,json!([])),
@@ -2120,6 +2123,7 @@ fn manager_desktop_sign_in_does_not_request_administrator_account_data() {
             && !r.prefix.contains("/payroll_tax_reconciliations?")
             && !r.prefix.contains("/payroll_payment_receipts?")
             && !r.prefix.contains("/payroll_final_cases?")
+            && !r.prefix.contains("/payroll_amendment_cases?")
             && !r.prefix.contains("/payroll_wage_")
     });
     replies.remove(6); // Correction reasons are HR-only, including their loading path.
@@ -3359,6 +3363,17 @@ fn final_pay_creation_uses_its_guarded_rpc_and_retries_one_identity_after_refres
  replies.extend(after.into_iter().skip(1).take_while(|r|!r.prefix.starts_with("GET /auth/v1/user ")));
  let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();assert!(client.execute(Action::Payroll(action.clone()),&data).unwrap_err().to_string().contains("Payroll change saved, but refresh failed"));let result=client.execute(Action::Payroll(action),&data).unwrap();assert_eq!(result.payroll.finals.records[0].id,id);drop(client);server.join().unwrap();let req=requests.lock().unwrap();let writes=req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/manage_payroll_final ")).collect::<Vec<_>>();assert_eq!(writes.len(),2);assert_eq!(writes[0].json(),writes[1].json());assert_eq!(writes[0].json()["p_operation"],"create");assert!(!req.iter().any(|r|r.line.starts_with("POST /rest/v1/payroll_final_cases")));
 }
+#[test]
+fn amendment_creation_retries_one_identity_and_never_writes_financial_tables_directly(){
+ use hris_desktop::{domain::Action,payroll::PayrollAction,payroll_amendments as a};
+ let company=DemoStore::new().data.company;let id=uuid::Uuid::from_u128(99451);let target=uuid::Uuid::from_u128(99452);let employee=uuid::Uuid::from_u128(99453);
+ let action=PayrollAction::new("amendment_create",json!({"id":id,"target_kind":"cutoff","target_id":target,"cash_date":company.today(),"title":"Synthetic transport supplement","purpose":"payout","reason":"PRIVATE_AMENDMENT_TRANSPORT"}));
+ let saved=json!({"id":id,"company_id":company.id,"employee_id":employee,"target_kind":"cutoff","target_id":target,"starts_on":"2026-09-01","ends_on":"2026-09-15","cash_date":company.today(),"title":"Synthetic transport supplement","employee_name":"Fictional recipient","employee_code":"QA-TRANSPORT","department":"Operations","status":"draft","revision":0,"created_by":uuid::Uuid::from_u128(1),"prepared_by":uuid::Uuid::from_u128(1),"submitted_by":null,"approved_by":null,"approved_at":null,"paid_on":null,"payment_reference":"","source_basis":{},"worksheet":a::Worksheet{purpose:"payout".into(),..Default::default()},"totals":a::Calculation::default(),"rule_version":a::RULE_VERSION});
+ let mut replies=baseline(&company);replies.push(reply("POST /rest/v1/rpc/manage_payroll_amendment ",200,saved.clone()));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",500,json!({"message":"Synthetic post-save refresh failure"})));replies.push(reply("POST /rest/v1/rpc/manage_payroll_amendment ",200,saved.clone()));
+ let mut after=baseline(&company);for r in &mut after{if r.prefix.starts_with("GET /rest/v1/payroll_amendment_cases?"){r.body=serde_json::to_vec(&json!([saved])).unwrap();}}
+ replies.extend(after.into_iter().skip(1).take_while(|r|!r.prefix.starts_with("GET /auth/v1/user ")));
+ let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();assert!(client.execute(Action::Payroll(action.clone()),&data).unwrap_err().to_string().contains("Payroll change saved, but refresh failed"));let result=client.execute(Action::Payroll(action),&data).unwrap();assert_eq!(result.payroll.amendments.records[0].id,id);drop(client);server.join().unwrap();let req=requests.lock().unwrap();let writes=req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/manage_payroll_amendment ")).collect::<Vec<_>>();assert_eq!(writes.len(),2);assert_eq!(writes[0].json(),writes[1].json());assert_eq!(writes[0].json()["p_operation"],"create");assert!(!req.iter().any(|r|r.line.starts_with("POST /rest/v1/payroll_amendment_cases")));
+}
 
 #[test]
 fn wage_review_creation_uses_guarded_rpc_and_retry_identity(){
@@ -3379,10 +3394,10 @@ fn consolidated_payroll_report_uses_one_scoped_rpc_and_rechecks_before_export(){
  let f:Filter=serde_json::from_value(json!({"starts_on":"2026-01-01","ends_on":"2026-12-31","axis":"issued","kind":"all","employee_id":null,"search":""})).unwrap();
  let access=json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});
  let wire=json!({"version":VERSION,"company_id":company.id,"company_name":company.name,"generated_at":Utc::now(),"filter":f,"rows":[]});
- let mut responses=baseline(&company);responses.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access.clone()));responses.push(reply("POST /rest/v1/rpc/payroll_report ",200,wire));responses.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access));
+ let mut responses=baseline(&company);responses.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access.clone()));responses.push(reply("POST /rest/v1/rpc/payroll_report_v2 ",200,wire));responses.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access));
  let(config,server,requests)=fixture(responses);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
  let report=client.consolidated_payroll_report(&data,&f,None).unwrap();assert!(report.wire.rows.is_empty());drop(client);server.join().unwrap();
- let req=requests.lock().unwrap();let reports:Vec<_>=req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/payroll_report ")).collect();assert_eq!(reports.len(),1);assert_eq!(reports[0].json(),json!({"p_filter":f}));
+ let req=requests.lock().unwrap();let reports:Vec<_>=req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/payroll_report_v2 ")).collect();assert_eq!(reports.len(),1);assert_eq!(reports[0].json(),json!({"p_filter":f}));
 }
 #[test]
 fn consolidated_report_revocation_after_fetch_cannot_write_csv(){
@@ -3390,7 +3405,7 @@ fn consolidated_report_revocation_after_fetch_cannot_write_csv(){
  let d=DemoStore::new();let company=d.data.company.clone();let f:Filter=serde_json::from_value(json!({"starts_on":"2026-01-01","ends_on":"2026-12-31","axis":"issued","kind":"all","employee_id":null,"search":""})).unwrap();
  let access=json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});let mut denied=access.clone();denied["role"]=json!("manager");
  let wire=json!({"version":VERSION,"company_id":company.id,"company_name":company.name,"generated_at":Utc::now(),"filter":f,"rows":[]});
- let mut responses=baseline(&company);responses.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access));responses.push(reply("POST /rest/v1/rpc/payroll_report ",200,wire));responses.push(reply("POST /rest/v1/rpc/my_hris_access ",200,denied));
+ let mut responses=baseline(&company);responses.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access));responses.push(reply("POST /rest/v1/rpc/payroll_report_v2 ",200,wire));responses.push(reply("POST /rest/v1/rpc/my_hris_access ",200,denied));
  let path=std::env::temp_dir().join(format!("hris-report-revoked-{}.csv",uuid::Uuid::new_v4()));assert!(!path.exists());
  let(config,server,_)=fixture(responses);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
  assert!(client.consolidated_payroll_report(&data,&f,Some(&path)).is_err());assert!(!path.exists());drop(client);server.join().unwrap();

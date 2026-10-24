@@ -102,6 +102,13 @@ pub fn build_final(s:&crate::payroll_final::Slip,status:Option<&crate::payroll_f
  wrap("",&mut lines);wrap("Original payslips remain unchanged. Actual combined cash is shown once.",&mut lines);wrap("Employer tax handling is not an automatic employee debt.",&mut lines);wrap("This record is not a bank transfer, Form2316, filing or remittance.",&mut lines);
  render_titled_lines(lines,"FINAL PAY STATEMENT")
 }
+pub fn build_amendment(s:&crate::payroll_amendments::Slip,status:Option<&crate::payroll_amendments::Status>)->Result<Vec<u8>>{
+ let mut lines=vec![];
+ for t in [s.company_name.clone(),s.title.clone(),format!("Employee: {} - {}",s.employee_code,s.employee_name),format!("Department: {}",s.department),format!("Original {}: {}",s.target_kind,s.target_id),format!("Earned: {} to {} | Planned cash: {}",s.starts_on,s.ends_on,s.cash_date),format!("Approved: {} UTC",s.approved_at.format("%Y-%m-%d %H:%M")),format!("Rule pack: {}",s.rule_version),status.map(|p|format!("Recorded {}: {} | Cash {}",p.kind,p.recorded_on,money(p.net_cents))).unwrap_or(if s.purpose=="review_only"{"Reviewed discrepancy; no payment or recovery."}else{"Approved supplement; actual cash not yet recorded."}.into()),String::new()]{wrap(&t,&mut lines);}
+ if s.purpose=="review_only"{wrap(&format!("Discrepancy review only: {}",money(s.totals.review_amount_cents)),&mut lines);}else{for(label,n)in crate::payroll_amendments::totals_rows(&s.totals){wrap(&format!("{label:<42} {:>20}",money(n)),&mut lines);}}
+ wrap("",&mut lines);wrap("Original payslip and receipt remain unchanged. This is a linked correction.",&mut lines);wrap("Supplemental cash is recorded separately; no transfer or filing was made.",&mut lines);wrap("An overpayment review creates no automatic deduction or employee debt.",&mut lines);
+ render_titled_lines(lines,"PAYROLL AMENDMENT")
+}
 fn build_period(s: &Slip, period: &str) -> Result<Vec<u8>> {
     let mut lines = vec![];
     for text in [

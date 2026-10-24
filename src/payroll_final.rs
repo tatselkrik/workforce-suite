@@ -3,7 +3,7 @@ use crate::{payroll, payroll_tax as tax};
 use anyhow::{Result, ensure};
 use chrono::{Datelike, Months, NaiveDate};
 use serde::{Deserialize, Serialize};
-pub const RULE_VERSION: &str = "PH-final-pay-2026-10-24-v1";
+pub const RULE_VERSION: &str = "PH-final-pay-2026-10-24-v2";
 const LIMIT: i64 = tax::LIMIT;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -113,6 +113,11 @@ pub struct Worksheet {
     pub source_scope_reviewed: bool,
     pub contributions_reviewed: bool,
     pub review_note: String,
+    /// Private evidence that delayed pay was not actually/constructively received earlier.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub cash_year_reviewed: bool,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub cash_year_note: String,
 }
 impl Default for Worksheet {
     fn default() -> Self {
@@ -131,6 +136,8 @@ impl Default for Worksheet {
             source_scope_reviewed: false,
             contributions_reviewed: false,
             review_note: String::new(),
+            cash_year_reviewed: false,
+            cash_year_note: String::new(),
         }
     }
 }
@@ -215,10 +222,10 @@ pub fn calculate(s: &Source, w: &Worksheet) -> Result<Calculation> {
     ensure!(
         s.cash_date >= NaiveDate::from_ymd_opt(2026, 1, 6).unwrap()
             && s.cash_date.year() == 2026
-            && s.service_end.year() == 2026
+            && s.service_end >= NaiveDate::from_ymd_opt(2025, 1, 1).unwrap()
             && s.service_end <= s.cash_date
             && s.employment_start <= s.service_end,
-        "This reviewed final-pay pack supports same-year 2026 separation and actual cash dates from 6 January. Cross-year payments require a separate rule review."
+        "This reviewed final-pay pack supports 2025 or 2026 separation with cash from 6 January through December 2026. Other historical separation or later payment years need a reviewed rule pack."
     );
     ensure!(
         s.annual.as_of == s.cash_date
@@ -237,6 +244,7 @@ pub fn calculate(s: &Source, w: &Worksheet) -> Result<Calculation> {
     for note in [&w.contribution_note, &w.review_note] {
         text(note, 2000, false)?;
     }
+    text(&w.cash_year_note, 2000, false)?;
     let (full, credited) = service_years(s.employment_start, s.service_end)?;
     let mut c = Calculation {
         credited_service_years: credited,
@@ -501,6 +509,9 @@ pub fn calculate(s: &Source, w: &Worksheet) -> Result<Calculation> {
 }
 pub fn ready(s: &Source, w: &Worksheet) -> Result<Calculation> {
     let c = calculate(s, w)?;
+    ensure!(s.service_end.year() == s.cash_date.year()
+        || (w.cash_year_reviewed && !w.cash_year_note.trim().is_empty()),
+        "Review the payment year's actual/constructive receipt evidence, prior-year withholding and other employment before issuing delayed final pay. Do not move earlier received income into this year.");
     ensure!(
         s.annual.pending_adjustments == 0
             && c.tax.coverage_gaps.is_empty()

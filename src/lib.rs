@@ -47,3 +47,4 @@ pub mod payroll_pdf;
 pub mod payroll_wages;
 
 pub mod payroll_reporting;
+pub mod payroll_amendments;

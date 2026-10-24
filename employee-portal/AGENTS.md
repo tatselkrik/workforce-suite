@@ -20,3 +20,14 @@ are the current scope. Portal leave wrappers infer the current employee and guar
 policy/record revisions; staff roles still receive only own-record controls here.
 Follow ../docs/EMPLOYEE-PORTAL.md for verification and remaining scope.
 Do not claim public hosting, phone access or a native mobile app without evidence.
+
+
+Kirk resumed portal development on24October2026 for LOCAL use only, including the
+remaining own correction/overtime requests, notifications, profile/security and
+branding scope. Do not publicly host, tunnel or expose the server, or resume
+unrelated desktop employee access. Preserve the existing own-record/token/CSRF
+boundaries and nested release lifecycle.
+
+Kirk subsequently instructed this chat to stop after desktop0.1.41. Portal work is
+queued and PAUSED until a new human instruction resumes it; local-only deployment
+and all security boundaries remain in force.

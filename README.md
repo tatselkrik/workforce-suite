@@ -6,6 +6,8 @@ Application identifier: `io.github.tatselkrik.hrisdesktop`.
 
 ## What works
 
+- **Linked payroll amendments:** **Payroll → Amendments** retains paid originals while issuing independently approved supplements, reviewed same-year statutory refunds and separate overpayment discrepancies without automatic recovery. Own PDF/CSV statements and consolidated report-v2 show supplemental cash once. Final pay also supports prior-year separation with evidenced2026 receipt dates. See [amendment rules](docs/PAYROLL-AMENDMENTS.md) and the [0.1.41 review checklist](docs/AMENDMENTS-0.1.41-CHECKLIST.md).
+
 - **Separate employee portal:** the first local portal milestone provides own employment/contact details, server-timed attendance and approved payslips with CSV/browser printing. It has a separate Rust server and responsive browser interface; it does not change desktop Employee restrictions. Public hosting and additional request flows remain later increments. See [employee portal](docs/EMPLOYEE-PORTAL.md).
 
 - **Payroll and benefits:** open **Payroll** for effective salary profiles, reviewed monthly worksheets, Philippine overtime/holiday/night premiums, allowances, deductions and employer benefit memos. Another Administrator approves a submitted register; approved payslips are retained and export to PDF/CSV. Contribution and withholding worksheets support local reconciliation. Payment recording does not move money or file government returns. See [payroll rules and limits](docs/PAYROLL.md).

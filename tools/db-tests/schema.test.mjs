@@ -70,6 +70,7 @@ try {
   const finalPayMigrations=[];
   const wageMigrations=[];
   const payrollReportMigrations=[];
+  const amendmentMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -83,6 +84,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.includes('_payroll_cross_year_')||filename.includes('_payroll_amendments')){amendmentMigrations.push(filename);continue;}
     if(filename.includes('_expanded_payroll_reporting')){payrollReportMigrations.push(filename);continue;}
     if(filename.includes('_regional_wage_')){wageMigrations.push(filename);continue;}
     if(filename.includes('_payroll_final_pay_')){finalPayMigrations.push(filename);continue;}
@@ -403,6 +405,14 @@ try {
   await runPayrollReportTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   await db.exec('reset role');for(const t of reportTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,reportBefore[t],'Read-only reporting preserves public '+t);
 
+  await db.exec('reset role');const preAmendTables=(await db.query("select tablename from pg_tables where schemaname='public'order by tablename")).rows.map(r=>r.tablename);const preAmend={};
+  for(const t of preAmendTables)preAmend[t]=(await db.query('select to_jsonb(t)-array[\'cash_year_reviewed\',\'cash_year_note\']r from public.'+t+' t order by to_jsonb(t)::text')).rows;
+  for(const filename of amendmentMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  for(const t of preAmendTables)eq((await db.query('select to_jsonb(t)-array[\'cash_year_reviewed\',\'cash_year_note\']r from public.'+t+' t order by to_jsonb(t)::text')).rows,preAmend[t],'Amendment migrations preserve prior '+t+' facts apart from additive private review columns');
+  const {runCrossYearTests}=await import('./payroll-cross-year.test.mjs');
+  await runCrossYearTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
+  const {runAmendmentTests}=await import('./payroll-amendments.test.mjs');
+  await runAmendmentTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

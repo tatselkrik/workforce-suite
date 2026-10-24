@@ -1,12 +1,12 @@
 # Final pay — native worksheet and protected settlement
 
-The0.1.38 source adds **Payroll → Final pay**. Hosted deployment, packaging and installation must be established by versioned release evidence. The employee portal remains paused. This module records reviewed obligations and settlements; it does not transfer money, file returns or issue an official2316.
+The0.1.38 source added **Payroll → Final pay**. Source0.1.41 extends it through the [amendment and receipt-year rules](PAYROLL-AMENDMENTS.md). Hosted deployment, packaging and installation must be established by versioned release evidence. The separate portal is authorized for local use only. This module records reviewed obligations and settlements; it does not transfer money, file returns or issue an official2316.
 
 ## Reviewed scope and dates
 
 Prepare the last actual salary/cutoff and earned13th-month slips using the existing workflows. A final review includes every outstanding issued slip whose completed period falls on or before the planned cash date. Original basic, premiums, contributions and withholding remain immutable. Review partial service and any source period extending beyond the last working day before issuing that source; this module does not project salary or create a second13th-month entitlement. Missing attendance does not imply an absence deduction.
 
-The first final-pay pack supports private-sector same-year2026 separation and cash dates from6January2026. Cross-year final settlements, government/special occupational retirement and later rule years need separate review and implementation. The existing individual-payment and annual-tax workflows remain available within their own documented scope.
+The original pack supported private-sector same-year2026 separation and cash dates from6January2026. Source0.1.41 also retains earlier separation dates with explicit receipt-year evidence and reviewed2026 cash dates, without invented service coverage. Government/special occupational retirement and later cash years still need separate rule review and implementation. The existing individual-payment and annual-tax workflows retain their documented scope.
 
 The actual employment start must be recorded. Archived employees may be paid. Clearance, account access, employee archiving and an active exit case are not payment gates. The default release deadline is30days from separation; a more favorable company deadline may be shorter. An overdue planned release is flagged rather than refused. Settlement uses the approved cash date, no later than today and no earlier than approval. Withdraw an unpaid statement and prepare a fresh dated review when payment is rescheduled.
 

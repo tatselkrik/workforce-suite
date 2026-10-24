@@ -1,5 +1,53 @@
 # Prototype verification — 2026-10-24
 
+## Linked payroll amendments and cross-year final pay — version0.1.41
+
+-407 Rust tests and3,168 local PostgreSQL assertions passed. Fourteen checked-in
+ amendment centavo vectors and five normalized report-v2 contracts cover native/
+ server agreement without ignored-work prerequisites. Existing166 payroll rule
+ vectors remain. Coverage includes independent creator/preparer/submitter
+ exclusions, source/revision/current-role guards, rollback/retry, immutable
+ originals, retained outside benefits, shared caps and bounded statutory refunds
+ after annual/final settlements. Review-only discrepancies change no income,
+ payment, debt or recovery facts.
+-Three target-guarded migrations were applied, with54 hosted versions through
+ `20261024112502`. All82 earlier public record sets were preserved apart from
+ additive private default review columns. New table RLS, invoker wrappers,
+ protected writer grants and denied private helpers were verified. Advisors
+ returned no new WARN/ERROR or unindexed foreign keys; five prior FK INFO remain.
+-Seventeen actual hosted Auth/REST/native proof groups passed using synthetic
+ accounts with random RAM-only credentials. They exercised a paid original final
+ statement, independently approved/paid linked earnings and additional13th pay,
+ review-only discrepancy, actual2025 separation/2026 final settlement, exact
+ retries, native/server centavos, fresh CSV export, own Manager/Employee scope,
+ Employee desktop denial, Administrator self-approval denial, revoked membership
+ and old consolidated-report update guards. All316 preexisting financial row
+ hashes at the final probe's baseline remained unchanged. Test histories remain;
+ the exact synthetic accounts were disabled/archived and their sessions removed.
+ An earlier probe stopped on an incorrect field name in the test harness; the
+ corrected complete probe passed without changing that server contract.
+-Thirteen fictional native views were inspected, including editor/approval/
+ payment, own Manager statements, review-only discrepancy, cross-year final pay,
+ consolidated reporting and125% dark theme. Misaligned new statement fields
+ found in the first render were fixed and recaptured. Both one-page PDF exports
+ were rendered and visually inspected; CSV exports retain aggregate-only facts.
+-Receipt-year review is stored in two private top-level case columns, preserving
+ the legacy nested worksheet shape. Native report-v2 counts supplemental cash
+ once; older consolidated reports fail with an update instruction when they
+ would omit linked amendments. Source-only older reports remain available.
+-The reviewed final-pay extension supports2025/2026 separation and2026 receipt
+ from6January. It does not introduce2027 rules, invent current-year service gaps
+ or move earlier-year withholding automatically. Current official source dates
+ and financial limits are in `docs/PAYROLL-AMENDMENTS.md`.
+-Exact normal build/startup, source/archive privacy, signed private package,
+ updater download and actual installation evidence are retained separately with
+ this version's private artifacts. No remote CI or Authenticode result is
+ claimed. Signed-in native buttons were not automated; real Auth/API/native
+ backend proof and fictional layout captures are distinct evidence.
+
+Kirk requested stopping after finishing and installing this version. The
+usage-reset scheduler is paused; no subsequent portal/roadmap work starts.
+
 ## Consolidated payroll reporting — version0.1.40
 
 -398 normal Rust tests and2,964 local PostgreSQL assertions pass. Seven new

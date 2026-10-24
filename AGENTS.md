@@ -58,7 +58,7 @@ Cutoff payroll rules are in docs/PAYROLL-CUTOFFS.md. Keep its separate period
 tables compatible with monthly clients. Preserve both-direction per-employee
 overlap guards, exact first/second allocation, issued-first inputs to monthly
 contribution/cap reconciliation, semi-monthly withholding and immutable slips.
-Portal work is currently paused; native payroll work does not resume it.
+Portal work resumed on24October2026 for LOCAL use only. Keep it a separate application; do not publicly host, tunnel or expose it.
 
 The separate employee-portal/ Rust application is described in
 docs/EMPLOYEE-PORTAL.md and has its own nested instructions, Cargo.lock and release
@@ -80,7 +80,7 @@ paid dates, net certified prior-employer withholding, nonoverlapping evidenced
 openings and one shared benefit exclusion. Preserve paid-source freshness,
 independent approval, earlier-settlement credits, immutable own aggregate advice
 and HR-only certificate/source evidence. Tax advice is not a last-pay injection,
-transfer, filing or official2316. Portal remains paused.
+transfer, filing or official2316. Portal work is authorized locally only; public hosting remains out of scope.
 
 Individual payment rules are in docs/PAYROLL-PAYMENTS.md. Preserve immutable per-slip
 receipts and their actual received dates. One person's payment must not mark the
@@ -96,7 +96,8 @@ combined cash/offsets; it is not a second full-net cash payment. Keep own statem
 and terminal status aggregate-only, private references/evidence HR-only, unpaid
 withdrawal distinct from reversal, and same-employment duplicate guards. Do not gate
 owed pay on clearance, archiving or account access. The first reviewed pack supports
-same-year2026 separation/cash; cross-year settlements and amendments remain separate.
+same-year2026 separation/cash; the separately documented0.1.41 extension adds
+reviewed2025 separation/2026 receipt and linked amendments.
 
 
 Regional wage rules are in docs/REGIONAL-WAGES.md. Preserve evidenced effective
@@ -115,3 +116,45 @@ advice/settled adjustments and current outstanding/reserved balances distinct.
 Never use later batch metadata as an individual's receipt or add contained source
 net twice. Reports exclude private evidence, references and tax identifiers.
 Reject excessive ranges/rows without silently truncating financial totals.
+
+
+## Release installation workflow
+
+Linked amendment and receipt-year extension rules are in docs/PAYROLL-AMENDMENTS.md.
+Preserve original slips/receipts and independent approval, reviewed same-year refund
+floors and global net tax-credit guards. Overpayment reviews create no automatic
+recovery, debt or tax reduction. Carry evidenced outside benefits without counting
+known issued benefits twice. Delayed final pay may retain prior-year service with
+reviewed2026 receipt dates; never invent service coverage or a2027 rule pack.
+Use the versioned report-v2 contract for consolidated amendment cash.
+
+For each authorized HRIS release, finish by installing the latest verified version
+on Kirk's PC. Publishing or delivering an installer alone is not completion.
+Verify the installed executable hash, BUILD version, Windows Apps registration and
+normal launch; preserve company connection/branding, update-verification keys and
+unrelated files. Do not reinstall if all installed evidence already matches.
+Check a running app for unsaved work before closing it; never discard drafts.
+If Kirk must save/close it, complete independent work first and use a concise
+handoff. This installation preference does not authorize another module, a public
+release, a new deployment target or bypassing platform permissions.
+
+
+## Authorized continuation — 24 October 2026
+
+Proceed sequentially with payroll amendments/cross-year final pay, then the resumed
+local-only employee portal, government-specific payroll exports/reconciliation,
+payroll/appraisal/training notifications, leave-policy versions/opening balances/
+approval delegation, and attendance/leave imports plus accounting/device integration
+foundations. Preserve original payslips through linked adjustments. Verify current
+official rules before financial implementation. No bank transfer, actual government
+filing, public portal hosting, new cost or unresolved third-party/device connection
+is authorized. Keep actual biometric support disabled pending a selected protocol/
+device and physical verification. Use the existing usage-reset follow-up/checkpoint
+to continue this queue; install each verified authorized desktop release.
+
+## Current stop boundary — 24 October 2026
+
+Kirk's latest instruction is to finish, verify and install 0.1.41, then stop.
+The usage-reset scheduler is PAUSED. Do not begin the employee portal or subsequent
+roadmap milestones after this version without a new human instruction to resume.
+The remaining queue above stays queued; it is not an active continuation request.
