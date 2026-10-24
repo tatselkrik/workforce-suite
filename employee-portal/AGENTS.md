@@ -42,3 +42,11 @@ scheduler. The preceding stop boundary is superseded. Finish remaining local-onl
 pictures/account-security controls and verification, then follow the ordered root
 roadmap. Preserve own-record/token/CSRF and local-only boundaries. Keep build
 outputs separate from versioned packages and avoid duplicate QA binaries.
+
+Own account changes require current-password proof and the same live protected
+membership/identity checks. Email confirmation uses S256 and never establishes a
+browser login: discard its verifier and returned code; only an authenticated
+account refresh establishes current/pending email. Preserve provider confirmation
+rules. Do not infer actual mail delivery from local fixtures or rejected test
+requests. Sign-out-others removes only other own portal cookies; upstream access
+tokens on other clients retain the service's expiry behavior.

@@ -9,7 +9,8 @@ and the private versioned delivery records.
 
 1. ~~Multiple HR users, employee/manager roles, restricted permissions and
    configurable leave approval chains.~~ The separate employee portal is partial
-   and local only; further requests, notifications and account controls remain.
+   and local only; own requests, notifications, pictures and account controls
+   are implemented. Current visual/email-delivery verification remains pending.
 2. ~~Contact/emergency details, contracts, attachments, employment history and
    digital201 files.~~ Contracts are private documents/metadata; electronic signing
    and document approval are separate future features.

@@ -185,6 +185,10 @@ struct Mock {
     photo_png: Arc<Mutex<Option<Vec<u8>>>>,
     logo_png: Arc<Mutex<Option<Vec<u8>>>>,
     logo_revision: Arc<std::sync::atomic::AtomicU64>,
+    auth_password: Arc<Mutex<Option<String>>>,
+    pending_email: Arc<Mutex<String>>,
+    foreign_proof: Arc<std::sync::atomic::AtomicBool>,
+    foreign_update: Arc<std::sync::atomic::AtomicBool>,
 }
 fn uid() -> Uuid {
     Uuid::from_u128(101)
@@ -274,10 +278,43 @@ async fn fake(State(m): State<Mock>, request: Request) -> Response {
     row["planned_shift"] = json!({"break_rules":[{"id":rule_id(),"name":"Standard break","minutes":15,"paid":false,"required":false,"private":"PRIVATE_SENTINEL"}]});
     let data = match path.as_str() {
         "/auth/v1/token" => {
-            json!({"user":{"id":uid()},"access_token":"upstream-only-access","refresh_token":"upstream-only-refresh","expires_in":3600})
+            if uri.contains("grant_type=password") {
+                let password = m
+                    .auth_password
+                    .lock()
+                    .await
+                    .clone()
+                    .unwrap_or("fictional-test-password".into());
+                if b["password"] != password {
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        Json(json!({"error":"PRIVATE_SENTINEL"})),
+                    )
+                        .into_response();
+                }
+            }
+            json!({"user":{"id":if m.foreign_proof.load(Ordering::SeqCst){Uuid::from_u128(999)}else{uid()}},"access_token":"upstream-only-access","refresh_token":"upstream-only-refresh","expires_in":3600})
         }
         "/auth/v1/user" => {
-            json!({"id":uid(),"email":"portal-staff@example.invalid","user_metadata":{"role":"administrator","secret":"PRIVATE_SENTINEL"}})
+            if method == "PUT" {
+                if let Some(password) = b["password"].as_str() {
+                    assert_eq!(
+                        b["current_password"],
+                        m.auth_password
+                            .lock()
+                            .await
+                            .clone()
+                            .unwrap_or("fictional-test-password".into())
+                    );
+                    *m.auth_password.lock().await = Some(password.into());
+                }
+                if let Some(email) = b["email"].as_str() {
+                    assert_eq!(b["code_challenge_method"], "s256");
+                    assert_eq!(b["code_challenge"].as_str().unwrap().len(), 43);
+                    *m.pending_email.lock().await = email.into();
+                }
+            }
+            json!({"id":if method=="PUT"&&m.foreign_update.load(Ordering::SeqCst){Uuid::from_u128(999)}else{uid()},"email":"portal-staff@example.invalid","new_email":*m.pending_email.lock().await,"user_metadata":{"role":"administrator","secret":"PRIVATE_SENTINEL"}})
         }
         "/auth/v1/logout" => json!({}),
         "/rest/v1/rpc/portal_notifications" => {
@@ -467,6 +504,421 @@ async fn login(f: &Fixture) -> (String, String) {
             .into(),
         b["csrf"].as_str().unwrap().into(),
     )
+}
+
+fn password_change() -> Value {
+    json!({"current_password":"fictional-test-password","new_password":"a different fictional password","confirmation":"a different fictional password"})
+}
+#[tokio::test]
+async fn security_status_is_own_projected_live_and_strictly_scoped() {
+    use std::sync::atomic::Ordering;
+    let f = fixture().await;
+    assert_eq!(
+        request(&f.portal, "/api/account", None, None, None).await.0,
+        StatusCode::UNAUTHORIZED
+    );
+    let (cookie, csrf) = login(&f).await;
+    *f.mock.pending_email.lock().await = "new-account@example.invalid".into();
+    let (status, _, value) = request(&f.portal, "/api/account", None, Some(&cookie), None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        value,
+        json!({"email":"portal-staff@example.invalid","pending_email":"new-account@example.invalid","confirmation_pending":true,"idle_timeout_minutes":30})
+    );
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/account?employee_id=other",
+            None,
+            Some(&cookie),
+            None
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/account/password?user_id=other",
+            Some(password_change()),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    f.mock.disabled.store(true, Ordering::SeqCst);
+    assert_eq!(
+        request(&f.portal, "/api/account", None, Some(&cookie), None)
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
+}
+#[tokio::test]
+async fn password_requires_csrf_matching_fields_and_fresh_current_proof() {
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/account/password",
+            Some(password_change()),
+            Some(&cookie),
+            None
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    for (key, value) in [
+        ("current_password", "incorrect"),
+        ("confirmation", "incorrect"),
+        ("new_password", "short"),
+    ] {
+        let mut body = password_change();
+        body[key] = json!(value);
+        let r = request(
+            &f.portal,
+            "/api/account/password",
+            Some(body),
+            Some(&cookie),
+            Some(&csrf),
+        )
+        .await;
+        assert_eq!(r.0, StatusCode::BAD_REQUEST);
+        assert!(!r.2.to_string().contains("PRIVATE_SENTINEL"));
+    }
+    let mut body = password_change();
+    body["employee_id"] = json!(eid());
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/account/password",
+            Some(body),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+    assert!(
+        !f.mock
+            .requests
+            .lock()
+            .await
+            .iter()
+            .any(|(m, _, _)| m == "PUT")
+    );
+    assert_eq!(
+        request(&f.portal, "/api/me", None, Some(&cookie), None)
+            .await
+            .0,
+        StatusCode::OK
+    );
+}
+#[tokio::test]
+async fn password_update_keeps_opaque_cookie_and_never_returns_password_or_tokens() {
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    let (status, h, v) = request(
+        &f.portal,
+        "/api/account/password",
+        Some(password_change()),
+        Some(&cookie),
+        Some(&csrf),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(v, json!({"saved":true,"password_changed":true}));
+    assert!(!h.contains_key(header::SET_COOKIE));
+    assert_eq!(
+        *f.mock.auth_password.lock().await,
+        Some("a different fictional password".into())
+    );
+    assert_eq!(
+        request(&f.portal, "/api/account", None, Some(&cookie), None)
+            .await
+            .0,
+        StatusCode::OK
+    );
+    let calls = f.mock.requests.lock().await;
+    let put = calls
+        .iter()
+        .position(|(m, p, _)| m == "PUT" && p == "/auth/v1/user")
+        .unwrap();
+    assert!(
+        calls[..put]
+            .iter()
+            .any(|(_, p, b)| p == "/auth/v1/token?grant_type=password"
+                && b["email"] == "portal-staff@example.invalid")
+    );
+    assert!(
+        calls[..put]
+            .iter()
+            .any(|(_, p, _)| p == "/auth/v1/logout?scope=local")
+    );
+}
+#[tokio::test]
+async fn password_reconfirmation_rejects_foreign_identity_and_uncertain_save_is_explicit() {
+    use std::sync::atomic::Ordering;
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    f.mock.foreign_proof.store(true, Ordering::SeqCst);
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/account/password",
+            Some(password_change()),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::BAD_GATEWAY
+    );
+    assert!(
+        !f.mock
+            .requests
+            .lock()
+            .await
+            .iter()
+            .any(|(m, _, _)| m == "PUT")
+    );
+    f.mock.foreign_proof.store(false, Ordering::SeqCst);
+    f.mock.foreign_update.store(true, Ordering::SeqCst);
+    let r = request(
+        &f.portal,
+        "/api/account/password",
+        Some(password_change()),
+        Some(&cookie),
+        Some(&csrf),
+    )
+    .await;
+    assert_eq!(r.0, StatusCode::BAD_GATEWAY);
+    assert!(
+        r.2["error"]
+            .as_str()
+            .unwrap()
+            .contains("may have been saved")
+    );
+}
+#[tokio::test]
+async fn email_requests_use_current_password_and_pkce_without_browser_session_exchange() {
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    let b = json!({"current_password":"fictional-test-password","new_email":" new-account@example.invalid "});
+    let r = request(
+        &f.portal,
+        "/api/account/email",
+        Some(b),
+        Some(&cookie),
+        Some(&csrf),
+    )
+    .await;
+    assert_eq!(r.0, StatusCode::OK);
+    assert_eq!(r.2, json!({"saved":true,"confirmation_pending":true}));
+    let calls = f.mock.requests.lock().await;
+    let (_, path, b) = calls
+        .iter()
+        .find(|(m, p, _)| m == "PUT" && p.starts_with("/auth/v1/user?"))
+        .unwrap();
+    let url = reqwest::Url::parse(&format!("http://unused{path}")).unwrap();
+    assert_eq!(
+        url.query_pairs()
+            .find(|(k, _)| k == "redirect_to")
+            .unwrap()
+            .1,
+        "http://127.0.0.1:3030/account/confirm-email"
+    );
+    assert_eq!(b["email"], "new-account@example.invalid");
+    assert_eq!(b.as_object().unwrap().len(), 3);
+    assert!(!b.to_string().contains("current_password"));
+    drop(calls);
+    for query in [
+        "code=attacker-code",
+        "error=bad&error_description=PRIVATE_SENTINEL",
+        "access_token=attacker&state=attacker",
+    ] {
+        let r = request(
+            &f.portal,
+            &format!("/account/confirm-email?{query}"),
+            None,
+            None,
+            None,
+        )
+        .await;
+        assert_eq!(r.0, StatusCode::SEE_OTHER);
+        assert_eq!(r.1[header::LOCATION], "/");
+        assert!(!r.1.contains_key(header::SET_COOKIE));
+    }
+    assert_eq!(f.portal.sessions.lock().await.len(), 1);
+    assert!(
+        !f.mock
+            .requests
+            .lock()
+            .await
+            .iter()
+            .any(|(_, p, _)| p.contains("grant_type=pkce"))
+    );
+    assert_eq!(
+        request(&f.portal, "/api/account", None, Some(&cookie), None)
+            .await
+            .2["pending_email"],
+        "new-account@example.invalid"
+    );
+}
+#[tokio::test]
+async fn email_validation_never_accepts_targets_or_replaces_current_email_before_confirmation() {
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    for email in ["portal-staff@example.invalid", "broken-email", ""] {
+        let b = json!({"current_password":"fictional-test-password","new_email":email});
+        assert_eq!(
+            request(
+                &f.portal,
+                "/api/account/email",
+                Some(b),
+                Some(&cookie),
+                Some(&csrf)
+            )
+            .await
+            .0,
+            StatusCode::BAD_REQUEST
+        );
+    }
+    let b = json!({"current_password":"incorrect","new_email":"new@example.invalid"});
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/account/email",
+            Some(b),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    assert!(
+        !f.mock
+            .requests
+            .lock()
+            .await
+            .iter()
+            .any(|(m, _, _)| m == "PUT")
+    );
+}
+#[tokio::test]
+async fn sign_out_others_removes_only_other_own_portal_sessions() {
+    let f = fixture().await;
+    let (first, _) = login(&f).await;
+    let (current, csrf) = login(&f).await;
+    let foreign = Uuid::new_v4();
+    f.portal.sessions.lock().await.insert(
+        foreign,
+        Arc::new(Mutex::new(Session {
+            access: "foreign".into(),
+            refresh: "foreign".into(),
+            expires: Instant::now() + Duration::from_secs(3600),
+            last_seen: Instant::now(),
+            csrf: Uuid::new_v4(),
+            user: Uuid::from_u128(999),
+            company: cid(),
+            employee: Uuid::from_u128(999),
+        })),
+    );
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/account/sign-out-others",
+            Some(json!({})),
+            Some(&current),
+            None
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/account/sign-out-others",
+            Some(json!({"user_id":uid()})),
+            Some(&current),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+    let r = request(
+        &f.portal,
+        "/api/account/sign-out-others",
+        Some(json!({})),
+        Some(&current),
+        Some(&csrf),
+    )
+    .await;
+    assert_eq!(r.0, StatusCode::OK);
+    assert_eq!(
+        r.2,
+        json!({"signed_out_others":true,"local_sessions_removed":1})
+    );
+    assert!(f.portal.sessions.lock().await.contains_key(&foreign));
+    assert_eq!(
+        request(&f.portal, "/api/account", None, Some(&first), None)
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        request(&f.portal, "/api/account", None, Some(&current), None)
+            .await
+            .0,
+        StatusCode::OK
+    );
+}
+#[tokio::test]
+async fn security_throttle_does_not_lock_out_existing_own_read_session() {
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    for n in 0..11 {
+        let b = json!({"current_password":"incorrect","new_email":"new@example.invalid"});
+        assert_eq!(
+            request(
+                &f.portal,
+                "/api/account/email",
+                Some(b),
+                Some(&cookie),
+                Some(&csrf)
+            )
+            .await
+            .0,
+            if n < 10 {
+                StatusCode::BAD_REQUEST
+            } else {
+                StatusCode::TOO_MANY_REQUESTS
+            }
+        );
+    }
+    assert_eq!(
+        request(&f.portal, "/api/account", None, Some(&cookie), None)
+            .await
+            .0,
+        StatusCode::OK
+    );
+    assert!(
+        !f.mock
+            .requests
+            .lock()
+            .await
+            .iter()
+            .any(|(m, _, _)| m == "PUT")
+    );
 }
 
 #[tokio::test]

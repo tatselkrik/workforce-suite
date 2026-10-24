@@ -51,19 +51,49 @@ application identifier `io.github.tatselkrik.hrisportal`.
   private profile-photo URLs/initials clear. Optional picture errors leave own
   records available. Private Storage downloads use fresh-origin requests so
   replacement/removal does not show a stale CDN image.
+- Own account status, current-password verification, password change with matching
+  confirmation, pending sign-in email changes and sign-out-other-sessions controls
+  in My profile. Contact email remains separate. Employment and role fields stay
+  read-only. Passwords are cleared after each attempted save and when signing out;
+  contact/photo drafts are preserved independently.
 
 Staff who use the portal receive the same own-record interface; their broader
 desktop role does not cause team records or approval/admin controls to load here.
 Employee desktop admission remains prohibited.
 
-Account password/email controls are the next portal increment. Current picture/
-notification-screen visual verification is still pending, so milestone1 is partial.
+Account controls are implemented in the0.1.5 increment. Actual email delivery/
+confirmation and current picture/notification/security-screen visual verification
+remain pending, so milestone1 is partial.
 Kirk resumed remaining roadmap work and the usage-reset scheduler25October2026,
 after the0.1.3 pause and completed project storage cleanup.
 Public HTTPS deployment and physical phone/network checks remain
 separate from localhost development. The current prototype has no public URL.
 
 ## Operator startup
+
+Email confirmation is separate from sign-in. Requests use S256 PKCE so the
+provider does not redirect access/refresh tokens into the browser. The portal
+deliberately discards that verifier and never exchanges the returned code or
+creates a session from a callback. Confirm all required email links, then return
+to the original portal and refresh account status, or sign in with the confirmed
+email and current password. A callback only redirects to the main page and
+ignores its untrusted parameters. Restarting or signing out is never undone by
+opening a confirmation link.
+
+The company's Auth mail service must permit delivery, and its redirect allowlist
+should include the operator's exact local origin plus `/account/confirm-email`.
+If the provider falls back to its default site URL, return manually to the
+original portal after confirming. No mail provider, template, confirmation rule
+or redirect allowlist is silently changed by this release. SSO/MFA enrollment,
+forgotten-password recovery and a device/session inventory are separate scope.
+
+These are [Supabase user-update](https://supabase.com/docs/reference/javascript/auth-updateuser)
+and [PKCE email-confirmation](https://github.com/supabase/auth/blob/master/internal/api/verify.go)
+flows. A rejected or uncertain save is shown explicitly; refresh account status
+before retrying. Other portal cookies on this server are removed immediately by
+the session control; other clients' issued access tokens retain their service
+expiry behavior. Ten password-verification attempts per five minutes do not
+prevent reading one's already authenticated records.
 
 The operator supplies the same private two-field company connection profile used
 by the desktop. Users never see connection, company selection or database setup.
@@ -129,6 +159,23 @@ and call protected routines; current employee identity is inferred server-side.
 The installed desktop's existing leave and break routines remain compatible.
 
 ## Verification
+
+The0.1.5 account-security increment passes47Rust tests and13JavaScript code tests.
+Nine hosted proof groups exercise normal synthetic Employee password change,
+old-password rejection/new-password login, password restoration, unchanged opaque
+cookie, other-own-cookie revocation with another Manager preserved, projected
+own account status, forged-target/CSRF/current-password guards, disabled-membership
+denial and unchanged preexisting Auth users. Synthetic accounts remain disabled/
+archived with sessions removed. No real person's password or email changed.
+
+The hosted email-change test request was rejected by the configured Auth service;
+mail delivery and both-address confirmation are UNVERIFIED. Pending-state/S256
+request/callback behavior passes local HTTP tests. Those fixtures do not establish
+actual mail delivery. The callback cannot establish any login, including after
+sign-out. There is no schema change; the database remains at56versions and its
+suite was not rerun. Browser/native UI tools still fail before initialization;
+current account/picture/notification/phone visuals remain unverified. Milestone1
+stays partial while independent authorized roadmap work continues.
 
 The0.1.4 picture increment passes38Rust tests and9JavaScript code-level checks.
 Nine actual hosted Auth/Storage proof groups against the optimized loopback

@@ -62,6 +62,12 @@ unconfigured external connection to a completed integration.
   and9actual hosted proof groups pass. A stale-image removal issue was fixed with
   fresh Storage origin reads. Current visual verification remains pending, and
   password/email controls follow next; milestone1 stays open.
+- Portal increment0.1.5 implements own password/email status/changes and signing
+  out other sessions.47Rust/13JS tests and9hosted proof groups pass, including a
+  synthetic password change/restoration and retained foreign sessions/real Auth
+  users. Actual email confirmation delivery and current UI visuals are unverified;
+  milestone1 remains partial. Continue independent government-export work while
+  these limitations remain recorded; no confirmation/provider rules are weakened.
 - Effective-date policies, balances and delegation follow the existing saved
   charges/plans and immutable history rules; they do not rewrite older requests.
 - Install each verified authorized desktop release, preserving unsaved work and

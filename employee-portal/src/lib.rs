@@ -1,4 +1,5 @@
 //! Own-record portal. No service key, token-bearing browser storage or arbitrary proxy.
+mod account_security;
 mod notifications;
 mod pictures;
 mod requests;
@@ -356,6 +357,7 @@ impl Portal {
             .merge(requests::routes())
             .merge(notifications::routes())
             .merge(pictures::routes())
+            .merge(account_security::routes())
             .route("/notifications.js", get(notification_script))
             .route("/time-requests.js", get(time_requests_script))
             .layer(DefaultBodyLimit::max(8192))
@@ -454,7 +456,9 @@ impl Portal {
         {
             return Err(expired());
         }
-        Ok(json!({"email":user["email"],"reports_to_name":a["reports_to_name"]}))
+        Ok(
+            json!({"email":user["email"],"pending_email":user["new_email"],"reports_to_name":a["reports_to_name"]}),
+        )
     }
     async fn session(&self, h: &HeaderMap, write: bool) -> Reply<Arc<Mutex<Session>>> {
         self.session_activity(h, write, true).await

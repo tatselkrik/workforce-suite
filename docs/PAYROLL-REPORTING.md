@@ -41,4 +41,4 @@ person's later batch date. Balances are current at generation for selected
 records, not reconstructed historical closing balances. The report does not
 automatically recalculate payroll, create arrears, remit contributions, transfer
 funds, file returns or generate an official2316. CSV uses exact centavos and safe
-spreadsheet escaping; portal work remains paused.
+spreadsheet escaping. The separate portal is authorized for local use only.
