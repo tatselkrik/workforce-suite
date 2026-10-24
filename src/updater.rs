@@ -766,6 +766,15 @@ mod tests {
                     digest(&previous_exe)
                 }
             );
+            if success {
+                // Check the delivered inventory, including newly added supporting files.
+                let sums = fs::read_to_string(installed.join("SHA256SUMS.txt")).unwrap();
+                for line in sums.lines() {
+                    let (expected, name) = line.split_once("  ").expect("Payload checksum entry");
+                    assert!(!name.is_empty() && !name.contains(['/', '\\']) && name != "..");
+                    assert_eq!(file_hash(&installed.join(name)).unwrap(), expected, "Missing or stale installed payload: {name}");
+                }
+            }
             let evidence: serde_json::Value =
                 serde_json::from_slice(&fs::read(staging.join("verification.json")).unwrap())
                     .unwrap();

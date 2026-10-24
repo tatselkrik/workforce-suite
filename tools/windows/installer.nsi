@@ -83,6 +83,9 @@ Section "HRIS Desktop"
   !endif
   File "${APP_BUNDLE}\START-HERE.txt"
   File "${APP_BUNDLE}\VERIFICATION.md"
+  !if /FileExists "${APP_BUNDLE}\REVIEW-CHECKLIST.md"
+    File "${APP_BUNDLE}\REVIEW-CHECKLIST.md"
+  !endif
   File "${APP_BUNDLE}\BUILD.json"
   File "${APP_BUNDLE}\SHA256SUMS.txt"
   IfErrors setup_failed
@@ -146,6 +149,7 @@ Section "Uninstall"
   Delete "$INSTDIR\hris-updates.json"
   Delete "$INSTDIR\START-HERE.txt"
   Delete "$INSTDIR\VERIFICATION.md"
+  Delete "$INSTDIR\REVIEW-CHECKLIST.md"
   Delete "$INSTDIR\BUILD.json"
   Delete "$INSTDIR\SHA256SUMS.txt"
   Delete "$INSTDIR\company-logo.png"
