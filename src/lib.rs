@@ -45,3 +45,5 @@ pub mod payroll_payments;
 pub mod payroll_pdf;
 
 pub mod payroll_wages;
+
+pub mod payroll_reporting;

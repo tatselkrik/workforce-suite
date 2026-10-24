@@ -1714,6 +1714,7 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
 }
 
 pub enum Command {
+    PayrollReport {filter:crate::payroll_reporting::Filter,destination:Option<std::path::PathBuf>},
     PayrollExport { kind:String, record_id:Option<Uuid>, year:i32, destination:std::path::PathBuf },
     ImportErrors {
         preview: crate::imports::Preview,
@@ -1741,6 +1742,7 @@ pub enum Command {
 }
 
 pub struct Update {
+    pub payroll_report:Option<crate::payroll_reporting::Report>,
     pub report: Option<crate::reports::Report>,
     pub result: std::result::Result<Snapshot, String>,
     pub message: String,
@@ -1774,6 +1776,7 @@ pub fn worker(
             };
             let mut message = String::new();
             let mut report_result = None;
+            let mut payroll_report_result = None;
             let mut update_state = None;
             let mut check_after_sign_in = false;
             let mut result: Result<Snapshot> = match command {
@@ -1888,6 +1891,18 @@ pub fn worker(
                         }
                         crate::reports::save_csv(&destination, &preview.error_csv()?)?;
                         Ok(current.clone())
+                    })()
+                }
+                Command::PayrollReport{filter,destination}=>{
+                    (||->Result<Snapshot>{
+                        let report=if let Some(client)=cloud.as_mut(){client.consolidated_payroll_report(&current,&filter,destination.as_deref())?}else{
+                            let d=&demo.as_ref().context("Sign in to generate payroll reports.")?.data;
+                            let report=crate::payroll_reporting::demo(d,&filter,Utc::now())?;
+                            if let Some(path)=destination.as_deref(){crate::reports::save_csv(path,&report.csv()?)?;}
+                            report
+                        };
+                        message=format!("{} {} payroll fact(s). No payment or filing was made.",if destination.is_some(){"Exported"}else{"Generated"},report.wire.rows.len());
+                        payroll_report_result=Some(report);Ok(current.clone())
                     })()
                 }
                 Command::PayrollExport { kind,record_id,year,destination } => {
@@ -2019,6 +2034,7 @@ pub fn worker(
             if events
                 .send(Update {
                     report: report_result,
+                    payroll_report:payroll_report_result,
                     result: result.map_err(|e| e.to_string()),
                     message,
                     account: cloud
@@ -2042,6 +2058,7 @@ pub fn worker(
                     if events
                         .send(Update {
                             report: None,
+                            payroll_report:None,
                             result: Ok(current.clone()),
                             message: String::new(),
                             account: None,

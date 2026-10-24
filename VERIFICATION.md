@@ -1,6 +1,37 @@
 # Prototype verification — 2026-10-24
 
-## Regional wage compliance — version0.1.39
+## Consolidated payroll reporting — version0.1.40
+
+-398 normal Rust tests and2,964 local PostgreSQL assertions pass. Seven new
+ accounting/scope/date/CSV tests include17 actual SQL projections; two transport
+ tests cover one scoped report RPC and revocation before CSV creation. The5000/
+5001boundary is tested without silently truncating financial totals.
+-One additive read-only migration through20261024072104 is deployed:51versions.
+ All82 earlier public record sets matched. STABLE single-statement readers,
+ invoker public wrapper, protected current HR/Admin access and denied raw/private/
+ anonymous access passed. No newWARN/ERROR or unindexedFK;5 prior INFO remain.
+-Twelve actual hosted nativeRust/Auth/REST proof groups pass. All five financial
+ sources and12date/source filters match native row projections and summaries;
+ employee/empty filters, actual fresh CSV save and private-field exclusion pass.
+ Manager/Employee access, anonymous access, invalid filters and a disabled HR's
+ stale token are denied. All21 existing financial tables matched before/after.
+ Synthetic accounts remain disabled/archived/session-free; no financial writes.
+-Seven fictional native views and their exact CSV were inspected: approval and
+ actual payment/settlement filters, source figures, detail/cash/offset rows, empty
+ results, Manager absence and dark125 layout. Final key/value rows top-align
+ wrapped labels. Normal configured startup, source/privacy, exact installer,
+ signing and private publication are recorded in the versioned release evidence.
+-The report separates source offsets from combined final cash and keeps annual
+ tax advice/settled adjustments separate from payroll cash. Outstanding/reserved
+ balances are current at generation for the selected records, not a reconstructed
+ historical close. No salary, tax, payment, filing or remittance is created.
+-Wage reviews from39 are included. Catalog verified24October2026, bounded through
+31December2026; unsupported dates/coverage remain unresolved. No automatic arrears.
+-The two authorized milestones are complete on private publication. Portal remains
+ paused. No remoteCI, Authenticode, signed-in native-button or other-PC claim.
+ The open installed app is preserved; the latest signed package is delivered.
+
+## Historical regional wage compliance — version0.1.39
 
 -389 normal Rust tests and2,823 local PostgreSQL assertions pass.39 new manual
  wage boundary vectors agree exactly between Rust and SQL;166 total payroll

@@ -3371,3 +3371,27 @@ fn wage_review_creation_uses_guarded_rpc_and_retry_identity(){
  replies.extend(after.into_iter().skip(1).take_while(|r|!r.prefix.starts_with("GET /auth/v1/user ")));
  let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();assert!(client.execute(Action::Payroll(action.clone()),&data).unwrap_err().to_string().contains("Payroll change saved, but refresh failed"));let result=client.execute(Action::Payroll(action),&data).unwrap();assert_eq!(result.payroll.wages.classifications[0].id,id);drop(client);server.join().unwrap();let req=requests.lock().unwrap();let writes=req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/manage_payroll_wage ")).collect::<Vec<_>>();assert_eq!(writes.len(),2);assert_eq!(writes[0].json(),writes[1].json());assert_eq!(writes[0].json()["p_operation"],"create");assert!(!req.iter().any(|r|r.line.starts_with("POST /rest/v1/payroll_wage_classifications")));
 }
+
+#[test]
+fn consolidated_payroll_report_uses_one_scoped_rpc_and_rechecks_before_export(){
+ use hris_desktop::payroll_reporting::{Filter,VERSION};use chrono::Utc;
+ let d=DemoStore::new();let company=d.data.company.clone();
+ let f:Filter=serde_json::from_value(json!({"starts_on":"2026-01-01","ends_on":"2026-12-31","axis":"issued","kind":"all","employee_id":null,"search":""})).unwrap();
+ let access=json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});
+ let wire=json!({"version":VERSION,"company_id":company.id,"company_name":company.name,"generated_at":Utc::now(),"filter":f,"rows":[]});
+ let mut responses=baseline(&company);responses.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access.clone()));responses.push(reply("POST /rest/v1/rpc/payroll_report ",200,wire));responses.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access));
+ let(config,server,requests)=fixture(responses);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
+ let report=client.consolidated_payroll_report(&data,&f,None).unwrap();assert!(report.wire.rows.is_empty());drop(client);server.join().unwrap();
+ let req=requests.lock().unwrap();let reports:Vec<_>=req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/payroll_report ")).collect();assert_eq!(reports.len(),1);assert_eq!(reports[0].json(),json!({"p_filter":f}));
+}
+#[test]
+fn consolidated_report_revocation_after_fetch_cannot_write_csv(){
+ use hris_desktop::payroll_reporting::{Filter,VERSION};use chrono::Utc;
+ let d=DemoStore::new();let company=d.data.company.clone();let f:Filter=serde_json::from_value(json!({"starts_on":"2026-01-01","ends_on":"2026-12-31","axis":"issued","kind":"all","employee_id":null,"search":""})).unwrap();
+ let access=json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});let mut denied=access.clone();denied["role"]=json!("manager");
+ let wire=json!({"version":VERSION,"company_id":company.id,"company_name":company.name,"generated_at":Utc::now(),"filter":f,"rows":[]});
+ let mut responses=baseline(&company);responses.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access));responses.push(reply("POST /rest/v1/rpc/payroll_report ",200,wire));responses.push(reply("POST /rest/v1/rpc/my_hris_access ",200,denied));
+ let path=std::env::temp_dir().join(format!("hris-report-revoked-{}.csv",uuid::Uuid::new_v4()));assert!(!path.exists());
+ let(config,server,_)=fixture(responses);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
+ assert!(client.consolidated_payroll_report(&data,&f,Some(&path)).is_err());assert!(!path.exists());drop(client);server.join().unwrap();
+}

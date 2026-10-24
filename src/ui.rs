@@ -40,6 +40,7 @@ mod tax_view;
 mod payment_view;
 mod final_view;
 mod wage_view;
+mod payroll_report_view;
 mod organization_view;
 mod overtime_view;
 mod recruiting_view;
@@ -1168,6 +1169,7 @@ impl HrisApp {
                         }
                     }
                     self.import_state.applying = false;
+                    if let Some(report)=update.payroll_report{self.payroll_state.reports.accept(report,&data);}
                     if let Some(report) = update.report {
                         if report.filter == self.report_state.filter {
                             self.report_state.result = Some(report);

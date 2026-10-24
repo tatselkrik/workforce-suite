@@ -81,3 +81,16 @@ impl CloudClient {
         Ok(setup)
     }
 }
+
+impl CloudClient {
+    pub fn consolidated_payroll_report(&mut self,current:&Snapshot,filter:&crate::payroll_reporting::Filter,destination:Option<&Path>)->Result<crate::payroll_reporting::Report>{
+        crate::payroll_reporting::authorize(current)?;filter.validate()?;
+        let before=self.current_access()?;
+        if before!=current.access{return Err(AccessRevoked.into());}
+        let wire:crate::payroll_reporting::Wire=decode(self.request(Method::POST,"rpc/payroll_report")?.json(&json!({"p_filter":filter})).send()?)?;
+        let report=crate::payroll_reporting::Report::from_wire(wire,before.company_id,filter)?;
+        if self.current_access()?!=before{return Err(AccessRevoked.into());}
+        if let Some(path)=destination{crate::reports::save_csv(path,&report.csv()?)?;}
+        Ok(report)
+    }
+}

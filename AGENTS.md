@@ -106,3 +106,12 @@ Unknown dates/coverage stay unresolved; exemptions require independent evidence,
 not account role or tax flags. Optional Admin enforcement defaults off and guards
 older monthly/cutoff clients on the server. Retain immutable check/history/slips;
 changed facts require resubmission. A reference gap is not automatic arrears.
+
+
+Consolidated payroll reporting rules are in docs/PAYROLL-REPORTING.md. Use a fresh
+HR/Admin-only single-statement snapshot and recheck authorization before export.
+Keep approval/actual receipt dates, source offsets, combined final cash, tax
+advice/settled adjustments and current outstanding/reserved balances distinct.
+Never use later batch metadata as an individual's receipt or add contained source
+net twice. Reports exclude private evidence, references and tax identifiers.
+Reject excessive ranges/rows without silently truncating financial totals.

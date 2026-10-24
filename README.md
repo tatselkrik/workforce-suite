@@ -16,6 +16,8 @@ Application identifier: `io.github.tatselkrik.hrisdesktop`.
 
 - **Final pay:** **Payroll → Final pay** reviews outstanding issued salary/13th-month balances, vacation conversion, separation/retirement awards, other amounts and prospective annual tax. Independent approval issues a private aggregate PDF/CSV statement; an Administrator records combined settlement or withdraws an unpaid statement with retained history. Original slips remain unchanged. The first pack supports same-year2026 cases; see [final-pay rules](docs/PAYROLL-FINAL-PAY.md) and [review checklist](docs/FINAL-PAY-REVIEW-CHECKLIST.md).
 
+- **Consolidated payroll reports:** **Payroll → Reports** filters issued/received dates across monthly, cutoff,13th-month, annual-tax and final records, with current outstanding/reserved balances and safe CSV. Final offsets and tax advice stay separate from actual combined payroll cash. See [report definitions](docs/PAYROLL-REPORTING.md).
+
 - **Regional wage compliance:** **Payroll → Wage compliance** compares basic rates with a dated official regional catalog. HR records workplace/category evidence; a different Administrator approves effective intervals. Advisory snapshots are automatic; optional Administrator enforcement also protects older monthly/cutoff clients. Unsupported dates remain unresolved. See [wage reviews](docs/REGIONAL-WAGES.md) and [review checklist](docs/REGIONAL-WAGE-REVIEW-CHECKLIST.md).
 
 - **Career development:** Employees > Development > Career plans holds shared aspirations, skills and required/optional milestones. Independent staff review completion, HR can waive, and closure retains milestone/context facts without changing employment or source learning records. See [career plans](docs/CAREER-DEVELOPMENT.md).

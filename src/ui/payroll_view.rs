@@ -7,6 +7,7 @@ use serde_json::Value;
 use serde_json::json;
 #[derive(Default)]
 pub(super) struct State {
+    pub(super) reports:super::payroll_report_view::State,
     pub(super) wages: super::wage_view::State,
     pub(super) finals: super::final_view::State,
     pub(super) payments: super::payment_view::State,
@@ -417,6 +418,7 @@ impl HrisApp {
     }
     pub(super) fn payroll(&mut self, ui: &mut Ui) {
         self.payroll_state.wages.bind(&self.data);
+        self.payroll_state.reports.bind(&self.data);
         if self.payroll_state.wages.editing(){self.payroll_wage_forms(ui);return;}
         if self.payroll_state.finals.editing(){self.payroll_final_forms(ui);return;}
         if self.payroll_state.payments.editing() {self.payroll_payment_forms(ui);return;}
@@ -1296,7 +1298,7 @@ impl HrisApp {
             empty(ui, "No approved payslips yet.");
         }
     }
-    fn payroll_reports(&mut self, ui: &mut Ui) {
+    pub(super) fn payroll_legacy_reports(&mut self, ui: &mut Ui) {
         ui.label("Monthly-register reconciliation only. Cutoff totals are exported from Cutoffs. No government upload/filing or remittance occurs. Annual summaries here cover approved monthly registers; they do not annualize tax or fill prior-employer/opening balances.");
         ui.horizontal(|ui| {
             ui.label("Annual summary year");
@@ -1369,6 +1371,7 @@ impl HrisApp {
             return;
         }
         self.page = Page::Payroll;
+        if form.starts_with("payroll-report"){self.prepare_consolidated_report_preview(&form);return;}
         if form.starts_with("payroll-wage"){self.prepare_wage_preview(&form);return;}
         if form.starts_with("payroll-final"){self.prepare_final_preview(&form);return;}
         if form.starts_with("payroll-payment") {self.payroll_state.tab=9;self.prepare_payment_preview(&form);return;}
