@@ -88,6 +88,39 @@ impl CloudClient {
 }
 
 impl CloudClient {
+    pub fn government_registration(
+        &mut self, current: &Snapshot, employee_id: Option<Uuid>,
+        save: Option<&crate::payroll_government::registration::Save>,
+    ) -> Result<crate::payroll_government::registration::Snapshot> {
+        use crate::payroll_government::registration as reg;
+        crate::payroll_reporting::authorize(current)?;
+        ensure!(employee_id.is_none_or(|id| current.employees.iter().any(|e|e.id==id)), "Employee outside the current company.");
+        let before=self.current_access()?;
+        if before!=current.access {return Err(AccessRevoked.into());}
+        let mut saved=None;
+        if let Some(request)=save {
+            let payload=request.validate(current)?;
+            ensure!(payload.employee_id==employee_id,"Save the selected registration target only.");
+            let response=self.request(Method::POST,"rpc/save_government_registration")?
+                .json(&json!({"p_record":payload})).send()
+                .map_err(|_|anyhow::anyhow!("The registration write result is uncertain. Refresh stored records before retrying."))?;
+            if response.status().is_server_error(){bail!("The registration may have been saved. Refresh before retrying.");}
+            let receipt:reg::Receipt=decode(response)?;
+            ensure!(receipt.operation_id==payload.operation_id&&receipt.record_id==payload.id&&receipt.saved_revision==payload.expected_revision.map_or(0,|n|n+1),"The registration result is uncertain. Refresh its stored history.");
+            saved=Some(receipt);
+            if self.current_access()?!=before {return Err(AccessRevoked.into());}
+        }
+        let result:reg::Snapshot=decode(self.request(Method::POST,"rpc/government_registration")?
+            .json(&json!({"p_employee_id":employee_id})).send()?)?;
+        result.validate(before.company_id,employee_id,current.company.today())?;
+        if let Some(receipt)=saved {
+            ensure!(result.record.as_ref().is_some_and(|r|r.id==receipt.record_id&&r.revision>=receipt.saved_revision)
+                &&result.history.iter().any(|e|e.id==receipt.operation_id&&e.revision==receipt.saved_revision),
+                "Saved registration history changed. Refresh the current record.");
+        }
+        if self.current_access()?!=before {return Err(AccessRevoked.into());}
+        Ok(result)
+    }
     pub fn government_reconciliation(&mut self,current:&Snapshot,filter:crate::payroll_government::Filter,action:Option<&crate::payroll_government::Action>,destination:Option<&Path>)->Result<crate::payroll_government::Reconciliation>{
         crate::payroll_reporting::authorize(current)?;filter.validate(current.company.today())?;
         ensure!(action.is_none()||destination.is_none(),"Save government changes separately from exporting a fresh worksheet.");

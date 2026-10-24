@@ -3,6 +3,8 @@ use crate::payroll_government as g;
 use serde_json::json;
 #[derive(Default)]
 pub(super) struct State {
+    pub(super) registration: super::government_registration_view::State,
+    pub(super) registration_open: bool,
     scope: Option<(Uuid, Uuid, Role)>,
     month: String,
     agency: Option<g::Agency>,
@@ -82,7 +84,23 @@ impl State {
         }
     }
     pub(super) fn editing(&self) -> bool {
-        self.form.is_some()
+        self.form.is_some() || self.registration.editing()
+    }
+    pub(super) fn scroll_key(&self) -> (u8, Option<Uuid>) {
+        if self.registration_open {
+            return self.registration.scroll_key();
+        }
+        match &self.form {
+            None => (0, None),
+            Some(Form::Allocation(f)) => (1, Some(f.id)),
+            Some(Form::Decision(f)) => (2, Some(f.record.id)),
+            Some(Form::Remittance(f)) => (3, Some(f.id)),
+            Some(Form::Void(f)) => (4, Some(f.id)),
+        }
+    }
+    pub(super) fn accept_registration(&mut self, r: g::registration::Snapshot, data: &Snapshot) {
+        self.bind(data);
+        self.registration.accept(r, data);
     }
     pub(super) fn accept(&mut self, r: g::Reconciliation, data: &Snapshot) {
         self.bind(data);
@@ -281,6 +299,24 @@ impl HrisApp {
     pub(super) fn payroll_government(&mut self, ui: &mut Ui) {
         self.payroll_state.government.bind(&self.data);
         if !self.data.access.role.manages_hr() {
+            return;
+        }
+        if !self.payroll_state.government.editing() {
+            ui.horizontal_wrapped(|ui| {
+                ui.selectable_value(
+                    &mut self.payroll_state.government.registration_open,
+                    false,
+                    "Reconciliation",
+                );
+                ui.selectable_value(
+                    &mut self.payroll_state.government.registration_open,
+                    true,
+                    "Registration details",
+                );
+            });
+        }
+        if self.payroll_state.government.registration_open {
+            self.payroll_government_registration(ui);
             return;
         }
         let intent = if self.payroll_state.government.form.is_some() {
@@ -934,6 +970,10 @@ fn remittance_action(f: &RemittanceForm, today: NaiveDate) -> anyhow::Result<g::
 #[cfg(feature = "qa-screenshot")]
 impl HrisApp {
     pub(super) fn prepare_government_preview(&mut self, preview: &str) {
+        if preview.starts_with("payroll-government-registration") {
+            self.prepare_registration_preview(preview);
+            return;
+        }
         if self.data.mode != Mode::Demo {
             return;
         }

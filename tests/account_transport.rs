@@ -3410,3 +3410,40 @@ fn consolidated_report_revocation_after_fetch_cannot_write_csv(){
  let(config,server,_)=fixture(responses);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
  assert!(client.consolidated_payroll_report(&data,&f,Some(&path)).is_err());assert!(!path.exists());drop(client);server.join().unwrap();
 }
+
+#[test]
+fn government_registration_reads_one_scoped_rpc_and_discards_a_revoked_response(){
+ for revoked in [false,true]{
+  let company=Company{owner_id:uuid::Uuid::from_u128(170001),..Default::default()};
+  let access=json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});let mut after=access.clone();if revoked{after["role"]=json!("manager");}
+  let wire=json!({"version":"government-registration-v1","company_id":company.id,"employee_id":null,"record":null,"history":[]});
+  let mut replies=baseline(&company);replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access));replies.push(reply("POST /rest/v1/rpc/government_registration ",200,wire));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,after));
+  let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
+  let result=client.government_registration(&data,None,None);assert_eq!(result.is_err(),revoked);
+  assert!(client.government_registration(&data,Some(uuid::Uuid::new_v4()),None).is_err());
+  drop(client);server.join().unwrap();let requests=requests.lock().unwrap();
+  let reads:Vec<_>=requests.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/government_registration ")).collect();assert_eq!(reads.len(),1);assert_eq!(reads[0].json(),json!({"p_employee_id":null}));
+  assert!(!requests.iter().any(|r|r.line.contains("/government_registration_records?")));
+ }
+}
+
+#[test]
+fn registration_save_retry_preserves_operation_and_unknowns_after_a_failed_refresh(){
+ use hris_desktop::payroll_government::registration as reg;
+ let company=Company{owner_id:uuid::Uuid::from_u128(170001),..Default::default()};let now=chrono::Utc::now();
+ let id=uuid::Uuid::from_u128(170002);let op=uuid::Uuid::from_u128(170003);
+ let details=reg::normalize(&[("registered_name".into(),"Fictional Legal Registration".into())].into_iter().collect(),false,company.today()).unwrap();
+ let record=reg::Record{id,company_id:company.id,employee_id:None,revision:0,details:details.clone(),reference:"Synthetic registration".into(),note:"Private evidence".into(),created_by:company.owner_id,updated_by:company.owner_id,created_at:now,updated_at:now};
+ let saved=reg::Snapshot{version:"government-registration-v1".into(),company_id:company.id,employee_id:None,record:Some(record.clone()),history:vec![reg::Event{id:op,company_id:company.id,record_id:id,revision:0,actor_id:company.owner_id,actor_name:"Synthetic HR".into(),reason:"Initial registration review".into(),before_record:None,after_record:record,recorded_at:now}]};
+ let action=reg::Save{id,operation_id:op,employee_id:None,expected_revision:None,details,reference:"Synthetic registration".into(),note:"Private evidence".into(),reason:"Initial registration review".into(),reviewed:true};
+ let access=json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});let receipt=json!({"operation_id":op,"record_id":id,"saved_revision":0});
+ let mut replies=baseline(&company);
+ for failure in [true,false]{
+  replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access.clone()));replies.push(reply("POST /rest/v1/rpc/save_government_registration ",200,receipt.clone()));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access.clone()));
+  replies.push(if failure{reply("POST /rest/v1/rpc/government_registration ",500,json!({"message":"Synthetic refresh failure"}))}else{reply("POST /rest/v1/rpc/government_registration ",200,json!(saved))});
+  if !failure{replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access.clone()));}
+ }
+ let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
+ assert!(client.government_registration(&data,None,Some(&action)).is_err());let result=client.government_registration(&data,None,Some(&action)).unwrap();assert_eq!(result.record.unwrap().revision,0);
+ drop(client);server.join().unwrap();let requests=requests.lock().unwrap();let writes:Vec<_>=requests.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/save_government_registration ")).collect();assert_eq!(writes.len(),2);assert_eq!(writes[0].json(),writes[1].json());assert_eq!(writes[0].json()["p_record"]["details"]["bir_tin"],json!(""));assert_eq!(writes[0].json()["p_record"]["operation_id"],json!(op));
+}

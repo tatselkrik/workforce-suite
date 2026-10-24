@@ -12,6 +12,28 @@ fn main() -> Result<()> {
         input.len() <= 32 * 1024 * 1024,
         "Response exceeds diagnostic limit."
     );
+    if std::env::args().nth(1).as_deref() == Some("--registration") {
+        let today: chrono::NaiveDate = std::env::args()
+            .nth(2)
+            .ok_or_else(|| {
+                anyhow::anyhow!("Supply the company-local date for registration validation.")
+            })?
+            .parse()?;
+        let values: Vec<hris_desktop::payroll_government::registration::Snapshot> =
+            serde_json::from_slice(&input)?;
+        ensure!(
+            (1..=32).contains(&values.len()),
+            "Provide 1–32 protected responses."
+        );
+        for s in &values {
+            s.validate(s.company_id, s.employee_id, today)?;
+        }
+        println!(
+            "{}",
+            serde_json::json!({"validated_registration_snapshots":values.len(),"private_response_saved":false})
+        );
+        return Ok(());
+    }
     let values: Vec<ReviewWire> = serde_json::from_slice(&input)?;
     ensure!(
         (1..=32).contains(&values.len()),

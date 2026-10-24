@@ -83,8 +83,9 @@ pack, penalty/deadline calculation, tax filing, transfer or provider connection.
 
 ## Remaining implementation
 
-1. HR-only legal identity/company registration data, validated without changing
-   original payslips or weakening older clients.
+1. HR-only legal identity/company registration data is implemented in the0.1.43
+   candidate and under verification; see [the registration contract](GOVERNMENT-REGISTRATION.md).
+   It is not yet a delivered release.
 2. Exact agency files after complete specification/validator verification; block
    missing/ambiguous inputs rather than silently creating incomplete returns.
 3. Complete the remaining government-specific verification and versioned delivery.

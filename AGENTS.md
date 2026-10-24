@@ -214,3 +214,9 @@ exclusions, immutable approved reviews/receipts, linked correction chains and
 fresh protected exports. Only Administrators record/void evidenced remittances.
 Internal worksheets are not agency upload files. Source/workflow increments do
 not complete the full government milestone without legal identity/file adapters.
+
+Government registration records follow docs/GOVERNMENT-REGISTRATION.md. Keep legal
+names, assigned identifiers, supporting references and history HR/Admin-private,
+including against an Employee's own-record access. Unknowns remain blank; shape
+checks never imply agency verification. Preserve actor-bound retry receipts and
+immutable before/after revisions without changing employment, branding or pay.

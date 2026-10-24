@@ -1714,6 +1714,7 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
 }
 
 pub enum Command {
+    GovernmentRegistration {employee_id:Option<Uuid>,save:Option<crate::payroll_government::registration::Save>},
     Government {filter:crate::payroll_government::Filter,action:Option<crate::payroll_government::Action>,destination:Option<std::path::PathBuf>},
     PayrollReport {filter:crate::payroll_reporting::Filter,destination:Option<std::path::PathBuf>},
     PayrollExport { kind:String, record_id:Option<Uuid>, year:i32, destination:std::path::PathBuf },
@@ -1743,6 +1744,7 @@ pub enum Command {
 }
 
 pub struct Update {
+    pub government_registration:Option<crate::payroll_government::registration::Snapshot>,
     pub government:Option<crate::payroll_government::Reconciliation>,
     pub payroll_report:Option<crate::payroll_reporting::Report>,
     pub report: Option<crate::reports::Report>,
@@ -1780,6 +1782,7 @@ pub fn worker(
             let mut report_result = None;
             let mut payroll_report_result = None;
             let mut government_result = None;
+            let mut registration_result = None;
             let mut update_state = None;
             let mut check_after_sign_in = false;
             let mut result: Result<Snapshot> = match command {
@@ -1893,6 +1896,14 @@ pub fn worker(
                             );
                         }
                         crate::reports::save_csv(&destination, &preview.error_csv()?)?;
+                        Ok(current.clone())
+                    })()
+                }
+                Command::GovernmentRegistration{employee_id,save}=>{
+                    (||->Result<Snapshot>{
+                        let client=cloud.as_mut().context("Company sign-in is required for registration records.")?;
+                        registration_result=Some(client.government_registration(&current,employee_id,save.as_ref())?);
+                        message=if save.is_some(){"Registration saved with retained history. Employment and branding are unchanged.".into()}else{"Current registration records loaded.".into()};
                         Ok(current.clone())
                     })()
                 }
@@ -2044,6 +2055,7 @@ pub fn worker(
             }
             if events
                 .send(Update {
+                    government_registration:registration_result,
                     government:government_result,
                     report: report_result,
                     payroll_report:payroll_report_result,
@@ -2069,6 +2081,7 @@ pub fn worker(
                         .unwrap_or_else(|e| UpdateState::Failed(e.to_string()));
                     if events
                         .send(Update {
+                            government_registration:None,
                             government:None,
                             report: None,
                             payroll_report:None,

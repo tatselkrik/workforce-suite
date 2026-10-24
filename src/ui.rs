@@ -43,6 +43,7 @@ mod amendment_view;
 mod wage_view;
 mod payroll_report_view;
 mod government_view;
+mod government_registration_view;
 mod organization_view;
 mod overtime_view;
 mod recruiting_view;
@@ -1171,6 +1172,7 @@ impl HrisApp {
                         }
                     }
                     self.import_state.applying = false;
+                    if let Some(record)=update.government_registration{self.payroll_state.government.accept_registration(record,&data);}
                     if let Some(report)=update.government{self.payroll_state.government.accept(report,&data);}
                     if let Some(report)=update.payroll_report{self.payroll_state.reports.accept(report,&data);}
                     if let Some(report) = update.report {
@@ -1297,6 +1299,7 @@ impl HrisApp {
                     self.career_state.pending = None;
                     self.payroll_state.pending = None;
                     self.payroll_state.government.pending = None;
+                    self.payroll_state.government.registration.pending = false;
                     self.recruiting_state.pending = None;
                     self.recruiting_state.resume_pending = None;
                     self.report_state.pending_views = None;
@@ -4039,8 +4042,10 @@ impl eframe::App for HrisApp {
                         });
                         return;
                     }
-                    let scroll =
-                        egui::ScrollArea::vertical().id_salt(("main_scroll", self.page as u8));
+                    let scroll_id=("main_scroll",self.page as u8);
+                    let scroll=if self.page==Page::Payroll&&self.payroll_state.tab==13{
+                        egui::ScrollArea::vertical().id_salt((scroll_id,self.payroll_state.government.scroll_key()))
+                    }else{egui::ScrollArea::vertical().id_salt(scroll_id)};
                     #[cfg(feature = "qa-screenshot")]
                     let scroll = if std::env::var("HRIS_PREVIEW_SCROLL").as_deref() == Ok("bottom")
                     {

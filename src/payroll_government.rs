@@ -8,6 +8,7 @@ use uuid::Uuid;
 #[cfg(any(test, feature = "qa-screenshot"))]
 mod preview;
 mod workflow;
+pub mod registration;
 #[cfg(any(test, feature = "qa-screenshot"))]
 pub(crate) use preview::fixture as preview;
 pub use workflow::{
