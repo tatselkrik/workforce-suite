@@ -181,6 +181,7 @@ struct Mock {
     foreign: Arc<std::sync::atomic::AtomicBool>,
     break_state: Arc<std::sync::atomic::AtomicU8>,
     leave_cancelled: Arc<std::sync::atomic::AtomicBool>,
+    notification_read: Arc<std::sync::atomic::AtomicBool>,
 }
 fn uid() -> Uuid {
     Uuid::from_u128(101)
@@ -238,6 +239,15 @@ async fn fake(State(m): State<Mock>, request: Request) -> Response {
             json!({"id":uid(),"email":"portal-staff@example.invalid","user_metadata":{"role":"administrator","secret":"PRIVATE_SENTINEL"}})
         }
         "/auth/v1/logout" => json!({}),
+        "/rest/v1/rpc/portal_notifications" => {
+            let read = m.notification_read.load(Ordering::SeqCst);
+            json!({"company_id":cid(),"employee_id":person,"user_id":uid(),"asof":"2026-10-25","generated_at":"2026-10-25T00:00:00Z","offset":b["p_offset"],"limit":25,"unread_only":b["p_unread_only"],"total_items":if b["p_unread_only"]==true&&read{0}else{1},"unread_count":if read{0}else{1},"items":if (b["p_unread_only"]==true&&read)||b["p_offset"].as_u64().unwrap_or(0)>0{json!([])}else{json!([{"key":"correction-status:00000000-0000-0000-0000-00000000006e:1","kind":"correction-status","title":"Your attendance correction was approved","detail":"Work date2026-09-01","date":"2026-10-25","urgent":false,"read":read,"target_id":Uuid::from_u128(110),"target_page":"attendance","private":"PRIVATE_SENTINEL"}])},"private":"PRIVATE_SENTINEL"})
+        }
+        "/rest/v1/rpc/portal_notification_reads" => {
+            m.notification_read
+                .store(b["p_read"].as_bool().unwrap_or(false), Ordering::SeqCst);
+            json!({"company_id":cid(),"employee_id":person,"user_id":uid(),"saved":true,"private":"PRIVATE_SENTINEL"})
+        }
         "/rest/v1/rpc/portal_attendance_context" => {
             json!({"company_id":cid(),"employee_id":person,"work_date":b["p_day"].as_str().unwrap_or("2026-09-01"),"timezone":"Asia/Manila","attendance":{"id":aid(),"revision":0,"work_date":"2026-09-01","checked_in_at":"2026-09-01T00:00:00Z","checked_out_at":"2026-09-01T10:30:00Z","secret":"PRIVATE_SENTINEL"},"candidate_minutes":90,"break_revisions":[{"id":bid(),"revision":0,"secret":"PRIVATE_SENTINEL"}],"correction_pending":false,"overtime_blocked":false,"current_approved_minutes":0,"secret":"PRIVATE_SENTINEL"})
         }
@@ -1016,4 +1026,236 @@ async fn foreign_context_or_revoked_membership_never_reaches_browser() {
             .0,
         StatusCode::UNAUTHORIZED
     );
+}
+
+#[tokio::test]
+async fn personal_inbox_projects_metadata_and_uses_saved_page_filter() {
+    let f = fixture().await;
+    let (cookie, _) = login(&f).await;
+    let (s, _, v) = request(&f.portal, "/api/notifications", None, Some(&cookie), None).await;
+    assert_eq!(s, StatusCode::OK, "{v}");
+    assert_eq!(v["unread_count"], 1);
+    assert_eq!(v["items"][0]["target_page"], "attendance");
+    assert!(!v.to_string().contains("PRIVATE_SENTINEL"));
+    for k in ["company_id", "employee_id", "user_id"] {
+        assert!(v.get(k).is_none());
+    }
+    let (s, _, v) = request(
+        &f.portal,
+        "/api/notifications?offset=25&unread=true",
+        None,
+        Some(&cookie),
+        None,
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(v["items"], json!([]));
+    let seen = f.mock.requests.lock().await;
+    let (_, _, b) = seen
+        .iter()
+        .rev()
+        .find(|(_, p, _)| p == "/rest/v1/rpc/portal_notifications")
+        .unwrap();
+    assert_eq!(b["p_offset"], 25);
+    assert_eq!(b["p_unread_only"], true);
+    assert!(b.get("p_employee_id").is_none());
+}
+#[tokio::test]
+async fn own_read_unread_reset_persist_without_browser_identity_fields() {
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    let key = "correction-status:00000000-0000-0000-0000-00000000006e:1";
+    let (s, _, v) = request(
+        &f.portal,
+        "/api/notifications/read",
+        Some(json!({"keys":[key],"read":true})),
+        Some(&cookie),
+        Some(&csrf),
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(v, json!({"saved":true}));
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/notifications?unread=true",
+            None,
+            Some(&cookie),
+            None
+        )
+        .await
+        .2["total_items"],
+        0
+    );
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/notifications/read",
+            Some(json!({"keys":[],"read":false,"reset":true})),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        request(&f.portal, "/api/notifications", None, Some(&cookie), None)
+            .await
+            .2["unread_count"],
+        1
+    );
+    let seen = f.mock.requests.lock().await;
+    for (_, _, b) in seen
+        .iter()
+        .filter(|(_, p, _)| p == "/rest/v1/rpc/portal_notification_reads")
+    {
+        assert!(b.get("p_user_id").is_none());
+        assert!(b.get("p_company_id").is_none());
+    }
+}
+#[tokio::test]
+async fn read_history_rejects_foreign_fields_review_keys_duplicates_and_missing_csrf() {
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    let key = "correction-status:00000000-0000-0000-0000-00000000006e:1";
+    let b = json!({"keys":[key],"read":true});
+    let mut forged = b.clone();
+    forged["user_id"] = json!(Uuid::from_u128(999));
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/notifications/read",
+            Some(forged),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+    for keys in [
+        json!([]),
+        json!([key, key]),
+        json!(["leave-review:00000000-0000-0000-0000-00000000006e:1"]),
+    ] {
+        assert_eq!(
+            request(
+                &f.portal,
+                "/api/notifications/read",
+                Some(json!({"keys":keys,"read":true})),
+                Some(&cookie),
+                Some(&csrf)
+            )
+            .await
+            .0,
+            StatusCode::BAD_REQUEST
+        );
+    }
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/notifications/read",
+            Some(b),
+            Some(&cookie),
+            None
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    assert!(
+        !f.mock
+            .requests
+            .lock()
+            .await
+            .iter()
+            .any(|(_, p, _)| p == "/rest/v1/rpc/portal_notification_reads")
+    );
+}
+#[tokio::test]
+async fn notification_queries_reject_spoofed_scope_and_excessive_offsets() {
+    let f = fixture().await;
+    let (cookie, _) = login(&f).await;
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/notifications?employee_id=forged",
+            None,
+            Some(&cookie),
+            None
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/notifications?offset=50001",
+            None,
+            Some(&cookie),
+            None
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(
+        request(&f.portal, "/api/notifications", None, None, None)
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
+}
+#[tokio::test]
+async fn foreign_or_disabled_notification_identity_never_reaches_browser() {
+    let f = fixture().await;
+    let (cookie, _) = login(&f).await;
+    f.mock
+        .foreign
+        .store(true, std::sync::atomic::Ordering::SeqCst);
+    assert_eq!(
+        request(&f.portal, "/api/notifications", None, Some(&cookie), None)
+            .await
+            .0,
+        StatusCode::BAD_GATEWAY
+    );
+    f.mock
+        .foreign
+        .store(false, std::sync::atomic::Ordering::SeqCst);
+    f.mock
+        .disabled
+        .store(true, std::sync::atomic::Ordering::SeqCst);
+    assert_eq!(
+        request(&f.portal, "/api/notifications", None, Some(&cookie), None)
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
+}
+
+#[tokio::test]
+async fn passive_notification_poll_does_not_extend_idle_session() {
+    let f = fixture().await;
+    let (cookie, _) = login(&f).await;
+    let sid: Uuid = cookie.split_once('=').unwrap().1.parse().unwrap();
+    let session = f.portal.sessions.lock().await[&sid].clone();
+    let inactive = Instant::now() - Duration::from_secs(1200);
+    session.lock().await.last_seen = inactive;
+    assert_eq!(
+        request(&f.portal, "/api/notifications", None, Some(&cookie), None)
+            .await
+            .0,
+        StatusCode::OK
+    );
+    assert_eq!(session.lock().await.last_seen, inactive);
+    session.lock().await.last_seen = Instant::now() - Duration::from_secs(1801);
+    assert_eq!(
+        request(&f.portal, "/api/notifications", None, Some(&cookie), None)
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
+    assert!(!f.portal.sessions.lock().await.contains_key(&sid));
 }

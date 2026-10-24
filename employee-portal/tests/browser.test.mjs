@@ -17,3 +17,9 @@ test('downloaded CSV cells preserve text and neutralize spreadsheet formulas', a
   assert.equal(context.csvCell('a"b'), '"a""b"');
   assert.equal(context.csvCell('2026-09-01'), '"2026-09-01"');
 });
+
+test('portal HTML preserves UTF-8 punctuation after Windows source edits',async()=>{
+ const html=await readFile(new URL('../web/index.html',import.meta.url),'utf8');
+ assert(html.includes('HRIS · Employee portal'));assert(html.includes('View my details →'));
+ assert(!html.includes('\u00c2\u00b7'));assert(!html.includes('\u00e2\u2020'));
+});

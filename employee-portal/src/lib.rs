@@ -1,4 +1,5 @@
 //! Own-record portal. No service key, token-bearing browser storage or arbitrary proxy.
+mod notifications;
 mod requests;
 mod self_service;
 use anyhow::{Context, Result, ensure};
@@ -343,6 +344,8 @@ impl Portal {
             .route("/api/payslips/{id}", get(payslip))
             .merge(self_service::routes())
             .merge(requests::routes())
+            .merge(notifications::routes())
+            .route("/notifications.js", get(notification_script))
             .route("/time-requests.js", get(time_requests_script))
             .layer(DefaultBodyLimit::max(8192))
             .layer(middleware::from_fn_with_state(self.clone(), security))
@@ -443,6 +446,16 @@ impl Portal {
         Ok(json!({"email":user["email"],"reports_to_name":a["reports_to_name"]}))
     }
     async fn session(&self, h: &HeaderMap, write: bool) -> Reply<Arc<Mutex<Session>>> {
+        self.session_activity(h, write, true).await
+    }
+    // Passive inbox polling must still validate live access and expiry, but must
+    // not keep an unattended shared-device session alive indefinitely.
+    async fn session_activity(
+        &self,
+        h: &HeaderMap,
+        write: bool,
+        activity: bool,
+    ) -> Reply<Arc<Mutex<Session>>> {
         let sid = cookie_id(h, self.config.cookie_name()).ok_or_else(expired)?;
         let session = self
             .sessions
@@ -481,7 +494,9 @@ impl Portal {
             set_tokens(&mut s, &v)?;
         }
         self.access(&s).await?;
-        s.last_seen = Instant::now();
+        if activity {
+            s.last_seen = Instant::now();
+        }
         drop(s);
         Ok(session)
     }
@@ -594,6 +609,12 @@ async fn time_requests_script() -> impl IntoResponse {
     (
         [(header::CONTENT_TYPE, "text/javascript; charset=utf-8")],
         include_str!("../web/time-requests.js"),
+    )
+}
+async fn notification_script() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "text/javascript; charset=utf-8")],
+        include_str!("../web/notifications.js"),
     )
 }
 async fn sign_in(

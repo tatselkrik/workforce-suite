@@ -33,13 +33,22 @@ application identifier `io.github.tatselkrik.hrisportal`.
   Changed attendance/break/leave facts withhold current authorization until reviewed.
 - Own pending-request cancellation and submission/decision history. The portal
   exposes no reviewer controls or team records, including for staff accounts.
+- Personal notification inbox with unread count,25-item pages, unread-only
+  filtering, saved read/unread markers, mark-shown and reset-read-history controls.
+  Own leave decisions/upcoming approved leave, correction/overtime decisions and
+  earlier open-shift reminders link to refreshed own records. Decision updates
+  cover30company-local dates; upcoming leave covers today through the next7days.
+  Background refresh runs while the page is visible and no draft/action is open;
+  polling does not extend the30-minute idle session. Read status never approves
+  a request. Staff tasks and private document reminders remain outside this inbox.
 
 Staff who use the portal receive the same own-record interface; their broader
 desktop role does not cause team records or approval/admin controls to load here.
 Employee desktop admission remains prohibited.
 
-Next increments add notifications, company/profile pictures and account password/
-email controls. Public HTTPS deployment and physical phone/network checks remain
+Company/profile pictures and account password/email controls stay queued.
+Kirk asked to stop after the0.1.3 notification increment; the scheduler is paused.
+Project storage cleanup is the next task after the pause. Public HTTPS deployment and physical phone/network checks remain
 separate from localhost development. The current prototype has no public URL.
 
 ## Operator startup
@@ -101,6 +110,29 @@ and call protected routines; current employee identity is inferred server-side.
 The installed desktop's existing leave and break routines remain compatible.
 
 ## Verification
+
+The0.1.3 notification increment passes32Rust tests,5JavaScript code-level tests
+and3,414local PostgreSQL assertions. Eight actual hosted Auth/API proof groups
+against the optimized loopback executable cover own redacted reminders, independent
+correction/OT decisions, approved upcoming leave, pagination, persistent read/
+unread/reset and concurrent marker updates, CSRF/field/foreign-record guards,
+staff own-only scope and immediate disabled-membership denial. Synthetic accounts
+remain disabled/archived with sessions removed and their history retained. The
+first live harness used the wrong legacy-RPC parameter name; the corrected full
+run passed. No actual account password changed.
+
+Additive migration`20261024160758` is deployed (56versions), with85oldpublicrecord
+sets and235existing functions unchanged. New markers have RLS, public RPCs remain
+invokers, and private helper grants are restricted. No new advisor warnings/errors
+or unindexed foreign keys appeared;3olderwarnings and5olderFKINFO remain.
+
+Current notification-screen and phone-width visual checks are UNVERIFIED: both
+browser and native UI runtimes fail kernel-assets initialization with a Windows
+path error. The JavaScript tests use a small code-level DOM fixture, not a browser
+render. Package metadata records this limitation. Earlier screenshots below apply
+only to their original increments. This is a local prototype increment, not proof
+of public hosting, remoteCI, browser printing, a physical phone or Authenticode.
+UTF-8 punctuation is corrected in this source; delivered0.1.2 archives stay intact.
 
 The0.1.2 increment passes25 Rust portal tests, one CSV safety test, JavaScript
 syntax checks and3,275 local PostgreSQL assertions. Seven actual hosted Auth/API

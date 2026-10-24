@@ -32,3 +32,7 @@ Kirk resumed this chat again after desktop0.1.41, approved the ordered checklist
 in ../docs/REMAINING-ROADMAP.md and reactivated the usage-reset scheduler. Complete
 the remaining local portal controls first; cross out the milestone only when all
 its scope is verified. Local-only deployment and all security boundaries remain.
+
+Latest boundary25October2026: finish only the in-progress0.1.3 personal inbox,
+verify/deliver it locally, then stop. Scheduler is paused. Other portal controls
+and subsequent roadmap milestones remain queued until Kirk resumes work.

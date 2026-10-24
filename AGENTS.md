@@ -163,3 +163,17 @@ portal first, then the remaining ordered checklist. Preserve the deployment,
 financial, privacy and unresolved external-target boundaries above. Continue
 through usage resets using this task's checkpoint and the same follow-up, until
 Kirk stops the work, the scope is complete or a genuine handoff blocks progress.
+
+## Latest stop boundary — 25 October 2026
+
+Kirk said "stop after this" during the portal0.1.3 personal-notification increment.
+Finish and verify only that current increment, deliver its local package, then
+stop. The existing usage-reset scheduler is paused. Pictures/account-security
+controls and the rest of the roadmap stay queued until Kirk resumes them.
+This supersedes the continuous-work instruction above.
+
+Next task after the pause: Kirk reports the project occupies about219GB and
+wants unnecessary/obsolete project files cleaned up. Keep cleanup queued until
+the pause ends. Inspect actual storage use and preserve source, company data,
+current releases and useful verification evidence; do not start cleanup while
+finishing the current notification increment.

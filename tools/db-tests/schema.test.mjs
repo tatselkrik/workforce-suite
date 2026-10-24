@@ -72,6 +72,7 @@ try {
   const payrollReportMigrations=[];
   const amendmentMigrations=[];
   const portalTimeMigrations=[];
+  const portalInboxMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -85,6 +86,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_employee_portal_notifications.sql')){portalInboxMigrations.push(filename);continue;}
     if(filename.endsWith('_employee_portal_attendance_context.sql')){portalTimeMigrations.push(filename);continue;}
     if(filename.includes('_payroll_cross_year_')||filename.includes('_payroll_amendments')){amendmentMigrations.push(filename);continue;}
     if(filename.includes('_expanded_payroll_reporting')){payrollReportMigrations.push(filename);continue;}
@@ -420,6 +422,11 @@ try {
   for(const filename of portalTimeMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
   for(const t of portalTimeTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,beforePortalTime[t],'Own portal context preserves prior '+t+' records');
   const{runPortalAttendanceTests}=await import('./portal-attendance.test.mjs');await runPortalAttendanceTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
+  await db.exec('reset role');const inboxBefore={};const inboxTables=(await db.query("select tablename from pg_tables where schemaname='public'order by tablename")).rows.map(r=>r.tablename);
+  for(const t of inboxTables)inboxBefore[t]=(await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows;
+  for(const filename of portalInboxMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  for(const t of inboxTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,inboxBefore[t],'Portal inbox migration preserves prior '+t+' records');
+  const{runPortalNotificationTests}=await import('./portal-notifications.test.mjs');await runPortalNotificationTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

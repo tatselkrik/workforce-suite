@@ -4,6 +4,15 @@ Kirk approved this order on24October2026 and resumed continuous work and the
 existing usage-reset follow-up. This supersedes the stop-after0.1.41 boundary.
 The original roadmap status remains in [ROADMAP.md](ROADMAP.md).
 
+Latest instruction25October2026: finish only the current portal0.1.3 personal
+notification increment, then stop. The scheduler is paused; all other work stays
+queued until Kirk resumes it. This supersedes continuous continuation above.
+
+**Next task after this pause: project storage cleanup.** Inspect the reported
+219GB footprint and remove unnecessary/obsolete artifacts while preserving source,
+company files, current deliverables and useful release/verification evidence.
+Cleanup is queued and has not started; address it before resuming this roadmap.
+
 Keep this ordered list as the working checklist. Cross out a milestone only
 after its implemented scope passes proportionate verification and its authorized
 release/delivery requirements. Record partial progress below its item; retain
@@ -42,6 +51,12 @@ unconfigured external connection to a completed integration.
   Desktop layout/draft/history checks passed; the new phone-width check remains
   pending. The entire milestone stays open until notifications, pictures and
   account controls are implemented and all remaining verification is complete.
+- Portal increment0.1.3 adds the own notification inbox/read history with32Rust
+  tests,5JavaScript code checks,3,414database assertions and8actual hosted proof
+  groups. Its additive migration preserves85priorrecordsets and235functions.
+  Current notification/phone visual verification is pending because both UI
+  runtimes fail initialization. Pictures/security remain queued, so milestone1
+  stays partial. Work stops after this local increment; scheduling is paused.
 - Effective-date policies, balances and delegation follow the existing saved
   charges/plans and immutable history rules; they do not rewrite older requests.
 - Install each verified authorized desktop release, preserving unsaved work and
