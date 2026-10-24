@@ -4,14 +4,14 @@ Kirk approved this order on24October2026 and resumed continuous work and the
 existing usage-reset follow-up. This supersedes the stop-after0.1.41 boundary.
 The original roadmap status remains in [ROADMAP.md](ROADMAP.md).
 
-Latest instruction25October2026: finish only the current portal0.1.3 personal
-notification increment, then stop. The scheduler is paused; all other work stays
-queued until Kirk resumes it. This supersedes continuous continuation above.
+Latest instruction25October2026: Kirk resumed the roadmap, reactivated the same
+usage-reset scheduler and requested continuous work. The stop-after-portal0.1.3
+and cleanup-only pause are superseded. Finish remaining local portal work first.
 
-**Next task after this pause: project storage cleanup.** Inspect the reported
-219GB footprint and remove unnecessary/obsolete artifacts while preserving source,
-company files, current deliverables and useful release/verification evidence.
-Cleanup is queued and has not started; address it before resuming this roadmap.
+**Storage cleanup completed25October2026:** project size reduced from219.1GiB to
+about1.82GiB. Source/company files, current releases and useful evidence were
+preserved. See [storage maintenance](STORAGE-MAINTENANCE.md). This completed only
+the cleanup task; Kirk subsequently resumed roadmap work and the scheduler.
 
 Keep this ordered list as the working checklist. Cross out a milestone only
 after its implemented scope passes proportionate verification and its authorized
@@ -49,14 +49,19 @@ unconfigured external connection to a completed integration.
   history~~ are implemented in the0.1.2 increment, with25 Rust tests,3,275 database
   assertions and seven actual hosted proof groups. See [portal verification](EMPLOYEE-PORTAL.md).
   Desktop layout/draft/history checks passed; the new phone-width check remains
-  pending. The entire milestone stays open until notifications, pictures and
-  account controls are implemented and all remaining verification is complete.
+  pending. The entire milestone stays open until account controls and all
+  remaining verification are complete.
 - Portal increment0.1.3 adds the own notification inbox/read history with32Rust
   tests,5JavaScript code checks,3,414database assertions and8actual hosted proof
   groups. Its additive migration preserves85priorrecordsets and235functions.
   Current notification/phone visual verification is pending because both UI
   runtimes fail initialization. Pictures/security remain queued, so milestone1
-  stays partial. Work stops after this local increment; scheduling is paused.
+  stays partial. Work and scheduling resumed after the completed storage cleanup.
+- Portal increment0.1.4 implements private own circular photos/preview/save/
+  discard/removal and deployment-bound company sign-in branding.38Rust/9JS checks
+  and9actual hosted proof groups pass. A stale-image removal issue was fixed with
+  fresh Storage origin reads. Current visual verification remains pending, and
+  password/email controls follow next; milestone1 stays open.
 - Effective-date policies, balances and delegation follow the existing saved
   charges/plans and immutable history rules; they do not rewrite older requests.
 - Install each verified authorized desktop release, preserving unsaved work and

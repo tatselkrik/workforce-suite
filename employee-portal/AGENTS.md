@@ -36,3 +36,9 @@ its scope is verified. Local-only deployment and all security boundaries remain.
 Latest boundary25October2026: finish only the in-progress0.1.3 personal inbox,
 verify/deliver it locally, then stop. Scheduler is paused. Other portal controls
 and subsequent roadmap milestones remain queued until Kirk resumes work.
+
+Latest resumption25October2026: Kirk resumed the roadmap and usage-reset
+scheduler. The preceding stop boundary is superseded. Finish remaining local-only
+pictures/account-security controls and verification, then follow the ordered root
+roadmap. Preserve own-record/token/CSRF and local-only boundaries. Keep build
+outputs separate from versioned packages and avoid duplicate QA binaries.

@@ -182,6 +182,9 @@ struct Mock {
     break_state: Arc<std::sync::atomic::AtomicU8>,
     leave_cancelled: Arc<std::sync::atomic::AtomicBool>,
     notification_read: Arc<std::sync::atomic::AtomicBool>,
+    photo_png: Arc<Mutex<Option<Vec<u8>>>>,
+    logo_png: Arc<Mutex<Option<Vec<u8>>>>,
+    logo_revision: Arc<std::sync::atomic::AtomicU64>,
 }
 fn uid() -> Uuid {
     Uuid::from_u128(101)
@@ -217,12 +220,50 @@ async fn fake(State(m): State<Mock>, request: Request) -> Response {
         .get("x-hris-leave-contract")
         .and_then(|v| v.to_str().ok())
         == Some("2");
-    let body = to_bytes(request.into_body(), 8192).await.unwrap();
+    let body = to_bytes(request.into_body(), 5 * 1024 * 1024)
+        .await
+        .unwrap();
     let b: Value = serde_json::from_slice(&body).unwrap_or(Value::Null);
     m.requests
         .lock()
         .await
         .push((method.clone(), uri.clone(), b.clone()));
+    if path == format!("/storage/v1/object/profile-photos/{}/avatar.png", uid()) && method == "POST"
+    {
+        assert!(body.starts_with(b"\x89PNG\r\n\x1a\n"));
+        *m.photo_png.lock().await = Some(body.to_vec());
+        return Json(json!({"Key":"PRIVATE_SENTINEL"})).into_response();
+    }
+    if path == "/storage/v1/object/profile-photos" && method == "DELETE" {
+        assert_eq!(b["prefixes"], json!([format!("{}/avatar.png", uid())]));
+        *m.photo_png.lock().await = None;
+        return Json(json!([])).into_response();
+    }
+    if path
+        == format!(
+            "/storage/v1/object/authenticated/profile-photos/{}/avatar.png",
+            uid()
+        )
+        || path
+            == format!(
+                "/storage/v1/object/authenticated/company-branding/{}/logo.png",
+                cid()
+            )
+    {
+        let raw = if path.contains("profile-photos") {
+            m.photo_png.lock().await.clone()
+        } else {
+            m.logo_png.lock().await.clone()
+        };
+        return match raw {
+            Some(bytes) => ([(header::CONTENT_TYPE, "image/png")], bytes).into_response(),
+            None => (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error":"not_found","message":"Object not found"})),
+            )
+                .into_response(),
+        };
+    }
     let person = if m.foreign.load(Ordering::SeqCst) {
         Uuid::from_u128(999)
     } else {
@@ -315,7 +356,7 @@ async fn fake(State(m): State<Mock>, request: Request) -> Response {
             json!([{"id":eid(),"company_id":cid(),"employee_code":"EMP-TEST","full_name":"Sample Employee","department":"Operations","job_title":"Coordinator","joined_on":"2025-01-01","annual_leave_days":15,"status":"active","private_hr":"PRIVATE_SENTINEL"}])
         }
         "/rest/v1/companies" => {
-            json!([{"id":cid(),"name":"Sample Company","timezone":"Asia/Manila","secret":"PRIVATE_SENTINEL"}])
+            json!([{"id":cid(),"name":"Sample Company","timezone":"Asia/Manila","logo_version":if m.logo_png.lock().await.is_some(){json!(Uuid::from_u128(501+u128::from(m.logo_revision.load(Ordering::SeqCst))))}else{Value::Null},"secret":"PRIVATE_SENTINEL"}])
         }
         "/rest/v1/employee_contacts" => {
             let mut c = serde_json::to_value(Contacts::default()).unwrap();
@@ -1258,4 +1299,280 @@ async fn passive_notification_poll_does_not_extend_idle_session() {
         StatusCode::UNAUTHORIZED
     );
     assert!(!f.portal.sessions.lock().await.contains_key(&sid));
+}
+
+fn sample_photo() -> Vec<u8> {
+    let image = image::RgbaImage::from_fn(160, 80, |x, y| {
+        let n = (x.wrapping_mul(1597334677) ^ y.wrapping_mul(3812015801)).wrapping_mul(2654435761);
+        image::Rgba([n as u8, (n >> 8) as u8, (n >> 16) as u8, 180])
+    });
+    let mut c = std::io::Cursor::new(vec![]);
+    image::DynamicImage::ImageRgba8(image)
+        .write_to(&mut c, image::ImageFormat::Png)
+        .unwrap();
+    c.into_inner()
+}
+async fn binary_request(
+    p: &Portal,
+    path: &str,
+    body: Option<Vec<u8>>,
+    cookie: Option<&str>,
+    csrf: Option<&str>,
+) -> (StatusCode, HeaderMap, Vec<u8>) {
+    let mut b = axum::http::Request::builder()
+        .uri(path)
+        .method(if body.is_some() { "POST" } else { "GET" })
+        .header("host", "127.0.0.1:3030")
+        .header("origin", "http://127.0.0.1:3030");
+    if let Some(c) = cookie {
+        b = b.header("cookie", c);
+    }
+    if let Some(c) = csrf {
+        b = b.header("x-csrf-token", c);
+    }
+    let r = p
+        .router()
+        .oneshot(b.body(Body::from(body.unwrap_or_default())).unwrap())
+        .await
+        .unwrap();
+    let status = r.status();
+    let headers = r.headers().clone();
+    let bytes = to_bytes(r.into_body(), 3 * 1024 * 1024)
+        .await
+        .unwrap()
+        .to_vec();
+    (status, headers, bytes)
+}
+#[tokio::test]
+async fn photo_upload_download_and_removal_use_only_current_account() {
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    let raw = sample_photo();
+    assert!(raw.len() > 8192);
+    assert_eq!(
+        binary_request(
+            &f.portal,
+            "/api/photo",
+            Some(raw.clone()),
+            Some(&cookie),
+            None
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    assert!(f.mock.photo_png.lock().await.is_none());
+    let (status, _, saved) = binary_request(
+        &f.portal,
+        "/api/photo",
+        Some(raw),
+        Some(&cookie),
+        Some(&csrf),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        serde_json::from_slice::<Value>(&saved).unwrap(),
+        json!({"saved":true})
+    );
+    let (status, h, png) = binary_request(&f.portal, "/api/photo", None, Some(&cookie), None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(h["content-type"], "image/png");
+    assert!(h["cache-control"].to_str().unwrap().contains("no-store"));
+    let img = image::load_from_memory(&png).unwrap();
+    assert_eq!((img.width(), img.height()), (256, 256));
+    let (_, _, brand) = request(&f.portal, "/api/branding", None, None, None).await;
+    assert_eq!(brand["has_logo"], false);
+    assert_eq!(
+        binary_request(&f.portal, "/api/branding/logo", None, None, None)
+            .await
+            .0,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/photo/remove",
+            Some(json!({"user_id":Uuid::from_u128(999)})),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/photo/remove",
+            Some(json!({})),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        binary_request(&f.portal, "/api/photo", None, Some(&cookie), None)
+            .await
+            .0,
+        StatusCode::NOT_FOUND
+    );
+    let seen = f.mock.requests.lock().await;
+    assert!(
+        seen.iter()
+            .filter(|(_, p, _)| p.contains("profile-photos/"))
+            .all(|(_, p, _)| p
+                .split('?')
+                .next()
+                .unwrap()
+                .ends_with(&format!("{}/avatar.png", uid())))
+    );
+    assert!(
+        seen.iter()
+            .filter(|(method, p, _)| method == "GET" && p.contains("authenticated/profile-photos/"))
+            .all(|(_, p, _)| p.contains("cacheNonce="))
+    );
+}
+#[tokio::test]
+async fn pictures_reject_bad_images_spoofed_scope_and_revoked_sessions() {
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    assert_eq!(
+        binary_request(
+            &f.portal,
+            "/api/photo",
+            Some(b"<svg></svg>".to_vec()),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(
+        binary_request(
+            &f.portal,
+            "/api/photo",
+            Some(vec![0; 5 * 1024 * 1024 + 1]),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::PAYLOAD_TOO_LARGE
+    );
+    assert_eq!(
+        binary_request(
+            &f.portal,
+            "/api/photo?user_id=other",
+            None,
+            Some(&cookie),
+            None
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(
+        binary_request(&f.portal, "/api/photo", None, None, None)
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
+    f.mock
+        .disabled
+        .store(true, std::sync::atomic::Ordering::SeqCst);
+    assert_eq!(
+        binary_request(
+            &f.portal,
+            "/api/photo",
+            Some(sample_photo()),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::UNAUTHORIZED
+    );
+    assert!(f.mock.photo_png.lock().await.is_none());
+}
+#[tokio::test]
+async fn only_verified_company_branding_survives_sign_out() {
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    *f.mock.logo_png.lock().await = Some(sample_photo());
+    let (status, _, v) = request(&f.portal, "/api/pictures", None, Some(&cookie), None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(v, json!({"company_name":"Sample Company","has_logo":true}));
+    request(
+        &f.portal,
+        "/api/sign-out",
+        Some(json!({})),
+        Some(&cookie),
+        Some(&csrf),
+    )
+    .await;
+    let (status, _, v) = request(&f.portal, "/api/branding", None, None, None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(v, json!({"company_name":"Sample Company","has_logo":true}));
+    assert!(!v.to_string().contains("PRIVATE_SENTINEL"));
+    assert_eq!(
+        binary_request(&f.portal, "/api/branding/logo", None, None, None)
+            .await
+            .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        binary_request(&f.portal, "/api/company-logo", None, Some(&cookie), None)
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
+}
+
+#[tokio::test]
+async fn company_logo_revision_refresh_replaces_cached_image_and_removal_clears_it() {
+    let f = fixture().await;
+    let (cookie, _) = login(&f).await;
+    *f.mock.logo_png.lock().await = Some(sample_photo());
+    assert_eq!(
+        request(&f.portal, "/api/pictures", None, Some(&cookie), None)
+            .await
+            .0,
+        StatusCode::OK
+    );
+    let (_, _, first) = binary_request(&f.portal, "/api/branding/logo", None, None, None).await;
+    let mut c = std::io::Cursor::new(vec![]);
+    image::DynamicImage::ImageRgba8(image::RgbaImage::from_pixel(
+        80,
+        40,
+        image::Rgba([250, 30, 100, 100]),
+    ))
+    .write_to(&mut c, image::ImageFormat::Png)
+    .unwrap();
+    *f.mock.logo_png.lock().await = Some(c.into_inner());
+    f.mock
+        .logo_revision
+        .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    assert_eq!(
+        request(&f.portal, "/api/pictures", None, Some(&cookie), None)
+            .await
+            .0,
+        StatusCode::OK
+    );
+    let (status, _, second) =
+        binary_request(&f.portal, "/api/branding/logo", None, None, None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_ne!(first, second);
+    *f.mock.logo_png.lock().await = None;
+    let (_, _, context) = request(&f.portal, "/api/pictures", None, Some(&cookie), None).await;
+    assert_eq!(context["has_logo"], false);
+    assert_eq!(
+        binary_request(&f.portal, "/api/branding/logo", None, None, None)
+            .await
+            .0,
+        StatusCode::NOT_FOUND
+    );
 }

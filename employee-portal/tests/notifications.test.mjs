@@ -29,6 +29,7 @@ test('read changes contain no identity and clearing a session removes the badge'
 test('background polling respects drafts, busy state, visibility and sign-out',async()=>{
  const f=await fixture();f.c.initNotifications();const poll=f.timers[0];
  f.state.dirty=true;await poll();f.state.dirty=false;f.timeState.dirtyKind='correction';await poll();f.timeState.dirtyKind=null;
+ f.state.pictureDirty=true;await poll();f.state.pictureDirty=false;
  f.state.busy=true;await poll();f.state.busy=false;f.document.visibilityState='hidden';await poll();f.document.visibilityState='visible';
  assert.equal(f.calls.length,0);await poll();assert.equal(f.calls.length,1);assert.equal(f.state.busy,false);
  f.state.me=null;await poll();assert.equal(f.calls.length,1);

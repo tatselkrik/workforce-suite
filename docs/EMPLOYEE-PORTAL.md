@@ -41,14 +41,26 @@ application identifier `io.github.tatselkrik.hrisportal`.
   Background refresh runs while the page is visible and no draft/action is open;
   polling does not extend the30-minute idle session. Read status never approves
   a request. Staff tasks and private document reminders remain outside this inbox.
+- Own circular photo preview, Save, Discard and Remove, shared with the existing
+  native profile-photo record. The sidebar photo opens My profile. PNG/JPEG input
+  is limited to5MiB/4096pixels, orientation is normalized and metadata stripped
+  into a256square PNG. The server chooses the current user's private object path.
+  Photo drafts block navigation/refresh and never discard unsaved contact edits.
+- Transparent company logo/name on sign-in and in the company header. Only
+  deployment-bound company branding may remain in server memory after sign-out;
+  private profile-photo URLs/initials clear. Optional picture errors leave own
+  records available. Private Storage downloads use fresh-origin requests so
+  replacement/removal does not show a stale CDN image.
 
 Staff who use the portal receive the same own-record interface; their broader
 desktop role does not cause team records or approval/admin controls to load here.
 Employee desktop admission remains prohibited.
 
-Company/profile pictures and account password/email controls stay queued.
-Kirk asked to stop after the0.1.3 notification increment; the scheduler is paused.
-Project storage cleanup is the next task after the pause. Public HTTPS deployment and physical phone/network checks remain
+Account password/email controls are the next portal increment. Current picture/
+notification-screen visual verification is still pending, so milestone1 is partial.
+Kirk resumed remaining roadmap work and the usage-reset scheduler25October2026,
+after the0.1.3 pause and completed project storage cleanup.
+Public HTTPS deployment and physical phone/network checks remain
 separate from localhost development. The current prototype has no public URL.
 
 ## Operator startup
@@ -57,6 +69,13 @@ The operator supplies the same private two-field company connection profile used
 by the desktop. Users never see connection, company selection or database setup.
 The server uses only a publishable key and the signed-in user's access token;
 neither a service-role key nor another person's Auth token is required.
+
+The private package also includes an optional `hris-branding.json` next to the
+connection profile. It contains only a profile fingerprint, company ID/name and
+optional normalized logo. The server rejects a mismatched or malformed branding
+file. Generic source archives exclude it. An unbranded source build learns the
+current company's name/logo after an authenticated refresh and keeps only those
+company assets in memory for sign-in; employee photos are never part of that cache.
 
 ```powershell
 cargo test --manifest-path employee-portal/Cargo.toml --locked
@@ -110,6 +129,27 @@ and call protected routines; current employee identity is inferred server-side.
 The installed desktop's existing leave and break routines remain compatible.
 
 ## Verification
+
+The0.1.4 picture increment passes38Rust tests and9JavaScript code-level checks.
+Nine actual hosted Auth/Storage proof groups against the optimized loopback
+executable cover branded startup metadata, own normalized uploads, EXIF/text
+metadata removal, CSRF/format/scope guards, foreign-account read/write denial,
+immediate removal visibility, separate Manager photo/removal, sign-out privacy,
+disabled membership and preservation of preexisting objects (excluding read-access
+timestamps). The hosted company currently has no logo; its absence/branding
+metadata were verified live, while actual logo pixels/transparency/cache behavior
+use local HTTP/image fixtures. The current screen/phone layout remains unverified
+because the browser runtime still fails kernel-assets initialization.
+
+Two early live runs caught a real stale-image response after successful deletion.
+A guarded read showed both synthetic Manager objects had been deleted. Fresh
+`cacheNonce` origin requests fixed the mismatch; the complete subsequent run
+passed. This follows [Supabase cache-bypass guidance](https://supabase.com/docs/guides/storage/cdn/smart-cdn#bypassing-cache).
+Synthetic accounts remain disabled/archived with sessions removed and history
+retained. No actual password changed, database migration, native desktop release
+or existing portal restart was performed. The schema remains at56versions; the
+database suite was not rerun for this client-only change. Compact build settings
+avoid accumulating full debug-symbol/incremental variants after storage cleanup.
 
 The0.1.3 notification increment passes32Rust tests,5JavaScript code-level tests
 and3,414local PostgreSQL assertions. Eight actual hosted Auth/API proof groups

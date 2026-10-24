@@ -7,6 +7,7 @@
 /hris-config.json
 /hris-connection.json
 /company-logo.png
+**/hris-branding.json
 /memory.md
 /supabase/.temp/
 /supabase/.branches/

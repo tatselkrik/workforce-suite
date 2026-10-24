@@ -1,5 +1,6 @@
 //! Own-record portal. No service key, token-bearing browser storage or arbitrary proxy.
 mod notifications;
+mod pictures;
 mod requests;
 mod self_service;
 use anyhow::{Context, Result, ensure};
@@ -31,6 +32,7 @@ pub struct Config {
     origin: String,
     authority: String,
     secure: bool,
+    branding: pictures::Branding,
 }
 impl Config {
     pub fn load(path: &std::path::Path, origin: &str, listen: &str) -> Result<Self> {
@@ -65,6 +67,8 @@ impl Config {
         let mut config = Self::origin(origin, listen)?;
         config.url = p.url.trim_end_matches('/').into();
         config.key = p.publishable_key;
+        config.branding =
+            pictures::load_bootstrap(&path.with_file_name("hris-branding.json"), &config)?;
         Ok(config)
     }
     fn origin(origin: &str, listen: &str) -> Result<Self> {
@@ -94,6 +98,7 @@ impl Config {
             origin,
             authority,
             secure,
+            branding: Default::default(),
         })
     }
     fn cookie_name(&self) -> &str {
@@ -136,6 +141,8 @@ pub struct Portal {
     sessions: Arc<Mutex<HashMap<Uuid, Arc<Mutex<Session>>>>>,
     attempts: Arc<Mutex<HashMap<String, Attempt>>>,
     auth_slots: Arc<Semaphore>,
+    image_slots: Arc<Semaphore>,
+    branding: Arc<Mutex<pictures::Branding>>,
 }
 #[derive(Debug)]
 struct Error(StatusCode, &'static str);
@@ -316,6 +323,7 @@ const TOTAL_FIELDS: &[&str] = &[
 
 impl Portal {
     pub fn new(config: Config) -> Result<Self> {
+        let branding = Arc::new(Mutex::new(config.branding.clone()));
         Ok(Self {
             config: Arc::new(config),
             client: Client::builder()
@@ -325,6 +333,8 @@ impl Portal {
             sessions: Default::default(),
             attempts: Default::default(),
             auth_slots: Arc::new(Semaphore::new(8)),
+            image_slots: Arc::new(Semaphore::new(2)),
+            branding,
         })
     }
     pub fn router(&self) -> Router {
@@ -345,6 +355,7 @@ impl Portal {
             .merge(self_service::routes())
             .merge(requests::routes())
             .merge(notifications::routes())
+            .merge(pictures::routes())
             .route("/notifications.js", get(notification_script))
             .route("/time-requests.js", get(time_requests_script))
             .layer(DefaultBodyLimit::max(8192))

@@ -135,8 +135,10 @@ Latest local increments: portal0.1.2 adds own correction/overtime proposals and
 decision history;0.1.3 adds personal notifications and saved read/unread state.
 Automated and actual Auth/API checks pass; current notification/phone visual
 inspection remains unavailable. Pictures/account-security controls stay pending.
-Kirk's25October stop boundary pauses work/scheduling after0.1.3; storage cleanup
-is the next task after the pause. Use [the ordered checklist](REMAINING-ROADMAP.md)
+Kirk subsequently completed storage cleanup and resumed work/scheduling25October.
+Portal0.1.4 adds private own circular photos and company sign-in branding, with
+automated/live checks and current visual verification still pending. Password/
+email controls follow next. Use [the ordered checklist](REMAINING-ROADMAP.md)
 for current scope/status rather than historical stop/resume paragraphs above.
 
 The sequence may change when the company has a more urgent requirement. Payroll, biometric devices and external integrations require company-specific decisions; they are not generic plug-ins already working in this prototype.

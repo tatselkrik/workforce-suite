@@ -172,8 +172,30 @@ stop. The existing usage-reset scheduler is paused. Pictures/account-security
 controls and the rest of the roadmap stay queued until Kirk resumes them.
 This supersedes the continuous-work instruction above.
 
-Next task after the pause: Kirk reports the project occupies about219GB and
-wants unnecessary/obsolete project files cleaned up. Keep cleanup queued until
-the pause ends. Inspect actual storage use and preserve source, company data,
-current releases and useful verification evidence; do not start cleanup while
-finishing the current notification increment.
+## Storage cleanup — 25 October 2026
+
+Kirk explicitly authorized the queued cleanup. It is complete: the project went
+from219.1GiB to about1.82GiB by removing generated Cargo caches, obsolete test
+executables and hash-identical release copies. Source, company files, current/
+rollback releases, all portal packages and useful evidence were preserved.
+See docs/STORAGE-MAINTENANCE.md and the ignored work/storage-cleanup-20261025 audit.
+Cargo output must be rebuilt when development resumes; do not rebuild merely to
+verify cleanup. The running portal was preserved. Cleanup authorization did not
+resume feature work or scheduling: both remain paused until Kirk resumes them.
+
+## Latest resumption — 25 October 2026
+
+Kirk explicitly said to continue the roadmap, activate scheduling again and not
+stop. This supersedes the stop-after-portal0.1.3 and cleanup-only pause above.
+The same usage-reset scheduler is active again. Continue docs/REMAINING-ROADMAP.md
+sequentially from the remaining local portal pictures/security/verification, then
+the rest of the approved queue. All deployment, privacy, financial and unresolved
+external-target boundaries remain. Storage cleanup is complete; never blindly
+reuse its deletion manifest. Keep compact build evidence and avoid accumulating
+duplicate test binaries/debug-symbol variants after verified delivery.
+
+For routine prototype QA builds, set CARGO_INCREMENTAL=0,
+CARGO_PROFILE_DEV_DEBUG=0 and CARGO_PROFILE_TEST_DEBUG=0 in the command environment;
+use one target directory per application (work/target or work/portal-target).
+Keep release profiles/lockfiles pinned. Enable extra debug symbols only when
+needed for a specific diagnostic, and remove obsolete output after verification.
