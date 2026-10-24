@@ -1,6 +1,39 @@
 # Prototype verification — 2026-10-24
 
-## Final-pay reviews and settlement — version0.1.38
+## Regional wage compliance — version0.1.39
+
+-389 normal Rust tests and2,823 local PostgreSQL assertions pass.39 new manual
+ wage boundary vectors agree exactly between Rust and SQL;166 total payroll
+ centavo vectors are retained. Independent creator/preparer exclusion, effective
+ dates, workplace freshness, immutable history, RLS, older monthly/cutoff guards,
+ changed-fact resubmission and audit rollback are covered.
+-Two additive migrations through20261024061626 are deployed:50 hosted versions.
+ All79 earlier public record sets matched before/after. Protected SELECT-only
+ grants, invoker wrapper/view, private engine and immutable guards were verified.
+ No newWARN/ERROR or missing-FK-index findings;5 unrelated prior INFO remain.
+-Thirteen actual hosted nativeRust/Auth/REST proof groups pass. They include
+ independent classification approval, exact create retry, Rust/server result
+ parity, compact source privacy, legacy monthly advisory snapshots, changed-fact
+ approval rollback, Manager private-read exclusion, Employee desktop rejection,
+ stale revisions and unchanged earlier issued/received financial records.
+ Live company enforcement stayed unchanged/advisory. Strict monthly AND cutoff
+ gates were verified in local PostgreSQL rather than toggling the user's setting.
+ Synthetic accounts retain history disabled/archived with zero Auth sessions.
+-Eleven fictional native captures inspected, including date-field alignment,
+ classification save footer, approval confirmation, catalog/history, Admin
+ enforcement, Manager absence and dark125percent layout. Normal release startup
+ and normal close passed in an isolated configured folder. The normal executable
+ excludes QA controls and carries no company connection or credentials.
+-The catalog has69 dated bands/40categories across17 wage boards, verified
+24October2026. Unsupported dates stay unresolved. No salary/tax status changes,
+ automatic arrears, actual payments or government filings occur. Portal paused.
+ Regional wage and expanded reporting are the only resumed milestones.
+
+Current exact packaging/signature/installer/private-feed evidence is recorded
+separately; no remoteCI, Authenticode, signed-in native-button or other-PC claim.
+The user's installed38 remains untouched while39 is prepared.
+
+## Historical final-pay reviews and settlement — version0.1.38
 
 -378 normal Rust tests and2,483 local PostgreSQL assertions pass, including28
  new Rust/PostgreSQL final-pay centavo vectors and99 earlier payroll vectors.

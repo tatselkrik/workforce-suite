@@ -68,6 +68,7 @@ try {
   const annualTaxMigrations=[];
   const receiptMigrations=[];
   const finalPayMigrations=[];
+  const wageMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -81,6 +82,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.includes('_regional_wage_')){wageMigrations.push(filename);continue;}
     if(filename.includes('_payroll_final_pay_')){finalPayMigrations.push(filename);continue;}
     if(filename.endsWith('_payroll_individual_receipts.sql')){receiptMigrations.push(filename);continue;}
     if(filename.endsWith('_payroll_annual_tax_engine.sql')||filename.endsWith('_payroll_annual_tax_workflow.sql')||filename.endsWith('_payroll_annual_tax_receipt_index.sql')){annualTaxMigrations.push(filename);continue;}
@@ -382,6 +384,15 @@ try {
   await runFinalPayEngineTests({db,eq,deny,session,owner:uidA,unassigned:uidB});
   const {runFinalPayWorkflowTests}=await import('./final-pay-workflow.test.mjs');
   await runFinalPayWorkflowTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
+  await db.exec('reset role');
+  const wageTables=(await db.query("select tablename from pg_tables where schemaname='public'order by tablename")).rows.map(x=>x.tablename);
+  const wagePreserved={};for(const t of wageTables)wagePreserved[t]=(await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows;
+  for(const filename of wageMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  for(const t of wageTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,wagePreserved[t],'Regional wages preserve prior public '+t);
+  const {runWageEngineTests}=await import('./regional-wages.test.mjs');
+  await runWageEngineTests({db,eq,deny,session,owner:uidA});
+  const {runWageWorkflowTests}=await import('./regional-wage-workflow.test.mjs');
+  await runWageWorkflowTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

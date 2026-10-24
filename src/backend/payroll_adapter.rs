@@ -13,6 +13,9 @@ impl CloudClient {
         setup.finals.statuses = self.rows("payroll_final_status",company)?;
         setup.tax.slips = self.rows("payroll_tax_slips", company)?;
         if a.role.manages_hr() {
+            setup.wages.classifications=self.rows("payroll_wage_classifications",company)?;
+            setup.wages.settings=self.rows("payroll_wage_settings",company)?;
+            setup.wages.checks=self.rows("payroll_wage_check_index",company)?;
             setup.profiles = self.rows("payroll_profiles", company)?;
             setup.holidays = self.rows("payroll_holidays", company)?;
             setup.runs = self.rows("payroll_runs", company)?;
@@ -73,6 +76,7 @@ impl CloudClient {
             ensure!(s.company_id==a.company_id && s.year==s.as_of.year() && (a.role.manages_hr() || Some(s.employee_id)==a.employee_id), "Annual tax advice is outside your current access.");
         }
         ensure!(setup.finals.slips.iter().all(|s|s.company_id==a.company_id&&(a.role.manages_hr()||a.employee_id==Some(s.employee_id)))&&setup.finals.statuses.iter().all(|s|s.company_id==a.company_id&&(a.role.manages_hr()||a.employee_id==Some(s.employee_id))),"Final pay is outside your current access.");
+        ensure!(setup.wages.classifications.iter().all(|c|c.company_id==a.company_id)&&setup.wages.settings.iter().all(|s|s.company_id==a.company_id)&&setup.wages.checks.iter().all(|c|c.company_id==a.company_id),"Wage reviews are outside this company.");
         ensure!(setup.receipts.iter().all(|r|r.company_id==a.company_id && a.role.manages_hr()), "Payment receipt is outside your current access.");
         Ok(setup)
     }

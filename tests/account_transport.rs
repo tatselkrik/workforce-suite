@@ -1092,6 +1092,9 @@ fn baseline(company: &Company) -> Vec<Reply> {
         reply("GET /rest/v1/payroll_final_slips?",200,json!([])),
         reply("GET /rest/v1/payroll_final_status?",200,json!([])),
         reply("GET /rest/v1/payroll_tax_slips?",200,json!([])),
+        reply("GET /rest/v1/payroll_wage_classifications?",200,json!([])),
+        reply("GET /rest/v1/payroll_wage_settings?",200,json!([])),
+        reply("GET /rest/v1/payroll_wage_check_index?",200,json!([])),
         reply("GET /rest/v1/payroll_profiles?",200,json!([])),
         reply("GET /rest/v1/payroll_holidays?",200,json!([])),
         reply("GET /rest/v1/payroll_runs?",200,json!([])),
@@ -2117,6 +2120,7 @@ fn manager_desktop_sign_in_does_not_request_administrator_account_data() {
             && !r.prefix.contains("/payroll_tax_reconciliations?")
             && !r.prefix.contains("/payroll_payment_receipts?")
             && !r.prefix.contains("/payroll_final_cases?")
+            && !r.prefix.contains("/payroll_wage_")
     });
     replies.remove(6); // Correction reasons are HR-only, including their loading path.
     replies.retain(|r| !r.prefix.contains("/employment_history?"));
@@ -2143,6 +2147,7 @@ fn manager_desktop_sign_in_does_not_request_administrator_account_data() {
                 || r.line.contains("account_access_events")
                 || r.line.contains("payroll_payment_receipts")
                 || r.line.contains("payroll_final_cases")
+                || r.line.contains("payroll_wage_")
                 || r.line.contains("payroll_profiles")
                 || r.line.contains("payroll_items")
                 || r.line.contains("payroll_runs"))
@@ -3353,4 +3358,16 @@ fn final_pay_creation_uses_its_guarded_rpc_and_retries_one_identity_after_refres
  let mut after=baseline(&company);for r in &mut after{if r.prefix.starts_with("GET /rest/v1/payroll_final_cases?"){r.body=serde_json::to_vec(&demo.data.payroll.finals.records).unwrap();}if r.prefix.starts_with("GET /rest/v1/payroll_events?"){r.body=serde_json::to_vec(&demo.data.payroll.events).unwrap();}}
  replies.extend(after.into_iter().skip(1).take_while(|r|!r.prefix.starts_with("GET /auth/v1/user ")));
  let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();assert!(client.execute(Action::Payroll(action.clone()),&data).unwrap_err().to_string().contains("Payroll change saved, but refresh failed"));let result=client.execute(Action::Payroll(action),&data).unwrap();assert_eq!(result.payroll.finals.records[0].id,id);drop(client);server.join().unwrap();let req=requests.lock().unwrap();let writes=req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/manage_payroll_final ")).collect::<Vec<_>>();assert_eq!(writes.len(),2);assert_eq!(writes[0].json(),writes[1].json());assert_eq!(writes[0].json()["p_operation"],"create");assert!(!req.iter().any(|r|r.line.starts_with("POST /rest/v1/payroll_final_cases")));
+}
+
+#[test]
+fn wage_review_creation_uses_guarded_rpc_and_retry_identity(){
+ use hris_desktop::{domain::Action,payroll::PayrollAction};
+ let mut demo=DemoStore::new();let company=demo.data.company.clone();let id=uuid::Uuid::from_u128(39391);let employee=demo.data.employees[1].id;
+ let action=PayrollAction::new("wage_create",json!({"id":id,"employee_id":employee,"starts_on":"2026-01-01","ends_on":"2026-12-31","coverage":"covered","series_key":"vi-nonagri-large","workplace":"Synthetic Bacolod workplace","evidence":"PRIVATE_WAGE_TRANSPORT","note":"Reviewed industry and establishment size","reason":"Synthetic transport wage review","catalog_version":hris_desktop::payroll_wages::VERSION}));
+ demo.execute(Action::Payroll(action.clone())).unwrap();let saved=demo.data.payroll.wages.classifications[0].clone();
+ let mut replies=baseline(&company);for r in &mut replies{if r.prefix.starts_with("GET /rest/v1/employees?"){r.body=serde_json::to_vec(&demo.data.employees).unwrap();}}replies.push(reply("POST /rest/v1/rpc/manage_payroll_wage ",200,json!(saved)));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",500,json!({"message":"Synthetic saved-write refresh failure"})));replies.push(reply("POST /rest/v1/rpc/manage_payroll_wage ",200,json!(saved)));
+ let mut after=baseline(&company);for r in &mut after{if r.prefix.starts_with("GET /rest/v1/employees?"){r.body=serde_json::to_vec(&demo.data.employees).unwrap();}if r.prefix.starts_with("GET /rest/v1/payroll_wage_classifications?"){r.body=serde_json::to_vec(&demo.data.payroll.wages.classifications).unwrap();}if r.prefix.starts_with("GET /rest/v1/payroll_events?"){r.body=serde_json::to_vec(&demo.data.payroll.events).unwrap();}}
+ replies.extend(after.into_iter().skip(1).take_while(|r|!r.prefix.starts_with("GET /auth/v1/user ")));
+ let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();assert!(client.execute(Action::Payroll(action.clone()),&data).unwrap_err().to_string().contains("Payroll change saved, but refresh failed"));let result=client.execute(Action::Payroll(action),&data).unwrap();assert_eq!(result.payroll.wages.classifications[0].id,id);drop(client);server.join().unwrap();let req=requests.lock().unwrap();let writes=req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/manage_payroll_wage ")).collect::<Vec<_>>();assert_eq!(writes.len(),2);assert_eq!(writes[0].json(),writes[1].json());assert_eq!(writes[0].json()["p_operation"],"create");assert!(!req.iter().any(|r|r.line.starts_with("POST /rest/v1/payroll_wage_classifications")));
 }

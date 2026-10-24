@@ -7,6 +7,7 @@ use serde_json::Value;
 use serde_json::json;
 #[derive(Default)]
 pub(super) struct State {
+    pub(super) wages: super::wage_view::State,
     pub(super) finals: super::final_view::State,
     pub(super) payments: super::payment_view::State,
     pub(super) tax: super::tax_view::State,
@@ -200,7 +201,7 @@ struct Decision {
 }
 impl State {
     pub fn editing(&self) -> bool {
-        self.finals.editing() || self.payments.editing() || self.tax.editing() || self.thirteenth.editing() || self.profile.is_some()
+        self.wages.editing() || self.finals.editing() || self.payments.editing() || self.tax.editing() || self.thirteenth.editing() || self.profile.is_some()
             || self.cutoffs.editing()
             || self.holiday.is_some()
             || self.run.is_some()
@@ -214,6 +215,7 @@ impl State {
         if !a.saved(data) {
             return false;
         }
+        if a.operation.starts_with("wage_"){self.wages.accept(&a);return true;}
         if a.operation.starts_with("final_"){self.finals.accept(&a,data);return true;}
         if a.operation.starts_with("receipt_") {self.payments.accept();return true;}
         if a.operation.starts_with("tax_") {self.tax.accept(&a,data);return true;}
@@ -414,6 +416,8 @@ impl HrisApp {
         self.send(Command::Change(Action::Payroll(a)));
     }
     pub(super) fn payroll(&mut self, ui: &mut Ui) {
+        self.payroll_state.wages.bind(&self.data);
+        if self.payroll_state.wages.editing(){self.payroll_wage_forms(ui);return;}
         if self.payroll_state.finals.editing(){self.payroll_final_forms(ui);return;}
         if self.payroll_state.payments.editing() {self.payroll_payment_forms(ui);return;}
         if self.payroll_state.tax.editing() {self.payroll_tax_forms(ui);return;}
@@ -446,6 +450,7 @@ impl HrisApp {
                 "Annual tax",
                 "Payments",
                 "Final pay",
+                "Wage compliance",
             ]
             .iter()
             .enumerate()
@@ -476,6 +481,7 @@ impl HrisApp {
             8 => self.payroll_tax(ui),
             9 => self.payroll_payments(ui),
             10 => self.payroll_final(ui),
+            11 => self.payroll_wages(ui),
             _ => {
                 card(ui, |ui| {
                     ui.heading("Philippine private-sector payroll");
@@ -487,7 +493,7 @@ impl HrisApp {
                     ui.separator();
                     ui.label("Ordinary OT:125%. Rest/special day:130%; special + rest:150%; regular holiday:200%/260% on rest; double regular:300%/390%. Nonordinary OT multiplies by130%. Night differential adds10% of the applicable normal/OT rate for22:00–06:00.");
                     ui.label("SSS:5% employee /10% employer on MSC5,000–35,000 plus employer-only EC. PhilHealth:5% fixed monthly basic,10,000–100,000, equally shared. Pag-IBIG:1%/2% employee,2% employer, fund salary capped10,000. Monthly BIR table:2023 onwards.");
-                    ui.label("Rice and laundry use monthly caps2,500 and400 respectively. Other allowances default taxable. Regional minimum wages, unusual coverage and fringe-benefit tax need separate review. Use13th-month pay for actual benefit payouts and Annual tax for recorded-pay closing reconciliation; monthly basic pay /12 remains an accrual memo.");
+                    ui.label("Rice and laundry use monthly caps2,500 and400 respectively. Other allowances default taxable. Wage compliance compares verified regional basic floors. Unusual coverage and fringe-benefit tax require separate review. Use13th-month pay for actual benefit payouts and Annual tax for recorded-pay closing reconciliation; monthly basic pay /12 remains an accrual memo.");
                     for (title, url) in payroll::SOURCES {
                         ui.hyperlink_to(*title, *url);
                     }
@@ -1363,6 +1369,7 @@ impl HrisApp {
             return;
         }
         self.page = Page::Payroll;
+        if form.starts_with("payroll-wage"){self.prepare_wage_preview(&form);return;}
         if form.starts_with("payroll-final"){self.prepare_final_preview(&form);return;}
         if form.starts_with("payroll-payment") {self.payroll_state.tab=9;self.prepare_payment_preview(&form);return;}
         if form.starts_with("payroll-tax") {self.payroll_state.tab=8;self.prepare_tax_preview(&form);return;}

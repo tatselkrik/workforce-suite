@@ -43,3 +43,5 @@ pub mod payroll_final;
 pub mod payroll_payments;
 
 pub mod payroll_pdf;
+
+pub mod payroll_wages;

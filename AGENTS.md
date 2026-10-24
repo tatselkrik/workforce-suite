@@ -97,3 +97,12 @@ and terminal status aggregate-only, private references/evidence HR-only, unpaid
 withdrawal distinct from reversal, and same-employment duplicate guards. Do not gate
 owed pay on clearance, archiving or account access. The first reviewed pack supports
 same-year2026 separation/cash; cross-year settlements and amendments remain separate.
+
+
+Regional wage rules are in docs/REGIONAL-WAGES.md. Preserve evidenced effective
+classifications and independent creator/preparer-excluding approval. Compare only
+basic daily or exact true-monthly salary with supported dated official floors.
+Unknown dates/coverage stay unresolved; exemptions require independent evidence,
+not account role or tax flags. Optional Admin enforcement defaults off and guards
+older monthly/cutoff clients on the server. Retain immutable check/history/slips;
+changed facts require resubmission. A reference gap is not automatic arrears.

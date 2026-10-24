@@ -1,0 +1,2864 @@
+[
+  {
+    "label": "Exact daily floor",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 55000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "vi-nonagri-large",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 55000
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "meets_recorded_floor",
+          "rate_id": "vi-nonagri-large@2025-11-19",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 55000,
+          "required_salary_cents": 55000,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 55000
+    }
+  },
+  {
+    "label": "One cent below daily floor",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 54999,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "vi-nonagri-large",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "below_recorded_floor"
+      ],
+      "blocking_days": 1,
+      "max_gap_salary_cents": 1,
+      "exemption_days": 0,
+      "max_required_salary_cents": 55000
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "below_recorded_floor",
+          "rate_id": "vi-nonagri-large@2025-11-19",
+          "gap_salary_cents": 1,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 55000,
+          "required_salary_cents": 55000,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 1,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 1,
+      "max_required_salary_cents": 55000
+    }
+  },
+  {
+    "label": "Monthly rounds required salary up, not daily rate down",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "monthly",
+        "rate_cents": 1672916,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "vi-nonagri-large",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "below_recorded_floor"
+      ],
+      "blocking_days": 1,
+      "max_gap_salary_cents": 1,
+      "exemption_days": 0,
+      "max_required_salary_cents": 1672917
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "below_recorded_floor",
+          "rate_id": "vi-nonagri-large@2025-11-19",
+          "gap_salary_cents": 1,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 55000,
+          "required_salary_cents": 1672917,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 1,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 1,
+      "max_required_salary_cents": 1672917
+    }
+  },
+  {
+    "label": "Monthly exact cent ceiling passes",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "monthly",
+        "rate_cents": 1672917,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "vi-nonagri-large",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 1672917
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "meets_recorded_floor",
+          "rate_id": "vi-nonagri-large@2025-11-19",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 55000,
+          "required_salary_cents": 1672917,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 1672917
+    }
+  },
+  {
+    "label": "366divisor exact reference",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "monthly",
+        "rate_cents": 1677500,
+        "annual_divisor": 366
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "vi-nonagri-large",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 1677500
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "meets_recorded_floor",
+          "rate_id": "vi-nonagri-large@2025-11-19",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 55000,
+          "required_salary_cents": 1677500,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 1677500
+    }
+  },
+  {
+    "label": "vi-nonagri-small",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 52500,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "vi-nonagri-small",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 52500
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "meets_recorded_floor",
+          "rate_id": "vi-nonagri-small@2025-11-19",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 52500,
+          "required_salary_cents": 52500,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 52500
+    }
+  },
+  {
+    "label": "vi-agri",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 52000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "vi-agri",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 52000
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "meets_recorded_floor",
+          "rate_id": "vi-agri@2025-11-19",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 52000,
+          "required_salary_cents": 52000,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 52000
+    }
+  },
+  {
+    "label": "car-all",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 50500,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "car-all",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 50500
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "meets_recorded_floor",
+          "rate_id": "car-all@2025-12-30",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 50500,
+          "required_salary_cents": 50500,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 50500
+    }
+  },
+  {
+    "label": "i-nonagri-10plus",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 50500,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "i-nonagri-10plus",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 50500
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "meets_recorded_floor",
+          "rate_id": "i-nonagri-10plus@2025-11-19",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 50500,
+          "required_salary_cents": 50500,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 50500
+    }
+  },
+  {
+    "label": "i-other",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 48000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "i-other",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 48000
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "meets_recorded_floor",
+          "rate_id": "i-other@2025-11-19",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 48000,
+          "required_salary_cents": 48000,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 48000
+    }
+  },
+  {
+    "label": "ii-all",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 50000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "ii-all",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 50000
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "meets_recorded_floor",
+          "rate_id": "ii-all@2025-11-05",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 50000,
+          "required_salary_cents": 50000,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 50000
+    }
+  },
+  {
+    "label": "iii-aurora-2",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 51500,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "iii-aurora-2",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 51500
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "meets_recorded_floor",
+          "rate_id": "iii-aurora-2@2026-04-16",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 51500,
+          "required_salary_cents": 51500,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 51500
+    }
+  },
+  {
+    "label": "iii-six-provinces-2",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 59000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "iii-six-provinces-2",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 59000
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "meets_recorded_floor",
+          "rate_id": "iii-six-provinces-2@2026-04-16",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 59000,
+          "required_salary_cents": 59000,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 59000
+    }
+  },
+  {
+    "label": "ivb-all",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 45500,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "ivb-all",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 45500
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "meets_recorded_floor",
+          "rate_id": "ivb-all@2026-01-01",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 45500,
+          "required_salary_cents": 45500,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 45500
+    }
+  },
+  {
+    "label": "viii-other",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 44000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "viii-other",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 44000
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "meets_recorded_floor",
+          "rate_id": "viii-other@2026-06-01",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 44000,
+          "required_salary_cents": 44000,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 44000
+    }
+  },
+  {
+    "label": "ix-other",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 45100,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "ix-other",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 45100
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "meets_recorded_floor",
+          "rate_id": "ix-other@2026-06-01",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 45100,
+          "required_salary_cents": 45100,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 45100
+    }
+  },
+  {
+    "label": "x-ii",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 48500,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "x-ii",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 48500
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "meets_recorded_floor",
+          "rate_id": "x-ii@2026-05-01",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 48500,
+          "required_salary_cents": 48500,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 48500
+    }
+  },
+  {
+    "label": "xi-agri",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 52500,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "xi-agri",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 52500
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "meets_recorded_floor",
+          "rate_id": "xi-agri@2026-09-01",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 52500,
+          "required_salary_cents": 52500,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 52500
+    }
+  },
+  {
+    "label": "xii-agri",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 44300,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "xii-agri",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 44300
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "meets_recorded_floor",
+          "rate_id": "xii-agri@2025-12-15",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 44300,
+          "required_salary_cents": 44300,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 44300
+    }
+  },
+  {
+    "label": "xiii-all",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 47500,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "xiii-all",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 47500
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "meets_recorded_floor",
+          "rate_id": "xiii-all@2026-05-01",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 47500,
+          "required_salary_cents": 47500,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 47500
+    }
+  },
+  {
+    "label": "ncr-lower",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 71800,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "ncr-lower",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 71800
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "meets_recorded_floor",
+          "rate_id": "ncr-lower@2026-09-26",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 71800,
+          "required_salary_cents": 71800,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 71800
+    }
+  },
+  {
+    "label": "CALABARZON future rate does not activate early",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 60000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-25",
+      "ends_on": "2026-10-26",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "iva-nonagri-ema",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor",
+        "below_recorded_floor"
+      ],
+      "blocking_days": 1,
+      "max_gap_salary_cents": 4500,
+      "exemption_days": 0,
+      "max_required_salary_cents": 64500
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-25",
+          "status": "meets_recorded_floor",
+          "rate_id": "iva-nonagri-ema@2026-04-07",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 60000,
+          "required_salary_cents": 60000,
+          "classification_revision": 1
+        },
+        {
+          "date": "2026-10-26",
+          "status": "below_recorded_floor",
+          "rate_id": "iva-nonagri-ema@2026-10-26",
+          "gap_salary_cents": 4500,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 64500,
+          "required_salary_cents": 64500,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-26",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-25",
+      "blocking_days": 1,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 4500,
+      "max_required_salary_cents": 64500
+    }
+  },
+  {
+    "label": "Bicol December tranche boundary",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 45500,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-11-30",
+      "ends_on": "2026-12-01",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "v-all",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor",
+        "below_recorded_floor"
+      ],
+      "blocking_days": 1,
+      "max_gap_salary_cents": 2500,
+      "exemption_days": 0,
+      "max_required_salary_cents": 48000
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-11-30",
+          "status": "meets_recorded_floor",
+          "rate_id": "v-all@2026-04-08",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 45500,
+          "required_salary_cents": 45500,
+          "classification_revision": 1
+        },
+        {
+          "date": "2026-12-01",
+          "status": "below_recorded_floor",
+          "rate_id": "v-all@2026-12-01",
+          "gap_salary_cents": 2500,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 48000,
+          "required_salary_cents": 48000,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-12-01",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-11-30",
+      "blocking_days": 1,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 2500,
+      "max_required_salary_cents": 48000
+    }
+  },
+  {
+    "label": "BARMM December tranche boundary",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 40100,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-11-30",
+      "ends_on": "2026-12-01",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "barmm-other-agri",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor",
+        "below_recorded_floor"
+      ],
+      "blocking_days": 1,
+      "max_gap_salary_cents": 2500,
+      "exemption_days": 0,
+      "max_required_salary_cents": 42600
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-11-30",
+          "status": "meets_recorded_floor",
+          "rate_id": "barmm-other-agri@2026-08-06",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 40100,
+          "required_salary_cents": 40100,
+          "classification_revision": 1
+        },
+        {
+          "date": "2026-12-01",
+          "status": "below_recorded_floor",
+          "rate_id": "barmm-other-agri@2026-12-01",
+          "gap_salary_cents": 2500,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 42600,
+          "required_salary_cents": 42600,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-12-01",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-11-30",
+      "blocking_days": 1,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 2500,
+      "max_required_salary_cents": 42600
+    }
+  },
+  {
+    "label": "Northern Mindanao May tranche boundary",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 48600,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-04-30",
+      "ends_on": "2026-05-01",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "x-i",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "meets_recorded_floor",
+        "below_recorded_floor"
+      ],
+      "blocking_days": 1,
+      "max_gap_salary_cents": 1400,
+      "exemption_days": 0,
+      "max_required_salary_cents": 50000
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-04-30",
+          "status": "meets_recorded_floor",
+          "rate_id": "x-i@2026-01-16",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 48600,
+          "required_salary_cents": 48600,
+          "classification_revision": 1
+        },
+        {
+          "date": "2026-05-01",
+          "status": "below_recorded_floor",
+          "rate_id": "x-i@2026-05-01",
+          "gap_salary_cents": 1400,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 50000,
+          "required_salary_cents": 50000,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-05-01",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-04-30",
+      "blocking_days": 1,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 1400,
+      "max_required_salary_cents": 50000
+    }
+  },
+  {
+    "label": "Unassigned never implies compliance",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 55000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": []
+    },
+    "expected": {
+      "statuses": [
+        "missing_classification"
+      ],
+      "blocking_days": 1,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "missing_classification",
+          "rate_id": null,
+          "gap_salary_cents": null,
+          "classification_id": null,
+          "floor_daily_cents": null,
+          "required_salary_cents": null,
+          "classification_revision": null
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 1,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 0
+    }
+  },
+  {
+    "label": "Draft does not authorize a rate",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 55000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "vi-nonagri-large",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "draft",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "missing_classification"
+      ],
+      "blocking_days": 1,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "missing_classification",
+          "rate_id": null,
+          "gap_salary_cents": null,
+          "classification_id": null,
+          "floor_daily_cents": null,
+          "required_salary_cents": null,
+          "classification_revision": null
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 1,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 0
+    }
+  },
+  {
+    "label": "Retired no longer applies",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 55000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "vi-nonagri-large",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "retired",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "missing_classification"
+      ],
+      "blocking_days": 1,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "missing_classification",
+          "rate_id": null,
+          "gap_salary_cents": null,
+          "classification_id": null,
+          "floor_daily_cents": null,
+          "required_salary_cents": null,
+          "classification_revision": null
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 1,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 0
+    }
+  },
+  {
+    "label": "Expired does not apply",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 55000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-10-23",
+          "coverage": "covered",
+          "series_key": "vi-nonagri-large",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "missing_classification"
+      ],
+      "blocking_days": 1,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "missing_classification",
+          "rate_id": null,
+          "gap_salary_cents": null,
+          "classification_id": null,
+          "floor_daily_cents": null,
+          "required_salary_cents": null,
+          "classification_revision": null
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 1,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 0
+    }
+  },
+  {
+    "label": "Overlapping facts unresolved",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 55000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "vi-nonagri-large",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000390006",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "vi-nonagri-large",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "overlapping_classifications"
+      ],
+      "blocking_days": 1,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "overlapping_classifications",
+          "rate_id": null,
+          "gap_salary_cents": null,
+          "classification_id": null,
+          "floor_daily_cents": null,
+          "required_salary_cents": null,
+          "classification_revision": null
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 1,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 0
+    }
+  },
+  {
+    "label": "Changed workplace invalidates review",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 55000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": "00000000-0000-4000-8000-000000390007",
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "vi-nonagri-large",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "workplace_or_employment_changed"
+      ],
+      "blocking_days": 1,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "workplace_or_employment_changed",
+          "rate_id": null,
+          "gap_salary_cents": null,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": null,
+          "required_salary_cents": null,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 1,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 0
+    }
+  },
+  {
+    "label": "NIR placeholder is not zero wage",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 55000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "nir-zero",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "rate_not_verified"
+      ],
+      "blocking_days": 1,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "rate_not_verified",
+          "rate_id": null,
+          "gap_salary_cents": null,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": null,
+          "required_salary_cents": null,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 1,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 0
+    }
+  },
+  {
+    "label": "Self approval does not qualify",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 55000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "vi-nonagri-large",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390004",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "unreviewed_classification"
+      ],
+      "blocking_days": 1,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "unreviewed_classification",
+          "rate_id": null,
+          "gap_salary_cents": null,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": null,
+          "required_salary_cents": null,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 1,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 0
+    }
+  },
+  {
+    "label": "Unknown coverage not exempt",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 55000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "unknown",
+          "series_key": "vi-nonagri-large",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "nonstandard_coverage_needs_review"
+      ],
+      "blocking_days": 1,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "nonstandard_coverage_needs_review",
+          "rate_id": null,
+          "gap_salary_cents": null,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": null,
+          "required_salary_cents": null,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 1,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 0
+    }
+  },
+  {
+    "label": "Unverified earlier NCR stays unresolved",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 75500,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-09-25",
+      "ends_on": "2026-09-26",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "ncr-nonagri",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "rate_not_verified",
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 1,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 75500
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-09-25",
+          "status": "rate_not_verified",
+          "rate_id": null,
+          "gap_salary_cents": null,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": null,
+          "required_salary_cents": null,
+          "classification_revision": 1
+        },
+        {
+          "date": "2026-09-26",
+          "status": "meets_recorded_floor",
+          "rate_id": "ncr-nonagri@2026-09-26",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 75500,
+          "required_salary_cents": 75500,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-09-26",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-09-25",
+      "blocking_days": 1,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 75500
+    }
+  },
+  {
+    "label": "Unverified early IVA stays unresolved",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 60000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-04-06",
+      "ends_on": "2026-04-07",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "covered",
+          "series_key": "iva-nonagri-ema",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "rate_not_verified",
+        "meets_recorded_floor"
+      ],
+      "blocking_days": 1,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0,
+      "max_required_salary_cents": 60000
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-04-06",
+          "status": "rate_not_verified",
+          "rate_id": null,
+          "gap_salary_cents": null,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": null,
+          "required_salary_cents": null,
+          "classification_revision": 1
+        },
+        {
+          "date": "2026-04-07",
+          "status": "meets_recorded_floor",
+          "rate_id": "iva-nonagri-ema@2026-04-07",
+          "gap_salary_cents": 0,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": 60000,
+          "required_salary_cents": 60000,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-04-07",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-04-06",
+      "blocking_days": 1,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 60000
+    }
+  },
+  {
+    "label": "Exemption visibly distinct",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 55000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "exempt",
+          "series_key": "",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "documented_exemption"
+      ],
+      "blocking_days": 0,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 1,
+      "max_required_salary_cents": 0
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "documented_exemption",
+          "rate_id": null,
+          "gap_salary_cents": null,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": null,
+          "required_salary_cents": null,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 0,
+      "exemption_days": 1,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 0
+    }
+  },
+  {
+    "label": "No exemption without evidence",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 55000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "exempt",
+          "series_key": "",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "",
+          "note": "PRIVATE_SYNTHETIC_COVERAGE_REVIEW",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "unreviewed_exemption"
+      ],
+      "blocking_days": 1,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "unreviewed_exemption",
+          "rate_id": null,
+          "gap_salary_cents": null,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": null,
+          "required_salary_cents": null,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 1,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 0
+    }
+  },
+  {
+    "label": "No exemption without rationale",
+    "source": {
+      "company_id": "00000000-0000-4000-8000-000000390001",
+      "employee_id": "00000000-0000-4000-8000-000000390002",
+      "pay": {
+        "basis": "daily",
+        "rate_cents": 55000,
+        "annual_divisor": 365
+      },
+      "employee_basis": {
+        "work_location_id": null,
+        "employment_type_id": null
+      },
+      "starts_on": "2026-10-24",
+      "ends_on": "2026-10-24",
+      "classifications": [
+        {
+          "id": "00000000-0000-4000-8000-000000390003",
+          "company_id": "00000000-0000-4000-8000-000000390001",
+          "employee_id": "00000000-0000-4000-8000-000000390002",
+          "starts_on": "2026-01-01",
+          "ends_on": "2026-12-31",
+          "coverage": "exempt",
+          "series_key": "",
+          "workplace": "Fictional Bacolod workplace",
+          "evidence": "PRIVATE_SYNTHETIC_CATEGORY_EVIDENCE",
+          "note": "",
+          "employee_basis": {
+            "work_location_id": null,
+            "employment_type_id": null
+          },
+          "status": "approved",
+          "revision": 1,
+          "created_by": "00000000-0000-4000-8000-000000390004",
+          "prepared_by": "00000000-0000-4000-8000-000000390004",
+          "approved_by": "00000000-0000-4000-8000-000000390005",
+          "approved_at": "2026-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "statuses": [
+        "unreviewed_exemption"
+      ],
+      "blocking_days": 1,
+      "max_gap_salary_cents": 0,
+      "exemption_days": 0
+    },
+    "result": {
+      "days": [
+        {
+          "date": "2026-10-24",
+          "status": "unreviewed_exemption",
+          "rate_id": null,
+          "gap_salary_cents": null,
+          "classification_id": "00000000-0000-4000-8000-000000390003",
+          "floor_daily_cents": null,
+          "required_salary_cents": null,
+          "classification_revision": 1
+        }
+      ],
+      "ends_on": "2026-10-24",
+      "version": "PH-regional-wages-2026-10-24-v1",
+      "starts_on": "2026-10-24",
+      "blocking_days": 1,
+      "exemption_days": 0,
+      "max_gap_salary_cents": 0,
+      "max_required_salary_cents": 0
+    }
+  }
+]
