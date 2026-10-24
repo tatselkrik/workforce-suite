@@ -1,4 +1,38 @@
-# Prototype verification — 2026-10-24
+# Prototype verification — 2026-10-25
+
+## Native government reconciliation — source0.1.42
+
+-423default Rust tests pass. Three gated checks are separate: both government
+ PostgreSQL-vector checks pass in an explicit18test run; the real installer and
+ recovery check requires the exact candidate artifacts and is recorded with the
+ packaged release evidence. An earlier blanket include-ignored invocation failed
+ that installer check because its required environment was unset, not a tested
+ application defect. No passing installer result is inferred from that run.
+-3,785local PostgreSQL assertions and chronological replay of all58migrations
+ pass. The additive reconciliation migration preserves86prior public record sets
+ and243functions. Existing source-v1 stays unchanged. Explicit missing JSON
+ attestations/source bases and fractional revisions are rejected.
+-Actual hosted Auth/REST verifies HR preparation, retained issued employee amount,
+ independent Administrator approval, all-editor denial, concurrent duplicate
+ remittance prevention, idempotent voids/linked replacement, protected table/API
+ denial and immediate revoked-membership denial. Six protected responses with114
+ source rows and privacy-limited CSV validate through the native engine in memory.
+ All24prior payroll record sets and earlier Auth users match. Synthetic payments
+ end voided and synthetic accounts remain disabled/archived/session-free.
+-Eleven fictional native views were rendered and inspected: overview, sources,
+ allocation, approval, remittance, void, history, compact, dark125percent, HR and
+ Manager denial. These prove native layout; actual signed-in native button clicks,
+ agency-validator acceptance and current portal browser/phone visuals remain
+ unverified. Portal packages0.1.4/0.1.5 are already delivered independently.
+-New government Rust modules/examples pass their formatting check. The full
+ repository formatting gate still reports differences in32existing files,
+ confirmed against the preceding commit. That unrelated formatting debt is
+ preserved. No remote CI result is claimed. Post-deployment advisors add no
+ warning/error or unindexed FK finding; three older warnings remain.
+-Versioned package/signature/installer/actual installed-state results are separate
+ private release evidence. This increment implements reconciliation worksheets;
+ legal identities and exact agency upload files remain queued. No return was
+ filed and no money transferred. See [review checklist](docs/GOVERNMENT-0.1.42-CHECKLIST.md).
 
 ## Separate local employee portal — version0.1.2
 

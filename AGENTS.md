@@ -208,5 +208,9 @@ client requests. Preserve original slips/receipts and earned contribution months
 BIR review follows individual received dates. An unknown contribution allocation,
 employer share or EC is unresolved, never silently zero. Postdated receipts retain
 their date and explicit review state. Final cash/source tax must not be counted
-twice. The source RPC/engine alone do not complete government files, remittance
-history, native UI or milestone2; deliver/install only after those scopes pass.
+twice. Contribution allocation and remittance workflow rules are also in that
+document. Preserve exact issued employee amounts, all-editor/own-source approval
+exclusions, immutable approved reviews/receipts, linked correction chains and
+fresh protected exports. Only Administrators record/void evidenced remittances.
+Internal worksheets are not agency upload files. Source/workflow increments do
+not complete the full government milestone without legal identity/file adapters.

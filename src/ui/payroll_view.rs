@@ -7,6 +7,7 @@ use serde_json::Value;
 use serde_json::json;
 #[derive(Default)]
 pub(super) struct State {
+    pub(super) government:super::government_view::State,
     pub(super) amendments:super::amendment_view::State,
     pub(super) reports:super::payroll_report_view::State,
     pub(super) wages: super::wage_view::State,
@@ -203,6 +204,7 @@ struct Decision {
 }
 impl State {
     pub fn editing(&self) -> bool {
+        if self.government.editing(){return true;}
         self.amendments.editing() || self.wages.editing() || self.finals.editing() || self.payments.editing() || self.tax.editing() || self.thirteenth.editing() || self.profile.is_some()
             || self.cutoffs.editing()
             || self.holiday.is_some()
@@ -419,6 +421,8 @@ impl HrisApp {
         self.send(Command::Change(Action::Payroll(a)));
     }
     pub(super) fn payroll(&mut self, ui: &mut Ui) {
+        self.payroll_state.government.bind(&self.data);
+        if self.payroll_state.government.editing(){self.payroll_government(ui);return;}
         if self.payroll_state.amendments.editing(){self.payroll_amendment_forms(ui);return;}
         self.payroll_state.wages.bind(&self.data);
         self.payroll_state.reports.bind(&self.data);
@@ -457,6 +461,7 @@ impl HrisApp {
                 "Final pay",
                 "Wage compliance",
                 "Amendments",
+                "Government",
             ]
             .iter()
             .enumerate()
@@ -489,6 +494,7 @@ impl HrisApp {
             10 => self.payroll_final(ui),
             11 => self.payroll_wages(ui),
             12 => self.payroll_amendments(ui),
+            13 => self.payroll_government(ui),
             _ => {
                 card(ui, |ui| {
                     ui.heading("Philippine private-sector payroll");
@@ -1376,6 +1382,7 @@ impl HrisApp {
             return;
         }
         self.page = Page::Payroll;
+        if form.starts_with("payroll-government"){self.prepare_government_preview(&form);return;}
         if form.starts_with("payroll-amendment"){self.prepare_amendment_preview(&form);return;}
         if form.starts_with("payroll-report"){self.prepare_consolidated_report_preview(&form);return;}
         if form.starts_with("payroll-wage"){self.prepare_wage_preview(&form);return;}

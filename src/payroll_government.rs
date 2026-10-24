@@ -3,8 +3,53 @@
 use anyhow::{Result, ensure};
 use chrono::{DateTime, Datelike, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
+#[cfg(any(test, feature = "qa-screenshot"))]
+mod preview;
+mod workflow;
+#[cfg(any(test, feature = "qa-screenshot"))]
+pub(crate) use preview::fixture as preview;
+pub use workflow::{
+    Action, Allocation, Basis, EmployeeLabel, Event, Filter, Receipt, ReceiptAllocation,
+    Reconciliation, Review, ReviewWire,
+};
+pub use workflow::{decimal, parse_cents, validate_plan};
+impl Agency {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Bir => "BIR",
+            Self::Sss => "SSS",
+            Self::Philhealth => "PhilHealth",
+            Self::Pagibig => "Pag-IBIG",
+        }
+    }
+}
+impl Kind {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Monthly => "Monthly salary",
+            Self::Cutoff => "Cutoff salary",
+            Self::Thirteenth => "13th-month payout",
+            Self::Amendment => "Linked amendment",
+            Self::FinalAdjustment => "Final tax adjustment",
+            Self::FinalContribution => "Final contribution adjustment",
+            Self::AnnualTax => "Annual tax settlement",
+        }
+    }
+}
+impl State {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Approved => "Approved, not received",
+            Self::Received => "Received",
+            Self::ReceiptMissing => "Individual receipt missing",
+            Self::DatedAfterAsOf => "Receipt dated after report date",
+            Self::Withdrawn => "Withdrawn",
+            Self::ReviewOnly => "Review only",
+        }
+    }
+}
 
 const LIMIT: i64 = 1_000_000_000_000_000;
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
@@ -58,7 +103,7 @@ impl Parts {
         [self.employee_cents, self.employer_cents, self.ec_cents]
     }
 }
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct Fact {
     pub company_id: Uuid,
@@ -136,6 +181,7 @@ pub struct Summary {
     pub missing_receipt_count: usize,
     pub dated_after_as_of_count: usize,
     pub unreceived_count: usize,
+    pub negative_balance_count: usize,
     pub remitted_cents: i64,
     /// Positive outstanding / negative excess; neither implies a credit/refund.
     pub difference_cents: Option<i64>,
@@ -241,9 +287,11 @@ pub fn reconcile(
         missing_receipt_count: 0,
         dated_after_as_of_count: 0,
         unreceived_count: 0,
+        negative_balance_count: 0,
         remitted_cents: 0,
         difference_cents: None,
     };
+    let mut people: HashMap<Uuid, [i64; 3]> = HashMap::new();
     for f in facts {
         validate_fact(f, cid, asof)?;
         ensure!(
@@ -296,6 +344,10 @@ pub fn reconcile(
             continue;
         }
         s.source_count += 1;
+        let person = people.entry(f.employee_id).or_default();
+        for (i, v) in f.parts.values().into_iter().enumerate() {
+            person[i] = add(person[i], v.unwrap_or(0))?;
+        }
         let known = s.known_parts.values();
         let mut sums = [0; 3];
         for (i, v) in f.parts.values().into_iter().enumerate() {
@@ -323,6 +375,12 @@ pub fn reconcile(
         );
         if !r.voided && r.agency == agency && r.month == month {
             s.remitted_cents = add(s.remitted_cents, r.amount_cents)?;
+        }
+    }
+    if agency != Agency::Bir {
+        s.negative_balance_count = people.values().filter(|p| p.iter().any(|n| *n < 0)).count();
+        if s.negative_balance_count > 0 {
+            s.complete = false;
         }
     }
     if s.complete {

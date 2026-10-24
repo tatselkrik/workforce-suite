@@ -74,8 +74,16 @@ unconfigured external connection to a completed integration.
   versions with86recordsets/241functions preserved; hosted checks cover93facts,
   four agency projections and current protected-role denial/revocation. All24prior
   payroll table sets and earlier Auth users matched. Native library78tests pass;
-  allocations/remittance storage, native UI and file adapters remain outstanding.
-  No native release or government upload file is delivered yet. See
+  The next0.1.42 reconciliation increment now has reviewed allocations, immutable
+  remittance/void/correction storage, native screens and fresh privacy-limited CSV.
+  Its workflow migration is deployed58 with86recordsets/243functions preserved;
+  3,785local database assertions and fresh58migration replay pass. Actual hosted
+  checks include independent approval, a concurrent duplicate-reference race,
+  revocation and native validation of six snapshots/114source rows. All24prior
+  payroll sets and earlier Auth users match; synthetic payments end voided.
+  Eleven fictional native screen layouts are inspected. Versioned desktop
+  packaging/installation is pending. Legal identity/file adapters remain queued;
+  the complete government milestone is partial. See
   [government reporting boundaries](PAYROLL-GOVERNMENT.md).
 - Effective-date policies, balances and delegation follow the existing saved
   charges/plans and immutable history rules; they do not rewrite older requests.

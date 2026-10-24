@@ -6,6 +6,8 @@ Application identifier: `io.github.tatselkrik.hrisdesktop`.
 
 ## What works
 
+- **Government reconciliation:** **Payroll → Government** reviews SSS, PhilHealth, Pag-IBIG and BIR sources by month. Evidenced contribution allocations retain the issued employee deduction and need an independent Administrator. Administrator remittance records, voids and linked corrections retain history; fresh CSV worksheets omit private evidence. Agency upload files remain a separate increment. See [workflow rules](docs/PAYROLL-GOVERNMENT.md) and the [0.1.42 checklist](docs/GOVERNMENT-0.1.42-CHECKLIST.md).
+
 - **Linked payroll amendments:** **Payroll → Amendments** retains paid originals while issuing independently approved supplements, reviewed same-year statutory refunds and separate overpayment discrepancies without automatic recovery. Own PDF/CSV statements and consolidated report-v2 show supplemental cash once. Final pay also supports prior-year separation with evidenced2026 receipt dates. See [amendment rules](docs/PAYROLL-AMENDMENTS.md) and the [0.1.41 review checklist](docs/AMENDMENTS-0.1.41-CHECKLIST.md).
 
 - **Separate employee portal:** the first local portal milestone provides own employment/contact details, server-timed attendance and approved payslips with CSV/browser printing. It has a separate Rust server and responsive browser interface; it does not change desktop Employee restrictions. Public hosting and additional request flows remain later increments. See [employee portal](docs/EMPLOYEE-PORTAL.md).

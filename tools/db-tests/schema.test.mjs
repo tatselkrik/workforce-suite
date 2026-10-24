@@ -74,6 +74,7 @@ try {
   const portalTimeMigrations=[];
   const portalInboxMigrations=[];
   const governmentMigrations=[];
+  const governmentReconciliationMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -87,6 +88,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_government_reconciliation.sql')){governmentReconciliationMigrations.push(filename);continue;}
     if(filename.endsWith('_government_payroll_sources.sql')){governmentMigrations.push(filename);continue;}
     if(filename.endsWith('_employee_portal_notifications.sql')){portalInboxMigrations.push(filename);continue;}
     if(filename.endsWith('_employee_portal_attendance_context.sql')){portalTimeMigrations.push(filename);continue;}
@@ -434,6 +436,10 @@ try {
   for(const filename of governmentMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
   const{runGovernmentSourceTests}=await import('./government-payroll.test.mjs');await runGovernmentSourceTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   await db.exec('reset role');for(const t of governmentTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,governmentBefore[t],'Government read-only migration preserves '+t);
+  const beforeGovernmentWorkflow={};for(const t of governmentTables)beforeGovernmentWorkflow[t]=(await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows;
+  for(const filename of governmentReconciliationMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  for(const t of governmentTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,beforeGovernmentWorkflow[t],'Government workflow migration preserves '+t);
+  const{runGovernmentReconciliationTests}=await import('./government-reconciliation.test.mjs');await runGovernmentReconciliationTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

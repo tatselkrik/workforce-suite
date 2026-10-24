@@ -1714,6 +1714,7 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
 }
 
 pub enum Command {
+    Government {filter:crate::payroll_government::Filter,action:Option<crate::payroll_government::Action>,destination:Option<std::path::PathBuf>},
     PayrollReport {filter:crate::payroll_reporting::Filter,destination:Option<std::path::PathBuf>},
     PayrollExport { kind:String, record_id:Option<Uuid>, year:i32, destination:std::path::PathBuf },
     ImportErrors {
@@ -1742,6 +1743,7 @@ pub enum Command {
 }
 
 pub struct Update {
+    pub government:Option<crate::payroll_government::Reconciliation>,
     pub payroll_report:Option<crate::payroll_reporting::Report>,
     pub report: Option<crate::reports::Report>,
     pub result: std::result::Result<Snapshot, String>,
@@ -1777,6 +1779,7 @@ pub fn worker(
             let mut message = String::new();
             let mut report_result = None;
             let mut payroll_report_result = None;
+            let mut government_result = None;
             let mut update_state = None;
             let mut check_after_sign_in = false;
             let mut result: Result<Snapshot> = match command {
@@ -1891,6 +1894,14 @@ pub fn worker(
                         }
                         crate::reports::save_csv(&destination, &preview.error_csv()?)?;
                         Ok(current.clone())
+                    })()
+                }
+                Command::Government{filter,action,destination}=>{
+                    (||->Result<Snapshot>{
+                        let client=cloud.as_mut().context("Company sign-in is required for government reconciliation.")?;
+                        let report=client.government_reconciliation(&current,filter,action.as_ref(),destination.as_deref())?;
+                        message=if action.is_some(){"Government record saved. Review the current status and audit history.".into()}else if destination.is_some(){"Fresh government review worksheet exported. References and evidence are kept private.".into()}else{"Government reconciliation refreshed from current records.".into()};
+                        government_result=Some(report);Ok(current.clone())
                     })()
                 }
                 Command::PayrollReport{filter,destination}=>{
@@ -2033,6 +2044,7 @@ pub fn worker(
             }
             if events
                 .send(Update {
+                    government:government_result,
                     report: report_result,
                     payroll_report:payroll_report_result,
                     result: result.map_err(|e| e.to_string()),
@@ -2057,6 +2069,7 @@ pub fn worker(
                         .unwrap_or_else(|e| UpdateState::Failed(e.to_string()));
                     if events
                         .send(Update {
+                            government:None,
                             report: None,
                             payroll_report:None,
                             result: Ok(current.clone()),

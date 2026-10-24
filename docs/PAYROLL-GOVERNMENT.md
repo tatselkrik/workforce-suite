@@ -1,26 +1,30 @@
 # Government payroll exports and reconciliation
 
-Implementation is in progress. This milestone is not delivered or installed.
-The new `payroll_government` module currently provides source validation and
-reconciliation arithmetic; an additive read-only source RPC is also implemented.
-Remittance storage, reviewed allocations, native UI,
-agency-specific file generation and end-to-end verification remain outstanding.
-Eleven Rust checks pass, including strict decoding of local PostgreSQL vectors.
-The local PostgreSQL suite passes3,591assertions. The source migration is deployed
-at schema version57 with all86prior public record sets and241existing functions
-unchanged. Hosted checks validate93published fact rows across four agencies,
-protected HR/Admin access, Employee/Manager denial, forged metadata rejection,
-invalid parameters and immediate disabled-membership denial. All24existing payroll
-table sets and prior Auth users matched; synthetic histories remain disabled/
-archived/session-free. The native library suite passes78tests with2ignored;
-the explicit government-vector run includes its otherwise ignored conformance
-check. Native UI/delivery remain outstanding; a source API alone does not complete milestone2.
-Existing monthly statutory CSV files remain generic payroll worksheets.
+Source0.1.42 implements **Payroll → Government**, reviewed contribution allocations,
+recorded remittances and fresh reconciliation CSV worksheets. This is a partial
+government-reporting milestone: private legal identities and exact agency upload
+formats/validators remain outstanding. Delivery and installation are established
+separately by the versioned release evidence. Existing monthly statutory CSV files
+and the new government CSV are internal review worksheets, not official returns.
+
+The additive workflow migration is deployed at58schema versions, preserving all86
+preexisting public record sets and243functions. The local PostgreSQL suite passes
+3,785assertions and a fresh chronological replay of all58migrations. Hosted real
+Auth/REST checks cover HR preparation, independent Administrator approval, missing
+attestation rejection, duplicate-reference races, idempotent voids, linked receipt
+corrections, RLS/direct-write denial and immediate membership revocation. A native
+diagnostic validates six fresh protected snapshots with114source rows and their
+CSV output in memory. All24earlier payroll record sets and prior Auth users match.
+Synthetic remittances end voided and accounts disabled/archived/session-free.
+Fictional native screen inspection includes normal/compact/dark125percent layouts,
+allocation/approval/remittance/void/history and Manager denial. Actual signed-in
+native button interactions and government validator acceptance are not claimed.
 
 Post-deployment advisors report3warnings: Auth leaked-password protection disabled
 and2multiple-permissive-policy warnings. They also report5unindexed foreign-key
-INFO findings,5deny-by-default RLS INFO findings and105unused-index INFO findings.
-This function-only migration did not alter those tables or Auth settings. The
+INFO findings,5deny-by-default RLS INFO findings and113unused-index INFO findings
+after the workflow migration. No new warning or unindexed foreign-key finding
+was introduced. Existing Auth settings and those earlier table policies remain. The
 private verification record retains exact findings. References:
 [password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection),
 [policy lint](https://supabase.com/docs/guides/database/database-linter?lint=0006_multiple_permissive_policies),
@@ -77,13 +81,45 @@ pack, penalty/deadline calculation, tax filing, transfer or provider connection.
 
 ## Remaining implementation
 
-1. Add reviewed contribution allocations, preserving the deployed source-v1
-   contract through new checked-in migrations.
-2. HR-only legal identity/company registration data, validated without changing
+1. HR-only legal identity/company registration data, validated without changing
    original payslips or weakening older clients.
-3. Auditable remittance records/voids and source freshness checks.
-4. Native review screens, fresh worksheet exports and scoped source/issue details.
-5. Exact agency files after complete specification/validator verification; block
+2. Exact agency files after complete specification/validator verification; block
    missing/ambiguous inputs rather than silently creating incomplete returns.
-6. Proportionate local/database/hosted/privacy checks, versioned desktop delivery
-   and installation. Public portals and actual government filing remain out of scope.
+3. Complete the remaining government-specific verification and versioned delivery.
+   Public portals and actual government filing remain out of scope.
+
+## Contribution reviews and remittance records — source0.1.42
+
+HR/Admin opens a current agency/month snapshot. Monthly/cutoff known shares stay
+read-only. Special13th-month, amendment and final-contribution amounts may have
+explicit reviewed coverage and employer/EC shares. Every employee centavo must
+sum to the immutable issued deduction/adjustment; zero cannot be split into new
+charges/refunds. Covered months must be unique, within evidenced service and any
+known original month. Unknown shares remain unresolved until an evidenced review
+is approved. A negative correction needs an existing known per-person charge;
+another employee's positive charge never covers it.
+
+Draft/save/submit/return/cancel uses retained revisions. Every creator, editor and
+submitter remains in the exclusion history. Approval requires an Administrator
+who contributed to no version of that draft and is not the source employee.
+Approved/cancelled reviews are immutable; changed coverage uses a linked successor.
+Source/revision/current membership checks are enforced on the server. A later wage
+receipt does not invalidate an unchanged contribution basis. Withdrawal does.
+Fresh snapshots keep raw source-v1 and effective reviewed facts separately.
+
+Only an active Administrator records an actual evidenced agency/bank remittance.
+The whole receipt and1–24covered-month shares must reconcile exactly. Dates cannot
+be future. Agency/reference uniqueness is case/space normalized and serialized
+against concurrent entry. Exact operation retries do not duplicate a receipt.
+Voiding requires a reason, retains the original and excludes its shares; it never
+reverses a real payment. A correction replaces the final voided entry, retaining
+the chain even when correcting a reference typo. No direct client table writes
+are granted, including to Administrators.
+
+**Export fresh review CSV** fetches and validates a new protected snapshot and
+rechecks current access before writing. Its22columns distinguish source inclusion,
+known amounts, complete liability, selected-month remittance share and discrepancy.
+Unknown complete totals remain `UNRESOLVED`; an original amount on an excluded
+source is not an included liability. Private payment/review references, evidence,
+notes and actor IDs are omitted. Employee labels are current and explicitly named
+as such. A worksheet neither submits a return nor authorizes a transfer/refund.

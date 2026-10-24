@@ -88,6 +88,26 @@ impl CloudClient {
 }
 
 impl CloudClient {
+    pub fn government_reconciliation(&mut self,current:&Snapshot,filter:crate::payroll_government::Filter,action:Option<&crate::payroll_government::Action>,destination:Option<&Path>)->Result<crate::payroll_government::Reconciliation>{
+        crate::payroll_reporting::authorize(current)?;filter.validate(current.company.today())?;
+        ensure!(action.is_none()||destination.is_none(),"Save government changes separately from exporting a fresh worksheet.");
+        let before=self.current_access()?;if before!=current.access{return Err(AccessRevoked.into());}
+        if let Some(a)=action{
+            a.authorize(current)?;let(path,op)=a.endpoint()?;
+            let response=self.request(Method::POST,path)?.json(&json!({"p_operation":op,"p_record":a.record})).send()
+                .map_err(|_|anyhow::anyhow!("The government write result is uncertain. Refresh records before retrying."))?;
+            if response.status().is_server_error(){bail!("The government change may have been saved. Refresh records before retrying.");}
+            let saved:Value=decode(response)?;
+            if saved["id"].as_str().and_then(|v|Uuid::parse_str(v).ok())!=Some(a.id()?){bail!("The government change may have been saved. Refresh records before retrying.");}
+            if self.current_access()?!=before{return Err(AccessRevoked.into());}
+        }
+        let wire:crate::payroll_government::ReviewWire=decode(self.request(Method::POST,"rpc/government_reconciliation")?
+            .json(&json!({"p_month":filter.month,"p_agency":filter.agency})).send()?)?;
+        let report=crate::payroll_government::Reconciliation::from_wire(wire,before.company_id,filter)?;
+        if self.current_access()?!=before{return Err(AccessRevoked.into());}
+        if let Some(path)=destination{crate::reports::save_csv(path,&report.csv()?)?;}
+        Ok(report)
+    }
     pub fn government_payroll_sources(
         &mut self,
         current: &Snapshot,

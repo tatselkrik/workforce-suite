@@ -42,6 +42,7 @@ mod final_view;
 mod amendment_view;
 mod wage_view;
 mod payroll_report_view;
+mod government_view;
 mod organization_view;
 mod overtime_view;
 mod recruiting_view;
@@ -1170,6 +1171,7 @@ impl HrisApp {
                         }
                     }
                     self.import_state.applying = false;
+                    if let Some(report)=update.government{self.payroll_state.government.accept(report,&data);}
                     if let Some(report)=update.payroll_report{self.payroll_state.reports.accept(report,&data);}
                     if let Some(report) = update.report {
                         if report.filter == self.report_state.filter {
@@ -1294,6 +1296,7 @@ impl HrisApp {
                     self.learning_state.pending = None;
                     self.career_state.pending = None;
                     self.payroll_state.pending = None;
+                    self.payroll_state.government.pending = None;
                     self.recruiting_state.pending = None;
                     self.recruiting_state.resume_pending = None;
                     self.report_state.pending_views = None;
