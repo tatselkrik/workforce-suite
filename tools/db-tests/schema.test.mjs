@@ -92,7 +92,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
-    if(filename.endsWith('_audited_leave_credits.sql')){creditMigrations.push(filename);continue;}
+    if(filename.endsWith('_audited_leave_credits.sql')||filename.endsWith('_leave_credit_active_team_scope.sql')){creditMigrations.push(filename);continue;}
     if(filename.endsWith('_lifecycle_notifications.sql')){lifecycleMigrations.push(filename);continue;}
     if(filename.endsWith('_government_preparation_exports.sql')){governmentPreparationMigrations.push(filename);continue;}
     if(filename.endsWith('_government_registration_records.sql')){governmentRegistrationMigrations.push(filename);continue;}
