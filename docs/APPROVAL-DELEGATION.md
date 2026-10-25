@@ -6,9 +6,10 @@ Configure leave, attendance corrections and overtime separately. HR/Admin see
 configuration history; Managers see only assignments involving themselves.
 Reasons/references and configuration actors remain HR/Admin-private.
 
-This increment is being verified for0.1.48. Do not mark its roadmap item complete
-until the checked migration, native application, hosted behavior and delivery
-have passed their required checks.
+Delivered in0.1.48, installed and privately published. The migration, native
+application, hosted Auth/workflows and exact installer/recovery checks pass.
+See [verification](APPROVAL-DELEGATION-0.1.48-VERIFICATION.md) and the
+[review checklist](APPROVAL-DELEGATION-0.1.48-CHECKLIST.md).
 
 Delegation adds a substitute; the original approver retains original authority.
 It does not transfer an account role, reporting line, personnel-file access,
@@ -28,8 +29,10 @@ Payroll approval and independent-approval exclusions are unchanged.
   every decision. A role/binding/status change suspends the grant; restored
   matching eligibility can reactivate it within its dates unless revoked.
 - The original approver must still have original authority for that exact
-  request/step. A substitute cannot forward delegated authority. Self-review
-  and review of a request submitted by that same account remain blocked.
+  request/step. A substitute cannot forward delegated authority. Reviewing one's
+  own employee request remains blocked in all three workflows. Correction and
+  overtime review also retains its existing submitting-account exclusion; the
+  existing HR-assisted leave workflow is unchanged.
 - Saved manager/person assignments stay in filed leave plans. Reviewer steps
   that depend on current reporting still use current reporting. Delegation
   neither changes the plan nor skips an approval step.

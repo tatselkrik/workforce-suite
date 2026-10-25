@@ -1,6 +1,6 @@
 # HRIS development roadmap
 
-## Original roadmap status through0.1.41
+## Original roadmap status — updated through0.1.48
 
 Strikethrough means implemented within the prototype's documented limits. It
 does not imply external filing, bank transfer, public portal hosting or verified
@@ -21,7 +21,8 @@ and the private versioned delivery records.
    remains pending selected hardware/protocol and physical verification.
 5. ~~Holiday calendars, custom workweeks, half-days, accrual, carryover,
    cancellation and configurable leave types.~~ Further effective-date policy
-   versions, opening balances/credit adjustments and approval delegation remain.
+   versions and opening balances remain. Audited credit adjustments are delivered
+   in0.1.47; operational approval delegation is delivered in0.1.48.
 6. ~~Salary calculations, deductions, allowances, payslips, core benefits and
    local payroll reports.~~ Includes Philippine premiums, cutoffs,13th-month pay,
    annual tax, final pay, wage reviews and linked amendments. Government-specific

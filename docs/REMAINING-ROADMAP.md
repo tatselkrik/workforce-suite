@@ -50,8 +50,10 @@ unconfigured external connection to a completed integration.
 4. **Effective-date leave policies and balances.** Scheduled policy changes,
    entered/imported opening balances and ~~audited credit adjustments~~.
    Credit deltas/reversals are delivered in0.1.47; the whole milestone stays open.
-5. **Approval delegation.** Temporary substitute approvers with retained history,
-   current permissions, self-approval restrictions and clear validity periods.
+5. ~~**Approval delegation.** Temporary substitute approvers with retained history,
+   current permissions, self-approval restrictions and clear validity periods.~~
+   Delivered/installed in0.1.48 for leave, attendance corrections and overtime.
+   Salary/account/personnel authority remains outside delegation.
 6. **Attendance/leave imports and Excel support.** Validated imports, previews,
    error reports and native XLSX import/export; employee CSV imports already work.
 7. **Accounting and external payroll integration foundations.** Configurable data
@@ -66,6 +68,17 @@ unconfigured external connection to a completed integration.
    resumption; do not treat the placeholder as a working connection.
 
 ## Progress and boundaries
+
+- Desktop0.1.48 is installed and privately published, frozen source
+  `84f34054a2b07166bc317e6f39a5cad8def49afc`;0.1.47 rollback is retained.
+  467default Rust checks plus the exact real installer/recovery,5,460PostgreSQL
+  assertions and fresh64migration replay pass. Four fictional native layouts and
+  seven actual protected native-decoded snapshots pass. Hosted Auth verifies all
+  three workflows, current roles, self-review denial, no forwarding, private data,
+  concurrent retries/decisions and immediate revocation. Migration64 preserves95
+  prior recordsets and279unrelated functions; previous Auth users/source facts
+  remain. See [delegation checklist](APPROVAL-DELEGATION-0.1.48-CHECKLIST.md).
+  No other roadmap feature was started in this bounded increment.
 
 - Desktop0.1.47 is installed and privately published, source
   `517a0d099c21f5d6f800a09f25b761b260ec8f8d`;0.1.46 rollback is retained.
