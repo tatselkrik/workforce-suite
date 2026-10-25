@@ -203,6 +203,18 @@ struct Decision {
     payment_reference: String,
 }
 impl State {
+    pub(super) fn open_notice(&mut self,page:&str,id:Uuid){
+        self.selected=None;self.employee=None;
+        match page {
+            "payroll_monthly"=>{self.tab=3;self.slip=Some(id);}
+            "payroll_cutoff"=>{self.tab=6;self.cutoffs.open_notice(id);}
+            "payroll_thirteenth"=>{self.tab=7;self.thirteenth.open_notice(id);}
+            "payroll_tax"=>{self.tab=8;self.tax.open_notice(id);}
+            "payroll_final"=>{self.tab=10;self.finals.open_notice(id);}
+            "payroll_amendment"=>{self.tab=12;self.amendments.open_notice(id);}
+            _=>{}
+        }
+    }
     pub fn editing(&self) -> bool {
         if self.government.editing(){return true;}
         self.amendments.editing() || self.wages.editing() || self.finals.editing() || self.payments.editing() || self.tax.editing() || self.thirteenth.editing() || self.profile.is_some()

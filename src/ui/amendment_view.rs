@@ -39,6 +39,7 @@ struct Edit {
     reason: String,
 }
 impl State {
+    pub(super) fn open_notice(&mut self,id:Uuid){self.selected=None;self.issued=true;self.search.clear();self.slip=Some(id);}
     pub(super) fn editing(&self) -> bool {
         self.form.is_some()
     }

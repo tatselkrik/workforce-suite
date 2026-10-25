@@ -182,6 +182,7 @@ struct Mock {
     break_state: Arc<std::sync::atomic::AtomicU8>,
     leave_cancelled: Arc<std::sync::atomic::AtomicBool>,
     notification_read: Arc<std::sync::atomic::AtomicBool>,
+    lifecycle_kind: Arc<std::sync::atomic::AtomicU8>,
     photo_png: Arc<Mutex<Option<Vec<u8>>>>,
     logo_png: Arc<Mutex<Option<Vec<u8>>>>,
     logo_revision: Arc<std::sync::atomic::AtomicU64>,
@@ -317,11 +318,20 @@ async fn fake(State(m): State<Mock>, request: Request) -> Response {
             json!({"id":if method=="PUT"&&m.foreign_update.load(Ordering::SeqCst){Uuid::from_u128(999)}else{uid()},"email":"portal-staff@example.invalid","new_email":*m.pending_email.lock().await,"user_metadata":{"role":"administrator","secret":"PRIVATE_SENTINEL"}})
         }
         "/auth/v1/logout" => json!({}),
-        "/rest/v1/rpc/portal_notifications" => {
+        "/rest/v1/rpc/portal_notifications_v2" => {
             let read = m.notification_read.load(Ordering::SeqCst);
-            json!({"company_id":cid(),"employee_id":person,"user_id":uid(),"asof":"2026-10-25","generated_at":"2026-10-25T00:00:00Z","offset":b["p_offset"],"limit":25,"unread_only":b["p_unread_only"],"total_items":if b["p_unread_only"]==true&&read{0}else{1},"unread_count":if read{0}else{1},"items":if (b["p_unread_only"]==true&&read)||b["p_offset"].as_u64().unwrap_or(0)>0{json!([])}else{json!([{"key":"correction-status:00000000-0000-0000-0000-00000000006e:1","kind":"correction-status","title":"Your attendance correction was approved","detail":"Work date2026-09-01","date":"2026-10-25","urgent":false,"read":read,"target_id":Uuid::from_u128(110),"target_page":"attendance","private":"PRIVATE_SENTINEL"}])},"private":"PRIVATE_SENTINEL"})
+            let mode=m.lifecycle_kind.load(Ordering::SeqCst);let source=Uuid::from_u128(110);
+            let(kind,page,key)=match mode{
+                1=>("payroll-monthly-issued","payroll_monthly",format!("payroll-monthly-issued:{source}:0")),
+                2=>("training-due","training",format!("training-due:{source}:1:soon")),
+                3=>("payroll-receipt","payroll_monthly",format!("payroll-receipt:{}:0",Uuid::from_u128(111))),
+                4=>("appraisal-review","appraisal",format!("appraisal-review:{source}:1:soon")),
+                5=>("payroll-monthly-issued","private_files",format!("payroll-monthly-issued:{source}:0")),
+                _=>("correction-status","attendance",format!("correction-status:{source}:1")),
+            };
+            json!({"version":"portal-notifications-v2","company_id":cid(),"employee_id":person,"user_id":uid(),"asof":"2026-10-25","generated_at":"2026-10-25T00:00:00Z","offset":b["p_offset"],"limit":25,"unread_only":b["p_unread_only"],"total_items":if b["p_unread_only"]==true&&read{0}else{1},"unread_count":if read{0}else{1},"items":if (b["p_unread_only"]==true&&read)||b["p_offset"].as_u64().unwrap_or(0)>0{json!([])}else{json!([{"key":key,"kind":kind,"title":"Your current personal update","detail":"A fictional scoped update","date":"2026-10-25","urgent":false,"read":read,"target_id":source,"target_page":page,"private":"PRIVATE_SENTINEL"}])},"private":"PRIVATE_SENTINEL"})
         }
-        "/rest/v1/rpc/portal_notification_reads" => {
+        "/rest/v1/rpc/portal_notification_reads_v2" => {
             m.notification_read
                 .store(b["p_read"].as_bool().unwrap_or(false), Ordering::SeqCst);
             json!({"company_id":cid(),"employee_id":person,"user_id":uid(),"saved":true,"private":"PRIVATE_SENTINEL"})
@@ -1547,11 +1557,23 @@ async fn personal_inbox_projects_metadata_and_uses_saved_page_filter() {
     let (_, _, b) = seen
         .iter()
         .rev()
-        .find(|(_, p, _)| p == "/rest/v1/rpc/portal_notifications")
+        .find(|(_, p, _)| p == "/rest/v1/rpc/portal_notifications_v2")
         .unwrap();
     assert_eq!(b["p_offset"], 25);
     assert_eq!(b["p_unread_only"], true);
     assert!(b.get("p_employee_id").is_none());
+}
+#[tokio::test]
+async fn lifecycle_notices_keep_pay_links_valid_and_unimplemented_records_informational(){
+    use std::sync::atomic::Ordering;
+    let f=fixture().await;let(cookie,_)=login(&f).await;
+    for(mode,page)in[(1,"pay"),(2,"notifications"),(3,"pay")]{
+        f.mock.lifecycle_kind.store(mode,Ordering::SeqCst);
+        let(status,_,value)=request(&f.portal,"/api/notifications",None,Some(&cookie),None).await;
+        assert_eq!(status,StatusCode::OK,"{value}");assert_eq!(value["items"][0]["target_page"],page);
+        assert!(!value.to_string().contains("PRIVATE_SENTINEL"));
+    }
+    for mode in[4,5]{f.mock.lifecycle_kind.store(mode,Ordering::SeqCst);let(status,_,_)=request(&f.portal,"/api/notifications",None,Some(&cookie),None).await;assert_eq!(status,StatusCode::BAD_GATEWAY);}
 }
 #[tokio::test]
 async fn own_read_unread_reset_persist_without_browser_identity_fields() {
@@ -1601,7 +1623,7 @@ async fn own_read_unread_reset_persist_without_browser_identity_fields() {
     let seen = f.mock.requests.lock().await;
     for (_, _, b) in seen
         .iter()
-        .filter(|(_, p, _)| p == "/rest/v1/rpc/portal_notification_reads")
+        .filter(|(_, p, _)| p == "/rest/v1/rpc/portal_notification_reads_v2")
     {
         assert!(b.get("p_user_id").is_none());
         assert!(b.get("p_company_id").is_none());
@@ -1663,7 +1685,7 @@ async fn read_history_rejects_foreign_fields_review_keys_duplicates_and_missing_
             .lock()
             .await
             .iter()
-            .any(|(_, p, _)| p == "/rest/v1/rpc/portal_notification_reads")
+            .any(|(_, p, _)| p == "/rest/v1/rpc/portal_notification_reads_v2")
     );
 }
 #[tokio::test]

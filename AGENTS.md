@@ -247,3 +247,19 @@ Standing prototype SQL and verified private-channel publication authorizations
 remain in effect; this stop changes work scheduling, not those target guards.
 This boundary is now satisfied:0.1.45 is installed and privately published.
 Keep work and the same scheduler paused pending Kirk's explicit resumption.
+
+## Latest resumption and free-only constraint — 25 October 2026
+
+Kirk explicitly resumed the remaining roadmap and the same scheduler after
+0.1.45, requesting continuous work. This supersedes the finish-after0.1.45 pause.
+Preserve the running local portal0.1.5 and its drafts/sessions. Continue the
+ordered checklist with the existing verification/release/installation rules.
+
+HRIS must remain completely free for now. Put any feature requiring a paid
+subscription, paid service or new purchase on hold; continue independent local,
+free/open-source and already-available free-tier work. Do not enable billing,
+upgrade plans, incur fees or purchase hardware/services. A free tier must stay
+within its no-charge limits; it is not permission for overage or auto-upgrades.
+Record cost dependencies and unresolved targets explicitly instead of silently
+calling an unconfigured integration complete. Actual email/push delivery and
+physical device connections retain their separate target/authority requirements.

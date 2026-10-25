@@ -16,6 +16,11 @@ pub(super) struct State {
     pub certificates: bool,
 }
 impl State {
+    pub(super) fn open_notice(&mut self,data:&Snapshot,employee:Uuid,id:Uuid,certificate:bool){
+        self.employee=Some(employee);self.certificates=certificate;self.archived=false;
+        self.search=if certificate{data.learning.certificates.iter().find(|r|r.id==id).map(|r|r.title.clone())}
+            else{data.learning.training.iter().find(|r|r.id==id).map(|r|r.title.clone())}.unwrap_or_default();
+    }
     pub fn editing(&self) -> bool {
         self.training_form.is_some()
             || self.certificate_form.is_some()

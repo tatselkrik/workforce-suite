@@ -331,6 +331,7 @@ pub struct Snapshot {
     pub recruiting: crate::recruiting::Setup,
     pub hiring: crate::hiring::Setup,
     pub notification_reads: crate::notifications::ReadState,
+    pub lifecycle_notifications: Option<crate::notifications::lifecycle::Inbox>,
     pub imports: crate::imports::Setup,
     pub overtime: crate::overtime::Setup,
     pub requests: crate::requests::Setup,
@@ -369,6 +370,7 @@ impl Snapshot {
             performance: Default::default(),
             hiring: Default::default(),
             notification_reads: Default::default(),
+            lifecycle_notifications: None,
             imports: Default::default(),
             overtime: Default::default(),
             requests: Default::default(),
@@ -624,6 +626,7 @@ impl DemoStore {
                     company_id: company.id,
                     ..Default::default()
                 },
+                lifecycle_notifications: None,
                 imports: Default::default(),
                 overtime: Default::default(),
                 requests: Default::default(),
@@ -759,7 +762,7 @@ impl DemoStore {
             Action::NotificationReads(action) => {
                 self.data.notification_reads.user_id = self.data.access.user_id;
                 self.data.notification_reads.company_id = self.data.company.id;
-                self.data.notification_reads.apply(&action)?;
+                crate::notifications::apply_reads(&mut self.data, &action)?;
             }
             Action::ImportEmployees(preview, reason) => {
                 crate::imports::apply_demo(self, preview, reason)?

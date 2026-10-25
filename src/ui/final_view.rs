@@ -55,6 +55,7 @@ struct Decision {
     handling: String,
 }
 impl State {
+    pub(super) fn open_notice(&mut self,id:Uuid){self.selected=None;self.slips=true;self.search.clear();self.slip=Some(id);}
     pub(super) fn editing(&self) -> bool {
         self.form.is_some()
     }

@@ -32,6 +32,8 @@ pub(super) struct State {
     cycles_closed: bool,
 }
 impl State {
+    pub(super) fn open_notice(&mut self,id:Uuid){self.tab=Tab::Appraisals;self.review_id=Some(id);self.employee=None;self.search.clear();}
+    pub(super) fn open_learning_notice(&mut self,certificate:bool){self.tab=if certificate{Tab::Certifications}else{Tab::Training};}
     pub fn editing(&self) -> bool {
         self.goal_form.is_some()
             || self.cycle_form.is_some()

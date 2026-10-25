@@ -14,6 +14,7 @@ pub(super) struct State {
     decision: Option<Decision>,
 }
 impl State {
+    pub(super) fn open_notice(&mut self,id:Uuid){self.selected=None;self.employee=None;self.show_slips=true;self.slip=Some(id);}
     pub(super) fn editing(&self) -> bool {
         self.run.is_some() || self.decision.is_some()
     }

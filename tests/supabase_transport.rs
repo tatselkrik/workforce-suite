@@ -28,6 +28,7 @@ fn auth_fixture(
     let company_json = serde_json::to_string(&companies).unwrap();
     let assigned = !companies.is_empty();
     let company_id = companies.first().map(|c| c.id).unwrap_or_default();
+    let today = companies.first().map(|c| c.today()).unwrap_or_default();
     let server = thread::spawn(move || {
         let deadline = Instant::now() + Duration::from_secs(15);
         let mut count = 0;
@@ -79,6 +80,8 @@ fn auth_fixture(
                 } else {
                     ("403 Forbidden", json!({"code":"42501"}).to_string())
                 }
+            } else if first.starts_with("POST /rest/v1/rpc/lifecycle_notifications ") {
+                ("200 OK",json!({"version":"lifecycle-notifications-v1","company_id":company_id,"user_id":user_id,"employee_id":null,"role":"administrator","surface":"desktop","as_of":today,"generated_at":"2026-10-25T00:00:00Z","read_keys":[],"total_items":0,"truncated":false,"items":[]}).to_string())
             } else if first.starts_with("GET /auth/v1/user ") {
                 ("200 OK", user.to_string())
             } else if first.starts_with("GET /storage/v1/object/authenticated/") {

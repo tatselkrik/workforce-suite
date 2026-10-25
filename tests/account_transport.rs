@@ -717,6 +717,7 @@ fn report_export_reloads_scoped_data_and_rechecks_access_before_creating_csv() {
                     .starts_with("POST /rest/v1/rpc/list_company_accounts ")
                 || r.line
                     .starts_with("POST /rest/v1/rpc/recruiting_interviewers ")
+                || r.line.starts_with("POST /rest/v1/rpc/lifecycle_notifications ")
                 || r.line.starts_with("POST /rest/v1/rpc/exit_readiness_list "))
     );
 }
@@ -904,7 +905,8 @@ fn fixture(replies: Vec<Reply>) -> (ConnectionConfig, thread::JoinHandle<()>, Re
     let observed = requests.clone();
     let server = thread::spawn(move || {
         let deadline = Instant::now() + Duration::from_secs(20);
-        for reply in replies {
+        let mut last_access=Value::Null;
+        for mut reply in replies {
             let (mut stream, _) = loop {
                 match listener.accept() {
                     Ok(stream) => break stream,
@@ -952,6 +954,14 @@ fn fixture(replies: Vec<Reply>) -> (ConnectionConfig, thread::JoinHandle<()>, Re
                 "Expected {}, got {line}",
                 reply.prefix
             );
+            if reply.prefix=="POST /rest/v1/rpc/my_hris_access "&&reply.status==200{last_access=serde_json::from_slice(&reply.body).unwrap();}
+            if reply.prefix=="POST /rest/v1/rpc/lifecycle_notifications " {
+                let mut wire:Value=serde_json::from_slice(&reply.body).unwrap();
+                if wire.get("fixture_empty")==Some(&json!(true)){
+                    wire=json!({"version":"lifecycle-notifications-v1","company_id":last_access["company_id"],"user_id":last_access["user_id"],"employee_id":last_access["employee_id"],"role":last_access["role"],"surface":"desktop","as_of":wire["as_of"],"generated_at":chrono::Utc::now(),"read_keys":[],"total_items":0,"truncated":false,"items":[]});
+                    reply.body=serde_json::to_vec(&wire).unwrap();
+                }
+            }
             observed.lock().unwrap().push(Request {
                 line,
                 headers,
@@ -1111,6 +1121,7 @@ fn baseline(company: &Company) -> Vec<Reply> {
         reply("GET /rest/v1/payroll_tax_reconciliations?",200,json!([])),
         reply("GET /rest/v1/payroll_payment_receipts?",200,json!([])),
         reply("GET /rest/v1/notification_read_state?", 200, json!([])),
+        reply("POST /rest/v1/rpc/lifecycle_notifications ",200,json!({"fixture_empty":true,"as_of":company.today()})),
         reply("GET /auth/v1/user ", 200, user(company)),
         reply(
             "GET /storage/v1/object/authenticated/profile-photos/",
@@ -1979,6 +1990,12 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
         200,
         json!([]),
     ));
+    replies.push(
+        baseline(&revised)
+            .into_iter()
+            .find(|r| r.prefix.starts_with("POST /rest/v1/rpc/lifecycle_notifications "))
+            .unwrap(),
+    );
     replies.extend(
         baseline(&revised)
             .into_iter()
@@ -3474,6 +3491,35 @@ fn collection_source(company:&Company)->serde_json::Value{
  let eid=uuid::Uuid::from_u128(181001);let receipt=uuid::Uuid::from_u128(181002);let actor=uuid::Uuid::from_u128(181003);
  let fact=json!({"company_id":company.id,"employee_id":eid,"id":uuid::Uuid::from_u128(181004),"agency":"sss","kind":"monthly","state":"received","starts_on":month,"ends_on":end,"contribution_month":month,"received_on":company.today(),"parts":{"employee_cents":150000,"employer_cents":300000,"ec_cents":3000}});
  json!({"version":"government-preparation-v1","review":{"version":"government-reconciliation-v1","source":{"version":"government-payroll-sources-v1","company_id":company.id,"company_name":company.name,"generated_at":chrono::Utc::now(),"as_of":company.today(),"month":month,"agency":"sss","facts":[fact.clone()]},"effective_facts":[fact],"reviews":[],"history":[],"employees":[{"employee_id":eid,"employee_code":"TEST-SSS","employee_name":"Fictional Staff"}],"remittances":[{"id":receipt,"company_id":company.id,"agency":"sss","paid_on":company.today(),"amount_cents":453000,"allocations":[{"month":month,"amount_cents":453000}],"reference":"QA-SBR-01","evidence":"Fictional receipt","note":"","replaces_id":null,"recorded_by":actor,"recorded_at":chrono::Utc::now(),"void_id":null,"void_reason":null,"voided_by":null,"voided_at":null,"replacement_id":null}]},"registrations":[{"id":uuid::Uuid::from_u128(181005),"company_id":company.id,"employee_id":null,"revision":0,"details":{"registered_name":"Fictional Company","sss_number":"0123456789"}},{"id":uuid::Uuid::from_u128(181006),"company_id":company.id,"employee_id":eid,"revision":0,"details":{"last_name":"Dela Cruz","first_name":"Alex","middle_name":"M","name_suffix":"","sss_number":"0212345678"}}]})
+}
+fn lifecycle_wire(company:&Company,employee:uuid::Uuid,read_keys:Vec<String>)->Value{
+ let id=uuid::Uuid::from_u128(184601);let key=format!("payroll-monthly-issued:{id}:0");
+ json!({"version":"lifecycle-notifications-v1","company_id":company.id,"user_id":company.owner_id,"employee_id":employee,"role":"administrator","surface":"desktop","as_of":company.today(),"generated_at":chrono::Utc::now(),"read_keys":read_keys,"total_items":1,"truncated":false,
+ "items":[{"key":key,"kind":"payroll-monthly-issued","title":"Your monthly payslip is available","detail":"Approval is separate from payment","date":company.today(),"urgent":false,"target_id":id,"target_page":"payroll_monthly","employee_id":employee}]})
+}
+#[test]
+fn lifecycle_projection_rejects_a_changed_protected_role_before_loading_account_data(){
+ let company=Company{owner_id:uuid::Uuid::from_u128(184600),..Default::default()};let mut replies=baseline(&company);
+ let at=replies.iter().position(|r|r.prefix=="POST /rest/v1/rpc/lifecycle_notifications ").unwrap();
+ let mut wire=lifecycle_wire(&company,uuid::Uuid::from_u128(184602),vec![]);wire["employee_id"]=Value::Null;wire["role"]=json!("manager");replies[at]=reply("POST /rest/v1/rpc/lifecycle_notifications ",200,wire);replies.truncate(at+1);
+ let(config,server,requests)=fixture(replies);assert!(CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).is_err());server.join().unwrap();
+ assert!(!requests.lock().unwrap().iter().any(|r|r.line.starts_with("GET /auth/v1/user ")));
+}
+#[test]
+fn mixed_lifecycle_reads_use_atomic_new_rpc_and_keep_legacy_state_separate(){
+ use hris_desktop::{domain::Action,notifications::ReadAction};
+ let data=DemoStore::new().data;let company=data.company.clone();let person=data.employees[0].clone();let eid=person.id;
+ let new_key=format!("payroll-monthly-issued:{}:0",uuid::Uuid::from_u128(184601));let old_key=format!("checkout:{}:0",uuid::Uuid::from_u128(184603));
+ let prepare=|reads:Vec<String>|{
+  let mut v=baseline(&company);let mut access:Value=serde_json::from_slice(&v[1].body).unwrap();access["employee_id"]=json!(eid);v[1].body=serde_json::to_vec(&access).unwrap();v[3]=reply("GET /rest/v1/employees?",200,json!([person]));
+  response_at(&mut v,"POST /rest/v1/rpc/lifecycle_notifications ").body=serde_json::to_vec(&lifecycle_wire(&company,eid,reads)).unwrap();v
+ };
+ let mut replies=prepare(vec![]);let saved=json!({"company_id":company.id,"user_id":company.owner_id,"read_keys":[old_key]});replies.push(reply("POST /rest/v1/rpc/staff_notification_reads ",200,saved.clone()));
+ let mut after=prepare(vec![new_key.clone()]);response_at(&mut after,"GET /rest/v1/notification_read_state?").body=serde_json::to_vec(&json!([saved])).unwrap();replies.extend(after.into_iter().skip(1).take_while(|r|!r.prefix.starts_with("GET /auth/v1/user ")));
+ let(config,server,requests)=fixture(replies);let(mut client,current)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
+ let next=client.execute(Action::NotificationReads(ReadAction::Mark{keys:vec![old_key.clone(),new_key.clone()],read:true}),&current).unwrap();server.join().unwrap();
+ assert_eq!(next.notification_reads.read_keys,vec![old_key.clone()]);assert_eq!(next.lifecycle_notifications.unwrap().read_keys,vec![new_key.clone()]);
+ let req=requests.lock().unwrap();let sent=request_at(&req,"POST /rest/v1/rpc/staff_notification_reads ",0).json();assert_eq!(sent,json!({"p_company_id":company.id,"p_keys":[old_key,new_key],"p_read":true,"p_reset":false}));
 }
 #[test]
 fn sss_collection_load_is_private_and_membership_is_rechecked_before_return(){

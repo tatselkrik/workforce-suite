@@ -941,7 +941,16 @@ impl CloudClient {
                     ..Default::default()
                 });
         notification_reads.validate(access.user_id, company.id)?;
+        let lifecycle_notifications: crate::notifications::lifecycle::Inbox = decode(
+            self.request(Method::POST, "rpc/lifecycle_notifications")?
+                .json(&json!({"p_surface":"desktop"})).send()?
+        )?;
+        if lifecycle_notifications.company_id!=access.company_id || lifecycle_notifications.user_id!=access.user_id
+            || lifecycle_notifications.employee_id!=access.employee_id || lifecycle_notifications.role!=access.role { return Err(AccessRevoked.into()); }
+        lifecycle_notifications.validate(&access, company.today())?;
+        ensure!(lifecycle_notifications.items.iter().all(|i| employees.iter().any(|e| e.company_id==company.id && e.id==i.employee_id)), "Lifecycle subject is outside the current employee directory.");
         Ok(Snapshot {
+            lifecycle_notifications: Some(lifecycle_notifications),
             payroll,
             learning,
             career,
@@ -1187,8 +1196,12 @@ impl CloudClient {
         }
         if let Action::NotificationReads(action) = &action {
             let payload = action.payload(current.company.id)?;
+            let extended = match action {
+                crate::notifications::ReadAction::Mark { keys, .. } => keys.iter().any(|k| crate::notifications::lifecycle::valid_key(k)),
+                crate::notifications::ReadAction::Reset => current.lifecycle_notifications.as_ref().is_some_and(|s| !s.read_keys.is_empty()),
+            };
             let saved: crate::notifications::ReadState = decode(
-                self.request(Method::POST, "rpc/set_notification_reads")?
+                self.request(Method::POST, if extended { "rpc/staff_notification_reads" } else { "rpc/set_notification_reads" })?
                     .json(&payload)
                     .send()
                     .context("Could not update notification history. Refresh before retrying.")?,

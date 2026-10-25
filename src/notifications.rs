@@ -5,6 +5,7 @@ use chrono::{Duration, NaiveDate};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use uuid::Uuid;
+pub mod lifecycle;
 
 pub const MAX_READ_KEYS: usize = 5000;
 pub const MAX_MARK_BATCH: usize = 100;
@@ -23,7 +24,7 @@ impl ReadAction {
     pub fn validate(&self) -> Result<()> {
         if let Self::Mark { keys, .. } = self {
             ensure!(!keys.is_empty() && keys.len() <= MAX_MARK_BATCH, "Choose 1–100 notifications.");
-            ensure!(keys.iter().all(|k| valid_key(k)) && keys.iter().collect::<HashSet<_>>().len() == keys.len(), "The notification keys are invalid.");
+            ensure!(keys.iter().all(|k| valid_key(k) || lifecycle::valid_key(k)) && keys.iter().collect::<HashSet<_>>().len() == keys.len(), "The notification keys are invalid.");
         }
         Ok(())
     }
@@ -52,6 +53,7 @@ impl ReadState {
     }
     pub fn apply(&mut self, action: &ReadAction) -> Result<()> {
         action.validate()?;
+        if let ReadAction::Mark { keys, .. } = action { ensure!(keys.iter().all(|k| valid_key(k)), "Keep lifecycle markers separate from legacy history."); }
         let mut next: HashSet<_> = self.read_keys.iter().cloned().collect();
         match action {
             ReadAction::Reset => next.clear(),
@@ -64,13 +66,13 @@ impl ReadState {
     }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Category { Approvals, Updates, Reminders, Documents }
+pub enum Category { Approvals, Updates, Reminders, Documents, Payroll, Appraisals, Learning }
 impl Category {
-    pub const ALL: [Self;4] = [Self::Approvals,Self::Updates,Self::Reminders,Self::Documents];
-    pub fn label(self) -> &'static str { match self { Self::Approvals=>"Approvals",Self::Updates=>"My request updates",Self::Reminders=>"Reminders",Self::Documents=>"Document expiry" } }
+    pub const ALL: [Self;7] = [Self::Approvals,Self::Updates,Self::Reminders,Self::Documents,Self::Payroll,Self::Appraisals,Self::Learning];
+    pub fn label(self) -> &'static str { match self { Self::Approvals=>"Approvals",Self::Updates=>"My request updates",Self::Reminders=>"Reminders",Self::Documents=>"Document expiry",Self::Payroll=>"Payroll",Self::Appraisals=>"Appraisals",Self::Learning=>"Learning" } }
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Target { Leave(Uuid), Correction(Uuid), Overtime(Uuid), Document { employee: Uuid, title: String }, Attendance(NaiveDate) }
+pub enum Target { Leave(Uuid), Correction(Uuid), Overtime(Uuid), Document { employee: Uuid, title: String }, Attendance(NaiveDate), Lifecycle { page:String, record:Uuid, employee:Uuid } }
 #[derive(Clone, Debug)]
 pub struct Alert { pub key: String, pub category: Category, pub title: String, pub detail: String, pub date: NaiveDate, pub urgent: bool, pub target: Target }
 pub fn alerts(data: &Snapshot, now: chrono::DateTime<chrono::Utc>) -> Vec<Alert> {
@@ -139,8 +141,40 @@ pub fn alerts(data: &Snapshot, now: chrono::DateTime<chrono::Utc>) -> Vec<Alert>
             out.push(Alert { key:key("checkout",a.id,a.revision),category:Category::Reminders,title:"Review an unfinished check-out".into(),detail:format!("{} · an attendance record is still open",a.work_date),date:a.work_date,urgent:true,target:Target::Attendance(a.work_date) });
         }
     }
+    if let Some(inbox) = &data.lifecycle_notifications {
+        if inbox.validate(&data.access, today).is_ok() { out.extend(inbox.alerts()); }
+    }
     out.sort_by(|a,b| b.urgent.cmp(&a.urgent).then(a.date.cmp(&b.date)).then(a.key.cmp(&b.key)));
     let mut seen = HashSet::new();
     out.retain(|a| seen.insert(a.key.clone()));
     out
+}
+pub fn is_read(data:&Snapshot,key:&str)->bool {
+    data.notification_reads.read_keys.iter().any(|k|k==key)
+        || data.lifecycle_notifications.as_ref().is_some_and(|s|s.read_keys.iter().any(|k|k==key))
+}
+pub fn read_count(data:&Snapshot)->usize {
+    data.notification_reads.read_keys.len()+data.lifecycle_notifications.as_ref().map_or(0,|s|s.read_keys.len())
+}
+pub fn apply_reads(data:&mut Snapshot,action:&ReadAction)->Result<()> {
+    action.validate()?;
+    let mut legacy=data.notification_reads.clone();
+    let mut life=data.lifecycle_notifications.clone();
+    match action {
+        ReadAction::Reset=>{legacy.apply(action)?;if let Some(s)=&mut life{s.read_keys.clear();}}
+        ReadAction::Mark{keys,read}=>{
+            let old:Vec<_>=keys.iter().filter(|k|valid_key(k)).cloned().collect();
+            let new:Vec<_>=keys.iter().filter(|k|lifecycle::valid_key(k)).cloned().collect();
+            if !old.is_empty(){legacy.apply(&ReadAction::Mark{keys:old,read:*read})?;}
+            if !new.is_empty(){
+                let s=life.as_mut().ok_or_else(||anyhow::anyhow!("Refresh current lifecycle notices first."))?;
+                ensure!(new.iter().all(|k|s.items.iter().any(|i|&i.key==k)),"A notice changed or is unavailable.");
+                let mut next:HashSet<_>=s.read_keys.iter().cloned().collect();
+                for k in new{if *read{next.insert(k);}else{next.remove(&k);}}
+                ensure!(next.len()<=MAX_READ_KEYS,"Lifecycle read history is full.");
+                s.read_keys=next.into_iter().collect();s.read_keys.sort();
+            }
+        }
+    }
+    data.notification_reads=legacy;data.lifecycle_notifications=life;Ok(())
 }

@@ -1,5 +1,15 @@
 # Prototype verification — 2026-10-25
 
+## Lifecycle notifications —0.1.46 candidate
+
+The additive notification contract passes4,549local PostgreSQL assertions
+and a fresh61migration chronological replay. Portal checks pass48Rust tests
+(one isolated visual preview intentionally ignored) and15JavaScript checks.
+Native fictional light/dark/compact previews were inspected. Hosted deployment,
+exact packaging and installation remain pending; this is not a delivery claim.
+See docs/LIFECYCLE-NOTIFICATIONS.md and docs/NOTIFICATIONS-0.1.46-CHECKLIST.md.
+Continuous work/scheduling resumed after0.1.45. Paid dependencies are on hold.
+
 ## SSS reference draft —0.1.45 installed and privately published
 
 442default Rust checks, the exact real-installer/recovery check and four

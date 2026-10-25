@@ -11,8 +11,7 @@ impl State {
     pub fn current(&mut self,data:&Snapshot) -> std::sync::Arc<Vec<notifications::Alert>> {
         if self.scope.as_ref()!=Some(&data.access) || self.refreshed.is_none_or(|at|at.elapsed().as_secs()>=60) {
             let items=notifications::alerts(data,chrono::Utc::now());
-            let reads:std::collections::HashSet<_>=data.notification_reads.read_keys.iter().collect();
-            self.unread=items.iter().filter(|a|!reads.contains(&a.key)).count();
+            self.unread=items.iter().filter(|a|!notifications::is_read(data,&a.key)).count();
             self.items=std::sync::Arc::new(items);self.scope=Some(data.access.clone());self.refreshed=Some(std::time::Instant::now());
         }
         self.items.clone()
@@ -28,6 +27,7 @@ impl HrisApp {
         let own=self.data.access.employee_id.unwrap_or(self.data.employees[0].id);
         self.data.leave.clear();self.data.documents.clear();self.data.attendance.clear();self.data.requests=Default::default();self.data.overtime=Default::default();self.data.leave_setup.events.clear();
         let peer=self.data.employees.iter().find(|e|e.id!=own).unwrap().id;
+        if form.contains("manager") {self.data.access.role=Role::Manager;}
         if self.data.access.role == Role::Manager {self.data.access.direct_reports=vec![peer];}
         for (i,(person,status,offset)) in [(peer,LeaveStatus::Pending,1),(own,LeaveStatus::Approved,3)].into_iter().enumerate() {
             let date=today+Duration::days(offset);
@@ -42,17 +42,22 @@ impl HrisApp {
         }
         self.data.attendance.push(Attendance{id:Uuid::from_u128(99800),company_id:self.data.company.id,employee_id:own,work_date:today-Duration::days(2),checked_in_at:now-Duration::hours(30),checked_out_at:None,revision:0,planned_shift:None,calculation_snapshot:None});
         self.data.notification_reads.read_keys=Vec::new();
-        if form.contains("read") {self.data.notification_reads.read_keys=notifications::alerts(&self.data,now).iter().take(3).map(|a|a.key.clone()).collect();}
+        if form.contains("lifecycle") {self.data.access.employee_id=Some(own);self.data.lifecycle_notifications=Some(notifications::lifecycle::preview(&self.data,now));}
+        if form.contains("read") {let keys=notifications::alerts(&self.data,now).iter().take(3).map(|a|a.key.clone()).collect();notifications::apply_reads(&mut self.data,&ReadAction::Mark{keys,read:true}).unwrap();}
         if form.contains("unread") {self.notification_state.unread_only=true;}
         if form.contains("documents") {self.notification_state.category=Some(Category::Documents);}
         if form.contains("approvals") {self.notification_state.category=Some(Category::Approvals);}
+        if form.contains("payroll") {self.notification_state.category=Some(Category::Payroll);}
+        if form.contains("learning") {self.notification_state.category=Some(Category::Learning);}
         if form.contains("empty") {self.data.leave.clear();self.data.documents.clear();self.data.attendance.clear();}
         self.page=Page::Notifications;
     }
     pub(super) fn notifications_page(&mut self,ui:&mut Ui) {
         let all=self.notification_state.current(&self.data);
-        let reads=&self.data.notification_reads.read_keys;
-        let unread=all.iter().filter(|a| !reads.contains(&a.key)).count();
+        let unread=all.iter().filter(|a| !notifications::is_read(&self.data,&a.key)).count();
+        if let Some(s)=self.data.lifecycle_notifications.as_ref().filter(|s|s.truncated){
+            ui.add(egui::Label::new(format!("Showing {} of {} lifecycle notices. The current feed is bounded; older notices are not included in this view.",s.items.len(),s.total_items)).wrap());
+        }
         card(ui,|ui| {
             ui.label(RichText::new(format!("{unread} unread · {} current items",all.len())).strong());
             ui.label(RichText::new("Updates refresh after sign-in, every minute while connected, and with Refresh. Read items remain actionable; a changed request or expiry stage can appear as a new item.").small().color(muted(ui)));
@@ -64,12 +69,12 @@ impl HrisApp {
             });
             if before != (self.notification_state.unread_only,self.notification_state.category) {self.notification_state.page=0;}
         });
-        let rows:Vec<_>=all.iter().filter(|a| (!self.notification_state.unread_only || !reads.contains(&a.key)) && self.notification_state.category.is_none_or(|c| c == a.category)).cloned().collect();
+        let rows:Vec<_>=all.iter().filter(|a| (!self.notification_state.unread_only || !notifications::is_read(&self.data,&a.key)) && self.notification_state.category.is_none_or(|c| c == a.category)).cloned().collect();
         let pages=rows.len().max(1).div_ceil(25);
         self.notification_state.page=self.notification_state.page.min(pages-1);
         let start=self.notification_state.page*25;
         let page=&rows[start..(start+25).min(rows.len())];
-        let to_read:Vec<_>=page.iter().filter(|a| !reads.contains(&a.key)).map(|a|a.key.clone()).collect();
+        let to_read:Vec<_>=page.iter().filter(|a| !notifications::is_read(&self.data,&a.key)).map(|a|a.key.clone()).collect();
         ui.horizontal_wrapped(|ui| {
             if ui.add_enabled(self.notification_state.page>0,egui::Button::new("Previous")).clicked(){self.notification_state.page-=1;}
             ui.label(format!("Page {} of {pages}",self.notification_state.page+1));
@@ -78,7 +83,7 @@ impl HrisApp {
         });
         if page.is_empty(){empty(ui,"No current notifications match these filters.");}
         for a in page {
-            let read=self.data.notification_reads.read_keys.contains(&a.key);
+            let read=notifications::is_read(&self.data,&a.key);
             card(ui,|ui| {
                 ui.horizontal_wrapped(|ui| {
                     ui.label(RichText::new(if read {"Read"} else {"Unread"}).small().color(if read {muted(ui)}else{accent(ui)}));
@@ -97,10 +102,11 @@ impl HrisApp {
             });
         }
         ui.collapsing("Read history",|ui| {
-            ui.label(RichText::new(format!("{} of {} read markers saved privately to your account. Reset marks current items unread; source records and approvals are unchanged.",self.data.notification_reads.read_keys.len(),notifications::MAX_READ_KEYS)).small().color(muted(ui)));
-            if ui.add_enabled(!self.data.notification_reads.read_keys.is_empty(),egui::Button::new("Reset read history")).clicked(){self.send(Command::Change(Action::NotificationReads(ReadAction::Reset)));}
+            ui.label(RichText::new(format!("{} read items saved privately to your account. Reset marks current items unread; source records and approvals are unchanged.",notifications::read_count(&self.data))).small().color(muted(ui)));
+            if ui.add_enabled(notifications::read_count(&self.data)>0,egui::Button::new("Reset read history")).clicked(){self.send(Command::Change(Action::NotificationReads(ReadAction::Reset)));}
         });
         ui.label(RichText::new("Document reminders cover active employees' filed, unarchived documents: expiry or contract end within 30 days, today, or past date. Your upcoming approved leave covers seven days. Own request updates cover the last 30 days. Unfinished check-outs require at least 24 hours elapsed. Read is not an approval. Email delivery and device connections are separate setup work.").small().color(muted(ui)));
+        ui.add(egui::Label::new(RichText::new("Payroll notices separate issued advice from recorded individual payments. Appraisal and training deadlines cover the next seven days and overdue open tasks; recorded certificates cover 30 days and past expiry. Read status does not approve or change a record.").small().color(muted(ui))).wrap());
     }
     fn open_notification(&mut self,target:&Target,ctx:&egui::Context) {
         match target {
@@ -109,6 +115,13 @@ impl HrisApp {
             Target::Overtime(id)=>{self.navigate(Page::Attendance,ctx);self.shift_state.tab=shifts_view::Tab::Overtime;self.overtime_state.detail=Some(*id);}
             Target::Document{employee,title}=>{self.navigate(Page::Employees,ctx);self.open_employee(*employee);self.contacts_section=ContactSection::Documents;self.document_search=title.clone();}
             Target::Attendance(date)=>{self.navigate(Page::Attendance,ctx);self.shift_state.tab=shifts_view::Tab::Daily;self.attendance_date=*date;self.calendar_month=month_start(*date);}
+            Target::Lifecycle{page,record,employee}=>{
+                if page.starts_with("payroll_"){self.navigate(Page::Payroll,ctx);self.payroll_state.open_notice(page,*record);}
+                else{self.navigate(Page::Employees,ctx);self.employee_view=EmployeeView::Development;
+                    if page=="appraisal"{self.performance_state.open_notice(*record);}
+                    else{self.performance_state.open_learning_notice(page=="certificate");self.learning_state.open_notice(&self.data,*employee,*record,page=="certificate");}
+                }
+            }
         }
     }
 }

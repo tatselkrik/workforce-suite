@@ -1,9 +1,12 @@
 # Remaining HRIS roadmap — agreed order
 
-**Latest boundary25October2026:** finish only the current SSS reference-draft
-increment, then stop. The existing scheduler is paused. Earlier continuous-work
-instructions below are historical and superseded by this boundary. Review work
-since9:31p.m. with the [consolidated checklist](REVIEW-SINCE-931PM-2026-10-25.md).
+**Latest resumption25October2026:** Kirk reactivated the same scheduler and
+resumed the remaining roadmap continuously after delivered0.1.45. This
+supersedes the finish-after0.1.45 pause. HRIS must remain completely free for now:
+put features requiring paid subscriptions/services or new purchases on hold.
+Continue independent local/open-source/free-tier work within no-charge limits;
+do not enable billing, upgrades or overages. Review work since9:31p.m. with the
+[consolidated checklist](REVIEW-SINCE-931PM-2026-10-25.md).
 
 Kirk approved this order on24October2026 and resumed continuous work and the
 existing usage-reset follow-up. This supersedes the stop-after0.1.41 boundary.
@@ -44,8 +47,11 @@ unconfigured external connection to a completed integration.
    require resolved company software/vendor targets.
 8. **Email/push notification delivery.** A company-approved provider, resolved
    destinations, delivery/retry history and required specific sending authority.
+   Paid providers/plans are on hold; use an approved no-charge option only.
 9. **Actual biometric/device integration.** Select hardware/protocol and verify
-   physical operation. Keep the visible control disabled until then.
+   physical operation. Keep the visible control disabled until then. New hardware
+   purchases or paid vendor licenses are on hold; an existing selected device may
+   be evaluated within the standing physical-verification boundary.
 
 ## Progress and boundaries
 

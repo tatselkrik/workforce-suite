@@ -77,6 +77,7 @@ try {
   const governmentReconciliationMigrations=[];
   const governmentRegistrationMigrations=[];
   const governmentPreparationMigrations=[];
+  const lifecycleMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -90,6 +91,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_lifecycle_notifications.sql')){lifecycleMigrations.push(filename);continue;}
     if(filename.endsWith('_government_preparation_exports.sql')){governmentPreparationMigrations.push(filename);continue;}
     if(filename.endsWith('_government_registration_records.sql')){governmentRegistrationMigrations.push(filename);continue;}
     if(filename.endsWith('_government_reconciliation.sql')){governmentReconciliationMigrations.push(filename);continue;}
@@ -454,6 +456,13 @@ try {
   for(const filename of governmentPreparationMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
   const{runGovernmentPreparationTests}=await import('./government-preparation.test.mjs');await runGovernmentPreparationTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   await db.exec('reset role');for(const t of preparationTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,preparationBefore[t],'Read-only agency preparation preserves '+t);
+  await db.exec('reset role');const lifecycleBefore={};const lifecycleTables=(await db.query("select tablename from pg_tables where schemaname='public'order by tablename")).rows.map(r=>r.tablename);
+  for(const t of lifecycleTables)lifecycleBefore[t]=(await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows;
+  const priorFunctions=(await db.query("select p.oid::regprocedure::text identity,md5(pg_get_functiondef(p.oid))digest from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in('public','hris_private')and p.prokind='f'order by 1")).rows;
+  for(const filename of lifecycleMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  for(const t of lifecycleTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,lifecycleBefore[t],'Lifecycle migration preserves '+t);
+  for(const f of priorFunctions)eq((await db.query('select md5(pg_get_functiondef($1::regprocedure))digest',[f.identity])).rows[0].digest,f.digest,'Lifecycle leaves prior function unchanged '+f.identity);
+  const{runLifecycleTests}=await import('./lifecycle-notifications.test.mjs');await runLifecycleTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();
