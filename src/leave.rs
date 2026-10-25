@@ -6,6 +6,9 @@ use chrono::{Datelike, Days, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 pub mod credits;
+pub mod openings;
+pub mod versions;
+pub mod entitlements;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

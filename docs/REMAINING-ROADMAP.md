@@ -1,5 +1,12 @@
 # Remaining HRIS roadmap — agreed order
 
+**Latest immediate queue25October2026:** Kirk authorized starting item4 now,
+resuming it across a usage reset if unfinished, then continuing item6 imports/
+native Excel and item7 exchange foundations. The next-refresh-only hold is
+superseded. Items1/2 retain their recorded verification/acceptance limitations.
+Item4 calculation/selection primitives are being implemented; they alone are
+not delivered functionality and the milestone remains open.
+
 **Scope refinement25October2026:** browser verification is the current portal
 priority. Free mobile-width browser checks may be included; physical-phone and
 actual email-confirmation verification are deferred when no approved no-charge
