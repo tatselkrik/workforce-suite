@@ -1,7 +1,8 @@
 # Government file adapters — review in progress
 
-As of 25 October 2026, desktop 0.1.43 has delivered private registration records.
-No agency machine-file writer or validator acceptance is claimed yet. This note
+As of 25 October 2026, desktop0.1.44 has delivered internal preparation CSVs;
+the0.1.45 increment adds a bounded local SSS reference-draft control. Current
+agency validator acceptance is not claimed. This note
 prevents repeating completed source inspection and identifies the next work.
 
 The [BIR 2024 Annex A](https://bir-cdn.bir.gov.ph/BIR/pdf/RMC%20No.%2025-2024%20Annex%20A.pdf)
@@ -40,7 +41,9 @@ The generator labels N (normal),1 (new hire),2 (separated) and3 (no earnings),
 plus an explicit hired/separated date. Account role/archiving cannot establish
 these declarations. The initial renderer supports explicit same-month events and
 ASCII text fitting declared widths without truncation. Broader semantics/encoding
-remain unresolved; no R3 product download control is released from this evidence.
+remain unresolved. The bounded [0.1.45 reference draft](SSS-REFERENCE-DRAFT.md)
+adds source/receipt/registration readiness and explicit declarations; it is not
+a verified agency upload control.
 
 Next: finish the exact SSS/BIR format and offline-validator investigation using
 fictional data, then implement a bounded adapter with explicit missing-input

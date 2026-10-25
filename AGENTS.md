@@ -235,3 +235,12 @@ recheck access after rendering and before file IO. Internal CSV is not an agency
 upload/return. The SSS reference encoder is not a released file control; preserve
 namesakes, exact cents and explicit declarations. Never infer current rates or
 agency acceptance from a legacy generator's output alone.
+
+## Latest stop boundary — current SSS increment
+
+Kirk instructed on 25 October 2026 to finish only the current SSS reference-draft
+increment, then stop and provide a testing checklist for work since 9:31 p.m.
+and the remaining roadmap. The existing scheduler is paused. This supersedes
+continuous continuation; do not start the next increment until Kirk resumes it.
+Standing prototype SQL and verified private-channel publication authorizations
+remain in effect; this stop changes work scheduling, not those target guards.

@@ -1714,6 +1714,8 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
 }
 
 pub enum Command {
+    GovernmentSssPrepare {filter:crate::payroll_government::Filter},
+    GovernmentSssExport {filter:crate::payroll_government::Filter,request:Box<crate::payroll_government::sss_collection::Request>,destination:std::path::PathBuf},
     GovernmentPreparation {filter:crate::payroll_government::Filter,destination:std::path::PathBuf},
     GovernmentRegistration {employee_id:Option<Uuid>,save:Option<crate::payroll_government::registration::Save>},
     Government {filter:crate::payroll_government::Filter,action:Option<crate::payroll_government::Action>,destination:Option<std::path::PathBuf>},
@@ -1745,6 +1747,7 @@ pub enum Command {
 }
 
 pub struct Update {
+    pub government_sss:Option<crate::payroll_government::sss_collection::Basis>,
     pub government_registration:Option<crate::payroll_government::registration::Snapshot>,
     pub government:Option<crate::payroll_government::Reconciliation>,
     pub payroll_report:Option<crate::payroll_reporting::Report>,
@@ -1784,6 +1787,7 @@ pub fn worker(
             let mut payroll_report_result = None;
             let mut government_result = None;
             let mut registration_result = None;
+            let mut sss_result=None;
             let mut update_state = None;
             let mut check_after_sign_in = false;
             let mut result: Result<Snapshot> = match command {
@@ -1898,6 +1902,20 @@ pub fn worker(
                         }
                         crate::reports::save_csv(&destination, &preview.error_csv()?)?;
                         Ok(current.clone())
+                    })()
+                }
+                Command::GovernmentSssPrepare{filter}=>{
+                    (||->Result<Snapshot>{
+                        let client=cloud.as_mut().context("Company sign-in is required for SSS drafts.")?;
+                        sss_result=Some(client.sss_collection_prepare(&current,filter)?);
+                        message="SSS draft sources checked against current registration and recorded remittance.".into();Ok(current.clone())
+                    })()
+                }
+                Command::GovernmentSssExport{filter,request,destination}=>{
+                    (||->Result<Snapshot>{
+                        let client=cloud.as_mut().context("Company sign-in is required for SSS drafts.")?;
+                        government_result=Some(client.sss_collection_export(&current,filter,&request,&destination)?);
+                        message="SSS reference draft saved for review. No collection list was submitted and no payment was recorded.".into();Ok(current.clone())
                     })()
                 }
                 Command::GovernmentPreparation{filter,destination}=>{
@@ -2064,6 +2082,7 @@ pub fn worker(
             }
             if events
                 .send(Update {
+                    government_sss:sss_result,
                     government_registration:registration_result,
                     government:government_result,
                     report: report_result,
@@ -2090,6 +2109,7 @@ pub fn worker(
                         .unwrap_or_else(|e| UpdateState::Failed(e.to_string()));
                     if events
                         .send(Update {
+                            government_sss:None,
                             government_registration:None,
                             government:None,
                             report: None,

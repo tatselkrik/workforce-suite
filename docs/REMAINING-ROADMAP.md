@@ -1,5 +1,10 @@
 # Remaining HRIS roadmap — agreed order
 
+**Latest boundary25October2026:** finish only the current SSS reference-draft
+increment, then stop. The existing scheduler is paused. Earlier continuous-work
+instructions below are historical and superseded by this boundary. Review work
+since9:31p.m. with the [consolidated checklist](REVIEW-SINCE-931PM-2026-10-25.md).
+
 Kirk approved this order on24October2026 and resumed continuous work and the
 existing usage-reset follow-up. This supersedes the stop-after0.1.41 boundary.
 The original roadmap status remains in [ROADMAP.md](ROADMAP.md).

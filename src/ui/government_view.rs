@@ -5,6 +5,8 @@ use serde_json::json;
 pub(super) struct State {
     pub(super) registration: super::government_registration_view::State,
     pub(super) registration_open: bool,
+    pub(super) collection: Option<super::government_collection_view::State>,
+    pub(super) collection_export_pending: bool,
     scope: Option<(Uuid, Uuid, Role)>,
     month: String,
     agency: Option<g::Agency>,
@@ -71,6 +73,7 @@ enum Intent {
     Save(g::Action),
     Export,
     ExportPreparation,
+    PrepareSss,
 }
 impl State {
     pub(super) fn bind(&mut self, data: &Snapshot) {
@@ -85,9 +88,12 @@ impl State {
         }
     }
     pub(super) fn editing(&self) -> bool {
-        self.form.is_some() || self.registration.editing()
+        self.form.is_some() || self.registration.editing() || self.collection.is_some()
     }
     pub(super) fn scroll_key(&self) -> (u8, Option<Uuid>) {
+        if let Some(s) = &self.collection {
+            return (20, Some(s.basis.receipt.id));
+        }
         if self.registration_open {
             return self.registration.scroll_key();
         }
@@ -103,19 +109,38 @@ impl State {
         self.bind(data);
         self.registration.accept(r, data);
     }
+    pub(super) fn accept_collection(&mut self, b: g::sss_collection::Basis, data: &Snapshot) {
+        self.bind(data);
+        if data.access.role.manages_hr()
+            && b.company_id == data.company.id
+            && self
+                .filter()
+                .is_ok_and(|f| f.agency == g::Agency::Sss && f.month == b.month)
+        {
+            if let Some(form) = &mut self.collection {
+                form.fresh = Some(b);
+            } else {
+                self.collection = Some(super::government_collection_view::State::new(b));
+            }
+        }
+    }
     pub(super) fn accept(&mut self, r: g::Reconciliation, data: &Snapshot) {
         self.bind(data);
         if self.filter().is_ok_and(|f| r.filter() == f)
             && r.wire.source.company_id == data.company.id
             && data.access.role.manages_hr()
         {
+            if self.collection_export_pending {
+                self.collection = None;
+                self.collection_export_pending = false;
+            }
             if self.pending.take().is_some() {
                 self.form = None;
             }
             self.report = Some(r);
         }
     }
-    fn filter(&self) -> anyhow::Result<g::Filter> {
+    pub(super) fn filter(&self) -> anyhow::Result<g::Filter> {
         Ok(g::Filter {
             month: self
                 .month
@@ -302,6 +327,10 @@ impl HrisApp {
         if !self.data.access.role.manages_hr() {
             return;
         }
+        if self.payroll_state.government.collection.is_some() {
+            self.payroll_sss_collection(ui);
+            return;
+        }
         if !self.payroll_state.government.editing() {
             ui.horizontal_wrapped(|ui| {
                 ui.selectable_value(
@@ -344,6 +373,7 @@ impl HrisApp {
                 }
             };
             match intent {
+                Intent::PrepareSss => self.send(Command::GovernmentSssPrepare { filter }),
                 Intent::Read => self.send(Command::Government {
                     filter,
                     action: None,
@@ -439,6 +469,18 @@ fn overview(ui: &mut Ui, state: &mut State, data: &Snapshot, busy: bool) -> Opti
             .clicked()
         {
             out = Some(Intent::ExportPreparation);
+        }
+        if ui
+            .add_enabled(
+                !busy
+                    && connected
+                    && state.current().is_some()
+                    && state.agency == Some(g::Agency::Sss),
+                egui::Button::new("Prepare SSS R3 reference draft"),
+            )
+            .clicked()
+        {
+            out = Some(Intent::PrepareSss);
         }
         if ui
             .add_enabled(
@@ -1018,6 +1060,17 @@ impl HrisApp {
             r.submitted_by = None;
         }
         let state = &mut self.payroll_state.government;
+        if preview.starts_with("payroll-government-sss") {
+            let p = g::sss_collection::fixture();
+            state.month = p.report.filter().month.to_string();
+            state.agency = Some(g::Agency::Sss);
+            state.collection = Some(super::government_collection_view::State::preview(
+                g::sss_collection::Basis::from_preparation(&p).unwrap(),
+                preview.ends_with("review"),
+            ));
+            state.report = Some(p.report);
+            return;
+        }
         state.month = report.filter().month.to_string();
         state.agency = Some(report.filter().agency);
         state.form = if preview.ends_with("allocation") {

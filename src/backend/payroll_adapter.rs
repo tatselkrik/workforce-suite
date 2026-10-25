@@ -88,17 +88,33 @@ impl CloudClient {
 }
 
 impl CloudClient {
-    pub fn government_preparation(&mut self,current:&Snapshot,filter:crate::payroll_government::Filter,destination:&Path)->Result<crate::payroll_government::Reconciliation>{
+    // Callers recheck access after processing and before returning private data/file IO.
+    fn load_government_preparation(&mut self,current:&Snapshot,filter:crate::payroll_government::Filter)->Result<crate::payroll_government::preparation::Preparation>{
         use crate::payroll_government::preparation::{Preparation,PreparationWire};
         crate::payroll_reporting::authorize(current)?;filter.validate(current.company.today())?;
         let before=self.current_access()?;if before!=current.access{return Err(AccessRevoked.into());}
         let wire:PreparationWire=decode(self.request(Method::POST,"rpc/government_preparation")?
             .json(&json!({"p_month":filter.month,"p_agency":filter.agency})).send()?)?;
-        let prepared=Preparation::from_wire(wire,before.company_id,filter)?;
+        Preparation::from_wire(wire,before.company_id,filter)
+    }
+    pub fn government_preparation(&mut self,current:&Snapshot,filter:crate::payroll_government::Filter,destination:&Path)->Result<crate::payroll_government::Reconciliation>{
+        let prepared=self.load_government_preparation(current,filter)?;
         let bytes=prepared.csv()?;
-        if self.current_access()?!=before{return Err(AccessRevoked.into());}
+        if self.current_access()?!=current.access{return Err(AccessRevoked.into());}
         crate::reports::save_csv(destination,&bytes)?;
         Ok(prepared.report)
+    }
+    pub fn sss_collection_prepare(&mut self,current:&Snapshot,filter:crate::payroll_government::Filter)->Result<crate::payroll_government::sss_collection::Basis>{
+        let prepared=self.load_government_preparation(current,filter)?;
+        let basis=crate::payroll_government::sss_collection::Basis::from_preparation(&prepared)?;
+        if self.current_access()?!=current.access{return Err(AccessRevoked.into());}Ok(basis)
+    }
+    pub fn sss_collection_export(&mut self,current:&Snapshot,filter:crate::payroll_government::Filter,request:&crate::payroll_government::sss_collection::Request,destination:&Path)->Result<crate::payroll_government::Reconciliation>{
+        let prepared=self.load_government_preparation(current,filter)?;
+        let basis=crate::payroll_government::sss_collection::Basis::from_preparation(&prepared)?;
+        let bytes=basis.render(request)?;
+        if self.current_access()?!=current.access{return Err(AccessRevoked.into());}
+        crate::payroll_government::sss_collection::save_reference(destination,&bytes)?;Ok(prepared.report)
     }
     pub fn government_registration(
         &mut self, current: &Snapshot, employee_id: Option<Uuid>,

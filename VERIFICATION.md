@@ -1,5 +1,15 @@
 # Prototype verification — 2026-10-25
 
+## SSS reference draft —0.1.45 candidate
+
+442default Rust checks and four inspected fictional native layouts pass. New
+checks cover fresh source/registration/receipt binding, explicit declarations,
+revocation before file creation, existing-file protection and compact geometry.
+No schema/rate/payroll mutation; migration60's prior database/hosted evidence is
+retained rather than represented as a new run. Delivery/installation/channel
+proof is a separate final gate in [0.1.45 evidence](docs/GOVERNMENT-0.1.45-VERIFICATION.md).
+Current My.SSS acceptance remains unverified. The government milestone is partial.
+
 ## Agency preparation — 0.1.44 installed and privately published
 
 434default Rust checks,4explicit vector checks, exact installer/recovery,

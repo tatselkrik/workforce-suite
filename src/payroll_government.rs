@@ -9,6 +9,7 @@ pub mod preparation;
 #[cfg(any(test, feature = "qa-screenshot"))]
 mod preview;
 pub mod registration;
+pub mod sss_collection;
 pub mod sss_r3;
 mod workflow;
 #[cfg(any(test, feature = "qa-screenshot"))]

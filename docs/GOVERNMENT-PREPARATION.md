@@ -23,7 +23,9 @@ protection. Manager/ordinary Employee own-record access grants no exception.
 Identifier leading zeros remain in the CSV bytes; import identifier columns as
 text when using a spreadsheet. Native typed Excel files remain a later milestone.
 
-The separate SSS reference encoder has no product download control. Twelve
+In0.1.44 the separate SSS reference encoder had no product download control.
+The [0.1.45 increment](SSS-REFERENCE-DRAFT.md) adds a bounded HR-review draft
+with current-source/readiness and explicit declaration checks. Twelve
 fictional monthly vectors match inspected DTO/string methods from the currently
 downloadable R3 package, whose base/update writer classes are identical. No SSS
 installer, GUI, network helper or old rate-table validator was launched. Integer

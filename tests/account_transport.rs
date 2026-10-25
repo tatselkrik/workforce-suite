@@ -3467,3 +3467,39 @@ fn agency_preparation_uses_one_fresh_rpc_and_revocation_prevents_file_creation()
   assert!(!req.iter().any(|r|r.line.contains("/government_registration_records?")));
  }
 }
+
+fn collection_source(company:&Company)->serde_json::Value{
+ use chrono::Datelike;
+ let month=company.today().with_day(1).unwrap().checked_sub_months(chrono::Months::new(1)).unwrap();let end=month.checked_add_months(chrono::Months::new(1)).unwrap().pred_opt().unwrap();
+ let eid=uuid::Uuid::from_u128(181001);let receipt=uuid::Uuid::from_u128(181002);let actor=uuid::Uuid::from_u128(181003);
+ let fact=json!({"company_id":company.id,"employee_id":eid,"id":uuid::Uuid::from_u128(181004),"agency":"sss","kind":"monthly","state":"received","starts_on":month,"ends_on":end,"contribution_month":month,"received_on":company.today(),"parts":{"employee_cents":150000,"employer_cents":300000,"ec_cents":3000}});
+ json!({"version":"government-preparation-v1","review":{"version":"government-reconciliation-v1","source":{"version":"government-payroll-sources-v1","company_id":company.id,"company_name":company.name,"generated_at":chrono::Utc::now(),"as_of":company.today(),"month":month,"agency":"sss","facts":[fact.clone()]},"effective_facts":[fact],"reviews":[],"history":[],"employees":[{"employee_id":eid,"employee_code":"TEST-SSS","employee_name":"Fictional Staff"}],"remittances":[{"id":receipt,"company_id":company.id,"agency":"sss","paid_on":company.today(),"amount_cents":453000,"allocations":[{"month":month,"amount_cents":453000}],"reference":"QA-SBR-01","evidence":"Fictional receipt","note":"","replaces_id":null,"recorded_by":actor,"recorded_at":chrono::Utc::now(),"void_id":null,"void_reason":null,"voided_by":null,"voided_at":null,"replacement_id":null}]},"registrations":[{"id":uuid::Uuid::from_u128(181005),"company_id":company.id,"employee_id":null,"revision":0,"details":{"registered_name":"Fictional Company","sss_number":"0123456789"}},{"id":uuid::Uuid::from_u128(181006),"company_id":company.id,"employee_id":eid,"revision":0,"details":{"last_name":"Dela Cruz","first_name":"Alex","middle_name":"M","name_suffix":"","sss_number":"0212345678"}}]})
+}
+#[test]
+fn sss_collection_load_is_private_and_membership_is_rechecked_before_return(){
+ use hris_desktop::payroll_government::{Agency,Filter};use chrono::Datelike;
+ for revoked in[false,true]{
+  let company=Company{owner_id:uuid::Uuid::from_u128(181100),..Default::default()};let month=company.today().with_day(1).unwrap().checked_sub_months(chrono::Months::new(1)).unwrap();
+  let access=json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});let mut after=access.clone();if revoked{after["role"]=json!("manager");}
+  let mut replies=baseline(&company);replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access));replies.push(reply("POST /rest/v1/rpc/government_preparation ",200,collection_source(&company)));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,after));
+  let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
+  assert_eq!(client.sss_collection_prepare(&data,Filter{month,agency:Agency::Sss}).is_err(),revoked);drop(client);server.join().unwrap();
+  let req=requests.lock().unwrap();assert_eq!(req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/government_preparation ")).count(),1);assert!(!req.iter().any(|r|r.line.contains("/government_registration_records?")));
+ }
+}
+#[test]
+fn sss_collection_export_refetches_and_rejects_stale_or_revoked_inputs_before_io(){
+ use hris_desktop::payroll_government::{Agency,Filter,preparation::{Preparation,PreparationWire},sss_collection::{Basis,Request,Declaration},sss_r3::Remark};use chrono::Datelike;
+ for case in["success","stale","revoked"]{
+  let company=Company{owner_id:uuid::Uuid::from_u128(181100),..Default::default()};let month=company.today().with_day(1).unwrap().checked_sub_months(chrono::Months::new(1)).unwrap();let filter=Filter{month,agency:Agency::Sss};
+  let mut wire=collection_source(&company);let original:PreparationWire=serde_json::from_value(wire.clone()).unwrap();let basis=Basis::from_preparation(&Preparation::from_wire(original,company.id,filter).unwrap()).unwrap();
+  let request=Request{expected_fingerprint:basis.fingerprint.clone(),receipt_id:basis.receipt.id,employer_name:basis.employer_name.clone(),reviewed:true,declarations:vec![Declaration{employee_id:basis.people[0].employee_id,last_name:"Dela Cruz".into(),first_name:"Alex".into(),middle_initial:"M".into(),remark:Remark::Normal,event_on:None}]};
+  if case=="stale"{wire["registrations"][1]["revision"]=json!(1);}
+  let access=json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});let mut after=access.clone();if case=="revoked"{after["role"]=json!("manager");}
+  let mut replies=baseline(&company);replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access));replies.push(reply("POST /rest/v1/rpc/government_preparation ",200,wire));if case!="stale"{replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,after));}
+  let(config,server,_)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();let path=std::env::current_dir().unwrap().join("work").join(format!("sss-reference-{}.txt",uuid::Uuid::new_v4()));
+  let result=client.sss_collection_export(&data,filter,&request,&path);assert_eq!(result.is_ok(),case=="success");
+  if case=="success"{assert_eq!(std::fs::read(&path).unwrap(),basis.render(&request).unwrap());std::fs::remove_file(path).unwrap();}else{assert!(!path.exists());}
+  drop(client);server.join().unwrap();
+ }
+}
