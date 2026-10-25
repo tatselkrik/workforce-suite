@@ -469,10 +469,17 @@ impl HrisApp {
                                 _ => {}
                             }
                         }
+                        if ui.add_enabled(self.report_state.result.is_some() && before==self.report_state.filter,egui::Button::new("Export Excel")).clicked() {
+                            let name=format!("{}.xlsx",self.report_state.filter.filename().trim_end_matches(".csv"));
+                            match reports::choose_export(&name) {
+                                Ok(Some(path))=>self.send(Command::Report{filter:self.report_state.filter.clone(),destination:Some(path)}),
+                                Err(e)=>self.notice=Some((e.to_string(),true)), _=>{}
+                            }
+                        }
                     });
                 }
             }
-            ui.label(RichText::new("Reports refresh company records and access before generation. Export CSV generates a fresh report and saves to a new file.").small().color(muted(ui)));
+            ui.label(RichText::new("CSV and Excel exports generate a fresh report, recheck current access and save to a new file.").small().color(muted(ui)));
         });
         if before != self.report_state.filter {
             self.report_state.result = None;

@@ -148,7 +148,7 @@ impl HrisApp {
         if hr {
             ui.horizontal_wrapped(|ui| {
                 ui.selectable_value(&mut state.view, View::Entry, "Enter opening");
-                ui.selectable_value(&mut state.view, View::Import, "Import CSV");
+                ui.selectable_value(&mut state.view, View::Import, "Import file");
                 ui.selectable_value(&mut state.view, View::History, "History");
             });
         }
@@ -413,7 +413,7 @@ impl HrisApp {
         let pending = state.pending.is_some();
         card(ui, |ui| {
             ui.label(
-                RichText::new("Import opening balances from CSV")
+                RichText::new("Import opening balances from CSV / Excel")
                     .size(18.0)
                     .strong(),
             );
@@ -450,8 +450,14 @@ impl HrisApp {
                             _ => {}
                         }
                     }
-                    if ui.button("Choose opening CSV").clicked() {
-                        match crate::imports::choose_csv_source("Preview opening balances CSV")
+                    if ui.button("Save opening Excel template").clicked() {
+                        match crate::reports::choose_export("hris-opening-balances.xlsx").and_then(|p|p.map(|p|leave::opening_import::template_xlsx().and_then(|b|crate::reports::save_xlsx(&p,&b))).transpose()) {
+                            Ok(Some(()))=>self.notice=Some(("Opening Excel template saved.".into(),false)),
+                            Err(e)=>state.error=Some(e.to_string()), _=>{}
+                        }
+                    }
+                    if ui.button("Choose opening CSV / Excel").clicked() {
+                        match crate::imports::choose_tabular_source("Preview opening balances CSV or Excel")
                             .and_then(|p| p.map(|p| Import::load(&self.data, &p)).transpose())
                         {
                             Ok(Some(source)) => {
@@ -535,10 +541,14 @@ impl HrisApp {
                     });
                 ui.add_enabled_ui(!self.busy&&!pending,|ui|{
                     ui.checkbox(&mut state.import_reviewed,"I reviewed source requests and their representation in HRIS for every imported row");
-                    if ui.button("Preview every CSV row — no changes").clicked(){match source.records(&self.data,state.import_reviewed){Ok(records)=>{preview=Some(records);state.import_preview=None;state.error=None;},Err(e)=>state.error=Some(e.to_string())}}
+                    if ui.button("Preview every row — no changes").clicked(){match source.records(&self.data,state.import_reviewed){Ok(records)=>{preview=Some(records);state.import_preview=None;state.error=None;},Err(e)=>state.error=Some(e.to_string())}}
                     if ui.button("Export row review / errors CSV").clicked(){
                         let mut report=source.clone();if let Some(p)=&state.import_preview{for(row,server)in report.rows.iter_mut().zip(&p.rows){if let Some(e)=&server.error{row.errors.push(e.clone());}}}
                         match crate::reports::choose_export("hris-opening-row-review.csv"){Ok(Some(destination))=>self.send(Command::OpeningImportErrors{report,destination}),Err(e)=>state.error=Some(e.to_string()),_=>{}}
+                    }
+                    if ui.button("Export row review / errors Excel").clicked(){
+                        let mut report=source.clone();if let Some(p)=&state.import_preview{for(row,server)in report.rows.iter_mut().zip(&p.rows){if let Some(e)=&server.error{row.errors.push(e.clone());}}}
+                        match crate::reports::choose_export("hris-opening-row-review.xlsx"){Ok(Some(destination))=>self.send(Command::OpeningImportErrors{report,destination}),Err(e)=>state.error=Some(e.to_string()),_=>{}}
                     }
                 });
                 if let Some(p) = &state.import_preview {

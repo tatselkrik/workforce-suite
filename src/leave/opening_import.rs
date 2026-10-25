@@ -51,6 +51,10 @@ pub struct Import {
 }
 impl Import {
     pub fn load(data: &Snapshot, path: &Path) -> Result<Self> {
+        if path.extension().is_some_and(|s| s.eq_ignore_ascii_case("xlsx")) {
+            let rows = crate::tabular::load_xlsx(path, 100, HEADERS.len())?;
+            return Self::from_rows(data, path.file_name().and_then(|s|s.to_str()).unwrap_or("opening.xlsx"), rows.into_iter().map(|r| crate::imports::CsvRow { line:r.number, cells:r.cells }).collect());
+        }
         ensure!(
             path.extension()
                 .is_some_and(|e| e.eq_ignore_ascii_case("csv")),
@@ -70,6 +74,9 @@ impl Import {
         )
     }
     pub fn parse(data: &Snapshot, filename: &str, text: &str) -> Result<Self> {
+        Self::from_rows(data, filename, crate::imports::parse(text)?)
+    }
+    fn from_rows(data: &Snapshot, filename: &str, rows: Vec<crate::imports::CsvRow>) -> Result<Self> {
         ensure!(
             data.access.role.manages_hr(),
             "HR access is required for opening imports."
@@ -80,7 +87,7 @@ impl Import {
             .as_ref()
             .context("Refresh dated leave setup first.")?;
         c.validate(&data.access, data.company.today())?;
-        let mut parsed = crate::imports::parse(text)?.into_iter();
+        let mut parsed = rows.into_iter();
         let header = parsed.next().context("Include a header row.")?;
         ensure!(
             header.cells.len() == HEADERS.len()
@@ -218,9 +225,24 @@ impl Import {
             }),
         )
     }
+    pub fn error_xlsx(&self) -> Result<Vec<u8>> {
+        let mut headers = vec!["source_row"];
+        headers.extend(HEADERS);
+        headers.push("errors");
+        let rows = self.rows.iter().map(|r| {
+            let mut cells = vec![r.line.to_string()];
+            cells.extend((0..6).map(|i| r.cells.get(i).cloned().unwrap_or_default()));
+            cells.push(r.errors.join("; "));
+            cells
+        }).collect::<Vec<_>>();
+        crate::tabular::text_xlsx(&headers, &rows)
+    }
 }
 pub fn template() -> Result<Vec<u8>> {
     crate::imports::csv(&HEADERS, std::iter::empty())
+}
+pub fn template_xlsx() -> Result<Vec<u8>> {
+    crate::tabular::text_xlsx(&HEADERS, &[])
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

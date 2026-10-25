@@ -225,7 +225,12 @@ impl Preview {
         );
         let text = std::str::from_utf8(bytes)
             .context("Save the file as UTF-8 comma-separated CSV, then try again.")?;
-        let mut parsed = parse(text)?;
+        Self::from_rows(data, filename, parse(text)?)
+    }
+    fn from_rows(data: &Snapshot, filename: String, mut parsed: Vec<CsvRow>) -> Result<Self> {
+        ensure!(data.access.role.manages_hr() && data.access.company_id == data.company.id,
+            "Only HR or Administrators can preview employee imports.");
+        ensure!(!parsed.is_empty() && parsed.len() <= MAX_ROWS + 1, "Include headers and at most 500 employee rows.");
         ensure!(
             parsed
                 .iter()
@@ -381,6 +386,10 @@ impl Preview {
         Ok(preview)
     }
     pub fn load(data: &Snapshot, path: &Path) -> Result<Self> {
+        if path.extension().is_some_and(|s| s.eq_ignore_ascii_case("xlsx")) {
+            let rows = crate::tabular::load_xlsx(path, MAX_ROWS, HEADERS.len())?;
+            return Self::from_rows(data, path.file_name().unwrap_or_default().to_string_lossy().into_owned(), rows.into_iter().map(|r| CsvRow { line:r.number, cells:r.cells }).collect());
+        }
         ensure!(
             path.extension()
                 .is_some_and(|s| s.eq_ignore_ascii_case("csv")),
@@ -479,6 +488,9 @@ impl Preview {
             }),
         )
     }
+    pub fn error_xlsx(&self) -> Result<Vec<u8>> {
+        crate::tabular::text_xlsx(&["source_row", "employee_code", "full_name", "errors"], &self.rows.iter().filter(|r| !r.errors.is_empty()).map(|r| vec![r.source_row.to_string(), r.employee_code.clone(), r.full_name.clone(), r.errors.join(" | ")]).collect::<Vec<_>>())
+    }
 }
 fn validate_reason(reason: &str) -> Result<()> {
     ensure!(
@@ -536,6 +548,9 @@ pub fn template() -> Result<Vec<u8>> {
         .map(String::from)
         .collect()],
     )
+}
+pub fn template_xlsx() -> Result<Vec<u8>> {
+    crate::tabular::text_xlsx(&HEADERS, &[])
 }
 pub fn apply_demo(store: &mut DemoStore, preview: Preview, reason: String) -> Result<()> {
     ensure!(
@@ -610,14 +625,14 @@ pub fn apply_demo(store: &mut DemoStore, preview: Preview, reason: String) -> Re
 
 #[cfg(windows)]
 pub fn choose_source() -> Result<Option<PathBuf>> {
-    choose_csv_source("Preview employee CSV import")
+    choose_tabular_source("Preview employee CSV or Excel import")
 }
 #[cfg(windows)]
-pub fn choose_csv_source(caption:&str) -> Result<Option<PathBuf>> {
+pub fn choose_tabular_source(caption:&str) -> Result<Option<PathBuf>> {
     use std::{ffi::OsString, os::windows::ffi::OsStringExt};
     use windows_sys::Win32::UI::{Controls::Dialogs::*, Input::KeyboardAndMouse::GetActiveWindow};
     let mut path = vec![0u16; 32768];
-    let filter: Vec<u16> = "UTF-8 CSV (*.csv)\0*.csv\0\0"
+    let filter: Vec<u16> = "CSV or Excel (*.csv;*.xlsx)\0*.csv;*.xlsx\0UTF-8 CSV (*.csv)\0*.csv\0Excel workbook (*.xlsx)\0*.xlsx\0\0"
         .encode_utf16()
         .collect();
     ensure!(!caption.contains('\0'),"Invalid file chooser title.");
@@ -651,4 +666,4 @@ pub fn choose_source() -> Result<Option<PathBuf>> {
     anyhow::bail!("CSV selection currently supports Windows only.")
 }
 #[cfg(not(windows))]
-pub fn choose_csv_source(_caption:&str)->Result<Option<PathBuf>> {anyhow::bail!("CSV selection currently supports Windows only.")}
+pub fn choose_tabular_source(_caption:&str)->Result<Option<PathBuf>> {anyhow::bail!("CSV/Excel selection currently supports Windows only.")}

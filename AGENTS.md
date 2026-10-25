@@ -350,3 +350,12 @@ start at a future January1; retain filed dates/plans and protected reservation
 checks. Use checked native submissions after enablement and preserve the portal's
 own-only balance contract. Local implementation is not a completed release until
 its proportionate checks, guarded deployment and actual installation pass.
+
+Native Excel exchange follows docs/NATIVE-EXCEL.md. Keep file parsing local and
+bounded before allocation; reject formulas/cached formulas, external links,
+macros, hidden/merged data and ambiguous numeric identifiers. Preserve worksheet
+row numbers and literal codes/contact values. Reuse existing protected import
+transactions. Render fresh scoped reports before the final protected access
+check/file write, and never overwrite existing exports. Agency adapters remain
+separate. Native XLSX alone does not complete the attendance/leave batch imports
+in docs/TABULAR-EXCHANGE.md. Preserve the new free dependency license notices.

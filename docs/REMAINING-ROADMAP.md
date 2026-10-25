@@ -68,6 +68,10 @@ unconfigured external connection to a completed integration.
    Salary/account/personnel authority remains outside delegation.
 6. **Attendance/leave imports and Excel support.** Validated imports, previews,
    error reports and native XLSX import/export; employee CSV imports already work.
+   Native XLSX is now a verified local0.1.50candidate for employee/opening files
+   and attendance/leave/workforce report exports; release delivery is pending.
+   Attendance/leave request batch imports are still queued. See
+   [the exchange plan](TABULAR-EXCHANGE.md) and [Excel evidence](NATIVE-EXCEL-0.1.50-VERIFICATION.md).
 7. **Accounting and external payroll integration foundations.** Configurable data
    exchange, reconciliation, retries and integration history. Actual connections
    require resolved company software/vendor targets.

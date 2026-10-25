@@ -25,6 +25,7 @@ pub mod report_views;
 pub mod reports;
 pub mod requests;
 pub mod shifts;
+pub mod tabular;
 pub mod ui;
 pub mod updater;
 pub mod workforce;

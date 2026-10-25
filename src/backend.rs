@@ -787,12 +787,13 @@ impl CloudClient {
         filter.validate()?;
         let data = self.snapshot()?;
         let report = crate::reports::build(&data, filter, Utc::now())?;
+        let bytes = destination.map(|path| report.export_bytes(path)).transpose()?;
         let access = self.current_access()?;
         if !crate::reports::same_scope(&data.access, &access) {
             return Err(AccessRevoked.into());
         }
-        if let Some(path) = destination {
-            report.save(path)?;
+        if let (Some(path), Some(bytes)) = (destination, bytes) {
+            crate::reports::save_export(path, &bytes)?;
         }
         Ok((data, report))
     }
@@ -1886,8 +1887,9 @@ pub fn worker(
             let mut check_after_sign_in = false;
             let mut result: Result<Snapshot> = match command {
                 Command::OpeningImportErrors{report,destination}=>(||{
+                    let bytes=if crate::tabular::is_xlsx(&destination){report.error_xlsx()?}else{report.error_csv()?};
                     match cloud.as_mut(){Some(client)=>{let access=client.current_access()?;if access!=current.access{return Err(AccessRevoked.into());}ensure!(access.role.manages_hr(),"HR access is required to export opening review rows.");},None=>ensure!(demo.as_ref().is_some_and(|s|s.data.mode==Mode::Demo&&s.data.access.role.manages_hr()),"Sign in to HRIS with HR access before exporting opening reviews.")}
-                    crate::reports::save_csv(&destination,&report.error_csv()?)?;message="Opening row review exported.".into();Ok(current.clone())
+                    crate::reports::save_export(&destination,&bytes)?;message="Opening row review exported.".into();Ok(current.clone())
                 })(),
                 Command::PreviewLeaveOpeningImport(records)=>{
                     let changed=match cloud.as_mut(){Some(client)=>client.leave_opening_import_preview(&records),None=>demo.as_mut().context("Sign in to preview opening imports.").map(|store|{
@@ -2014,7 +2016,9 @@ pub fn worker(
                                 "Only HR or Administrators can export import errors."
                             );
                         }
-                        crate::reports::save_csv(&destination, &preview.error_csv()?)?;
+                        let bytes=if crate::tabular::is_xlsx(&destination){preview.error_xlsx()?}else{preview.error_csv()?};
+                        if let Some(client)=cloud.as_mut(){if client.current_access()? != current.access {return Err(AccessRevoked.into());}}
+                        crate::reports::save_export(&destination, &bytes)?;
                         Ok(current.clone())
                     })()
                 }

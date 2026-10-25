@@ -25,8 +25,8 @@ impl HrisApp {
             return;
         }
         card(ui, |ui| {
-            ui.heading("Employee CSV import");
-            ui.label("Create new employee and contact records from UTF-8 CSV. Previewing makes no changes. Existing employee codes are preserved; use the employee editor for updates.");
+            ui.heading("Employee import");
+            ui.label("Create new employee and contact records from CSV or Excel (.xlsx). Previewing makes no changes. Existing employee codes are preserved; use the employee editor for updates.");
             ui.add_space(10.0);
             ui.horizontal_wrapped(|ui| {
                 if ui.button("Save CSV template").clicked() {
@@ -45,12 +45,18 @@ impl HrisApp {
                         _ => {}
                     }
                 }
+                if ui.button("Save Excel template").clicked() {
+                    match reports::choose_export("hris-employee-import-template.xlsx").and_then(|p| p.map(|p| imports::template_xlsx().and_then(|b| reports::save_xlsx(&p,&b))).transpose()) {
+                        Ok(Some(())) => self.notice=Some(("Excel employee template saved.".into(),false)),
+                        Err(e) => self.notice=Some((e.to_string(),true)), _=>{}
+                    }
+                }
                 if primary(
                     ui,
                     if self.import_state.preview.is_some() {
-                        "Reopen / choose CSV"
+                        "Reopen / choose file"
                     } else {
-                        "Choose CSV to preview"
+                        "Choose CSV / Excel"
                     },
                 ) {
                     match imports::choose_source() {
@@ -69,7 +75,7 @@ impl HrisApp {
                 }
             });
             ui.label(RichText::new("Maximum 500 rows / 2 MiB. Required headers: employee_code, full_name. Optional columns use the template names; blank annual_leave_days uses the company default. Managers and employment options must already exist and be active.").small().color(muted(ui)));
-            ui.label(RichText::new("Imports create active employee records without sign-in accounts. Raw CSV files are not uploaded or retained in the import audit.").small().color(muted(ui)));
+            ui.label(RichText::new("Imports create active employee records without sign-in accounts. Source files are not uploaded or retained. In Excel, keep codes and contact numbers as Text; use one visible worksheet and paste values instead of formulas.").small().color(muted(ui)));
         });
         ui.add_space(12.0);
         if let Some(p) = self.import_state.preview.clone() {
@@ -124,6 +130,12 @@ impl HrisApp {
                             }),
                             Err(e) => self.notice = Some((e.to_string(), true)),
                             _ => {}
+                        }
+                    }
+                    if ui.add_enabled(!p.valid(),egui::Button::new("Export errors Excel")).clicked() {
+                        match reports::choose_export("hris-employee-import-errors.xlsx") {
+                            Ok(Some(destination))=>self.send(Command::ImportErrors{preview:p.clone(),destination}),
+                            Err(e)=>self.notice=Some((e.to_string(),true)), _=>{}
                         }
                     }
                     if ui.button("Discard preview").clicked() {
@@ -250,7 +262,7 @@ impl HrisApp {
         let mut batches = self.data.imports.batches.clone();
         batches.sort_by_key(|b| std::cmp::Reverse((b.created_at, b.id)));
         if batches.is_empty() {
-            empty(ui, "No employee CSV batches have been imported.");
+            empty(ui, "No employee batches have been imported.");
         }
         for batch in batches.iter().take(30) {
             card(ui, |ui| {
