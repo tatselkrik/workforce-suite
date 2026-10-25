@@ -290,3 +290,46 @@ Kirk has no biometric hardware. Keep the biometric section visible and Connect
 device disabled. Actual device/driver/protocol work and hardware purchases are
 deferred until Kirk supplies hardware and resumes that scope. The rest of the
 authorized free roadmap and the same scheduler remain active.
+
+## Usage-reset continuation and context freshness — 25 October 2026
+
+Kirk requires automatic continuation to use current context, including changes
+made after a scheduler prompt was saved. Reuse the existing chat's heartbeat;
+the saved prompt is a recovery procedure, not an authoritative frozen work order.
+Latest human instructions and current evidence override older prompts/notes.
+
+- Keep this task's short checkpoint current at meaningful milestones and scope
+  changes. Include the latest human intent, source revision/dirty work, completed
+  delivery, actual verification/limits, any interrupted operation and the exact
+  next safe step. Reference private guards without copying sensitive contents.
+- Check both five-hour and weekly limits at continuation start and periodically
+  at milestones. Once usage is available, immediately arm the SAME heartbeat for
+  the current reported five-hour reset plus two minutes as a fallback, before
+  substantive work; an unexpected cutoff must not depend on a last-minute update.
+  Around80% of the five-hour allowance used, prepare the checkpoint
+  and next wake before starting long operations. Before exhaustion, save the
+  freshest state and retime the SAME heartbeat for two minutes after the actual
+  reported reset. Do not calculate five hours from the interruption. If multiple
+  exhausted windows block work, use the latest applicable reset. Missing limit
+  metadata is not permission to assume availability or buy/redeem capacity.
+- On every wake, allow only read-only recovery/availability checks first: reconcile
+  the latest human messages with this file, this task's checkpoint and the current
+  roadmap. Read project memory once as historical context. Inspect the relevant
+  source revision/dirty files and affected delivery or migration evidence. Read
+  only bounded recent human messages if chat context is incomplete; never dump
+  entire historical tool transcripts. Identify newer pauses, changed scope,
+  completed steps and unresolved outcomes before doing implementation, SQL,
+  builds, installation or publication. Skip unrelated historical investigations.
+- Refresh a stale checkpoint before resuming. If an operation may already have
+  completed when the session stopped, verify its outcome before retrying; never
+  blindly repeat migrations, releases, installation or other mutations. An abrupt
+  cutoff is recovered from current evidence and the last saved milestone.
+- Keep the scheduler prompt focused on this protocol and current file pointers.
+  Update it when scope or recovery rules change; do not hardcode old task commands
+  or duplicate full release histories. After the brief recovery, take the next
+  concrete authorized step instead of repeatedly replanning settled work.
+
+Continue only existing authorized free scope. Preserve all project, privacy,
+financial, target, delivery and platform-permission boundaries. Pause the same
+follow-up on a human stop/pause, completed scope or a genuine required handoff;
+otherwise retime it while blocked and resume when actual usage is available.
