@@ -2,6 +2,7 @@ pub mod access;
 pub mod approvals;
 pub mod account;
 pub mod attendance;
+pub mod attendance_imports;
 pub mod backend;
 pub mod breaks;
 pub mod calculations;

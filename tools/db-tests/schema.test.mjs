@@ -81,6 +81,7 @@ try {
   const creditMigrations=[];
   const delegationMigrations=[];
   const datedMigrations=[];
+  const attendanceImportMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -94,6 +95,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_attendance_request_imports.sql')){attendanceImportMigrations.push(filename);continue;}
     if(filename.endsWith('_leave_opening_arithmetic.sql')||filename.endsWith('_leave_openings_and_policy_schedule.sql')){datedMigrations.push(filename);continue;}
     if(filename.endsWith('_approval_delegation.sql')){delegationMigrations.push(filename);continue;}
     if(filename.endsWith('_audited_leave_credits.sql')||filename.endsWith('_leave_credit_active_team_scope.sql')){creditMigrations.push(filename);continue;}
@@ -493,6 +495,13 @@ try {
   for(const t of datedTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,datedBefore[t],'Dated leave preserves prior '+t+' records');
   const datedChanged=['leave_balance','minimum_annual_allowance','save_leave_policy','submit_leave','review_leave_without_delegation_receipt','require_credit_preview','portal_leave_context','portal_submit_leave','payroll_basis','shift_working','exit_readiness','post_leave_credit'];
   for(const f of datedPriorFunctions)if(f.schema!=='hris_private'||!datedChanged.includes(f.name))eq((await db.query('select md5(pg_get_functiondef($1::regprocedure))digest',[f.identity])).rows[0].digest,f.digest,'Dated leave preserves unrelated function '+f.identity);
+  await db.exec('reset role');
+  const importTables=(await db.query("select tablename from pg_tables where schemaname='public'order by tablename")).rows.map(r=>r.tablename);
+  const importBefore={};for(const t of importTables)importBefore[t]=(await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows;
+  const importFunctions=(await db.query("select p.oid::regprocedure::text identity,md5(pg_get_functiondef(p.oid))digest from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in('public','hris_private')and p.prokind='f'order by 1")).rows;
+  for(const filename of attendanceImportMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  for(const t of importTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,importBefore[t],'Attendance imports preserve prior '+t+' records');
+  for(const f of importFunctions)eq((await db.query('select md5(pg_get_functiondef($1::regprocedure))digest',[f.identity])).rows[0].digest,f.digest,'Attendance imports preserve every existing function '+f.identity);
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

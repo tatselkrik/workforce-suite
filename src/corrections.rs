@@ -101,6 +101,11 @@ impl CorrectionDraft {
                 data.company.tz(),
             )?)
         };
+        self.proposal_from_instants(data, now, time_in, time_out)
+    }
+    // File imports already carry an unambiguous offset. Reuse the record rules
+    // without discarding that offset through a local wall-clock conversion.
+    pub(crate) fn proposal_from_instants(&self, data: &Snapshot, now: DateTime<Utc>, time_in: DateTime<Utc>, time_out: Option<DateTime<Utc>>) -> Result<CorrectionChange> {
         let mut change = CorrectionChange {
             record: Attendance {
                 calculation_snapshot: self

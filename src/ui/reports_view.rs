@@ -236,7 +236,9 @@ impl HrisApp {
             for kind in Kind::ALL {
                 if ui
                     .selectable_label(
-                        !self.import_state.open && self.report_state.filter.kind == kind,
+                        !self.import_state.open
+                            && !self.attendance_import_state.open
+                            && self.report_state.filter.kind == kind,
                         kind.label(),
                     )
                     .clicked()
@@ -250,15 +252,31 @@ impl HrisApp {
                         self.report_state.filter.ends_on = self.data.company.today();
                     }
                     self.import_state.open = false;
+                    self.attendance_import_state.open = false;
                 }
             }
         });
-        if self.data.access.role.manages_hr()
-            && ui
-                .selectable_label(self.import_state.open, "Employee import")
-                .clicked()
-        {
-            self.import_state.open = true;
+        ui.horizontal_wrapped(|ui| {
+            if self.data.access.role.manages_hr()
+                && ui
+                    .selectable_label(self.import_state.open, "Employee import")
+                    .clicked()
+            {
+                self.import_state.open = true;
+                self.attendance_import_state.open = false;
+            }
+            if self.data.access.role.manages_hr()
+                && ui
+                    .selectable_label(self.attendance_import_state.open, "Attendance import")
+                    .clicked()
+            {
+                self.import_state.open = false;
+                self.attendance_import_state.open = true;
+            }
+        });
+        if self.attendance_import_state.open {
+            self.attendance_import(ui);
+            return;
         }
         if self.import_state.open && self.data.access.role.manages_hr() {
             self.employee_import(ui);
@@ -469,11 +487,25 @@ impl HrisApp {
                                 _ => {}
                             }
                         }
-                        if ui.add_enabled(self.report_state.result.is_some() && before==self.report_state.filter,egui::Button::new("Export Excel")).clicked() {
-                            let name=format!("{}.xlsx",self.report_state.filter.filename().trim_end_matches(".csv"));
+                        if ui
+                            .add_enabled(
+                                self.report_state.result.is_some()
+                                    && before == self.report_state.filter,
+                                egui::Button::new("Export Excel"),
+                            )
+                            .clicked()
+                        {
+                            let name = format!(
+                                "{}.xlsx",
+                                self.report_state.filter.filename().trim_end_matches(".csv")
+                            );
                             match reports::choose_export(&name) {
-                                Ok(Some(path))=>self.send(Command::Report{filter:self.report_state.filter.clone(),destination:Some(path)}),
-                                Err(e)=>self.notice=Some((e.to_string(),true)), _=>{}
+                                Ok(Some(path)) => self.send(Command::Report {
+                                    filter: self.report_state.filter.clone(),
+                                    destination: Some(path),
+                                }),
+                                Err(e) => self.notice = Some((e.to_string(), true)),
+                                _ => {}
                             }
                         }
                     });

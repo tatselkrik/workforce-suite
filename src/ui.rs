@@ -26,6 +26,7 @@ mod breaks_view;
 mod calculations_view;
 mod hiring_view;
 mod imports_view;
+mod attendance_import_view;
 mod leave_view;
 mod leave_credits_view;
 mod leave_openings_view;
@@ -157,6 +158,7 @@ pub struct HrisApp {
     overtime_state: overtime_view::State,
     report_state: reports_view::State,
     import_state: imports_view::State,
+    attendance_import_state:attendance_import_view::State,
     notification_state: notifications_view::State,
     hiring_state: hiring_view::State,
     recruiting_state: recruiting_view::State,
@@ -387,6 +389,7 @@ impl HrisApp {
             overtime_state: overtime_view::State::default(),
             report_state,
             import_state: imports_view::State::default(),
+            attendance_import_state:attendance_import_view::State::default(),
             notification_state: notifications_view::State::default(),
             hiring_state: hiring_view::State::default(),
             recruiting_state: Default::default(),
@@ -1020,6 +1023,7 @@ impl HrisApp {
             app.prepare_overtime_preview();
             app.prepare_reports_preview();
             app.prepare_import_preview();
+            app.prepare_attendance_import_preview();
             app.prepare_notifications_preview();
             app.prepare_hiring_preview();
             app.prepare_recruiting_preview();
@@ -1117,6 +1121,7 @@ impl HrisApp {
                         self.career_state = Default::default();
                         self.payroll_state = Default::default();
                         self.import_state = imports_view::State::default();
+                        self.attendance_import_state=attendance_import_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
                         self.account_form = None;
@@ -1150,6 +1155,7 @@ impl HrisApp {
                         self.career_state = Default::default();
                         self.payroll_state = Default::default();
                         self.import_state = imports_view::State::default();
+                        self.attendance_import_state=attendance_import_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
                         self.clear_profile_secrets(ctx);
@@ -1242,6 +1248,10 @@ impl HrisApp {
                     let career_saved = self.career_state.accept(&data);
                     let hiring_saved = hiring_record_saved && recruiting_saved && onboarding_saved && exit_saved && performance_saved && learning_saved && career_saved && payroll_saved;
                     self.data = data;
+                    self.attendance_import_state.sync(&self.data);
+                    if let Some(p)=update.attendance_import_preview{self.attendance_import_state.accept_preview(p,&self.data);}
+                    if let Some(r)=update.attendance_import_receipt{self.attendance_import_state.accept_receipt(r,&self.data);}
+                    if let Some(h)=update.attendance_import_history{self.attendance_import_state.accept_history(h,&self.data);}
                     if let Some(preview)=update.leave_opening_preview {self.leave_state.openings.accept(preview);}
                     if let Some(preview)=update.leave_opening_import_preview {self.leave_state.openings.accept_import(preview,&self.data);}
                     self.notification_state.invalidate();
@@ -1302,6 +1312,7 @@ impl HrisApp {
                     }
                 }
                 Err(error) => {
+                    if !update.background{self.attendance_import_state.failed(&error);}
                     self.hiring_state.pending = None;
                     self.onboarding_state.pending = None;
                     self.exit_state.pending = None;
@@ -1949,6 +1960,7 @@ impl HrisApp {
             || self.request_state.editing()
             || self.overtime_state.editing()
             || self.import_state.editing()
+            || self.attendance_import_state.has_draft()
             || self.hiring_state.editing()
             || self.onboarding_state.editing()
             || self.exit_state.editing()

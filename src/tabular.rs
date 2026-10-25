@@ -354,15 +354,16 @@ fn cell_text(cell: &Data, header: &str, row: usize, column: usize) -> Result<Str
         header,
         "annual_leave_days" | "available_days" | "remaining_carry_days"
     );
+    let date_column = matches!(header, "joined_on" | "work_date");
     let text = match cell {
         Data::Empty => String::new(),
         Data::String(s) => s.clone(),
         Data::Int(n) if numeric => n.to_string(),
         Data::Float(n) if numeric && n.is_finite() && n.abs() <= 1_000_000.0 => n.to_string(),
-        Data::DateTime(d) if header == "joined_on" && !d.is_duration() => {
+        Data::DateTime(d) if date_column && !d.is_duration() => {
             ensure!(
                 d.as_f64().fract() == 0.0,
-                "Excel row {row}, column {column}: joined_on must be a date without a time."
+                "Excel row {row}, column {column}: {header} must be a date without a time."
             );
             let serial = d.as_f64();
             let d = d.as_datetime().context("Invalid Excel date.")?;
@@ -372,11 +373,11 @@ fn cell_text(cell: &Data, header: &str, row: usize, column: usize) -> Result<Str
             );
             ensure!(
                 d.time().num_seconds_from_midnight() == 0 && d.time().nanosecond() == 0,
-                "Excel row {row}, column {column}: joined_on must be a date without a time."
+                "Excel row {row}, column {column}: {header} must be a date without a time."
             );
             d.date().to_string()
         }
-        Data::DateTimeIso(s) if header == "joined_on" => {
+        Data::DateTimeIso(s) if date_column => {
             if let Ok(date) = s.parse::<chrono::NaiveDate>() {
                 date.to_string()
             } else {
@@ -384,7 +385,7 @@ fn cell_text(cell: &Data, header: &str, row: usize, column: usize) -> Result<Str
                     .context("Use an ISO employment date without a timezone or time.")?;
                 ensure!(
                     date.time().num_seconds_from_midnight() == 0 && date.time().nanosecond() == 0,
-                    "joined_on must be a date without a time."
+                    "{header} must be a date without a time."
                 );
                 date.date().to_string()
             }

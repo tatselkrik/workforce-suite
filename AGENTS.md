@@ -340,6 +340,13 @@ self/submission exclusions, current source and issued-payroll guards. Never exte
 delegation to payroll/account/personnel permissions. Keep original plans/actors
 and immutable linked decision receipts; HR reasons/references remain private.
 
+Attendance file imports follow docs/ATTENDANCE-IMPORTS.md. Preserve the old self-only
+submission endpoint. The protected HR/Admin adapter records its actual importer,
+creates normal pending requests atomically, and retains independent review and
+source/revision checks. Never impersonate employee identities, apply clocks or
+approve during import. Bind uncertain retries to the same actor and full payload;
+private import references must not enter own/team request projections.
+
 Effective-date policies and reviewed openings follow docs/LEAVE-OPENINGS.md.
 Preserve known-from entitlement inputs AND captured incoming gross carry; changing
 employment defaults must not recalculate that known year. Takeover targets already

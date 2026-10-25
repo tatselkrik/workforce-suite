@@ -798,6 +798,30 @@ impl CloudClient {
         Ok((data, report))
     }
 
+    fn attendance_import_history_for(&mut self,data:&Snapshot)->Result<crate::attendance_imports::History>{
+        ensure!(data.access.role.manages_hr(),"Current HR access is required for attendance import history.");
+        let h:crate::attendance_imports::History=decode(self.request(Method::POST,"rpc/attendance_import_context")?.json(&json!({})).send().context("Could not refresh attendance import history.")?)?;
+        h.validate(data)?;if self.current_access()?!=data.access{return Err(AccessRevoked.into());}Ok(h)
+    }
+    pub fn attendance_import_history(&mut self)->Result<(Snapshot,crate::attendance_imports::History)>{let data=self.snapshot()?;let h=self.attendance_import_history_for(&data)?;Ok((data,h))}
+    pub fn attendance_import_preview(&mut self,batch:&crate::attendance_imports::Batch)->Result<(Snapshot,crate::attendance_imports::Preview)>{
+        let data=self.snapshot()?;batch.validate(&data)?;
+        let p:crate::attendance_imports::Preview=decode(self.request(Method::POST,"rpc/preview_attendance_import")?.json(&json!({"p_batch":batch})).send().context("Could not prepare the protected attendance import preview.")?)?;
+        p.validate(&data,batch)?;if self.current_access()?!=data.access{return Err(AccessRevoked.into());}Ok((data,p))
+    }
+    pub fn post_attendance_import(&mut self,post:&crate::attendance_imports::Post)->Result<(Snapshot,crate::attendance_imports::Receipt,crate::attendance_imports::History)>{
+        // Keep retries independent of later source/request changes. The server
+        // binds an existing receipt to the original actor and complete payload.
+        post.identity(&self.current_access()?)?;
+        let receipt:crate::attendance_imports::Receipt=decode(self.request(Method::POST,"rpc/post_attendance_import")?.json(&json!({"p_batch":post.batch,"p_fingerprint":post.preview.fingerprint})).send().context("Attendance import delivery is uncertain. Refresh history or retry this exact submission; do not create another batch.")?)?;
+        let data=self.snapshot()?;receipt.validate(&data,post)?;let history=self.attendance_import_history_for(&data)?;Ok((data,receipt,history))
+    }
+    pub fn withdraw_attendance_import(&mut self,change:&crate::attendance_imports::Withdraw)->Result<(Snapshot,crate::attendance_imports::History)>{
+        ensure!(self.current_access()?.role.manages_hr(),"Current HR access is required to withdraw an imported request.");
+        let receipt:Value=decode(self.request(Method::POST,"rpc/withdraw_attendance_import")?.json(&json!({"p_change":change})).send().context("Withdrawal delivery is uncertain. Keep this exact draft and refresh history before retrying.")?)?;
+        ensure!(receipt.get("id")==Some(&json!(change.id))&&receipt.get("item_id")==Some(&json!(change.item_id)),"Withdrawal receipt does not match the request.");
+        self.attendance_import_history()
+    }
     pub fn leave_opening_preview(&mut self,record:&crate::leave::dated::OpeningRecord)->Result<(Snapshot,crate::leave::dated::Preview)> {
         let data=self.snapshot()?;
         record.validate(&data)?;
@@ -1802,6 +1826,11 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
 }
 
 pub enum Command {
+    AttendanceImportHistory,
+    PreviewAttendanceImport(crate::attendance_imports::Batch),
+    PostAttendanceImport(Box<crate::attendance_imports::Post>),
+    WithdrawAttendanceImport(crate::attendance_imports::Withdraw),
+    AttendanceImportErrors{source:crate::attendance_imports::Import,preview:Option<crate::attendance_imports::Preview>,destination:std::path::PathBuf},
     OpeningImportErrors {report:crate::leave::opening_import::Import,destination:std::path::PathBuf},
     PreviewLeaveOpeningImport(Vec<crate::leave::dated::OpeningRecord>),
     PreviewLeaveOpening(crate::leave::dated::OpeningRecord),
@@ -1838,6 +1867,9 @@ pub enum Command {
 }
 
 pub struct Update {
+    pub attendance_import_history:Option<crate::attendance_imports::History>,
+    pub attendance_import_preview:Option<crate::attendance_imports::Preview>,
+    pub attendance_import_receipt:Option<crate::attendance_imports::Receipt>,
     pub leave_opening_import_preview:Option<crate::leave::opening_import::BatchPreview>,
     pub leave_opening_preview:Option<crate::leave::dated::Preview>,
     pub government_sss:Option<crate::payroll_government::sss_collection::Basis>,
@@ -1862,6 +1894,7 @@ pub fn worker(
         let mut demo = initial;
         let mut demo_documents = std::collections::HashMap::new();
         let mut demo_resumes = std::collections::HashMap::new();
+        let mut demo_attendance_imports=crate::attendance_imports::Demo::default();
         let mut demo_account = demo.as_ref().map(|_| AccountProfile::demo());
         let mut cloud: Option<CloudClient> = None;
         let mut current = demo
@@ -1877,6 +1910,9 @@ pub fn worker(
             };
             let mut message = String::new();
             let mut opening_preview_result=None;
+            let mut attendance_import_history_result=None;
+            let mut attendance_import_preview_result=None;
+            let mut attendance_import_receipt_result=None;
             let mut opening_import_preview_result=None;
             let mut report_result = None;
             let mut payroll_report_result = None;
@@ -1886,6 +1922,28 @@ pub fn worker(
             let mut update_state = None;
             let mut check_after_sign_in = false;
             let mut result: Result<Snapshot> = match command {
+                Command::AttendanceImportHistory=>{
+                    let changed=match cloud.as_mut(){Some(client)=>client.attendance_import_history(),None=>demo.as_ref().context("Sign in to view attendance import history.").and_then(|s|demo_attendance_imports.history(&s.data).map(|h|(s.data.clone(),h)))};
+                    changed.map(|(data,h)|{attendance_import_history_result=Some(h);message="Attendance import history refreshed.".into();data})
+                }
+                Command::PreviewAttendanceImport(batch)=>{
+                    let changed=match cloud.as_mut(){Some(client)=>client.attendance_import_preview(&batch),None=>demo.as_ref().context("Sign in to preview attendance imports.").and_then(|s|crate::attendance_imports::Demo::preview(&s.data,&batch).map(|p|(s.data.clone(),p)))};
+                    changed.map(|(data,p)|{attendance_import_preview_result=Some(p);message="Protected attendance preview ready. No requests have been created.".into();data})
+                }
+                Command::PostAttendanceImport(post)=>{
+                    let changed=match cloud.as_mut(){Some(client)=>client.post_attendance_import(&post),None=>demo.as_mut().context("Sign in to import attendance requests.").and_then(|s|{let r=demo_attendance_imports.post(&mut s.data,&post)?;r.validate(&s.data,&post)?;let h=demo_attendance_imports.history(&s.data)?;Ok((s.data.clone(),r,h))})};
+                    changed.map(|(data,r,h)|{message=format!("{} correction requests imported for normal review. Attendance is unchanged until approval.",r.row_count);attendance_import_receipt_result=Some(r);attendance_import_history_result=Some(h);data})
+                }
+                Command::WithdrawAttendanceImport(change)=>{
+                    let changed=match cloud.as_mut(){Some(client)=>client.withdraw_attendance_import(&change),None=>demo.as_mut().context("Sign in to withdraw imported requests.").and_then(|s|{demo_attendance_imports.withdraw(&mut s.data,&change)?;Ok((s.data.clone(),demo_attendance_imports.history(&s.data)?))})};
+                    changed.map(|(data,h)|{attendance_import_history_result=Some(h);message="Pending imported request withdrawn; its audit history remains.".into();data})
+                }
+                Command::AttendanceImportErrors{source,preview,destination}=>(||{
+                    ensure!(source.scope==current.access&&current.access.role.manages_hr(),"Import access changed. Reopen the source before exporting private review rows.");
+                    let bytes=source.error_bytes(&destination,preview.as_ref())?;
+                    if let Some(client)=cloud.as_mut(){if client.current_access()?!=current.access{return Err(AccessRevoked.into());}}
+                    crate::reports::save_export(&destination,&bytes)?;message="Attendance row review saved to a new file.".into();Ok(current.clone())
+                })(),
                 Command::OpeningImportErrors{report,destination}=>(||{
                     let bytes=if crate::tabular::is_xlsx(&destination){report.error_xlsx()?}else{report.error_csv()?};
                     match cloud.as_mut(){Some(client)=>{let access=client.current_access()?;if access!=current.access{return Err(AccessRevoked.into());}ensure!(access.role.manages_hr(),"HR access is required to export opening review rows.");},None=>ensure!(demo.as_ref().is_some_and(|s|s.data.mode==Mode::Demo&&s.data.access.role.manages_hr()),"Sign in to HRIS with HR access before exporting opening reviews.")}
@@ -2200,6 +2258,9 @@ pub fn worker(
             }
             if events
                 .send(Update {
+                    attendance_import_history:attendance_import_history_result,
+                    attendance_import_preview:attendance_import_preview_result,
+                    attendance_import_receipt:attendance_import_receipt_result,
                     leave_opening_import_preview:opening_import_preview_result,
                     leave_opening_preview:opening_preview_result,
                     government_sss:sss_result,
@@ -2230,6 +2291,9 @@ pub fn worker(
                     if events
                         .send(Update {
                             leave_opening_import_preview:None,
+                            attendance_import_history:None,
+                            attendance_import_preview:None,
+                            attendance_import_receipt:None,
                             leave_opening_preview:None,
                             government_sss:None,
                             government_registration:None,
