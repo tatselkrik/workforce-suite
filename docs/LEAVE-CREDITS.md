@@ -1,4 +1,4 @@
-# Audited leave credits — development scope
+# Audited leave credits — delivered partial milestone4
 
 This is a partial increment of roadmap4, not a completed opening-balance import
 or effective-date policy module. It adds no paid service or cash conversion.
@@ -23,7 +23,13 @@ The portal's existing protected balance context uses the same server calculation
 Opening balances require a separately reviewed takeover basis to avoid counting
 prior grants/usage twice; do not present this ledger as that feature.
 
-Current state: local implementation/testing in progress. Migration62 is NOT
-deployed and no new release is delivered. Desktop0.1.46 and local portal0.1.6
-remain the latest verified packages. Scheduled policies/openings follow only
-after this increment passes its SQL, native, hosted and delivery checks.
+Current state25October2026: desktop0.1.47 is installed and privately published;
+the separate portal0.1.6 stays compatible and was not rebuilt/restarted.456native
+Rust checks,4,990PostgreSQL assertions, fresh63migration replay and exact installer/
+recovery pass. Four fictional layouts and four actual native-decoded protected
+snapshots pass; hosted post/retry/reversal, minimal own/team scopes, archived-team
+exclusion, forgery and revocation checks pass. Prior leave/policy/payroll/Auth/
+registration facts remain. Migration62 integrates balance calculation and native
+preview compatibility; additive63 aligns archived-team visibility without editing62.
+Scheduled policies and opening-balance takeover/import accounting remain queued.
+See [checks](LEAVE-CREDITS-0.1.47-CHECKLIST.md) and [evidence](LEAVE-CREDITS-0.1.47-VERIFICATION.md).

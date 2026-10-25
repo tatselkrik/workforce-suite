@@ -44,10 +44,11 @@ that year starts with the company record or earlier retained leave records.
 
 Balances use the current type policy and employee allowance. Editing grants
 can therefore change current availability; already filed charge dates stay
-unchanged. This prototype calculates entitlements rather than maintaining
-separately posted annual grant/adjustment ledgers. Imported opening balances,
-manual credit adjustments, policy effective dates and cash conversion are
-separate future features.
+unchanged. Entitlements retain the established grant/accrual calculation. Dated
+base-credit adjustments now have a separate immutable ledger under Leave >
+Credit adjustments; see [audited credits](LEAVE-CREDITS.md). Imported opening
+balances, policy effective dates and cash conversion remain separate future
+features. Never enter a total remaining balance as a credit delta.
 
 The request preview shows the balance projected through the requested start
 date, including month-end credits earned by then. Pending requests reserve their

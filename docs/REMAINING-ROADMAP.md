@@ -38,7 +38,8 @@ unconfigured external connection to a completed integration.
    review deadlines, training reminders and certificate-expiry alerts.~~ Delivered
    in desktop0.1.46 and local portal0.1.6; in-app only. External delivery is item8.
 4. **Effective-date leave policies and balances.** Scheduled policy changes,
-   entered/imported opening balances and audited credit adjustments.
+   entered/imported opening balances and ~~audited credit adjustments~~.
+   Credit deltas/reversals are delivered in0.1.47; the whole milestone stays open.
 5. **Approval delegation.** Temporary substitute approvers with retained history,
    current permissions, self-approval restrictions and clear validity periods.
 6. **Attendance/leave imports and Excel support.** Validated imports, previews,
@@ -55,6 +56,17 @@ unconfigured external connection to a completed integration.
    be evaluated within the standing physical-verification boundary.
 
 ## Progress and boundaries
+
+- Desktop0.1.47 is installed and privately published, source
+  `517a0d099c21f5d6f800a09f25b761b260ec8f8d`;0.1.46 rollback is retained.
+  456Rust checks plus exact installer/recovery,4,990PostgreSQL assertions and
+  fresh63migration replay pass. Audited dated credits and full linked reversals
+  preserve filed charges/plans, private HR history and current own/team scopes,
+  including archived reports. Hosted real Auth/permission/retry/reversal and four
+  native-decoded snapshots pass. Prior leave/policy/payroll/Auth/registration facts
+  remain. The separate local portal and its running0.1.5 server were not restarted.
+  See [credit checks](LEAVE-CREDITS-0.1.47-CHECKLIST.md). Scheduled policies and
+  opening balances remain queued; no paid feature or provider was enabled.
 
 - Desktop0.1.46 is installed and privately published, source
   `e7efe56e9dcd4486f6629ae9870517a8ab2ec768`;0.1.45 is retained for rollback.

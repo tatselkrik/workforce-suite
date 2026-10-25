@@ -1,5 +1,19 @@
 # Prototype verification — 2026-10-25
 
+## Audited leave credits —0.1.47 installed and privately published
+
+456default Rust checks plus exact installer/recovery,4,990PostgreSQL assertions
+and fresh63migration replay pass. Hosted Admin post/retry/full reversal, own/team
+minimal facts, archived-team exclusion with retained HR history, protected role/
+target denial and same-session revocation pass. Four protected responses pass
+the native decoder. Prior leave/policy/payroll/Auth/registration facts remain.
+Four fictional layouts, frozen source/privacy, installed hash/BUILD/Windows Apps/
+normal launch-close and private download/signature/public+Employee denial pass.
+No paid service, external message, transfer or filing was added. Roadmap4 remains
+partial: scheduled policies/openings follow. Portal current visuals/real email
+confirmation and government agency acceptance remain unverified. See
+[credit evidence](docs/LEAVE-CREDITS-0.1.47-VERIFICATION.md).
+
 ## Lifecycle notifications —0.1.46 installed and privately published
 
 The additive notification contract passes4,549local PostgreSQL assertions
