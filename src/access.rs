@@ -124,7 +124,7 @@ impl Access {
                     && data.mode != crate::domain::Mode::SignedOut
                     && self.company_id == data.company.id
             }
-            Action::LeaveCredit(_) => self.role.manages_accounts(),
+            Action::LeaveCredit(_) | Action::ApprovalDelegation(_) => self.role.manages_accounts(),
             Action::ImportEmployees(_, _) => self.role.manages_hr(),
             Action::Overtime(action) => crate::overtime::allowed(self, action, data),
             Action::AttendanceRequest(action) => crate::requests::allowed(self, action, data),
@@ -158,13 +158,13 @@ impl Access {
                         .leave
                         .iter()
                         .find(|r| r.id == *id)
-                        .is_some_and(|r| crate::leave::can_review_access(self, r))
+                        .is_some_and(|r| crate::leave::can_review_access(self,r)||(self==&data.access&&crate::leave::can_review(data,r)))
             }
             Action::ReviewLeave(id, _, _, _) => data
                 .leave
                 .iter()
                 .find(|r| r.id == *id)
-                .is_some_and(|r| crate::leave::can_review_access(self, r)),
+                .is_some_and(|r| crate::leave::can_review_access(self,r)||(self==&data.access&&crate::leave::can_review(data,r))),
             Action::CancelLeave(id, _, _) => {
                 data.leave.iter().find(|r| r.id == *id).is_some_and(|r| {
                     self.role.manages_hr() || self.employee_id == Some(r.employee_id)

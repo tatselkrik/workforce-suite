@@ -80,6 +80,8 @@ fn auth_fixture(
                 } else {
                     ("403 Forbidden", json!({"code":"42501"}).to_string())
                 }
+            } else if first.starts_with("POST /rest/v1/rpc/approval_delegation_context ") {
+                ("200 OK",json!({"version":"approval-delegation-v1","company_id":company_id,"user_id":user_id,"employee_id":null,"role":"administrator","as_of":today,"revision":0,"grants":[],"revocations":[],"receipts":[],"permits":[],"audit":[],"staff":[]}).to_string())
             } else if first.starts_with("POST /rest/v1/rpc/leave_credit_context ") {
                 ("200 OK",json!({"version":"leave-credits-v1","company_id":company_id,"user_id":user_id,"employee_id":null,"role":"administrator","as_of":today,"revision":0,"entries":[],"audit":[]}).to_string())
             } else if first.starts_with("POST /rest/v1/rpc/lifecycle_notifications ") {

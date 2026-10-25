@@ -9,9 +9,11 @@ pub(super) enum View {
     Requests,
     Policies,
     Credits,
+    Delegation,
 }
 #[derive(Default)]
 pub(super) struct State {
+    pub delegation:super::approval_delegation_view::State,
     pub credits:super::leave_credits_view::State,
     pub show_inactive_types: bool,
     pub saving_revision: Option<i64>,
@@ -30,12 +32,14 @@ impl HrisApp {
             ui.selectable_value(&mut self.leave_state.view, View::Requests, "Requests");
             ui.selectable_value(&mut self.leave_state.view, View::Policies, "Leave policies");
             ui.selectable_value(&mut self.leave_state.view, View::Credits, "Credit adjustments");
+            ui.selectable_value(&mut self.leave_state.view, View::Delegation, "Approval delegation");
         });
         ui.add_space(10.0);
         match self.leave_state.view {
             View::Requests => self.leave_requests(ui),
             View::Policies => self.leave_policies(ui),
             View::Credits => self.leave_credits(ui),
+            View::Delegation => self.approval_delegations(ui),
         }
     }
     fn leave_requests(&mut self, ui: &mut Ui) {
@@ -131,6 +135,7 @@ impl HrisApp {
         }
     }
     fn leave_detail(&mut self, ui: &mut Ui, id: Uuid) {
+        self.delegated_review_history(ui,crate::approvals::Scope::Leave,id);
         if ui.button("Back to requests").clicked() {
             self.leave_state.detail = None;
             return;

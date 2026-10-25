@@ -333,3 +333,9 @@ Continue only existing authorized free scope. Preserve all project, privacy,
 financial, target, delivery and platform-permission boundaries. Pause the same
 follow-up on a human stop/pause, completed scope or a genuine required handoff;
 otherwise retime it while blocked and resume when actual usage is available.
+
+Operational delegation follows docs/APPROVAL-DELEGATION.md. Preserve original
+authority, role-bound/date-limited grants, nontransitive request-specific review,
+self/submission exclusions, current source and issued-payroll guards. Never extend
+delegation to payroll/account/personnel permissions. Keep original plans/actors
+and immutable linked decision receipts; HR reasons/references remain private.

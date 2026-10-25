@@ -272,7 +272,7 @@ impl HrisApp {
             .iter()
             .filter(|r| match queue {
                 Queue::Mine => r.submitted_by == access.user_id,
-                Queue::Review => requests::can_review(access, r),
+                Queue::Review => requests::can_review_in(&self.data, r),
                 Queue::History => r.status != Status::Pending,
             })
             .filter(|r| {
@@ -359,6 +359,7 @@ impl HrisApp {
             return;
         };
         let stale = r.status == Status::Pending && requests::stale(&self.data, &r);
+        self.delegated_review_history(ui,crate::approvals::Scope::Attendance,id);
         card(ui, |ui| {
             ui.heading(&r.employee_name);
             ui.horizontal_wrapped(|ui| {
@@ -385,7 +386,7 @@ impl HrisApp {
             if r.status == Status::Pending && self.request_state.resolution.is_none() {
                 ui.add_enabled_ui(!self.busy, |ui| {
                     ui.horizontal_wrapped(|ui| {
-                        if requests::can_review(&self.data.access, &r) {
+                        if requests::can_review_in(&self.data, &r) {
                             if ui
                                 .add_enabled(!stale, egui::Button::new("Approve with note"))
                                 .clicked()

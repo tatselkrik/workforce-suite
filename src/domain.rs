@@ -322,6 +322,7 @@ pub enum Mode {
 
 #[derive(Clone, Debug)]
 pub struct Snapshot {
+    pub approvals: Option<crate::approvals::Context>,
     pub payroll: crate::payroll::Setup,
     pub learning: crate::learning::Setup,
     pub career: crate::career::Setup,
@@ -361,6 +362,7 @@ pub struct Snapshot {
 impl Snapshot {
     pub fn signed_out() -> Self {
         Self {
+            approvals: None,
             recruiting: Default::default(),
             onboarding: Default::default(),
             exits: Default::default(),
@@ -450,6 +452,7 @@ impl Snapshot {
 
 #[derive(Clone, Debug)]
 pub enum Action {
+    ApprovalDelegation(crate::approvals::Change),
     LeaveCredit(crate::leave::credits::Record),
     Payroll(crate::payroll::PayrollAction),
     Learning(crate::learning::LearningAction),
@@ -615,6 +618,7 @@ impl DemoStore {
         .collect();
         let mut store = Self {
             data: Snapshot {
+                approvals: None,
                 recruiting: Default::default(),
                 onboarding: Default::default(),
             exits: Default::default(),
@@ -761,6 +765,7 @@ impl DemoStore {
                 crate::hiring::apply_demo(&mut self.data, &action, chrono::Utc::now())?
             }
             Action::LeaveCredit(record) => {crate::leave::credits::apply_demo(&mut self.data,&record)?;}
+            Action::ApprovalDelegation(change) => {crate::approvals::apply_demo(&mut self.data,&change)?;}
             Action::NotificationReads(action) => {
                 self.data.notification_reads.user_id = self.data.access.user_id;
                 self.data.notification_reads.company_id = self.data.company.id;

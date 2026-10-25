@@ -1,4 +1,5 @@
 pub mod access;
+pub mod approvals;
 pub mod account;
 pub mod attendance;
 pub mod backend;

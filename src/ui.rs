@@ -28,6 +28,7 @@ mod hiring_view;
 mod imports_view;
 mod leave_view;
 mod leave_credits_view;
+mod approval_delegation_view;
 mod notifications_view;
 mod onboarding_view;
 mod exits_view;
@@ -1008,6 +1009,7 @@ impl HrisApp {
             }
             app.prepare_leave_preview();
             app.prepare_leave_credits_preview();
+            app.prepare_approval_delegation_preview();
             app.prepare_shift_preview();
             app.prepare_break_preview();
             app.prepare_calculation_preview();
@@ -1930,6 +1932,7 @@ impl HrisApp {
             || self.correction_form.is_some()
             || self.leave_form.is_some()
             || self.leave_state.draft.is_some()
+            || self.leave_state.delegation.has_draft()
             || self.shift_state.template.is_some()
             || self.shift_state.assignment.is_some()
             || self.break_state.form.is_some()

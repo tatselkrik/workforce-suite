@@ -366,7 +366,7 @@ impl HrisApp {
             .iter()
             .filter(|r| match queue {
                 Queue::Mine => r.submitted_by == access.user_id,
-                Queue::Review => r.status == Status::Pending && overtime::can_review(access, r),
+                Queue::Review => r.status == Status::Pending && overtime::can_review_in(&self.data, r),
                 Queue::History => r.status != Status::Pending,
             })
             .filter(|r| {
@@ -448,6 +448,7 @@ impl HrisApp {
             return;
         };
         let current = overtime::matches_current(&self.data, &r);
+        self.delegated_review_history(ui,crate::approvals::Scope::Overtime,id);
         card(ui, |ui| {
             ui.heading(&r.employee_name);
             ui.horizontal_wrapped(|ui| {
@@ -477,7 +478,7 @@ impl HrisApp {
                 ui.add_enabled_ui(!self.busy, |ui| {
                     ui.horizontal_wrapped(|ui| {
                         if r.status == Status::Pending {
-                            if overtime::can_review(&self.data.access, &r) {
+                            if overtime::can_review_in(&self.data, &r) {
                                 if ui
                                     .add_enabled(current, egui::Button::new("Approve minutes"))
                                     .clicked()
@@ -496,7 +497,7 @@ impl HrisApp {
                             }
                         }
                         if r.status == Status::Approved
-                            && overtime::can_review(&self.data.access, &r)
+                            && overtime::can_review_in(&self.data, &r)
                             && ui.button("Revoke approval with reason").clicked()
                         {
                             self.overtime_state.decision = Some(Status::Revoked);

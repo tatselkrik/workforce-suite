@@ -502,7 +502,7 @@ fn usage(
     (total, before)
 }
 pub fn can_review(data: &Snapshot, row: &LeaveRequest) -> bool {
-    can_review_access(&data.access, row)
+    can_review_access(&data.access, row) || (row.status==LeaveStatus::Pending && data.access.employee_id!=Some(row.employee_id) && crate::approvals::permitted(data,crate::approvals::Scope::Leave,row.id,row.policy.revision))
 }
 pub fn can_review_access(access: &crate::access::Access, row: &LeaveRequest) -> bool {
     if row.status != LeaveStatus::Pending

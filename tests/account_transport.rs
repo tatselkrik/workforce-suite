@@ -719,6 +719,7 @@ fn report_export_reloads_scoped_data_and_rechecks_access_before_creating_csv() {
                     .starts_with("POST /rest/v1/rpc/recruiting_interviewers ")
                 || r.line.starts_with("POST /rest/v1/rpc/lifecycle_notifications ")
                 || r.line.starts_with("POST /rest/v1/rpc/leave_credit_context ")
+                || r.line.starts_with("POST /rest/v1/rpc/approval_delegation_context ")
                 || r.line.starts_with("POST /rest/v1/rpc/exit_readiness_list "))
     );
 }
@@ -956,6 +957,12 @@ fn fixture(replies: Vec<Reply>) -> (ConnectionConfig, thread::JoinHandle<()>, Re
                 reply.prefix
             );
             if reply.prefix=="POST /rest/v1/rpc/my_hris_access "&&reply.status==200{last_access=serde_json::from_slice(&reply.body).unwrap();}
+            if reply.prefix=="POST /rest/v1/rpc/approval_delegation_context " {
+                let wire:Value=serde_json::from_slice(&reply.body).unwrap();
+                if wire.get("fixture_empty")==Some(&json!(true)){
+                    reply.body=serde_json::to_vec(&json!({"version":"approval-delegation-v1","company_id":last_access["company_id"],"user_id":last_access["user_id"],"employee_id":last_access["employee_id"],"role":last_access["role"],"as_of":wire["as_of"],"revision":0,"grants":[],"revocations":[],"receipts":[],"permits":[],"audit":[],"staff":[]})).unwrap();
+                }
+            }
             if reply.prefix=="POST /rest/v1/rpc/leave_credit_context " {
                 let wire:Value=serde_json::from_slice(&reply.body).unwrap();
                 if wire.get("fixture_empty")==Some(&json!(true)){
@@ -1130,6 +1137,7 @@ fn baseline(company: &Company) -> Vec<Reply> {
         reply("GET /rest/v1/payroll_payment_receipts?",200,json!([])),
         reply("GET /rest/v1/notification_read_state?", 200, json!([])),
         reply("POST /rest/v1/rpc/lifecycle_notifications ",200,json!({"fixture_empty":true,"as_of":company.today()})),
+        reply("POST /rest/v1/rpc/approval_delegation_context ",200,json!({"fixture_empty":true,"as_of":company.today()})),
         reply("GET /auth/v1/user ", 200, user(company)),
         reply(
             "GET /storage/v1/object/authenticated/profile-photos/",
@@ -2003,6 +2011,9 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
             .into_iter()
             .find(|r| r.prefix.starts_with("POST /rest/v1/rpc/lifecycle_notifications "))
             .unwrap(),
+    );
+    replies.push(
+        baseline(&revised).into_iter().find(|r|r.prefix.starts_with("POST /rest/v1/rpc/approval_delegation_context ")).unwrap(),
     );
     replies.extend(
         baseline(&revised)
@@ -3572,4 +3583,26 @@ fn leave_credit_post_keeps_retry_identity_after_saved_write_and_failed_refresh()
  let fresh=client.execute(Action::LeaveCredit(r.clone()),&current).unwrap();assert_eq!(fresh.leave_setup.credits.unwrap().entries.len(),1);server.join().unwrap();
  let requests=requests.lock().unwrap();assert_eq!(request_at(&requests,"POST /rest/v1/rpc/post_leave_credit ",0).json(),request_at(&requests,"POST /rest/v1/rpc/post_leave_credit ",1).json());
  let p=request_at(&requests,"POST /rest/v1/rpc/post_leave_credit ",0).json();assert_eq!(p,json!({"p_record":r}));assert!(request_at(&requests,"POST /rest/v1/rpc/post_leave_credit ",0).headers.to_lowercase().contains("x-hris-leave-credits: 1"));
+}
+
+#[test]
+fn delegation_context_rejects_a_changed_protected_role_before_any_write(){
+ let company=Company::default();let mut replies=baseline(&company);let at=replies.iter().position(|r|r.prefix=="POST /rest/v1/rpc/approval_delegation_context ").unwrap();
+ replies[at]=reply("POST /rest/v1/rpc/approval_delegation_context ",200,json!({"version":"approval-delegation-v1","company_id":company.id,"user_id":company.owner_id,"employee_id":null,"role":"manager","as_of":company.today(),"revision":0,"grants":[],"revocations":[],"receipts":[],"permits":[],"audit":[],"staff":[]}));replies.truncate(at+1);
+ let(config,server,requests)=fixture(replies);assert!(CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).is_err());server.join().unwrap();assert!(!requests.lock().unwrap().iter().any(|r|r.line.contains("save_approval_delegation")));
+}
+
+#[test]
+fn delegation_post_keeps_identical_request_after_saved_write_and_failed_refresh(){
+ use hris_desktop::{approvals::{self,Change,Scope,Context},access::{Access,Role},domain::Action};
+ let mut data=DemoStore::new().data;let company=data.company.clone();data.access=Access{company_id:company.id,user_id:company.owner_id,employee_id:None,role:Role::Administrator,..Default::default()};let context=Context::empty(&data);
+ let principal=context.staff.iter().find(|s|s.role==Role::Manager).unwrap();let delegate=context.staff.iter().find(|s|s.role==Role::HrGeneralist).unwrap();
+ let change=Change::Grant{id:uuid::Uuid::from_u128(184800),expected_revision:0,scope:Scope::Leave,principal_id:principal.user_id,delegate_id:delegate.user_id,starts_on:company.today(),ends_on:company.today()+chrono::Duration::days(7),reason:"Synthetic documented delegation".into(),reference:"Synthetic reference".into()};
+ data.approvals=Some(context.clone());approvals::apply_demo(&mut data,&change).unwrap();let after_context=data.approvals.as_ref().unwrap().clone();
+ let prepare=|c:&Context|{let mut replies=baseline(&company);response_at(&mut replies,"POST /rest/v1/rpc/approval_delegation_context ").body=serde_json::to_vec(c).unwrap();replies};
+ let saved=json!({"id":change.id(),"company_revision":1});let mut replies=prepare(&context);replies.push(reply("POST /rest/v1/rpc/save_approval_delegation ",200,saved.clone()));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",500,json!({"message":"Synthetic refresh failure"})));replies.push(reply("POST /rest/v1/rpc/save_approval_delegation ",200,saved));
+ replies.extend(prepare(&after_context).into_iter().skip(1).take_while(|v|!v.prefix.starts_with("GET /auth/v1/user ")));
+ let(config,server,requests)=fixture(replies);let(mut client,current)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
+ assert!(client.execute(Action::ApprovalDelegation(change.clone()),&current).err().unwrap().to_string().contains("Delegation saved, but refresh failed"));let fresh=client.execute(Action::ApprovalDelegation(change.clone()),&current).unwrap();assert!(change.matches_history(fresh.approvals.as_ref().unwrap()));server.join().unwrap();
+ let requests=requests.lock().unwrap();assert_eq!(request_at(&requests,"POST /rest/v1/rpc/save_approval_delegation ",0).json(),request_at(&requests,"POST /rest/v1/rpc/save_approval_delegation ",1).json());
 }

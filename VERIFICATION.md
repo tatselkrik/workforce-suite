@@ -1,5 +1,15 @@
 # Prototype verification — 2026-10-25
 
+## Approval delegation —0.1.48 candidate
+
+The operational delegation increment is implemented for leave, attendance
+corrections and overtime. The full default Rust suite and local database upgrade
+tests pass, including scoped substitutes, current authority, immutable receipts,
+idempotent configuration and failed-refresh recovery. See the
+[review checklist](docs/APPROVAL-DELEGATION-0.1.48-CHECKLIST.md).
+Hosted checks, final visual inspection and release/installation evidence are
+still being completed; this source-stage note is not a delivery claim.
+
 ## Audited leave credits —0.1.47 installed and privately published
 
 456default Rust checks plus exact installer/recovery,4,990PostgreSQL assertions

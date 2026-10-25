@@ -954,7 +954,11 @@ impl CloudClient {
             || lifecycle_notifications.employee_id!=access.employee_id || lifecycle_notifications.role!=access.role { return Err(AccessRevoked.into()); }
         lifecycle_notifications.validate(&access, company.today())?;
         ensure!(lifecycle_notifications.items.iter().all(|i| employees.iter().any(|e| e.company_id==company.id && e.id==i.employee_id)), "Lifecycle subject is outside the current employee directory.");
-        Ok(Snapshot {
+        let approvals:crate::approvals::Context=decode(self.request(Method::POST,"rpc/approval_delegation_context")?.json(&json!({})).send()?)?;
+        if approvals.company_id!=access.company_id||approvals.user_id!=access.user_id||approvals.employee_id!=access.employee_id||approvals.role!=access.role{return Err(AccessRevoked.into());}
+        approvals.validate_access(&access,company.today())?;
+        let snapshot=Snapshot {
+            approvals: Some(approvals),
             lifecycle_notifications: Some(lifecycle_notifications),
             payroll,
             learning,
@@ -993,7 +997,9 @@ impl CloudClient {
             employment_history,
             documents,
             document_events,
-        })
+        };
+        snapshot.approvals.as_ref().unwrap().validate(&snapshot)?;
+        Ok(snapshot)
     }
 
     fn document_write(&mut self, operation: &str, payload: Value) -> Result<EmployeeDocument> {
@@ -1199,6 +1205,14 @@ impl CloudClient {
                 "The application response did not match your company/record."
             );
             return self.snapshot().context("Application saved, but refresh failed. Keep this draft and Refresh; retrying the same new application is safe.");
+        }
+        if let Action::ApprovalDelegation(change)=&action {
+            let payload=change.payload(current)?;
+            let saved:Value=decode(self.request(Method::POST,"rpc/save_approval_delegation")?.json(&json!({"p_change":payload})).send().context("Delegation outcome is uncertain. Keep this draft and retry the same request.")?)?;
+            ensure!(saved.as_object().is_some_and(|o|o.len()==2)&&saved["id"]==json!(change.id())&&saved["company_revision"].as_i64()==Some(change.expected_revision()+1),"Delegation response did not match the submitted request.");
+            let fresh=self.snapshot().context("Delegation saved, but refresh failed. Keep this draft and Refresh or retry the same request.")?;
+            ensure!(fresh.approvals.as_ref().is_some_and(|c|change.matches_history(c)),"Saved delegation does not match the retained draft. Keep it and Refresh.");
+            return Ok(fresh);
         }
         if let Action::LeaveCredit(record)=&action {
             record.validate(current)?;
@@ -1436,6 +1450,7 @@ impl CloudClient {
             Action::Hiring(_) => unreachable!("Applicant changes return above"),
             Action::NotificationReads(_) => unreachable!("Notification reads return above"),
             Action::LeaveCredit(_) => unreachable!("Credit posts return above"),
+            Action::ApprovalDelegation(_) => unreachable!("Delegation writes return above"),
             Action::ImportEmployees(_, _) => unreachable!("imports use their guarded transaction"),
             Action::Overtime(_) => unreachable!("Overtime actions return above"),
             Action::AttendanceRequest(_) => unreachable!("Attendance requests return above"),

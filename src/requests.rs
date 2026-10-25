@@ -84,6 +84,9 @@ pub fn can_review(access: &Access, r: &Request) -> bool {
         && r.submitted_by != access.user_id
         && access.can_review(r.employee_id)
 }
+pub fn can_review_in(data:&Snapshot,r:&Request)->bool {
+    can_review(&data.access,r)||(r.status==Status::Pending&&r.submitted_by!=data.access.user_id&&Some(r.employee_id)!=data.access.employee_id&&crate::approvals::permitted(data,crate::approvals::Scope::Attendance,r.id,r.revision))
+}
 pub fn allowed(access: &Access, action: &RequestAction, data: &Snapshot) -> bool {
     match action {
         RequestAction::Submit(d) => access.employee_id == Some(d.employee_id),
@@ -98,7 +101,7 @@ pub fn allowed(access: &Access, action: &RequestAction, data: &Snapshot) -> bool
                         && r.submitted_by == access.user_id
                         && access.employee_id == Some(r.employee_id)
                 }
-                Status::Approved | Status::Rejected => can_review(access, r),
+                Status::Approved | Status::Rejected => can_review(access,r)||(access==&data.access&&can_review_in(data,r)),
                 Status::Pending => false,
             }),
     }
@@ -155,7 +158,8 @@ pub fn payload(
                 "This request changed. Refresh and reopen it."
             );
             if *status == Status::Approved {
-                approval_change(data, r, now)?;
+                if let Some(current)=crate::approvals::delegated_source(data,crate::approvals::Scope::Attendance,r.id,r.revision){ensure!(current,"Attendance source changed. Reject or request a fresh proposal.");}
+                else{approval_change(data, r, now)?;}
             }
             Ok(
                 serde_json::json!({"operation":match status {Status::Approved=>"approve",Status::Rejected=>"reject",Status::Cancelled=>"cancel",Status::Pending=>unreachable!()},"request_id":id,"expected_revision":expected_revision,"reason":reason.trim()}),
@@ -164,6 +168,7 @@ pub fn payload(
     }
 }
 pub fn stale(data: &Snapshot, r: &Request) -> bool {
+    if let Some(current)=crate::approvals::delegated_source(data,crate::approvals::Scope::Attendance,r.id,r.revision){return !current;}
     if r.timezone != data.company.timezone {
         return true;
     }
