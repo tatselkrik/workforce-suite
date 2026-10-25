@@ -66,12 +66,13 @@ unconfigured external connection to a completed integration.
    current permissions, self-approval restrictions and clear validity periods.~~
    Delivered/installed in0.1.48 for leave, attendance corrections and overtime.
    Salary/account/personnel authority remains outside delegation.
-6. **Attendance/leave imports and Excel support.** Validated request imports,
-   previews/error reports and ~~native XLSX import/export~~; employee CSV imports
-   already work. Native Excel is delivered/installed in0.1.50 for employee/opening
-   files and attendance/leave/workforce report exports. Attendance/leave request
-   batch imports are next, so the whole milestone remains open. See
-   [the exchange plan](TABULAR-EXCHANGE.md) and [Excel evidence](NATIVE-EXCEL-0.1.50-VERIFICATION.md).
+6. **Attendance/leave imports and Excel support.** ~~Attendance-correction batch
+   imports, protected previews, row-error reports, exact retries and import history~~
+   are delivered/installed in0.1.51. ~~Native XLSX import/export~~ is delivered in
+   0.1.50 for employee/opening files and scoped reports. **Leave-request batch
+   imports remain next**, so the whole milestone stays open. See [attendance
+   evidence](ATTENDANCE-IMPORTS-0.1.51-VERIFICATION.md), [the exchange plan](TABULAR-EXCHANGE.md)
+   and [Excel evidence](NATIVE-EXCEL-0.1.50-VERIFICATION.md).
 7. **Accounting and external payroll integration foundations.** Configurable data
    exchange, reconciliation, retries and integration history. Actual connections
    require resolved company software/vendor targets.
@@ -84,6 +85,16 @@ unconfigured external connection to a completed integration.
    resumption; do not treat the placeholder as a working connection.
 
 ## Progress and boundaries
+
+- Desktop0.1.51is installed and privately published, frozen source
+  `53d93f12cf910cdd9f0758fc928d2f7886af3836`; keep0.1.50rollback.534default native
+  checks,82new SQL assertions,6,287existing database assertions, fresh67replay,
+  five fictional layouts and six actual hosted native projections pass. Guarded
+  migration67preserved105prior rowsets/all335existing functions; real hosted
+  role/concurrency/approval/withdrawal/revocation checks preserved prior facts.
+  Exact installer/recovery, actual installation and private byte/hash/signature/
+  access checks pass. Only attendance imports close; leave imports follow, then7.
+  See [the attendance-import checklist](ATTENDANCE-IMPORTS-0.1.51-CHECKLIST.md).
 
 - Desktop0.1.50 is installed and privately published, frozen source
   `23bd86873651faed5e10e8b4a69abb285e67f8ad`;0.1.49 rollback is retained.

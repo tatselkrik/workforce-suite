@@ -1,5 +1,10 @@
 # Attendance/leave imports and native Excel — implementation plan
 
+Current delivery: native Excel0.1.50and attendance-correction imports0.1.51are
+installed and privately published. Leave-request batch imports remain next.
+See [attendance imports](ATTENDANCE-IMPORTS.md) for its independent approval,
+immutable history and exact actor/payload retry contract.
+
 This is the next authorized milestone after delivered desktop0.1.49. The full
 roadmap item remains open until implementation, verification and delivery.
 
