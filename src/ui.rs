@@ -27,6 +27,7 @@ mod calculations_view;
 mod hiring_view;
 mod imports_view;
 mod leave_view;
+mod leave_credits_view;
 mod notifications_view;
 mod onboarding_view;
 mod exits_view;
@@ -1006,6 +1007,7 @@ impl HrisApp {
                 _ => {}
             }
             app.prepare_leave_preview();
+            app.prepare_leave_credits_preview();
             app.prepare_shift_preview();
             app.prepare_break_preview();
             app.prepare_calculation_preview();

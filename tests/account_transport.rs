@@ -718,6 +718,7 @@ fn report_export_reloads_scoped_data_and_rechecks_access_before_creating_csv() {
                 || r.line
                     .starts_with("POST /rest/v1/rpc/recruiting_interviewers ")
                 || r.line.starts_with("POST /rest/v1/rpc/lifecycle_notifications ")
+                || r.line.starts_with("POST /rest/v1/rpc/leave_credit_context ")
                 || r.line.starts_with("POST /rest/v1/rpc/exit_readiness_list "))
     );
 }
@@ -955,6 +956,12 @@ fn fixture(replies: Vec<Reply>) -> (ConnectionConfig, thread::JoinHandle<()>, Re
                 reply.prefix
             );
             if reply.prefix=="POST /rest/v1/rpc/my_hris_access "&&reply.status==200{last_access=serde_json::from_slice(&reply.body).unwrap();}
+            if reply.prefix=="POST /rest/v1/rpc/leave_credit_context " {
+                let wire:Value=serde_json::from_slice(&reply.body).unwrap();
+                if wire.get("fixture_empty")==Some(&json!(true)){
+                    reply.body=serde_json::to_vec(&json!({"version":"leave-credits-v1","company_id":last_access["company_id"],"user_id":last_access["user_id"],"employee_id":last_access["employee_id"],"role":last_access["role"],"as_of":wire["as_of"],"revision":0,"entries":[],"audit":[]})).unwrap();
+                }
+            }
             if reply.prefix=="POST /rest/v1/rpc/lifecycle_notifications " {
                 let mut wire:Value=serde_json::from_slice(&reply.body).unwrap();
                 if wire.get("fixture_empty")==Some(&json!(true)){
@@ -1037,6 +1044,7 @@ fn baseline(company: &Company) -> Vec<Reply> {
             }]),
         ),
         reply("GET /rest/v1/leave_events?", 200, json!([])),
+        reply("POST /rest/v1/rpc/leave_credit_context ",200,json!({"fixture_empty":true,"as_of":company.today()})),
         reply("GET /rest/v1/shift_templates?", 200, json!([])),
         reply("GET /rest/v1/shift_assignments?", 200, json!([])),
         reply("GET /rest/v1/shift_template_versions?", 200, json!([])),
@@ -3548,4 +3556,20 @@ fn sss_collection_export_refetches_and_rejects_stale_or_revoked_inputs_before_io
   if case=="success"{assert_eq!(std::fs::read(&path).unwrap(),basis.render(&request).unwrap());std::fs::remove_file(path).unwrap();}else{assert!(!path.exists());}
   drop(client);server.join().unwrap();
  }
+}
+
+#[test]
+fn leave_credit_post_keeps_retry_identity_after_saved_write_and_failed_refresh(){
+ use hris_desktop::{domain::Action,leave::credits::{Record,Entry}};
+ let data=DemoStore::new().data;let company=data.company.clone();let person=data.employees[0].clone();
+ let r=Record{id:uuid::Uuid::from_u128(184700),employee_id:person.id,type_code:"annual".into(),effective_on:company.today(),units:1,reverses_id:None,expected_revision:0,reason:"Synthetic reviewed credit".into(),reference:String::new()};
+ let prepare=||{let mut v=baseline(&company);response_at(&mut v,"GET /rest/v1/employees?").body=serde_json::to_vec(&json!([person])).unwrap();v};
+ let saved=json!({"id":r.id,"company_revision":1});let mut replies=prepare();replies.push(reply("POST /rest/v1/rpc/post_leave_credit ",200,saved.clone()));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",500,json!({"message":"Synthetic refresh failure"})));replies.push(reply("POST /rest/v1/rpc/post_leave_credit ",200,saved));
+ let mut after=prepare();response_at(&mut after,"POST /rest/v1/rpc/leave_credit_context ").body=serde_json::to_vec(&json!({"version":"leave-credits-v1","company_id":company.id,"user_id":company.owner_id,"employee_id":null,"role":"administrator","as_of":company.today(),"revision":1,"entries":[Entry{id:r.id,employee_id:r.employee_id,type_code:r.type_code.clone(),effective_on:r.effective_on,units:1,reverses_id:None}],"audit":[{"id":r.id,"reason":r.reason,"reference":"","created_by_name":"Fictional Administrator","posted_at":chrono::Utc::now(),"company_revision":1}]})).unwrap();
+ replies.extend(after.into_iter().skip(1).take_while(|v|!v.prefix.starts_with("GET /auth/v1/user ")));
+ let(config,server,requests)=fixture(replies);let(mut client,current)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
+ assert!(client.execute(Action::LeaveCredit(r.clone()),&current).unwrap_err().to_string().contains("Credit saved, but refresh failed"));
+ let fresh=client.execute(Action::LeaveCredit(r.clone()),&current).unwrap();assert_eq!(fresh.leave_setup.credits.unwrap().entries.len(),1);server.join().unwrap();
+ let requests=requests.lock().unwrap();assert_eq!(request_at(&requests,"POST /rest/v1/rpc/post_leave_credit ",0).json(),request_at(&requests,"POST /rest/v1/rpc/post_leave_credit ",1).json());
+ let p=request_at(&requests,"POST /rest/v1/rpc/post_leave_credit ",0).json();assert_eq!(p,json!({"p_record":r}));assert!(request_at(&requests,"POST /rest/v1/rpc/post_leave_credit ",0).headers.to_lowercase().contains("x-hris-leave-credits: 1"));
 }

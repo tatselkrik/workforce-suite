@@ -124,6 +124,7 @@ impl Access {
                     && data.mode != crate::domain::Mode::SignedOut
                     && self.company_id == data.company.id
             }
+            Action::LeaveCredit(_) => self.role.manages_accounts(),
             Action::ImportEmployees(_, _) => self.role.manages_hr(),
             Action::Overtime(action) => crate::overtime::allowed(self, action, data),
             Action::AttendanceRequest(action) => crate::requests::allowed(self, action, data),

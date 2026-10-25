@@ -5,6 +5,7 @@ use anyhow::{Result, ensure};
 use chrono::{Datelike, Days, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+pub mod credits;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -318,6 +319,7 @@ pub struct LeaveEvent {
 }
 #[derive(Clone, Debug, Default)]
 pub struct LeaveSetup {
+    pub credits: Option<credits::Context>,
     pub policy: LeavePolicy,
     pub events: Vec<LeaveEvent>,
 }
@@ -440,7 +442,8 @@ pub fn balance(
             expiry(y, t.carryover_expiry_month),
             exclude,
         );
-        let unused = (earned(e, t, y, end) - (used - before.min(carry))).max(0);
+        let adjustment = data.leave_setup.credits.as_ref().map_or(0,|c|c.units(e.id,&t.code,y,end));
+        let unused = (earned(e, t, y, end) + adjustment - (used - before.min(carry))).max(0);
         carry = unused.min(t.carryover_units);
     }
     let boundary = expiry(year, t.carryover_expiry_month);
@@ -457,7 +460,7 @@ pub fn balance(
         })
         .map(|r| r.units())
         .sum();
-    let earned = earned(e, t, year, as_of);
+    let earned = earned(e, t, year, as_of) + data.leave_setup.credits.as_ref().map_or(0,|c|c.units(e.id,&t.code,year,as_of));
     let applicable = if as_of <= boundary {
         carry
     } else {

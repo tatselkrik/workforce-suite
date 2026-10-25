@@ -250,6 +250,14 @@ Keep work and the same scheduler paused pending Kirk's explicit resumption.
 
 ## Latest resumption and free-only constraint — 25 October 2026
 
+Audited base-credit adjustments follow docs/LEAVE-CREDITS.md. Keep Administrator
+posting, minimal own/current-team projections, HR-private reasons/references,
+same-identity retries, exact half-day arithmetic and immutable linked reversals.
+Never treat a delta as an opening balance or rewrite filed charges/plans. Negative
+entries must protect reservations and later-year carry bases. Preserve the older
+portal balance contract and native upgrade guard for credited previews. Scheduled
+policy changes/opening-balance takeover accounting remain separate roadmap scope.
+
 Kirk explicitly resumed the remaining roadmap and the same scheduler after
 0.1.45, requesting continuous work. This supersedes the finish-after0.1.45 pause.
 Preserve the running local portal0.1.5 and its drafts/sessions. Continue the

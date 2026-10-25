@@ -78,6 +78,7 @@ try {
   const governmentRegistrationMigrations=[];
   const governmentPreparationMigrations=[];
   const lifecycleMigrations=[];
+  const creditMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -91,6 +92,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_audited_leave_credits.sql')){creditMigrations.push(filename);continue;}
     if(filename.endsWith('_lifecycle_notifications.sql')){lifecycleMigrations.push(filename);continue;}
     if(filename.endsWith('_government_preparation_exports.sql')){governmentPreparationMigrations.push(filename);continue;}
     if(filename.endsWith('_government_registration_records.sql')){governmentRegistrationMigrations.push(filename);continue;}
@@ -463,6 +465,14 @@ try {
   for(const t of lifecycleTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,lifecycleBefore[t],'Lifecycle migration preserves '+t);
   for(const f of priorFunctions)eq((await db.query('select md5(pg_get_functiondef($1::regprocedure))digest',[f.identity])).rows[0].digest,f.digest,'Lifecycle leaves prior function unchanged '+f.identity);
   const{runLifecycleTests}=await import('./lifecycle-notifications.test.mjs');await runLifecycleTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
+  await db.exec('reset role');const creditBefore={};const creditTables=(await db.query("select tablename from pg_tables where schemaname='public'order by tablename")).rows.map(r=>r.tablename);
+  const creditPriorFunctions=(await db.query("select n.nspname schema,p.proname name,p.oid::regprocedure::text identity,md5(pg_get_functiondef(p.oid))digest from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in('public','hris_private')and p.prokind='f'order by 1,2,3")).rows;
+  for(const t of creditTables)creditBefore[t]=(await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows;
+  for(const filename of creditMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  for(const t of creditTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,creditBefore[t],'Credit migration preserves prior '+t+' records');
+  const changed=[];for(const f of creditPriorFunctions){const now=(await db.query('select md5(pg_get_functiondef($1::regprocedure))digest',[f.identity])).rows[0].digest;if(['hris_private.leave_balance','public.submit_leave'].includes(f.schema+'.'+f.name)){if(now!==f.digest)changed.push(f.schema+'.'+f.name);}else eq(now,f.digest,'Credits preserve unrelated function '+f.identity);}
+  eq(changed.sort(),['hris_private.leave_balance','public.submit_leave'],'Credit migration changes exactly the balance integration and native compatibility wrapper');
+  const{runLeaveCreditTests}=await import('./leave-credits.test.mjs');await runLeaveCreditTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

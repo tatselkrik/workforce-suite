@@ -440,6 +440,7 @@ impl CloudClient {
             )
             .header("apikey", self.config.publishable_key.trim())
             .header("X-HRIS-Leave-Contract", "2")
+            .header("X-HRIS-Leave-Credits", "1")
             .bearer_auth(&self.session.access_token))
     }
 
@@ -869,6 +870,10 @@ impl CloudClient {
         };
         let policy = self.rows::<crate::leave::LeavePolicy>("leave_policies",Some(company.id))?.into_iter().next().ok_or_else(||anyhow::anyhow!("Leave policies are not configured. Ask the deployment administrator to apply the required migration."))?;
         let leave_events = self.rows("leave_events", Some(company.id))?;
+        let credits:crate::leave::credits::Context=decode(self.request(Method::POST,"rpc/leave_credit_context")?.json(&json!({})).send()?)?;
+        if credits.company_id!=access.company_id || credits.user_id!=access.user_id || credits.employee_id!=access.employee_id || credits.role!=access.role {return Err(AccessRevoked.into());}
+        credits.validate(&access,company.today())?;
+        ensure!(credits.entries.iter().all(|c|employees.iter().any(|e|e.id==c.employee_id && e.company_id==company.id)),"Leave credits include an unknown employee.");
         let mut shift_templates: Vec<crate::shifts::ShiftTemplate> =
             self.rows("shift_templates", Some(company.id))?;
         shift_templates.sort_by_key(|t| t.name.to_lowercase());
@@ -967,6 +972,7 @@ impl CloudClient {
             breaks,
             shifts,
             leave_setup: crate::leave::LeaveSetup {
+                credits: Some(credits),
                 policy,
                 events: leave_events,
             },
@@ -1194,6 +1200,15 @@ impl CloudClient {
             );
             return self.snapshot().context("Application saved, but refresh failed. Keep this draft and Refresh; retrying the same new application is safe.");
         }
+        if let Action::LeaveCredit(record)=&action {
+            record.validate(current)?;
+            let saved:serde_json::Value=decode(self.request(Method::POST,"rpc/post_leave_credit")?.json(&json!({"p_record":record})).send().context("Credit outcome is uncertain. Keep this draft and retry the same request.")?)?;
+            ensure!(saved.as_object().is_some_and(|o|o.len()==2) && saved["id"]==json!(record.id)
+                && saved["company_revision"].as_i64()==Some(record.expected_revision+1),"Credit response did not match the submitted request.");
+            let fresh=self.snapshot().context("Credit saved, but refresh failed. Keep this draft and Refresh or retry the same request.")?;
+            ensure!(fresh.leave_setup.credits.as_ref().is_some_and(|c|c.entries.iter().any(|e|record.matches_entry(e))),"Saved credit did not match this draft. Keep it and Refresh.");
+            return Ok(fresh);
+        }
         if let Action::NotificationReads(action) = &action {
             let payload = action.payload(current.company.id)?;
             let extended = match action {
@@ -1420,6 +1435,7 @@ impl CloudClient {
             Action::Interview(_) => unreachable!("Interview changes return above"),
             Action::Hiring(_) => unreachable!("Applicant changes return above"),
             Action::NotificationReads(_) => unreachable!("Notification reads return above"),
+            Action::LeaveCredit(_) => unreachable!("Credit posts return above"),
             Action::ImportEmployees(_, _) => unreachable!("imports use their guarded transaction"),
             Action::Overtime(_) => unreachable!("Overtime actions return above"),
             Action::AttendanceRequest(_) => unreachable!("Attendance requests return above"),

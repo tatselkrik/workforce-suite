@@ -8,9 +8,11 @@ pub(super) enum View {
     #[default]
     Requests,
     Policies,
+    Credits,
 }
 #[derive(Default)]
 pub(super) struct State {
+    pub credits:super::leave_credits_view::State,
     pub show_inactive_types: bool,
     pub saving_revision: Option<i64>,
     pub view: View,
@@ -27,11 +29,13 @@ impl HrisApp {
         ui.horizontal_wrapped(|ui| {
             ui.selectable_value(&mut self.leave_state.view, View::Requests, "Requests");
             ui.selectable_value(&mut self.leave_state.view, View::Policies, "Leave policies");
+            ui.selectable_value(&mut self.leave_state.view, View::Credits, "Credit adjustments");
         });
         ui.add_space(10.0);
         match self.leave_state.view {
             View::Requests => self.leave_requests(ui),
             View::Policies => self.leave_policies(ui),
+            View::Credits => self.leave_credits(ui),
         }
     }
     fn leave_requests(&mut self, ui: &mut Ui) {

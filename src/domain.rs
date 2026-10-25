@@ -450,6 +450,7 @@ impl Snapshot {
 
 #[derive(Clone, Debug)]
 pub enum Action {
+    LeaveCredit(crate::leave::credits::Record),
     Payroll(crate::payroll::PayrollAction),
     Learning(crate::learning::LearningAction),
     Career(crate::career::CareerAction),
@@ -759,6 +760,7 @@ impl DemoStore {
             Action::Hiring(action) => {
                 crate::hiring::apply_demo(&mut self.data, &action, chrono::Utc::now())?
             }
+            Action::LeaveCredit(record) => {crate::leave::credits::apply_demo(&mut self.data,&record)?;}
             Action::NotificationReads(action) => {
                 self.data.notification_reads.user_id = self.data.access.user_id;
                 self.data.notification_reads.company_id = self.data.company.id;

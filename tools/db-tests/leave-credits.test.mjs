@@ -1,0 +1,50 @@
+export async function runLeaveCreditTests({db,eq,deny,session,company,owner,unassigned}){
+ const id=n=>`bc470000-0000-4000-8000-${String(n).padStart(12,'0')}`;const people={};
+ for(const[n,key,role]of[[1,'admin','administrator'],[2,'hr','hr_generalist'],[3,'manager','manager'],[4,'subject','employee'],[5,'other','employee']]){
+  await db.exec('reset role');await db.query('insert into auth.users(id,email,email_confirmed_at)values($1,$2,now())',[id(n),`credit-${key}@example.invalid`]);await session(owner);await db.query('select public.save_company_account($1,$2,$3,true,null,null)',[id(n),`credit-${key}@example.invalid`,role]);people[key]={user:id(n),employee:(await db.query('select employee_id from public.company_members where user_id=$1',[id(n)])).rows[0].employee_id};
+ }
+ await db.exec('reset role');await db.query("update public.employees set joined_on='2026-01-01',annual_leave_days=15 where id=any($1::uuid[])",[Object.values(people).map(p=>p.employee)]);await db.query('update public.employees set reports_to=$1 where id=$2',[people.manager.employee,people.subject.employee]);
+ const date=(await db.query("select(now()at time zone timezone)::date::text d from public.companies where id=$1",[company.id])).rows[0].d,year=Number(date.slice(0,4));
+ const plus=async n=>(await db.query('select($1::date+$2::integer)::text d',[date,n])).rows[0].d;
+ await session(owner);const policy=(await db.query('select *from public.leave_policies where company_id=$1',[company.id])).rows[0];const types=policy.types.map(t=>t.code==='annual'?{...t,accrual:'upfront',use_employee_allowance:true,carryover_units:8,carryover_expiry_month:3}:t);
+ await db.query('select public.save_leave_policy($1,$2)',[{workweek:policy.workweek,holidays:policy.holidays,types},policy.revision]);
+ const ctx=async()=>(await db.query('select public.leave_credit_context()r')).rows[0].r;
+ const post=async r=>(await db.query('select public.post_leave_credit($1::jsonb)r',[JSON.stringify(r)])).rows[0].r;
+ const no=async(r,codes=['23514'])=>deny('select public.post_leave_credit($1::jsonb)',[JSON.stringify(r)],codes);
+ const base={id:id(20),employee_id:people.subject.employee,type_code:'annual',effective_on:date,units:6,reverses_id:null,expected_revision:0,reason:'PRIVATE_CREDIT_REASON',reference:'PRIVATE_CREDIT_REFERENCE'};
+ await session(owner);let initial=await ctx();eq(initial.entries,[],'Migration creates no credit facts');eq(initial.revision,0,'Empty credit revision starts at zero');
+ for(const key of['hr','manager','subject']){await session(people[key].user);await no(base,['42501']);}await session(unassigned);await deny('select public.leave_credit_context()',[],['42501']);
+ await session(owner);
+ for(const patch of[{id:null},{employee_id:null},{units:null},{units:1.5},{units:0},{units:733},{expected_revision:null},{expected_revision:0.1},{reason:null},{reference:null},{effective_on:null},{reverses_id:3},{forged:true}])await no({...base,...patch});
+ const missing={...base};delete missing.expected_revision;await no(missing);delete missing.reverses_id;await no(missing);
+ await no({...base,effective_on:await plus(-1)});await no({...base,type_code:'sick'});await no({...base,type_code:'missing'});await no({...base,reason:'line\nfeed'});
+ const first=await post(base);eq(first.company_revision,1,'Administrator posts audited credit');eq(await post(base),first,'Exact same-actor request retry is idempotent');await no({...base,units:7},['PT409']);await session(people.admin.user);await no(base,['PT409']);await session(owner);
+ let current=await ctx();eq(current.revision,1,'Retry does not advance revision');eq(current.entries.length,1,'One immutable credit');eq(current.audit[0].reference,base.reference,'HR/Admin history retains private reference');
+ const balance=async(asof=date,y=year)=>(await db.query("select hris_private.leave_balance($1,(select t from public.leave_policies p cross join lateral jsonb_array_elements(p.types)t where p.company_id=$2 and t->>'code'='annual'),$3,$4::date)r",[people.subject.employee,company.id,y,asof])).rows[0].r;
+ await db.exec('reset role');eq((await balance()).available_units,36,'Dated credit adds exact half-day units');eq((await balance(await plus(-1))).available_units,30,'Credit does not rewrite earlier balances');
+ await deny('update public.leave_credit_entries set units=8 where id=$1',[base.id],['23514']);await deny('delete from public.leave_credit_entries where id=$1',[base.id],['23514']);
+ await session(owner);await no({...base,id:id(21),expected_revision:0},['PT409']);await no({...base,id:id(21),expected_revision:1,units:-37});eq((await ctx()).revision,1,'Overdraw failure rolls back revision');eq((await ctx()).entries.length,1,'Overdraw leaves no entry');
+ const reverse={...base,id:id(22),units:-6,reverses_id:base.id,expected_revision:1,reason:'Reverse the retained original credit'};
+ await no({...reverse,units:-5});await no({...reverse,employee_id:people.other.employee});let reversal=await post(reverse);eq(reversal.company_revision,2,'Linked full reversal advances once');await no({...reverse,id:id(23),expected_revision:2},['PT409']);await no({...reverse,id:id(23),reverses_id:reverse.id,units:6,expected_revision:2});
+ await db.exec('reset role');eq((await balance()).available_units,30,'Full reversal restores base without deleting original');
+ await session(owner);const scheduled={...base,id:id(24),units:3,effective_on:await plus(2),expected_revision:2};await post(scheduled);await db.exec('reset role');eq((await balance()).available_units,30,'Future credit is not available early');eq((await balance(scheduled.effective_on)).available_units,33,'Future credit applies on its date');
+ await session(people.manager.user);let limited=await ctx();eq(limited.entries.length,3,'Manager sees current report credit facts');eq(limited.audit,[],'Manager receives no reasons/references/actor history');eq(JSON.stringify(limited).includes('PRIVATE_CREDIT'),false,'Manager minimal projection omits private fields');eq((await db.query('select id from public.leave_credit_entries')).rows,[],'Manager cannot read ledger table');
+ await session(people.subject.user);limited=await ctx();eq(limited.entries.length,3,'Employee sees own credit facts');eq(limited.audit,[],'Own employee context omits HR history');await db.exec('reset role');await db.query("update auth.users set raw_user_meta_data='{\"role\":\"administrator\"}'where id=$1",[people.subject.user]);await session(people.subject.user);await no({...base,id:id(25),expected_revision:3},['42501']);
+ await session(people.other.user);eq((await ctx()).entries,[],'Unrelated employee gets no foreign credit');
+ await session(owner);await db.exec('reset role');await db.query('update public.employees set reports_to=null where id=$1',[people.subject.employee]);await session(people.manager.user);eq((await ctx()).entries,[],'Reporting change removes old team credits');
+ await session(owner);await db.query('select public.save_company_account($1,$2,$3,false,$4,null)',[people.manager.user,'credit-manager@example.invalid','manager',people.manager.employee]);await session(people.manager.user);await deny('select public.leave_credit_context()',[],['42501']);
+ await session(owner);await deny('insert into public.leave_credit_state(company_id)values($1)',[company.id],['42501']);await deny('select hris_private.leave_credit_units($1,$2,$3,$4)',[people.subject.employee,'annual',year,date],['42501']);
+ // Carry uses unused credited base, respects its cap, and never carries old carry twice.
+ await db.exec('reset role');eq((await balance(`${year+1}-01-01`,year+1)).carryover_units,8,'Unused credited base remains subject to carry cap');
+ await session(people.subject.user);const portal=(await db.query('select public.portal_leave_context($1::date)r',[scheduled.effective_on])).rows[0].r;eq(portal.types.find(t=>t.code==='annual').balance.available_units,33,'Existing own portal balance context includes dated credits');
+ await session(owner);const dates=(await db.query("select d::date::text d from generate_series($1::date+5,make_date($2,12,31),interval'1day')d where extract(isodow from d)::int=any($3::int[])and not exists(select 1 from jsonb_array_elements($4::jsonb)h where(h->>'date')::date=d::date)limit 2",[date,year,policy.workweek,JSON.stringify(policy.holidays)])).rows.map(r=>r.d);
+ eq(dates.length,2,'Two synthetic scheduled dates available');
+ await deny('select public.submit_leave($1,$2,$3,$3,$4,$5)',[people.subject.employee,'annual',dates[0],'full','Old native preview is stale'],['PT409']);
+ await db.query("select set_config('request.headers',$1,false)",[JSON.stringify({'x-hris-leave-contract':'2','x-hris-leave-credits':'1'})]);
+ eq(Boolean((await db.query('select public.submit_leave($1,$2,$3,$3,$4,$5)id',[people.subject.employee,'annual',dates[0],'full','New native exact credit preview'])).rows[0].id),true,'Updated native contract can request credited leave');
+ await session(people.subject.user);eq(Boolean((await db.query('select public.portal_submit_leave($1,$2,$2,$3,$4,$5)id',['annual',dates[1],'full','Old portal uses protected credited context',portal.policy_revision])).rows[0].id),true,'Existing portal own wrapper remains compatible');
+ await session(owner);const requestsBefore=(await db.query('select to_jsonb(r)r from public.leave_requests r order by id')).rows;
+ await post({...base,id:id(26),employee_id:people.other.employee,units:1,expected_revision:3,reason:'Independent other employee adjustment'});
+ eq((await db.query('select to_jsonb(r)r from public.leave_requests r order by id')).rows,requestsBefore,'Credit posting never changes filed charges or approval history');
+ await session(owner);await db.query('select public.save_company_account($1,$2,$3,false,$4,null)',[people.admin.user,'credit-admin@example.invalid','administrator',people.admin.employee]);await session(people.admin.user);await no({...base,id:id(27),expected_revision:4},['42501']);
+}
