@@ -223,9 +223,7 @@ impl Record {
             .iter()
             .find(|e| e.id == self.employee_id)
             .ok_or_else(|| anyhow::anyhow!("Choose an employee."))?;
-        let kind = data
-            .leave_setup
-            .policy
+        let kind = super::dated::policy_on(data,self.effective_on)
             .leave_type(&self.type_code)
             .ok_or_else(|| anyhow::anyhow!("Choose a leave type."))?;
         ensure!(
@@ -336,15 +334,13 @@ pub fn apply_demo(data: &mut crate::domain::Snapshot, record: &Record) -> Result
             .iter()
             .find(|e| e.id == record.employee_id)
             .unwrap();
-        let kind = proposed
-            .leave_setup
-            .policy
+        let kind = super::dated::policy_on(&proposed,record.effective_on)
             .leave_type(&record.type_code)
             .unwrap();
         let mut day = record.effective_on;
         while day.year() == record.effective_on.year() {
             ensure!(
-                super::balance(&proposed, person, kind, day.year(), day, None).available_units >= 0,
+                super::balance_checked(&proposed, person, kind, day.year(), day, None)?.available_units >= 0,
                 "This reduction would exceed available leave or existing reservations."
             );
             let Some(next) = day.succ_opt() else { break };

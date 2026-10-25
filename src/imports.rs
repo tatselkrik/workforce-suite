@@ -79,14 +79,14 @@ pub struct Preview {
     pub rows: Vec<Row>,
 }
 #[derive(Debug)]
-struct CsvRow {
-    line: usize,
-    cells: Vec<String>,
+pub(crate) struct CsvRow {
+    pub(crate) line: usize,
+    pub(crate) cells: Vec<String>,
 }
 
 // Strict comma CSV with escaped quotes and quoted multiline cells. Track
 // physical source lines, so an address newline does not shift error locations.
-fn parse(text: &str) -> Result<Vec<CsvRow>> {
+pub(crate) fn parse(text: &str) -> Result<Vec<CsvRow>> {
     ensure!(
         text.len() <= MAX_BYTES,
         "CSV exceeds 2 MiB. Split it into smaller files."
@@ -610,13 +610,18 @@ pub fn apply_demo(store: &mut DemoStore, preview: Preview, reason: String) -> Re
 
 #[cfg(windows)]
 pub fn choose_source() -> Result<Option<PathBuf>> {
+    choose_csv_source("Preview employee CSV import")
+}
+#[cfg(windows)]
+pub fn choose_csv_source(caption:&str) -> Result<Option<PathBuf>> {
     use std::{ffi::OsString, os::windows::ffi::OsStringExt};
     use windows_sys::Win32::UI::{Controls::Dialogs::*, Input::KeyboardAndMouse::GetActiveWindow};
     let mut path = vec![0u16; 32768];
-    let filter: Vec<u16> = "UTF-8 employee CSV (*.csv)\0*.csv\0\0"
+    let filter: Vec<u16> = "UTF-8 CSV (*.csv)\0*.csv\0\0"
         .encode_utf16()
         .collect();
-    let title: Vec<u16> = "Preview employee CSV import\0".encode_utf16().collect();
+    ensure!(!caption.contains('\0'),"Invalid file chooser title.");
+    let title: Vec<u16> = format!("{caption}\0").encode_utf16().collect();
     // SAFETY: all buffers outlive this synchronous native dialog.
     let mut d: OPENFILENAMEW = unsafe { std::mem::zeroed() };
     d.lStructSize = std::mem::size_of::<OPENFILENAMEW>() as u32;
@@ -645,3 +650,5 @@ pub fn choose_source() -> Result<Option<PathBuf>> {
 pub fn choose_source() -> Result<Option<PathBuf>> {
     anyhow::bail!("CSV selection currently supports Windows only.")
 }
+#[cfg(not(windows))]
+pub fn choose_csv_source(_caption:&str)->Result<Option<PathBuf>> {anyhow::bail!("CSV selection currently supports Windows only.")}

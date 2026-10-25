@@ -1,4 +1,5 @@
 use super::*;
+use anyhow::Context;
 use crate::leave::{
     self, Accrual, ApprovalRule, ApproverKind, DayPart, Holiday, LeavePolicy, LeaveType,
 };
@@ -9,10 +10,17 @@ pub(super) enum View {
     Requests,
     Policies,
     Credits,
+    Openings,
     Delegation,
 }
 #[derive(Default)]
 pub(super) struct State {
+    pub openings:super::leave_openings_view::State,
+    pub policy_pending:Option<leave::dated::Change>,
+    pub policy_date:String,
+    pub policy_reason:String,
+    pub policy_reference:String,
+    pub withdraw_target:Option<Uuid>,
     pub delegation:super::approval_delegation_view::State,
     pub credits:super::leave_credits_view::State,
     pub show_inactive_types: bool,
@@ -28,10 +36,13 @@ pub(super) struct State {
 }
 impl HrisApp {
     pub(super) fn leave_page(&mut self, ui: &mut Ui) {
+        if self.data.mode==Mode::Demo && self.data.leave_setup.dated.is_none(){self.data.leave_setup.dated=Some(leave::dated::Context::empty(&self.data));}
+        if self.leave_state.policy_pending.as_ref().is_some_and(|p|self.data.leave_setup.dated.as_ref().is_some_and(|c|p.matches(c))) {self.leave_state.policy_pending=None;self.leave_state.draft=None;self.leave_state.withdraw_target=None;self.leave_state.policy_reason.clear();self.leave_state.policy_reference.clear();}
         ui.horizontal_wrapped(|ui| {
             ui.selectable_value(&mut self.leave_state.view, View::Requests, "Requests");
             ui.selectable_value(&mut self.leave_state.view, View::Policies, "Leave policies");
             ui.selectable_value(&mut self.leave_state.view, View::Credits, "Credit adjustments");
+            ui.selectable_value(&mut self.leave_state.view, View::Openings, "Opening balances");
             ui.selectable_value(&mut self.leave_state.view, View::Delegation, "Approval delegation");
         });
         ui.add_space(10.0);
@@ -39,6 +50,7 @@ impl HrisApp {
             View::Requests => self.leave_requests(ui),
             View::Policies => self.leave_policies(ui),
             View::Credits => self.leave_credits(ui),
+            View::Openings => self.leave_openings(ui),
             View::Delegation => self.approval_delegations(ui),
         }
     }
@@ -277,6 +289,7 @@ impl HrisApp {
     }
     fn leave_policies(&mut self, ui: &mut Ui) {
         let admin = self.data.access.role.manages_accounts();
+        self.dated_policy_history(ui);
         if self.leave_state.draft.is_none() {
             let p = &self.data.leave_setup.policy;
             card(ui, |ui| {
@@ -298,8 +311,11 @@ impl HrisApp {
                 ));
                 ui.label("Monthly accrual posts at month-end for full calendar months employed, rounded down to half-days. Carryover uses unused prior-year base grant, is consumed before its expiry month ends, and is not carried twice.");
                 ui.label(RichText::new(format!("Balance tracking starts in {}. A known Date joined is required for monthly accrual and prior-year carryover.",p.tracking_starts_year)).small().color(muted(ui)));
-                if admin && ui.button("Edit policies and approval chains").clicked() {
-                    self.leave_state.draft = Some(p.clone());
+                if admin && ui.button("Schedule policy / approval-chain version").clicked() {
+                    let tail=self.data.leave_setup.dated.as_ref().and_then(|c|c.timeline.versions.iter().rev().find(|v|!v.withdrawn));
+                    self.leave_state.draft = Some(tail.map_or_else(||p.clone(),|v|v.policy.clone()));
+                    self.leave_state.policy_date=tail.filter(|v|v.effective_on>=self.data.company.today()).map_or(self.data.company.today(),|v|v.effective_on.succ_opt().unwrap()).to_string();
+                    self.leave_state.policy_reason.clear();self.leave_state.policy_reference.clear();
                 }
             });
             if p.types.iter().any(|t| !t.active) {
@@ -363,7 +379,16 @@ impl HrisApp {
         let mut p = self.leave_state.draft.take().unwrap();
         let mut cancel = false;
         let mut save = false;
-        ui.add_enabled_ui(!self.busy,|ui|{
+        ui.add_enabled_ui(!self.busy && self.leave_state.policy_pending.is_none(),|ui|{
+            card(ui,|ui|{
+                ui.heading("Effective-date policy version");
+                field(ui,"Effective date",&mut self.leave_state.policy_date,"YYYY-MM-DD");
+                ui.label("Calendar, labels and approvals can change today or later. Annual grant, accrual, carry and new finite entitlements start on a future January 1. Use Credit adjustments for current-year corrections.");
+                ui.label("Existing request charges and approvers are retained. Employee allowance edits become future defaults once this company's dated workflow is enabled.");
+                field(ui,"Private reason",&mut self.leave_state.policy_reason,"Explain the scheduled policy version");
+                field(ui,"Private reference (optional)",&mut self.leave_state.policy_reference,"Policy review reference");
+            });
+            ui.add_space(10.0);
             card(ui,|ui|{
                 ui.label(RichText::new("Workweek and holidays").size(18.0).strong());
                 ui.label("These settings calculate new requests. Existing saved day charges stay unchanged.");
@@ -411,17 +436,13 @@ impl HrisApp {
                     if t.approval_chain.len()<5&&ui.button("+ Add approval step").clicked(){t.approval_chain.push(ApprovalRule{kind:ApproverKind::Hr,employee_id:None});}
                 }
             });
-            ui.add_space(10.0);ui.horizontal_wrapped(|ui|{save=primary(ui,"Save leave policies");cancel=ui.button("Discard policy edits").clicked();});
+            ui.add_space(10.0);ui.horizontal_wrapped(|ui|{save=primary(ui,"Post dated policy version");cancel=ui.button("Discard policy edits").clicked();});
             if let Some((message,true))=&self.notice {ui.colored_label(ui.visuals().error_fg_color,message);}
         });
         if save {
-            match p.validate(Some(&self.data.leave_setup.policy)) {
-                Ok(()) => {
-                    self.leave_state.saving_revision = Some(p.revision);
-                    self.send(Command::Change(Action::SaveLeavePolicy(p.clone())));
-                }
-                Err(e) => self.notice = Some((e.to_string(), true)),
-            }
+            let change=(||->anyhow::Result<leave::dated::Change>{let c=self.data.leave_setup.dated.as_ref().context("Refresh dated leave setup.")?;
+                let change=leave::dated::Change::Schedule(leave::dated::PolicyRecord{id:Uuid::new_v4(),effective_on:parse_date(&self.leave_state.policy_date)?,expected_revision:c.revision,policy:p.clone(),reason:self.leave_state.policy_reason.trim().into(),reference:self.leave_state.policy_reference.clone()});change.payload(&self.data)?;Ok(change)})();
+            match change{Ok(change)=>{self.leave_state.policy_pending=Some(change.clone());self.send(Command::Change(Action::DatedLeave(change)));},Err(e)=>self.notice=Some((e.to_string(),true))}
         }
         if !cancel {
             self.leave_state.draft = Some(p);
@@ -441,10 +462,8 @@ impl HrisApp {
         } else {
             draft.options.type_code.clone()
         };
-        let selected = self
-            .data
-            .leave_setup
-            .policy
+        let request_policy=leave::dated::policy_on(&self.data,parse_date(&draft.starts_on).unwrap_or(self.data.company.today()));
+        let selected = request_policy
             .leave_type(&code)
             .map(|t| t.name.as_str())
             .unwrap_or("Choose a leave type");
@@ -454,11 +473,7 @@ impl HrisApp {
             .truncate()
             .selected_text(selected)
             .show_ui(ui, |ui| {
-                for t in self
-                    .data
-                    .leave_setup
-                    .policy
-                    .types
+                for t in request_policy.types
                     .iter()
                     .filter(|t| t.active)
                 {
@@ -480,11 +495,7 @@ impl HrisApp {
             draft.ends_on = draft.starts_on.clone();
         }
         if let (Ok(start), Ok(end)) = (parse_date(&draft.starts_on), parse_date(&draft.ends_on)) {
-            match self
-                .data
-                .leave_setup
-                .policy
-                .charges(start, end, draft.options.day_part)
+            match leave::dated::charges(&self.data,&code,start,end,draft.options.day_part)
             {
                 Ok(charges) => {
                     let units = charges.iter().map(|d| d.units).sum();
@@ -505,11 +516,10 @@ impl HrisApp {
                     .employees
                     .iter()
                     .find(|e| Some(e.id) == draft.employee_id),
-                self.data.leave_setup.policy.leave_type(&code),
+                request_policy.leave_type(&code),
             ) {
                 if t.accrual != Accrual::Unlimited {
-                    let b = leave::balance(&self.data, e, t, start.year(), start, None);
-                    ui.label(format!("Balance at {start}: {} available · {} used · {} reserved · {} carryover day(s)",leave::days(b.available_units),leave::days(b.used_units),leave::days(b.reserved_units),leave::days(b.carryover_units)));
+                    match leave::balance_checked(&self.data,e,t,start.year(),start,None){Ok(b)=>{ui.label(format!("Balance at {start}: {} available · {} used · {} reserved · {} carryover day(s)",leave::days(b.available_units),leave::days(b.used_units),leave::days(b.reserved_units),leave::days(b.carryover_units)));},Err(e)=>{ui.colored_label(ui.visuals().error_fg_color,e.to_string());}}
                 }
                 ui.label(
                     RichText::new(format!(

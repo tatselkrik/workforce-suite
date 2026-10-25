@@ -56,9 +56,7 @@ impl ShiftPlan {
     pub fn working(&self, data: &Snapshot, date: NaiveDate) -> bool {
         self.days.contains(&date.weekday().number_from_monday())
             && (self.works_on_holidays
-                || !data
-                    .leave_setup
-                    .policy
+                || !crate::leave::dated::policy_on(data,date)
                     .holidays
                     .iter()
                     .any(|h| h.date == date))

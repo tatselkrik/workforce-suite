@@ -4,8 +4,11 @@
 resuming it across a usage reset if unfinished, then continuing item6 imports/
 native Excel and item7 exchange foundations. The next-refresh-only hold is
 superseded. Items1/2 retain their recorded verification/acceptance limitations.
-Item4 calculation/selection primitives are being implemented; they alone are
-not delivered functionality and the milestone remains open.
+Item4 now has a local0.1.49candidate with protected dated policies, captured
+entitlements, entered openings and atomic CSV openings. Local/native/database
+checks and fictional visual review are recorded in
+[the candidate evidence](LEAVE-OPENINGS-0.1.49-VERIFICATION.md). Hosted delivery and
+actual installation remain pending, so the milestone stays open until those pass.
 
 **Scope refinement25October2026:** browser verification is the current portal
 priority. Free mobile-width browser checks may be included; physical-phone and

@@ -441,6 +441,7 @@ impl CloudClient {
             .header("apikey", self.config.publishable_key.trim())
             .header("X-HRIS-Leave-Contract", "2")
             .header("X-HRIS-Leave-Credits", "1")
+            .header("X-HRIS-Leave-Dated", "1")
             .bearer_auth(&self.session.access_token))
     }
 
@@ -796,6 +797,21 @@ impl CloudClient {
         Ok((data, report))
     }
 
+    pub fn leave_opening_preview(&mut self,record:&crate::leave::dated::OpeningRecord)->Result<(Snapshot,crate::leave::dated::Preview)> {
+        let data=self.snapshot()?;
+        record.validate(&data)?;
+        let preview:crate::leave::dated::Preview=decode(self.request(Method::POST,"rpc/preview_leave_opening")?.json(&json!({"p_record":record})).send()?)?;
+        if self.current_access()?!=data.access {return Err(AccessRevoked.into());}
+        preview.validate(&data,record)?;
+        Ok((data,preview))
+    }
+    pub fn leave_opening_import_preview(&mut self,records:&[crate::leave::dated::OpeningRecord])->Result<(Snapshot,crate::leave::opening_import::BatchPreview)> {
+        let data=self.snapshot()?;
+        ensure!(data.access.role.manages_hr() && (1..=100).contains(&records.len()),"HR access and 1–100 opening rows are required.");
+        let preview:crate::leave::opening_import::BatchPreview=decode(self.request(Method::POST,"rpc/preview_leave_openings")?.json(&json!({"p_records":records})).send()?)?;
+        if self.current_access()?!=data.access{return Err(AccessRevoked.into());}
+        preview.validate(&data,records)?;Ok((data,preview))
+    }
     pub fn snapshot(&mut self) -> Result<Snapshot> {
         let access = self.current_access()?;
         let mut companies: Vec<Company> = self.rows("companies", None)?;
@@ -868,12 +884,17 @@ impl CloudClient {
         } else {
             (Vec::new(), Vec::new())
         };
-        let policy = self.rows::<crate::leave::LeavePolicy>("leave_policies",Some(company.id))?.into_iter().next().ok_or_else(||anyhow::anyhow!("Leave policies are not configured. Ask the deployment administrator to apply the required migration."))?;
+        let _legacy_policy = self.rows::<crate::leave::LeavePolicy>("leave_policies",Some(company.id))?.into_iter().next().ok_or_else(||anyhow::anyhow!("Leave policies are not configured. Ask the deployment administrator to apply the required migration."))?;
         let leave_events = self.rows("leave_events", Some(company.id))?;
         let credits:crate::leave::credits::Context=decode(self.request(Method::POST,"rpc/leave_credit_context")?.json(&json!({})).send()?)?;
         if credits.company_id!=access.company_id || credits.user_id!=access.user_id || credits.employee_id!=access.employee_id || credits.role!=access.role {return Err(AccessRevoked.into());}
         credits.validate(&access,company.today())?;
         ensure!(credits.entries.iter().all(|c|employees.iter().any(|e|e.id==c.employee_id && e.company_id==company.id)),"Leave credits include an unknown employee.");
+        let dated:crate::leave::dated::Context=decode(self.request(Method::POST,"rpc/leave_dated_context")?.json(&json!({})).send()?)?;
+        if dated.company_id!=access.company_id || dated.user_id!=access.user_id || dated.employee_id!=access.employee_id || dated.role!=access.role {return Err(AccessRevoked.into());}
+        dated.validate(&access,company.today())?;
+        ensure!(dated.anchors.iter().all(|a|employees.iter().any(|e|e.id==a.employee_id)) && dated.openings.iter().all(|o|employees.iter().any(|e|e.id==o.employee_id)),"Dated leave includes an unknown employee.");
+        let policy=dated.timeline.policy_on(company.today()).clone();
         let mut shift_templates: Vec<crate::shifts::ShiftTemplate> =
             self.rows("shift_templates", Some(company.id))?;
         shift_templates.sort_by_key(|t| t.name.to_lowercase());
@@ -976,6 +997,7 @@ impl CloudClient {
             breaks,
             shifts,
             leave_setup: crate::leave::LeaveSetup {
+                dated: Some(dated),
                 credits: Some(credits),
                 policy,
                 events: leave_events,
@@ -1223,6 +1245,16 @@ impl CloudClient {
             ensure!(fresh.leave_setup.credits.as_ref().is_some_and(|c|c.entries.iter().any(|e|record.matches_entry(e))),"Saved credit did not match this draft. Keep it and Refresh.");
             return Ok(fresh);
         }
+        if let Action::DatedLeave(change)=&action {
+            let (endpoint,payload)=change.payload(current)?;
+            let saved:Value=decode(self.request(Method::POST,endpoint)?.json(&payload).send().context("Leave setup outcome is uncertain. Keep this draft and retry the same request.")?)?;
+            let batch=matches!(change,crate::leave::dated::Change::OpeningBatch(_));
+            ensure!(saved.as_object().is_some_and(|o|o.len()==if batch{3}else{2}) && saved["id"]==json!(change.id()) && saved["company_revision"].as_i64()==Some(change.posted_revision()),"Leave setup response did not match this request.");
+            if let crate::leave::dated::Change::OpeningBatch(p)=change {ensure!(saved["opening_ids"]==json!(p.preview.rows.iter().map(|r|r.record.id).collect::<Vec<_>>()),"Opening import response did not match its complete row inventory.");}
+            let fresh=self.snapshot().context("Leave setup saved, but refresh failed. Keep this draft and Refresh or retry the same request.")?;
+            ensure!(fresh.leave_setup.dated.as_ref().is_some_and(|c|change.matches(c)),"Saved leave setup does not match this draft. Keep it and Refresh.");
+            return Ok(fresh);
+        }
         if let Action::NotificationReads(action) = &action {
             let payload = action.payload(current.company.id)?;
             let extended = match action {
@@ -1450,6 +1482,7 @@ impl CloudClient {
             Action::Hiring(_) => unreachable!("Applicant changes return above"),
             Action::NotificationReads(_) => unreachable!("Notification reads return above"),
             Action::LeaveCredit(_) => unreachable!("Credit posts return above"),
+            Action::DatedLeave(_) => unreachable!("Dated leave posts return above"),
             Action::ApprovalDelegation(_) => unreachable!("Delegation writes return above"),
             Action::ImportEmployees(_, _) => unreachable!("imports use their guarded transaction"),
             Action::Overtime(_) => unreachable!("Overtime actions return above"),
@@ -1497,6 +1530,15 @@ impl CloudClient {
                 json!({"checked_out_at":Utc::now()}),
             ),
             Action::RequestLeave(draft) => {
+                if current.leave_setup.dated.as_ref().is_some_and(|c|c.enabled) {
+                    let row=crate::leave::prepare(current,&draft)?;
+                    let c=current.leave_setup.dated.as_ref().unwrap();
+                    let e=current.employees.iter().find(|e|e.id==row.employee_id).context("Choose an employee.")?;
+                    let t=crate::leave::dated::policy_on(current,row.starts_on).leave_type(row.type_code()).context("Choose an active type.")?;
+                    let balance=if t.accrual==crate::leave::Accrual::Unlimited{None}else{Some(crate::leave::balance_checked(current,e,t,chrono::Datelike::year(&row.starts_on),row.starts_on,None)?)};
+                    (Method::POST,"rpc/submit_leave_checked",None,json!({"p_employee":row.employee_id,"p_type_code":row.type_code(),"p_starts":row.starts_on,"p_ends":row.ends_on,"p_part":row.policy.day_part,"p_reason":row.reason,
+                        "p_expected":{"setup_revision":c.revision,"credit_revision":current.leave_setup.credits.as_ref().map_or(0,|c|c.revision),"policy_revision":row.policy.policy_revision,"charged_dates":row.policy.charged_dates,"balance":balance}}))
+                } else {
                 let row = draft.request(current.company.id)?;
                 let code = if draft.options.type_code.is_empty() {
                     row.type_code()
@@ -1509,6 +1551,7 @@ impl CloudClient {
                     None,
                     json!({"p_employee":row.employee_id,"p_type_code":code,"p_starts":row.starts_on,"p_ends":row.ends_on,"p_part":draft.options.day_part,"p_reason":row.reason}),
                 )
+                }
             }
             Action::DecideLeave(id, status) => {
                 ensure!(
@@ -1758,6 +1801,9 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
 }
 
 pub enum Command {
+    OpeningImportErrors {report:crate::leave::opening_import::Import,destination:std::path::PathBuf},
+    PreviewLeaveOpeningImport(Vec<crate::leave::dated::OpeningRecord>),
+    PreviewLeaveOpening(crate::leave::dated::OpeningRecord),
     GovernmentSssPrepare {filter:crate::payroll_government::Filter},
     GovernmentSssExport {filter:crate::payroll_government::Filter,request:Box<crate::payroll_government::sss_collection::Request>,destination:std::path::PathBuf},
     GovernmentPreparation {filter:crate::payroll_government::Filter,destination:std::path::PathBuf},
@@ -1791,6 +1837,8 @@ pub enum Command {
 }
 
 pub struct Update {
+    pub leave_opening_import_preview:Option<crate::leave::opening_import::BatchPreview>,
+    pub leave_opening_preview:Option<crate::leave::dated::Preview>,
     pub government_sss:Option<crate::payroll_government::sss_collection::Basis>,
     pub government_registration:Option<crate::payroll_government::registration::Snapshot>,
     pub government:Option<crate::payroll_government::Reconciliation>,
@@ -1827,6 +1875,8 @@ pub fn worker(
                 Err(mpsc::RecvTimeoutError::Disconnected) => break,
             };
             let mut message = String::new();
+            let mut opening_preview_result=None;
+            let mut opening_import_preview_result=None;
             let mut report_result = None;
             let mut payroll_report_result = None;
             let mut government_result = None;
@@ -1835,6 +1885,26 @@ pub fn worker(
             let mut update_state = None;
             let mut check_after_sign_in = false;
             let mut result: Result<Snapshot> = match command {
+                Command::OpeningImportErrors{report,destination}=>(||{
+                    match cloud.as_mut(){Some(client)=>{let access=client.current_access()?;if access!=current.access{return Err(AccessRevoked.into());}ensure!(access.role.manages_hr(),"HR access is required to export opening review rows.");},None=>ensure!(demo.as_ref().is_some_and(|s|s.data.mode==Mode::Demo&&s.data.access.role.manages_hr()),"Sign in to HRIS with HR access before exporting opening reviews.")}
+                    crate::reports::save_csv(&destination,&report.error_csv()?)?;message="Opening row review exported.".into();Ok(current.clone())
+                })(),
+                Command::PreviewLeaveOpeningImport(records)=>{
+                    let changed=match cloud.as_mut(){Some(client)=>client.leave_opening_import_preview(&records),None=>demo.as_mut().context("Sign in to preview opening imports.").map(|store|{
+                        if store.data.leave_setup.dated.is_none(){store.data.leave_setup.dated=Some(crate::leave::dated::Context::empty(&store.data));}
+                        (store.data.clone(),crate::leave::opening_import::BatchPreview::demo(&store.data,&records))
+                    })};changed.map(|(data,p)|{opening_import_preview_result=Some(p);message="Opening import preview ready. No rows have been applied.".into();data})
+                }
+                Command::PreviewLeaveOpening(record)=>{
+                    let changed=match cloud.as_mut() {
+                        Some(client)=>client.leave_opening_preview(&record),
+                        None=>demo.as_mut().context("Sign in to preview leave openings.").and_then(|store|{
+                            if store.data.leave_setup.dated.is_none(){store.data.leave_setup.dated=Some(crate::leave::dated::Context::empty(&store.data));}
+                            crate::leave::dated::preview_demo(&store.data,&record).map(|p|(store.data.clone(),p))
+                        }),
+                    };
+                    changed.map(|(data,p)|{opening_preview_result=Some(p);message="Opening preview ready. No balance has been posted.".into();data})
+                }
                 Command::CheckUpdates => {
                     update_state = Some(match (cloud.as_mut(), UpdateConfig::load()) {
                         (Some(client), Ok(Some(config))) => client
@@ -2126,6 +2196,8 @@ pub fn worker(
             }
             if events
                 .send(Update {
+                    leave_opening_import_preview:opening_import_preview_result,
+                    leave_opening_preview:opening_preview_result,
                     government_sss:sss_result,
                     government_registration:registration_result,
                     government:government_result,
@@ -2153,6 +2225,8 @@ pub fn worker(
                         .unwrap_or_else(|e| UpdateState::Failed(e.to_string()));
                     if events
                         .send(Update {
+                            leave_opening_import_preview:None,
+                            leave_opening_preview:None,
                             government_sss:None,
                             government_registration:None,
                             government:None,

@@ -494,6 +494,7 @@ pub const DEFAULT_TASKS: [&str; 5] = [
     "Record payroll and final-pay review",
 ];
 pub fn readiness(data: &Snapshot, id: Uuid) -> Option<Readiness> {
+    let today=data.company.today();
     if !data.access.role.manages_hr() {
         return None;
     }
@@ -565,11 +566,9 @@ pub fn readiness(data: &Snapshot, id: Uuid) -> Option<Readiness> {
                     })
             })
             .count() as u64,
-        named_leave_policies: data
-            .leave_setup
-            .policy
-            .types
-            .iter()
+        named_leave_policies: std::iter::once(crate::leave::dated::policy_on(data,today))
+            .chain(data.leave_setup.dated.as_ref().into_iter().flat_map(|c|c.timeline.versions.iter().filter(|v|!v.withdrawn&&v.effective_on>today).map(|v|&v.policy)))
+            .flat_map(|p|p.types.iter())
             .filter(|t| {
                 t.active
                     && t.approval_chain.iter().any(|s| {

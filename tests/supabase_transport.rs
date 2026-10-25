@@ -84,6 +84,8 @@ fn auth_fixture(
                 ("200 OK",json!({"version":"approval-delegation-v1","company_id":company_id,"user_id":user_id,"employee_id":null,"role":"administrator","as_of":today,"revision":0,"grants":[],"revocations":[],"receipts":[],"permits":[],"audit":[],"staff":[]}).to_string())
             } else if first.starts_with("POST /rest/v1/rpc/leave_credit_context ") {
                 ("200 OK",json!({"version":"leave-credits-v1","company_id":company_id,"user_id":user_id,"employee_id":null,"role":"administrator","as_of":today,"revision":0,"entries":[],"audit":[]}).to_string())
+            } else if first.starts_with("POST /rest/v1/rpc/leave_dated_context ") {
+                ("200 OK",json!({"version":"leave-dated-v1","company_id":company_id,"user_id":user_id,"employee_id":null,"role":"administrator","as_of":today,"revision":0,"enabled":false,"timeline":{"baseline":hris_desktop::leave::LeavePolicy{company_id,..Default::default()},"versions":[]},"anchors":[],"openings":[],"withdrawals":[],"audit":[]}).to_string())
             } else if first.starts_with("POST /rest/v1/rpc/lifecycle_notifications ") {
                 ("200 OK",json!({"version":"lifecycle-notifications-v1","company_id":company_id,"user_id":user_id,"employee_id":null,"role":"administrator","surface":"desktop","as_of":today,"generated_at":"2026-10-25T00:00:00Z","read_keys":[],"total_items":0,"truncated":false,"items":[]}).to_string())
             } else if first.starts_with("GET /auth/v1/user ") {

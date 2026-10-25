@@ -57,7 +57,7 @@ pub fn daily_roster(data: &Snapshot, date: NaiveDate) -> Vec<DailyRow> {
                     .shifts
                     .plan(employee.id, date)
                     .map(|p| p.working(data, date))
-                    .unwrap_or_else(|| data.leave_setup.policy.working(date)),
+                    .unwrap_or_else(|| crate::leave::dated::policy_on(data,date).working(date)),
                 attendance,
                 approved_leave,
             })

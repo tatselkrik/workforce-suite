@@ -133,6 +133,8 @@ impl HrisApp {
         if state.date.is_empty() {
             state.date = today.to_string();
         }
+        let selected_on=parse_date(&state.date).unwrap_or(today);
+        let dated_policy=leave::dated::policy_on(data,selected_on);
         card(ui, |ui| {
             ui.label(
                 RichText::new("Leave credit adjustments")
@@ -166,17 +168,13 @@ impl HrisApp {
                         });
                     egui::ComboBox::from_id_salt("credit-type")
                         .selected_text(
-                            data.leave_setup
-                                .policy
+                            dated_policy
                                 .leave_type(&state.code)
                                 .map(|t| t.name.as_str())
                                 .unwrap_or("Choose finite leave type"),
                         )
                         .show_ui(ui, |ui| {
-                            for t in data
-                                .leave_setup
-                                .policy
-                                .types
+                            for t in dated_policy.types
                                 .iter()
                                 .filter(|t| t.accrual != leave::Accrual::Unlimited)
                             {
@@ -194,19 +192,12 @@ impl HrisApp {
                 state
                     .person
                     .and_then(|id| data.employees.iter().find(|e| e.id == id)),
-                data.leave_setup.policy.leave_type(&state.code),
+                dated_policy.leave_type(&state.code),
             ) {
-                let b = leave::balance(data, person, kind, today.year(), today, None);
-                let adjustments = context.units(person.id, &kind.code, today.year(), today);
+                let adjustments = context.units(person.id, &kind.code, selected_on.year(), selected_on);
+                match leave::balance_checked(data,person,kind,selected_on.year(),selected_on,None){Ok(b)=>{ui.label(format!("At {selected_on}: {} available · {} used · {} reserved · {} carryover day(s)",leave::days(b.available_units),leave::days(b.used_units),leave::days(b.reserved_units),leave::days(b.carryover_units)));},Err(e)=>{ui.colored_label(ui.visuals().error_fg_color,e.to_string());}}
                 ui.label(format!(
-                    "Today: {} available · {} used · {} reserved · {} carryover day(s)",
-                    leave::days(b.available_units),
-                    leave::days(b.used_units),
-                    leave::days(b.reserved_units),
-                    leave::days(b.carryover_units)
-                ));
-                ui.label(format!(
-                    "Applied base adjustments this year: {} day(s)",
+                    "Base adjustments through this date: {} day(s)",
                     leave::days(adjustments)
                 ));
             }

@@ -28,6 +28,8 @@ mod hiring_view;
 mod imports_view;
 mod leave_view;
 mod leave_credits_view;
+mod leave_openings_view;
+mod leave_versions_view;
 mod approval_delegation_view;
 mod notifications_view;
 mod onboarding_view;
@@ -1009,6 +1011,7 @@ impl HrisApp {
             }
             app.prepare_leave_preview();
             app.prepare_leave_credits_preview();
+            app.prepare_dated_leave_preview();
             app.prepare_approval_delegation_preview();
             app.prepare_shift_preview();
             app.prepare_break_preview();
@@ -1239,6 +1242,8 @@ impl HrisApp {
                     let career_saved = self.career_state.accept(&data);
                     let hiring_saved = hiring_record_saved && recruiting_saved && onboarding_saved && exit_saved && performance_saved && learning_saved && career_saved && payroll_saved;
                     self.data = data;
+                    if let Some(preview)=update.leave_opening_preview {self.leave_state.openings.accept(preview);}
+                    if let Some(preview)=update.leave_opening_import_preview {self.leave_state.openings.accept_import(preview,&self.data);}
                     self.notification_state.invalidate();
                     if !self.data.active().any(|e| {
                         Some(e.id) == self.check_in_employee && self.data.access.can_record(e.id)
@@ -1932,6 +1937,9 @@ impl HrisApp {
             || self.correction_form.is_some()
             || self.leave_form.is_some()
             || self.leave_state.draft.is_some()
+            || self.leave_state.policy_pending.is_some()
+            || self.leave_state.withdraw_target.is_some()
+            || self.leave_state.openings.has_draft()
             || self.leave_state.delegation.has_draft()
             || self.shift_state.template.is_some()
             || self.shift_state.assignment.is_some()
@@ -4394,6 +4402,7 @@ fn employment_fields(ui: &mut Ui, draft: &mut EmployeeDraft, data: &Snapshot) {
                 .suffix(" days"),
         );
     });
+    if data.leave_setup.dated.as_ref().is_some_and(|c|c.enabled) {ui.label(RichText::new("Future-year default. The captured current-year entitlement stays unchanged; use Leave > Credit adjustments for a reviewed current-year correction.").small().color(muted(ui)));}
     egui::ComboBox::from_id_salt("employee_record_status")
         .selected_text(draft.status.label())
         .show_ui(ui, |ui| {

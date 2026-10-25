@@ -339,3 +339,14 @@ authority, role-bound/date-limited grants, nontransitive request-specific review
 self/submission exclusions, current source and issued-payroll guards. Never extend
 delegation to payroll/account/personnel permissions. Keep original plans/actors
 and immutable linked decision receipts; HR reasons/references remain private.
+
+Effective-date policies and reviewed openings follow docs/LEAVE-OPENINGS.md.
+Preserve known-from entitlement inputs AND captured incoming gross carry; changing
+employment defaults must not recalculate that known year. Takeover targets already
+include HRIS reservations. Imported carry remains expiring and cannot become base
+or be carried twice. Keep baseline booking funding, scalar credit-at-posting,
+actor-bound retries, all-or-none imports and private HR audit. Annual-term changes
+start at a future January1; retain filed dates/plans and protected reservation
+checks. Use checked native submissions after enablement and preserve the portal's
+own-only balance contract. Local implementation is not a completed release until
+its proportionate checks, guarded deployment and actual installation pass.

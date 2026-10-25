@@ -6,7 +6,9 @@ use chrono::{Datelike, Days, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 pub mod credits;
+pub mod dated;
 pub mod openings;
+pub mod opening_import;
 pub mod versions;
 pub mod entitlements;
 
@@ -322,6 +324,7 @@ pub struct LeaveEvent {
 }
 #[derive(Clone, Debug, Default)]
 pub struct LeaveSetup {
+    pub dated: Option<dated::Context>,
     pub credits: Option<credits::Context>,
     pub policy: LeavePolicy,
     pub events: Vec<LeaveEvent>,
@@ -428,6 +431,17 @@ pub fn balance(
     as_of: NaiveDate,
     exclude: Option<Uuid>,
 ) -> Balance {
+    // Callers showing an editable preview use balance_checked to surface the
+    // reason. A failed finite calculation must never allow a positive charge.
+    balance_checked(data,e,t,year,as_of,exclude).unwrap_or_default()
+}
+pub fn balance_checked(data:&Snapshot,e:&Employee,t:&LeaveType,year:i32,as_of:NaiveDate,exclude:Option<Uuid>)->Result<Balance> {
+    if data.leave_setup.dated.as_ref().is_some_and(|c|c.enabled) {
+        return dated::balance(data,e,&t.code,year,as_of,exclude);
+    }
+    Ok(legacy_balance(data,e,t,year,as_of,exclude))
+}
+fn legacy_balance(data:&Snapshot,e:&Employee,t:&LeaveType,year:i32,as_of:NaiveDate,exclude:Option<Uuid>)->Balance {
     let first = e
         .joined_on
         .map(|j| j.year())
@@ -576,9 +590,8 @@ pub fn prepare(data: &Snapshot, draft: &LeaveDraft) -> Result<LeaveRequest> {
     } else {
         &draft.options.type_code
     };
-    let t = data
-        .leave_setup
-        .policy
+    let selected_policy = dated::policy_on(data,row.starts_on);
+    let t = selected_policy
         .leave_type(code)
         .filter(|t| t.active)
         .ok_or_else(|| anyhow::anyhow!("Choose an active leave type."))?;
@@ -586,17 +599,14 @@ pub fn prepare(data: &Snapshot, draft: &LeaveDraft) -> Result<LeaveRequest> {
         t.accrual != Accrual::Monthly || e.joined_on.is_some(),
         "Set the employee Date joined before requesting accrued leave."
     );
-    let charges =
-        data.leave_setup
-            .policy
-            .charges(row.starts_on, row.ends_on, draft.options.day_part)?;
+    let charges = dated::charges(data,code,row.starts_on,row.ends_on,draft.options.day_part)?;
     row.policy = RequestPolicy {
         type_code: t.code.clone(),
         type_name: t.name.clone(),
         day_part: draft.options.day_part,
         charged_units: charges.iter().map(|d| d.units).sum(),
         charged_dates: charges,
-        policy_revision: data.leave_setup.policy.revision,
+        policy_revision: selected_policy.revision,
         revision: 0,
         approval_steps: t
             .approval_chain
@@ -646,7 +656,7 @@ pub fn prepare(data: &Snapshot, draft: &LeaveDraft) -> Result<LeaveRequest> {
     }
     if t.accrual != Accrual::Unlimited {
         ensure!(
-            balance(data, e, t, row.starts_on.year(), row.starts_on, None).available_units
+            balance_checked(data, e, t, row.starts_on.year(), row.starts_on, None)?.available_units
                 >= row.units(),
             "This request exceeds the available leave balance, including pending reservations."
         );
@@ -739,9 +749,10 @@ pub fn apply_demo(data: &mut Snapshot, action: Action) -> Result<()> {
                     .ok_or_else(|| anyhow::anyhow!("Leave type not found."))?;
                 if t.accrual != Accrual::Unlimited {
                     ensure!(
-                        balance(data, e, t, row.starts_on.year(), row.starts_on, Some(id))
-                            .available_units
-                            >= row.units(),
+                        if data.leave_setup.dated.as_ref().is_some_and(|c|c.enabled) {
+                            let end=NaiveDate::from_ymd_opt(row.starts_on.year(),12,31).unwrap();
+                            balance_checked(data,e,t,row.starts_on.year(),row.starts_on.max(data.company.today().min(end)),None)?.available_units>=0
+                        } else {balance_checked(data, e, t, row.starts_on.year(), row.starts_on, Some(id))?.available_units>=row.units()},
                         "This request exceeds the available leave balance."
                     );
                 }

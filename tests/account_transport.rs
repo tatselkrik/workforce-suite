@@ -719,6 +719,7 @@ fn report_export_reloads_scoped_data_and_rechecks_access_before_creating_csv() {
                     .starts_with("POST /rest/v1/rpc/recruiting_interviewers ")
                 || r.line.starts_with("POST /rest/v1/rpc/lifecycle_notifications ")
                 || r.line.starts_with("POST /rest/v1/rpc/leave_credit_context ")
+                || r.line.starts_with("POST /rest/v1/rpc/leave_dated_context ")
                 || r.line.starts_with("POST /rest/v1/rpc/approval_delegation_context ")
                 || r.line.starts_with("POST /rest/v1/rpc/exit_readiness_list "))
     );
@@ -908,6 +909,7 @@ fn fixture(replies: Vec<Reply>) -> (ConnectionConfig, thread::JoinHandle<()>, Re
     let server = thread::spawn(move || {
         let deadline = Instant::now() + Duration::from_secs(20);
         let mut last_access=Value::Null;
+        let mut last_leave_policy=Value::Null;
         for mut reply in replies {
             let (mut stream, _) = loop {
                 match listener.accept() {
@@ -957,6 +959,13 @@ fn fixture(replies: Vec<Reply>) -> (ConnectionConfig, thread::JoinHandle<()>, Re
                 reply.prefix
             );
             if reply.prefix=="POST /rest/v1/rpc/my_hris_access "&&reply.status==200{last_access=serde_json::from_slice(&reply.body).unwrap();}
+            if reply.prefix=="GET /rest/v1/leave_policies?"&&reply.status==200{let rows:Value=serde_json::from_slice(&reply.body).unwrap();last_leave_policy=rows[0].clone();}
+            if reply.prefix=="POST /rest/v1/rpc/leave_dated_context " {
+                let wire:Value=serde_json::from_slice(&reply.body).unwrap();
+                if wire.get("fixture_empty")==Some(&json!(true)){
+                    reply.body=serde_json::to_vec(&json!({"version":"leave-dated-v1","company_id":last_access["company_id"],"user_id":last_access["user_id"],"employee_id":last_access["employee_id"],"role":last_access["role"],"as_of":wire["as_of"],"revision":0,"enabled":false,"timeline":{"baseline":last_leave_policy,"versions":[]},"anchors":[],"openings":[],"withdrawals":[],"audit":[]})).unwrap();
+                }
+            }
             if reply.prefix=="POST /rest/v1/rpc/approval_delegation_context " {
                 let wire:Value=serde_json::from_slice(&reply.body).unwrap();
                 if wire.get("fixture_empty")==Some(&json!(true)){
@@ -1052,6 +1061,7 @@ fn baseline(company: &Company) -> Vec<Reply> {
         ),
         reply("GET /rest/v1/leave_events?", 200, json!([])),
         reply("POST /rest/v1/rpc/leave_credit_context ",200,json!({"fixture_empty":true,"as_of":company.today()})),
+        reply("POST /rest/v1/rpc/leave_dated_context ",200,json!({"fixture_empty":true,"as_of":company.today()})),
         reply("GET /rest/v1/shift_templates?", 200, json!([])),
         reply("GET /rest/v1/shift_assignments?", 200, json!([])),
         reply("GET /rest/v1/shift_template_versions?", 200, json!([])),
@@ -3605,4 +3615,30 @@ fn delegation_post_keeps_identical_request_after_saved_write_and_failed_refresh(
  let(config,server,requests)=fixture(replies);let(mut client,current)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
  assert!(client.execute(Action::ApprovalDelegation(change.clone()),&current).err().unwrap().to_string().contains("Delegation saved, but refresh failed"));let fresh=client.execute(Action::ApprovalDelegation(change.clone()),&current).unwrap();assert!(change.matches_history(fresh.approvals.as_ref().unwrap()));server.join().unwrap();
  let requests=requests.lock().unwrap();assert_eq!(request_at(&requests,"POST /rest/v1/rpc/save_approval_delegation ",0).json(),request_at(&requests,"POST /rest/v1/rpc/save_approval_delegation ",1).json());
+}
+
+#[test]
+fn opening_post_retains_identical_retry_and_checked_leave_binds_the_entire_preview(){
+ use hris_desktop::{access::{Access,Role},domain::{Action,LeaveDraft},leave::{self,dated::{Context,OpeningRecord,Change}}};
+ let mut d=DemoStore::new().data;d.leave.clear();d.employees.truncate(1);let company=d.company.clone();let person=d.employees[0].clone();
+ d.access=Access{company_id:company.id,user_id:company.owner_id,employee_id:None,role:Role::Administrator,..Default::default()};d.leave_setup.dated=Some(Context::empty(&d));d.leave_setup.credits=Some(leave::credits::Context::empty(&d));
+ let record=OpeningRecord{id:uuid::Uuid::from_u128(184901),employee_id:person.id,type_code:"annual".into(),effective_on:company.today(),target_available_units:12,remaining_carry_units:0,source_requests_reviewed:true,expected_revision:0,reason:"Fictional reviewed opening".into(),reference:"Fictional source only".into()};
+ let preview=leave::dated::preview_demo(&d,&record).unwrap();let change=Change::Opening(Box::new(preview));let initial=d.leave_setup.dated.clone().unwrap();leave::dated::apply_demo(&mut d,&change).unwrap();let after=d.leave_setup.dated.clone().unwrap();
+ let prepare=|c:&Context|{let mut v=baseline(&company);response_at(&mut v,"GET /rest/v1/employees?").body=serde_json::to_vec(&json!([person])).unwrap();response_at(&mut v,"POST /rest/v1/rpc/leave_dated_context ").body=serde_json::to_vec(c).unwrap();v};
+ let saved=json!({"id":record.id,"company_revision":1});let mut replies=prepare(&initial);replies.push(reply("POST /rest/v1/rpc/post_leave_opening ",200,saved.clone()));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",500,json!({"message":"Fictional refresh failure"})));replies.push(reply("POST /rest/v1/rpc/post_leave_opening ",200,saved));
+ replies.extend(prepare(&after).into_iter().skip(1).take_while(|v|!v.prefix.starts_with("GET /auth/v1/user ")));
+ replies.push(reply("POST /rest/v1/rpc/submit_leave_checked ",200,json!(uuid::Uuid::from_u128(184902))));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",500,json!({"message":"Fictional refresh failure"})));
+ let(config,server,requests)=fixture(replies);let(mut client,current)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
+ assert!(client.execute(Action::DatedLeave(change.clone()),&current).unwrap_err().to_string().contains("Leave setup saved, but refresh failed"));let fresh=client.execute(Action::DatedLeave(change),&current).unwrap();assert_eq!(fresh.leave_setup.dated.as_ref().unwrap().openings.len(),1);
+ let mut day=company.today()+chrono::Duration::days(1);while chrono::Datelike::weekday(&day).number_from_monday()>5{day+=chrono::Duration::days(1);}
+ let draft=LeaveDraft{employee_id:Some(person.id),starts_on:day.to_string(),ends_on:day.to_string(),options:leave::LeaveOptions{type_code:"annual".into(),day_part:leave::DayPart::Full},..Default::default()};assert!(client.execute(Action::RequestLeave(draft),&fresh).is_err());server.join().unwrap();
+ let seen=requests.lock().unwrap();assert_eq!(request_at(&seen,"POST /rest/v1/rpc/post_leave_opening ",0).json(),request_at(&seen,"POST /rest/v1/rpc/post_leave_opening ",1).json());
+ let checked=request_at(&seen,"POST /rest/v1/rpc/submit_leave_checked ",0);let body=checked.json();assert_eq!(body["p_expected"]["setup_revision"],1);assert_eq!(body["p_expected"]["credit_revision"],0);assert_eq!(body["p_expected"]["balance"]["available_units"],12);assert_eq!(body["p_expected"]["charged_dates"],json!([{"date":day,"units":2}]));assert!(checked.headers.to_lowercase().contains("x-hris-leave-dated: 1"));
+}
+
+#[test]
+fn dated_context_role_mismatch_is_rejected_before_any_mutation(){
+ let company=Company::default();let mut replies=baseline(&company);let at=replies.iter().position(|r|r.prefix=="POST /rest/v1/rpc/leave_dated_context ").unwrap();
+ replies[at]=reply("POST /rest/v1/rpc/leave_dated_context ",200,json!({"version":"leave-dated-v1","company_id":company.id,"user_id":company.owner_id,"employee_id":null,"role":"manager","as_of":company.today(),"revision":0,"enabled":false,"timeline":{"baseline":hris_desktop::leave::LeavePolicy{company_id:company.id,..Default::default()},"versions":[]},"anchors":[],"openings":[],"withdrawals":[],"audit":[]}));replies.truncate(at+1);
+ let(config,server,requests)=fixture(replies);assert!(CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).is_err());server.join().unwrap();assert!(requests.lock().unwrap().iter().all(|r|!r.line.starts_with("POST /rest/v1/rpc/post_leave_open")));
 }
