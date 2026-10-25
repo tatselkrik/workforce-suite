@@ -9,6 +9,7 @@ pub mod credits;
 pub mod dated;
 pub mod openings;
 pub mod opening_import;
+pub mod request_import;
 pub mod versions;
 pub mod entitlements;
 

@@ -798,6 +798,24 @@ impl CloudClient {
         Ok((data, report))
     }
 
+    fn leave_import_history_for(&mut self,data:&Snapshot)->Result<crate::leave::request_import::History>{
+        ensure!(data.access.role.manages_hr(),"Current HR access is required for leave import history.");
+        let h:crate::leave::request_import::History=decode(self.request(Method::POST,"rpc/leave_import_context")?.json(&json!({})).send().context("Could not refresh leave import history.")?)?;
+        h.validate(data)?;if self.current_access()?!=data.access{return Err(AccessRevoked.into());}Ok(h)
+    }
+    pub fn leave_import_history(&mut self)->Result<(Snapshot,crate::leave::request_import::History)>{let data=self.snapshot()?;let h=self.leave_import_history_for(&data)?;Ok((data,h))}
+    pub fn leave_import_preview(&mut self,batch:&crate::leave::request_import::Batch)->Result<(Snapshot,crate::leave::request_import::Preview)>{
+        let data=self.snapshot()?;batch.validate(&data)?;
+        let p:crate::leave::request_import::Preview=decode(self.request(Method::POST,"rpc/preview_leave_import")?.json(&json!({"p_batch":batch})).send().context("Could not prepare the protected leave import preview.")?)?;
+        p.validate(&data,batch)?;if self.current_access()?!=data.access{return Err(AccessRevoked.into());}Ok((data,p))
+    }
+    pub fn post_leave_import(&mut self,post:&crate::leave::request_import::Post)->Result<(Snapshot,crate::leave::request_import::Receipt,crate::leave::request_import::History)>{
+        // Keep retries independent of later source/request changes. The server
+        // binds an existing receipt to the original actor and complete payload.
+        post.identity(&self.current_access()?)?;
+        let receipt:crate::leave::request_import::Receipt=decode(self.request(Method::POST,"rpc/post_leave_import")?.json(&json!({"p_batch":post.batch,"p_fingerprint":post.preview.fingerprint})).send().context("Leave import delivery is uncertain. Refresh history or retry this exact submission; do not create another batch.")?)?;
+        let data=self.snapshot()?;receipt.validate(&data,post)?;let history=self.leave_import_history_for(&data)?;Ok((data,receipt,history))
+    }
     fn attendance_import_history_for(&mut self,data:&Snapshot)->Result<crate::attendance_imports::History>{
         ensure!(data.access.role.manages_hr(),"Current HR access is required for attendance import history.");
         let h:crate::attendance_imports::History=decode(self.request(Method::POST,"rpc/attendance_import_context")?.json(&json!({})).send().context("Could not refresh attendance import history.")?)?;
@@ -1826,6 +1844,10 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
 }
 
 pub enum Command {
+    LeaveImportHistory,
+    PreviewLeaveImport(crate::leave::request_import::Batch),
+    PostLeaveImport(Box<crate::leave::request_import::Post>),
+    LeaveImportErrors{source:crate::leave::request_import::Import,preview:Option<crate::leave::request_import::Preview>,destination:std::path::PathBuf},
     AttendanceImportHistory,
     PreviewAttendanceImport(crate::attendance_imports::Batch),
     PostAttendanceImport(Box<crate::attendance_imports::Post>),
@@ -1867,8 +1889,11 @@ pub enum Command {
 }
 
 pub struct Update {
+    pub leave_import_history:Option<crate::leave::request_import::History>,
     pub attendance_import_history:Option<crate::attendance_imports::History>,
+    pub leave_import_preview:Option<crate::leave::request_import::Preview>,
     pub attendance_import_preview:Option<crate::attendance_imports::Preview>,
+    pub leave_import_receipt:Option<crate::leave::request_import::Receipt>,
     pub attendance_import_receipt:Option<crate::attendance_imports::Receipt>,
     pub leave_opening_import_preview:Option<crate::leave::opening_import::BatchPreview>,
     pub leave_opening_preview:Option<crate::leave::dated::Preview>,
@@ -1894,6 +1919,7 @@ pub fn worker(
         let mut demo = initial;
         let mut demo_documents = std::collections::HashMap::new();
         let mut demo_resumes = std::collections::HashMap::new();
+        let mut demo_leave_imports=crate::leave::request_import::Demo::default();
         let mut demo_attendance_imports=crate::attendance_imports::Demo::default();
         let mut demo_account = demo.as_ref().map(|_| AccountProfile::demo());
         let mut cloud: Option<CloudClient> = None;
@@ -1910,8 +1936,11 @@ pub fn worker(
             };
             let mut message = String::new();
             let mut opening_preview_result=None;
+            let mut leave_import_history_result=None;
             let mut attendance_import_history_result=None;
+            let mut leave_import_preview_result=None;
             let mut attendance_import_preview_result=None;
+            let mut leave_import_receipt_result=None;
             let mut attendance_import_receipt_result=None;
             let mut opening_import_preview_result=None;
             let mut report_result = None;
@@ -1922,6 +1951,18 @@ pub fn worker(
             let mut update_state = None;
             let mut check_after_sign_in = false;
             let mut result: Result<Snapshot> = match command {
+                Command::LeaveImportHistory=>{
+                    let changed=match cloud.as_mut(){Some(client)=>client.leave_import_history(),None=>demo.as_ref().context("Sign in to view leave import history.").and_then(|s|demo_leave_imports.history(&s.data).map(|h|(s.data.clone(),h)))};
+                    changed.map(|(data,h)|{leave_import_history_result=Some(h);message="Leave import history refreshed.".into();data})
+                }
+                Command::PreviewLeaveImport(batch)=>{
+                    let changed=match cloud.as_mut(){Some(client)=>client.leave_import_preview(&batch),None=>demo.as_ref().context("Sign in to preview leave imports.").and_then(|s|crate::leave::request_import::Demo::preview(&s.data,&batch).map(|p|(s.data.clone(),p)))};
+                    changed.map(|(data,p)|{leave_import_preview_result=Some(p);message="Protected leave preview ready. No requests have been created.".into();data})
+                }
+                Command::PostLeaveImport(post)=>{
+                    let changed=match cloud.as_mut(){Some(client)=>client.post_leave_import(&post),None=>demo.as_mut().context("Sign in to import attendance requests.").and_then(|s|{let r=demo_leave_imports.post(&mut s.data,&post)?;r.validate(&s.data,&post)?;let h=demo_leave_imports.history(&s.data)?;Ok((s.data.clone(),r,h))})};
+                    changed.map(|(data,r,h)|{message=format!("{} leave requests imported with normal charge and approval snapshots.",r.row_count);leave_import_receipt_result=Some(r);leave_import_history_result=Some(h);data})
+                }
                 Command::AttendanceImportHistory=>{
                     let changed=match cloud.as_mut(){Some(client)=>client.attendance_import_history(),None=>demo.as_ref().context("Sign in to view attendance import history.").and_then(|s|demo_attendance_imports.history(&s.data).map(|h|(s.data.clone(),h)))};
                     changed.map(|(data,h)|{attendance_import_history_result=Some(h);message="Attendance import history refreshed.".into();data})
@@ -1938,6 +1979,12 @@ pub fn worker(
                     let changed=match cloud.as_mut(){Some(client)=>client.withdraw_attendance_import(&change),None=>demo.as_mut().context("Sign in to withdraw imported requests.").and_then(|s|{demo_attendance_imports.withdraw(&mut s.data,&change)?;Ok((s.data.clone(),demo_attendance_imports.history(&s.data)?))})};
                     changed.map(|(data,h)|{attendance_import_history_result=Some(h);message="Pending imported request withdrawn; its audit history remains.".into();data})
                 }
+                Command::LeaveImportErrors{source,preview,destination}=>(||{
+                    ensure!(source.scope==current.access&&current.access.role.manages_hr(),"Import access changed. Reopen the source before exporting private review rows.");
+                    let bytes=source.error_bytes(&destination,preview.as_ref())?;
+                    if let Some(client)=cloud.as_mut(){if client.current_access()?!=current.access{return Err(AccessRevoked.into());}}
+                    crate::reports::save_export(&destination,&bytes)?;message="Leave row review saved to a new file.".into();Ok(current.clone())
+                })(),
                 Command::AttendanceImportErrors{source,preview,destination}=>(||{
                     ensure!(source.scope==current.access&&current.access.role.manages_hr(),"Import access changed. Reopen the source before exporting private review rows.");
                     let bytes=source.error_bytes(&destination,preview.as_ref())?;
@@ -2258,8 +2305,11 @@ pub fn worker(
             }
             if events
                 .send(Update {
+                    leave_import_history:leave_import_history_result,
                     attendance_import_history:attendance_import_history_result,
+                    leave_import_preview:leave_import_preview_result,
                     attendance_import_preview:attendance_import_preview_result,
+                    leave_import_receipt:leave_import_receipt_result,
                     attendance_import_receipt:attendance_import_receipt_result,
                     leave_opening_import_preview:opening_import_preview_result,
                     leave_opening_preview:opening_preview_result,
@@ -2291,8 +2341,11 @@ pub fn worker(
                     if events
                         .send(Update {
                             leave_opening_import_preview:None,
+                            leave_import_history:None,
                             attendance_import_history:None,
+                            leave_import_preview:None,
                             attendance_import_preview:None,
+                            leave_import_receipt:None,
                             attendance_import_receipt:None,
                             leave_opening_preview:None,
                             government_sss:None,

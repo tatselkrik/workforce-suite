@@ -238,6 +238,7 @@ impl HrisApp {
                     .selectable_label(
                         !self.import_state.open
                             && !self.attendance_import_state.open
+                            && !self.leave_request_import_state.open
                             && self.report_state.filter.kind == kind,
                         kind.label(),
                     )
@@ -253,6 +254,7 @@ impl HrisApp {
                     }
                     self.import_state.open = false;
                     self.attendance_import_state.open = false;
+                    self.leave_request_import_state.open = false;
                 }
             }
         });
@@ -264,6 +266,7 @@ impl HrisApp {
             {
                 self.import_state.open = true;
                 self.attendance_import_state.open = false;
+                self.leave_request_import_state.open = false;
             }
             if self.data.access.role.manages_hr()
                 && ui
@@ -272,8 +275,22 @@ impl HrisApp {
             {
                 self.import_state.open = false;
                 self.attendance_import_state.open = true;
+                self.leave_request_import_state.open = false;
+            }
+            if self.data.access.role.manages_hr()
+                && ui
+                    .selectable_label(self.leave_request_import_state.open, "Leave import")
+                    .clicked()
+            {
+                self.import_state.open = false;
+                self.attendance_import_state.open = false;
+                self.leave_request_import_state.open = true;
             }
         });
+        if self.leave_request_import_state.open {
+            self.leave_request_import(ui);
+            return;
+        }
         if self.attendance_import_state.open {
             self.attendance_import(ui);
             return;

@@ -347,6 +347,14 @@ source/revision checks. Never impersonate employee identities, apply clocks or
 approve during import. Bind uncertain retries to the same actor and full payload;
 private import references must not enter own/team request projections.
 
+Leave request file imports follow docs/LEAVE-REQUEST-IMPORTS.md. Reuse normal
+HR-assisted submit/review/cancel semantics, dated charge/approval snapshots and
+running reservations. The protected preview rehearses normal submissions inside
+an always-rolled-back subtransaction while retaining the company lock; it is not
+a read-only/replica endpoint. Keep deterministic source fingerprints, atomic
+posting, actor/full-payload receipts and private immutable import history. Never
+copy attendance's creator exclusion into the existing leave authority contract.
+
 Effective-date policies and reviewed openings follow docs/LEAVE-OPENINGS.md.
 Preserve known-from entitlement inputs AND captured incoming gross carry; changing
 employment defaults must not recalculate that known year. Takeover targets already

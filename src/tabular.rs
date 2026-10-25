@@ -354,7 +354,7 @@ fn cell_text(cell: &Data, header: &str, row: usize, column: usize) -> Result<Str
         header,
         "annual_leave_days" | "available_days" | "remaining_carry_days"
     );
-    let date_column = matches!(header, "joined_on" | "work_date");
+    let date_column = matches!(header, "joined_on" | "work_date" | "starts_on" | "ends_on");
     let text = match cell {
         Data::Empty => String::new(),
         Data::String(s) => s.clone(),

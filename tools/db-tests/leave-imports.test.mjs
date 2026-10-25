@@ -1,0 +1,69 @@
+import assert from 'node:assert/strict';
+import {readFile,readdir}from'node:fs/promises';
+import {PGlite}from'@electric-sql/pglite';
+import {btree_gist}from'@electric-sql/pglite/contrib/btree_gist';
+const db=new PGlite({extensions:{btree_gist}});let checks=0;let migration='bootstrap';
+const eq=(a,b,label)=>{assert.deepEqual(a,b,label);checks++;};
+const id=n=>`aa520000-0000-4000-8000-${String(n).padStart(12,'0')}`;
+const q=async(sql,args=[])=> (await db.query(sql,args)).rows;
+const rpc=async(name,...args)=>(await q(`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')})r`,args))[0].r;
+const root=async()=>db.exec('reset role');
+const session=async(uid)=>{await root();await q("select set_config('request.jwt.claim.sub',$1,false)",[uid]);await db.exec('set role authenticated');};
+const deny=async(fn,codes=['23514'])=>{try{await fn();}catch(e){assert.ok(codes.includes(e.code),`Expected ${codes}, got ${e.code}: ${e.message}`);checks++;return;}assert.fail('Invalid operation accepted');};
+try{
+ await db.exec(`create role anon nologin;create role authenticated nologin;create role service_role nologin bypassrls;
+ create schema supabase_migrations;create table supabase_migrations.schema_migrations(version text primary key);
+ create schema auth;create table auth.users(id uuid primary key,email text unique,email_confirmed_at timestamptz,raw_user_meta_data jsonb default'{}');
+ create function auth.uid()returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+ grant usage on schema auth to authenticated;grant execute on function auth.uid()to authenticated;
+ create schema storage;create table storage.buckets(id text primary key,name text,public boolean default false,file_size_limit bigint,allowed_mime_types text[]);
+ create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text references storage.buckets(id),name text,owner_id text,metadata jsonb,unique(bucket_id,name));
+ alter table storage.objects enable row level security;grant usage on schema storage to authenticated,anon;grant select,insert,update,delete on storage.objects to authenticated,anon;`);
+ const folder=new URL('../../supabase/migrations/',import.meta.url);
+ for(const f of(await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()){migration=f;await db.exec(await readFile(new URL(f,folder),'utf8'));}migration='workflow';
+ await q('insert into auth.users(id,email,email_confirmed_at)values($1,$2,now())',[id(1),'import-owner@example.invalid']);await q("select set_config('request.jwt.claim.sub',$1,false)",[id(1)]);
+ const company=(await q("insert into public.companies(owner_id,name,timezone)values($1,'Fictional imports','Asia/Manila')returning *",[id(1)]))[0];
+ const people={};
+ for(const[n,key,role]of[[2,'admin','administrator'],[3,'hr','hr_generalist'],[4,'manager','manager'],[5,'subject','employee'],[6,'other','employee']]){
+  await root();await q('insert into auth.users(id,email,email_confirmed_at)values($1,$2,now())',[id(n),`import-${key}@example.invalid`]);await session(id(1));
+  await rpc('save_company_account',id(n),`import-${key}@example.invalid`,role,true,null,null);
+  people[key]={user:id(n),...(await q('select e.id employee,e.employee_code code from public.employees e join public.company_members m on m.employee_id=e.id where m.user_id=$1',[id(n)]))[0]};
+ }
+ await root();await q("update public.employees set joined_on='2025-01-01'where company_id=$1",[company.id]);await q('update public.employees set reports_to=$1 where id=$2',[people.manager.employee,people.subject.employee]);
+
+ await root();await q('update public.employees set annual_leave_days=2 where company_id=$1',[company.id]);
+ const dates=(await q("select d::date::text d from generate_series(current_date+1,make_date(extract(year from current_date)::integer,12,31),'1 day')d where extract(isodow from d)between 1 and 5 limit 8")).map(x=>x.d);assert.ok(dates.length>=8);
+ const row=(n,person='subject',patch={})=>({id:id(n),source_row:n-18,employee_code:people[person].code,type_code:'annual',starts_on:dates[0],ends_on:dates[0],day_part:'full',reason:'Fictional reviewed leave source',reference:'PRIVATE_IMPORT_REFERENCE',...patch});
+ const batch=(n,rows)=>({id:id(n),expected_timezone:'Asia/Manila',reason:'PRIVATE_IMPORT_BATCH_NOTE',reference:'PRIVATE_BATCH_REFERENCE',rows});
+ const preview=b=>rpc('preview_leave_import',b),post=(b,p)=>rpc('post_leave_import',b,p.fingerprint),context=()=>rpc('leave_import_context');
+ const facts=async()=>{await root();return await q("select(select count(*)from public.leave_requests)::integer requests,(select count(*)from public.leave_events)::integer events,(select count(*)from public.leave_import_batches)::integer batches,(select count(*)from public.leave_import_items)::integer items");};
+ const allFacts=async()=>{await root();const tables=(await q("select tablename from pg_tables where schemaname='public'order by tablename")).map(t=>t.tablename);return await q(tables.map(t=>`select '${t}'name,md5(coalesce(jsonb_agg(to_jsonb(r)order by to_jsonb(r)::text)::text,'[]'))digest from public.${t} r`).join(' union all '));};
+ const allBefore=await allFacts();const before=await facts();await session(people.hr.user);
+ const halves=batch(100,[row(20,'subject',{day_part:'am'}),row(21,'subject',{day_part:'pm'})]);
+ const p=await preview(halves);eq(p.ready,true,'Opposite half-days can coexist');eq(p.rows.map(r=>r.charged_units),[1,1],'Half-days are exact integer units');eq(p.rows.map(r=>r.balance_before.available_units),[4,3],'Rehearsal includes running reservations');eq(p.rows.map(r=>r.balance_after.available_units),[3,2],'Every row shows its exact running availability');eq(p.fingerprint,(await preview(halves)).fingerprint,'Rehearsal fingerprint excludes generated UUIDs/times');eq(await facts(),before,'Repeated preview persists no requests/events/import ledgers');await session(people.hr.user);
+ const over=batch(101,[row(22),row(23,'subject',{starts_on:dates[1],ends_on:dates[1]}),row(24,'subject',{starts_on:dates[2],ends_on:dates[2]})]);const op=await preview(over);eq(op.ready,false,'Batch cannot over-reserve one employee');eq(op.rows.map(r=>r.errors.length>0),[false,false,true],'Later row sees earlier successful reservations');await deny(()=>post(over,op));eq(await facts(),before,'Failed all-or-none post retains no earlier rows');await session(people.hr.user);
+ const dup=batch(102,[row(25),row(26)]);const dp=await preview(dup);eq(dp.ready,false,'Duplicate full dates rejected by normal leave overlap engine');eq(dp.rows[1].errors.length>0,true,'Duplicate reports its source row');eq(await facts(),before,'Overlap rehearsal persists nothing');await session(people.hr.user);
+ eq(await allFacts(),allBefore,'Preview and failed batch preserve EVERY prior public table including anchors/credits/payroll');await session(people.hr.user);
+ for(const bad of[null,[],{}, {...halves,extra:true},{...halves,rows:[]},{...halves,id:'00000000-0000-0000-0000-000000000000'},{...halves,rows:[{...row(27),id:null}]}])await deny(()=>preview(bad));
+ await deny(()=>preview({...halves,expected_timezone:'UTC'}),['PT409']);
+ const badDates=await preview(batch(103,[row(27,'subject',{starts_on:'2026-02-30'}),row(28,'other',{starts_on:'2026-12-31',ends_on:'2027-01-01'})]));eq(badDates.rows.every(r=>r.errors.length>0),true,'Invalid/cross-year dates have row errors');
+ for(const key of['manager','subject']){await session(people[key].user);await deny(()=>context(),['42501']);await deny(()=>preview(halves),['42501']);await deny(()=>post(halves,p),['42501']);}
+ await root();await q("update auth.users set raw_user_meta_data='{"+'"role":"administrator"'+"}'where id=$1",[people.subject.user]);await session(people.subject.user);await deny(()=>preview(halves),['42501']);
+ await session(people.hr.user);await root();await q("update public.employees set department='Changed fictional source'where id=$1",[people.subject.employee]);await session(people.hr.user);await deny(()=>post(halves,p),['PT409']);eq((await context()).batches,[],'Stale source has no import history');
+ const fresh=await preview(halves);const receipt=await post(halves,fresh);eq(receipt.row_count,2,'Whole valid batch posts');eq(await post(halves,fresh),receipt,'Exact actor/payload retry is idempotent');eq((await context()).items.map(i=>i.status),['pending','pending'],'Imports preserve normal pending status');
+ await session(people.admin.user);await deny(()=>post(halves,fresh),['PT409']);await session(people.hr.user);await deny(()=>post({...halves,reason:'Changed retry'},fresh),['PT409']);
+ for(const table of['leave_import_batches','leave_import_items'])await deny(()=>q('select *from public.'+table),['42501']);
+ await session(people.subject.user);const own=await q('select *from public.leave_requests');eq(own.length,2,'Subject sees only normal own leave');eq(JSON.stringify(own).includes('PRIVATE_IMPORT'),false,'Private batch/row references never enter own requests');await deny(()=>rpc('review_leave',receipt.items[0].request_id,0,true,'Self review'),['42501']);
+ await session(people.manager.user);await rpc('review_leave',receipt.items[0].request_id,0,true,'Normal independent manager review');await session(people.hr.user);eq((await context()).items.find(i=>i.id===receipt.items[0].id).status,'approved','Normal approval reflected in import history');eq(await post(halves,fresh),receipt,'Retry survives normal review');
+ await rpc('cancel_leave',receipt.items[1].request_id,0,'Fictional cancellation through normal HR flow');eq((await context()).items.find(i=>i.id===receipt.items[1].id).status,'cancelled','Normal audited cancellation is reused');
+ const assisted=batch(104,[row(29,'other',{type_code:'unpaid',starts_on:dates[2],ends_on:dates[2]})]);const ap=await preview(assisted);const ar=await post(assisted,ap);await rpc('review_leave',ar.items[0].request_id,0,true,'Existing HR-assisted leave authority');eq((await context()).items.find(i=>i.id===ar.items[0].id).status,'approved','Import preserves existing HR-assisted leave review semantics');
+ await session(people.admin.user);await q("select set_config('request.headers',$1,false)",[JSON.stringify({'x-hris-leave-contract':'2','x-hris-leave-credits':'1','x-hris-leave-dated':'1'})]);
+ const today=(await q("select(now()at time zone 'Asia/Manila')::date::text d"))[0].d;const opening={id:id(150),employee_id:people.other.employee,type_code:'annual',effective_on:today,target_available_units:3,remaining_carry_units:0,source_requests_reviewed:true,expected_revision:0,reason:'Fictional reviewed opening source',reference:''};const openingPreview=await rpc('preview_leave_opening',opening);await rpc('post_leave_opening',opening,openingPreview.fingerprint);
+ await session(people.hr.user);const datedBefore=await allFacts();await session(people.hr.user);const openingBatch=batch(151,[row(30,'other',{day_part:'am'}),row(31,'other',{day_part:'pm'}),row(32,'other',{starts_on:dates[1],ends_on:dates[1],day_part:'am'}),row(33,'other',{starts_on:dates[1],ends_on:dates[1],day_part:'pm'})]);const ob=await preview(openingBatch);eq(ob.rows.slice(0,3).map(r=>r.balance_before.available_units),[3,2,1],'Dated opening reservations use the actual captured engine');eq(ob.rows[3].errors.length>0,true,'Dated opening cannot overbook the fourth half-day');eq(ob.fingerprint,(await preview(openingBatch)).fingerprint,'Dated opening rehearsal is deterministic');eq(await allFacts(),datedBefore,'Dated rehearsal preserves all public facts');await session(people.hr.user);
+ const nextYear=Number(today.slice(0,4))+1;const futureDates=(await q("select d::date::text d from generate_series(make_date($1,1,1),make_date($1,1,20),'1 day')d where extract(isodow from d)between 1 and 5 limit 3",[nextYear])).map(x=>x.d);const futureBatch=batch(152,[row(34,'other',{starts_on:futureDates[0],ends_on:futureDates[2]})]);const fp=await preview(futureBatch);
+ await session(people.admin.user);const dated=await rpc('leave_dated_context');const policy=structuredClone(dated.timeline.baseline);const annual=policy.types.find(t=>t.code==='annual');annual.use_employee_allowance=false;annual.annual_units=8;annual.name='Fictional future annual';policy.holidays.push({date:futureDates[0],name:'Fictional future holiday'});await rpc('save_dated_leave_policy',{id:id(153),effective_on:`${nextYear}-01-01`,expected_revision:dated.revision,policy,reason:'Fictional future leave configuration',reference:''});
+ await session(people.hr.user);await deny(()=>post(futureBatch,fp),['PT409']);const future=await preview(futureBatch);eq(future.ready,true,'Future dated policy can fund a reviewed request');eq(future.rows[0].charged_units,4,'Future holiday is excluded from filed charges');eq(future.rows[0].type_name,'Fictional future annual','Future type name captured');const fr=await post(futureBatch,future);const fi=(await context()).items.find(i=>i.id===fr.items[0].id);eq(fi.charged_dates,future.rows[0].charged_dates,'Actual post retains the preview charge snapshot');eq(fi.approval_steps,future.rows[0].approval_steps,'Actual post retains normal configured approval plan');eq((await context()).items.find(i=>i.id===receipt.items[0].id).policy_revision,p.rows[0].policy_revision,'Future policy never rewrites earlier imported requests');
+ await root();for(const table of['leave_import_batches','leave_import_items'])await deny(()=>q('delete from public.'+table));
+ await q('update public.company_members set active=false where user_id=$1',[people.hr.user]);await session(people.hr.user);await deny(()=>context(),['42501']);await deny(()=>post(halves,fresh),['42501']);
+ console.log(`Leave import workflow: ${checks} assertions passed.`);
+}catch(e){console.error('Leave import test failed:',migration,e.code??'',e.message,'position',e.position??e.internalPosition??'',(e.where??'').slice(0,500));process.exitCode=1;}finally{await db.close();}
