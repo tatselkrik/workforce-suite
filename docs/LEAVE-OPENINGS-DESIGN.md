@@ -4,11 +4,11 @@ Design notes for the authorized next increment, not completed behavior or new
 user authority. No opening is posted by this document. Preserve the current
 credit ledger and original charge/approval snapshots.
 
-**Implementation status26October2026:** the native/protected storage, preview,
-posting, dated policy and atomic CSV workflows are now implemented locally.
-See [the implementation contract](LEAVE-OPENINGS.md). Hosted verification, visual
-checks and release/installation remain pending; foundation-only wording below is
-retained as design history and must not be treated as the current delivery state.
+**Delivery status26October2026:** the native/protected storage, preview,
+posting, dated policy and atomic CSV workflows are delivered in installed/private
+desktop0.1.49. See [the implementation contract](LEAVE-OPENINGS.md) and
+[verification](LEAVE-OPENINGS-0.1.49-VERIFICATION.md). Foundation-only wording below
+is retained as design history and must not be treated as current delivery state.
 Current-year anchors also capture incoming gross carry; later employment defaults
 must not recalculate that known amount through legacy prior-year projections.
 

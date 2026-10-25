@@ -1,6 +1,6 @@
 # Review checklist — leave policies and openings0.1.49
 
-Candidate checklist. Delivery/install status is recorded separately in the
+0.1.49 is installed and privately published. Delivery evidence is recorded in the
 verification file. Use fictional employees for balance-changing checks.
 
 1. **Leave > Opening balances > Enter opening.** Select an active employee and a

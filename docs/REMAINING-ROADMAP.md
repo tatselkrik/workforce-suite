@@ -4,11 +4,11 @@
 resuming it across a usage reset if unfinished, then continuing item6 imports/
 native Excel and item7 exchange foundations. The next-refresh-only hold is
 superseded. Items1/2 retain their recorded verification/acceptance limitations.
-Item4 now has a local0.1.49candidate with protected dated policies, captured
-entitlements, entered openings and atomic CSV openings. Local/native/database
-checks and fictional visual review are recorded in
-[the candidate evidence](LEAVE-OPENINGS-0.1.49-VERIFICATION.md). Hosted delivery and
-actual installation remain pending, so the milestone stays open until those pass.
+Item4 is delivered in installed/private desktop0.1.49, including protected dated
+policies, captured entitlements, entered openings and atomic CSV openings.
+[Verification](LEAVE-OPENINGS-0.1.49-VERIFICATION.md) records the local, hosted,
+visual, installer and private-channel evidence and remaining verification limits.
+Continue item6, then item7; the same scheduler remains active.
 
 **Scope refinement25October2026:** browser verification is the current portal
 priority. Free mobile-width browser checks may be included; physical-phone and
@@ -57,9 +57,11 @@ unconfigured external connection to a completed integration.
 3. ~~**Payroll, appraisal and training notifications.** Payslip/payment notices,
    review deadlines, training reminders and certificate-expiry alerts.~~ Delivered
    in desktop0.1.46 and local portal0.1.6; in-app only. External delivery is deferred.
-4. **Effective-date leave policies and balances.** Scheduled policy changes,
-   entered/imported opening balances and ~~audited credit adjustments~~.
-   Credit deltas/reversals are delivered in0.1.47; the whole milestone stays open.
+4. ~~**Effective-date leave policies and balances.** Scheduled policy changes,
+   entered/imported opening balances and audited credit adjustments.~~ Dated
+   policies/openings delivered and installed in0.1.49; credit deltas/reversals in
+   0.1.47. Annual terms start at a future January1; known entitlements, expiring
+   carry, reservations and filed snapshots remain protected.
 5. ~~**Approval delegation.** Temporary substitute approvers with retained history,
    current permissions, self-approval restrictions and clear validity periods.~~
    Delivered/installed in0.1.48 for leave, attendance corrections and overtime.
@@ -78,6 +80,16 @@ unconfigured external connection to a completed integration.
    resumption; do not treat the placeholder as a working connection.
 
 ## Progress and boundaries
+
+- Desktop0.1.49 is installed and privately published, frozen source
+  `623174fbde1e4b2f53ee3895f16083dcbb6b838a`;0.1.48 rollback is retained.
+  506default Rust checks, two relevant explicit opt-ins,5,847PostgreSQL assertions
+  and fresh66migration replay pass. Six fictional native layouts plus a final CSV
+  error capture were inspected; eight actual protected native snapshots match
+  server/portal balances. Guarded schema deployment preserved99prior rowsets and
+  288unrelated functions. Hosted role/retry/staleness/atomicity/revocation and
+  preservation checks pass. See [the review checklist](LEAVE-OPENINGS-0.1.49-CHECKLIST.md).
+  The running separate local portal was preserved. Continue imports/native Excel.
 
 - Desktop0.1.48 is installed and privately published, frozen source
   `84f34054a2b07166bc317e6f39a5cad8def49afc`;0.1.47 rollback is retained.
