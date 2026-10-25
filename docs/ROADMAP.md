@@ -156,4 +156,11 @@ and current browser/phone visuals unverified. The ordered checklist is current;
 older stop/pause paragraphs above are historical. Work and scheduling remain active.
 See [0.1.42 delivery evidence](GOVERNMENT-0.1.42-VERIFICATION.md).
 
+~~Agency-specific internal preparation CSV~~ follows in installed/private-channel
+0.1.44, with purpose-limited registered fields, missing-input flags and fresh
+reconciliation. See [0.1.44 evidence](GOVERNMENT-0.1.44-VERIFICATION.md). Exact
+agency file controls/validator acceptance remain pending; the government milestone
+is partial. Standing private-channel publication is authorized for future verified
+releases to the existing destination, as recorded in AGENTS.md/private authorization.
+
 The sequence may change when the company has a more urgent requirement. Payroll, biometric devices and external integrations require company-specific decisions; they are not generic plug-ins already working in this prototype.
