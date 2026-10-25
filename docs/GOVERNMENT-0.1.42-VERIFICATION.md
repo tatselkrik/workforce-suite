@@ -53,9 +53,10 @@ Packages and detailed evidence stay in ignored private deployment/work folders.
 
 ## Publication boundary
 
-Automatic approval review rejected the0.1.42 private-channel upload because the
-trusted earlier upload authorization covered0.1.41. No upload executed. Local
-installation is complete; new external publication awaits the pending explicit
-authorization. Do not bypass the rejection or claim the channel contains0.1.42.
-Standing prototype SQL authorization remains unchanged. No government return,
-transfer, public hosting or external employee communication occurred.
+Automatic approval review initially rejected publication under the earlier0.1.41-only
+permission. On25October2026 Kirk explicitly authorized0.1.42 and future verified
+releases to the same private channel. The held0.1.42 artifact is now published:
+frozen source/archive, required migration subset, authenticated download/hash and
+Rust signature checks pass. Public/ordinary-Employee access is denied. The latest
+feed is0.1.44; see [current evidence](GOVERNMENT-0.1.44-VERIFICATION.md). The earlier
+rejection is historical, not a pending approval. SQL authority remains unchanged.

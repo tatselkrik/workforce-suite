@@ -1,7 +1,7 @@
 # Version 0.1.44 review checklist
 
-This candidate adds agency preparation exports. Installation evidence is recorded
-separately; use fictional employee details while testing.
+This version is installed and privately published; see [delivery evidence](GOVERNMENT-0.1.44-VERIFICATION.md).
+Use fictional employee details while testing.
 
 1. As HR/Admin, open **Payroll → Government**, select an agency/month and generate
    the report. Choose **Export agency preparation CSV** and a new local filename.

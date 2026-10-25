@@ -44,10 +44,10 @@ unconfigured external connection to a completed integration.
 
 ## Progress and boundaries
 
-- Desktop0.1.43 is installed and verified locally; retain0.1.42 as rollback.
-  Signed0.1.42/0.1.43 private-channel publication awaits authorization after automatic
-  approval review blocked the new payload. Do not repeat local installation or
-  bypass that external-upload boundary.
+- Desktop0.1.44 is installed and verified; retain0.1.43 as rollback. Kirk authorized
+  0.1.42 and future verified releases to the same private channel on25October2026.
+  The held0.1.42–0.1.44 updates are published, authenticated downloads/signatures
+  verified and0.1.44 serves as latest. Do not repeat completed installations.
 - Portal milestone1: ~~own correction/overtime requests, cancellation and decision
   history~~ are implemented in the0.1.2 increment, with25 Rust tests,3,275 database
   assertions and seven actual hosted proof groups. See [portal verification](EMPLOYEE-PORTAL.md).
@@ -99,6 +99,16 @@ unconfigured external connection to a completed integration.
   current role/revision/idempotency guards. All24payroll sets, earlier Auth and
   employer facts remain unchanged. See [0.1.43 evidence](GOVERNMENT-0.1.43-VERIFICATION.md).
   Exact agency files/validator acceptance remain queued; milestone2 stays partial.
+- ~~Agency-specific internal preparation CSV~~ is delivered/installed in0.1.44.
+  A fresh protected projection exports only the selected agency's legal fields,
+  missing-input flags and reviewed source/summary amounts.434default Rust checks,
+  four explicit vector checks, exact installer/recovery,4,110PostgreSQL assertions
+  and fresh60migration replay pass. Hosted checks cover four native-decoded
+  agency responses, role/revocation/privacy and unchanged payroll/Auth/employer
+  facts. Four native layouts pass; installed payloads/Windows Apps/launch match.
+  SSS reference rendering matches12fictional month vectors but has no product
+  download control. Exact agency files/validator acceptance remain queued; the
+  full government milestone stays partial. See [0.1.44 evidence](GOVERNMENT-0.1.44-VERIFICATION.md).
 - Effective-date policies, balances and delegation follow the existing saved
   charges/plans and immutable history rules; they do not rewrite older requests.
 - Install each verified authorized desktop release, preserving unsaved work and

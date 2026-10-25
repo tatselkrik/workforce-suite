@@ -1,6 +1,6 @@
-# Agency preparation exports — 0.1.44 candidate
+# Agency preparation exports — 0.1.44
 
-This candidate is under verification; the installed desktop remains 0.1.43.
+This increment is installed and verified; see [delivery evidence](GOVERNMENT-0.1.44-VERIFICATION.md).
 In **Payroll → Government**, generate the agency/month and choose **Export agency
 preparation CSV**. This internal worksheet contains the chosen agency's registered
 identifiers/name fields, revisions and immutable payroll sources. It is not an

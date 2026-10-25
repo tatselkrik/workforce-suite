@@ -1,5 +1,19 @@
 # Prototype verification — 2026-10-25
 
+## Agency preparation — 0.1.44 installed and privately published
+
+434default Rust checks,4explicit vector checks, exact installer/recovery,
+4,110PostgreSQL assertions and fresh60migration replay pass. The read-only
+projection preserves92prior public record sets and264functions. Actual hosted
+checks cover four agency projections, private field selection, current-role
+denial/revocation and unchanged24payroll sets/prior Auth/employer registration.
+Four fictional layouts, source/archive privacy, installed hashes/BUILD/Windows
+Apps and normal launch/close pass. The private feed now serves0.1.44 after direct
+same-channel authorization; held0.1.42–0.1.44 downloads/signatures and access checks
+pass. No government validator acceptance, filing, transfer or remote CI is claimed.
+See [0.1.44 evidence](docs/GOVERNMENT-0.1.44-VERIFICATION.md). The government
+milestone remains partial; internal preparation CSV is not an agency upload file.
+
 ## Private government registration — 0.1.43 locally installed
 
 -428default Rust checks and3,974local PostgreSQL assertions pass, including safe

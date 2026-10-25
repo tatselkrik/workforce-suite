@@ -62,8 +62,9 @@ Private proof is retained under `work/government043-*`,
 `work/government-registration-*`, `work/company-deployment-0.1.43` and
 `work/install-government043-actual/installation-results.json`.
 
-Automatic approval review rejected new private-channel publication because earlier
-trusted upload authorization covered 0.1.41. A human authorization question is
-pending; neither 0.1.42 nor 0.1.43 was uploaded. Local installation is complete
-independently. Do not retry or bypass this publication boundary without a trusted
-human answer.
+Publication was initially blocked under the earlier0.1.41-only permission. Kirk
+authorized0.1.42 and future verified releases to the same private channel on
+25October2026. This held0.1.43 artifact is now published with frozen source/archive,
+migration-subset, download/hash, signature and private-access checks passed. The
+latest feed is0.1.44; see [current evidence](GOVERNMENT-0.1.44-VERIFICATION.md).
+The earlier rejection is historical and no authorization question remains pending.
