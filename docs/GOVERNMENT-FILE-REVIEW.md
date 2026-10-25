@@ -24,8 +24,23 @@ or following its internal-network link. SHA256:
 `7a4382eb1db65daf860fdda44a463f3e4b53f4cda8b72bd8659d4177a860a8fc`.
 It contains two DOCX documents, a library file, a nested RAR and an update EXE.
 The readable documents describe a library replacement rather than a full flat-file
-schema. The nested application and embedded screenshots remain uninspected.
+schema. The nested application was subsequently inspected as described below;
+embedded DOCX screenshots remain uninspected.
 Do not treat a 2023 generator/library as evidence for current contribution rates.
+
+The nested JAR and self-extracting update were inspected without launching their
+installers/GUI. Their R3File, Contribution, Employee, Employer and Utility classes
+are identical. An isolated headless harness invokes inspected DTO/string methods
+on fictional values. Twelve month-position fixtures match the Rust integer-centavo
+renderer. The reference's name-only TreeSet comparison can omit namesakes; this
+prototype retains every unique employee/identifier. No old rate-table validator
+or network helper was invoked. This is reference rendering, not agency acceptance.
+
+The generator labels N (normal),1 (new hire),2 (separated) and3 (no earnings),
+plus an explicit hired/separated date. Account role/archiving cannot establish
+these declarations. The initial renderer supports explicit same-month events and
+ASCII text fitting declared widths without truncation. Broader semantics/encoding
+remain unresolved; no R3 product download control is released from this evidence.
 
 Next: finish the exact SSS/BIR format and offline-validator investigation using
 fictional data, then implement a bounded adapter with explicit missing-input

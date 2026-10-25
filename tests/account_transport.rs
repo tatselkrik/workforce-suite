@@ -3447,3 +3447,23 @@ fn registration_save_retry_preserves_operation_and_unknowns_after_a_failed_refre
  assert!(client.government_registration(&data,None,Some(&action)).is_err());let result=client.government_registration(&data,None,Some(&action)).unwrap();assert_eq!(result.record.unwrap().revision,0);
  drop(client);server.join().unwrap();let requests=requests.lock().unwrap();let writes:Vec<_>=requests.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/save_government_registration ")).collect();assert_eq!(writes.len(),2);assert_eq!(writes[0].json(),writes[1].json());assert_eq!(writes[0].json()["p_record"]["details"]["bir_tin"],json!(""));assert_eq!(writes[0].json()["p_record"]["operation_id"],json!(op));
 }
+
+#[test]
+fn agency_preparation_uses_one_fresh_rpc_and_revocation_prevents_file_creation(){
+ use chrono::Datelike;
+ use hris_desktop::payroll_government::{Agency,Filter};
+ for revoked in[false,true]{
+  let company=Company{owner_id:uuid::Uuid::from_u128(171001),..Default::default()};let month=company.today().with_day(1).unwrap();
+  let access=json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});let mut after=access.clone();if revoked{after["role"]=json!("manager");}
+  let source=json!({"version":"government-payroll-sources-v1","company_id":company.id,"company_name":company.name,"generated_at":chrono::Utc::now(),"as_of":company.today(),"month":month,"agency":"sss","facts":[]});
+  let review=json!({"version":"government-reconciliation-v1","source":source,"effective_facts":[],"reviews":[],"remittances":[],"history":[],"employees":[]});
+  let wire=json!({"version":"government-preparation-v1","review":review,"registrations":[]});
+  let mut replies=baseline(&company);replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access));replies.push(reply("POST /rest/v1/rpc/government_preparation ",200,wire));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,after));
+  let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
+  let path=std::env::current_dir().unwrap().join("work").join(format!("preparation-{}.csv",uuid::Uuid::new_v4()));
+  let result=client.government_preparation(&data,Filter{month,agency:Agency::Sss},&path);assert_eq!(result.is_err(),revoked);
+  if revoked{assert!(!path.exists());}else{let b=std::fs::read(&path).unwrap();assert!(String::from_utf8(b).unwrap().contains("INTERNAL_AGENCY_PREPARATION_NOT_AN_UPLOAD_FILE"));std::fs::remove_file(&path).unwrap();}
+  drop(client);server.join().unwrap();let req=requests.lock().unwrap();assert_eq!(req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/government_preparation ")).count(),1);
+  assert!(!req.iter().any(|r|r.line.contains("/government_registration_records?")));
+ }
+}

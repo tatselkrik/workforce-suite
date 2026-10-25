@@ -88,6 +88,18 @@ impl CloudClient {
 }
 
 impl CloudClient {
+    pub fn government_preparation(&mut self,current:&Snapshot,filter:crate::payroll_government::Filter,destination:&Path)->Result<crate::payroll_government::Reconciliation>{
+        use crate::payroll_government::preparation::{Preparation,PreparationWire};
+        crate::payroll_reporting::authorize(current)?;filter.validate(current.company.today())?;
+        let before=self.current_access()?;if before!=current.access{return Err(AccessRevoked.into());}
+        let wire:PreparationWire=decode(self.request(Method::POST,"rpc/government_preparation")?
+            .json(&json!({"p_month":filter.month,"p_agency":filter.agency})).send()?)?;
+        let prepared=Preparation::from_wire(wire,before.company_id,filter)?;
+        let bytes=prepared.csv()?;
+        if self.current_access()?!=before{return Err(AccessRevoked.into());}
+        crate::reports::save_csv(destination,&bytes)?;
+        Ok(prepared.report)
+    }
     pub fn government_registration(
         &mut self, current: &Snapshot, employee_id: Option<Uuid>,
         save: Option<&crate::payroll_government::registration::Save>,

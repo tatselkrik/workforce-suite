@@ -70,6 +70,7 @@ enum Intent {
     Read,
     Save(g::Action),
     Export,
+    ExportPreparation,
 }
 impl State {
     pub(super) fn bind(&mut self, data: &Snapshot) {
@@ -369,6 +370,18 @@ impl HrisApp {
                     Ok(None) => {}
                     Err(e) => self.notice = Some((e.to_string(), true)),
                 },
+                Intent::ExportPreparation => match crate::reports::choose_export(&format!(
+                    "HRIS-{}-preparation-{}.csv",
+                    filter.agency.label(),
+                    filter.month
+                )) {
+                    Ok(Some(path)) => self.send(Command::GovernmentPreparation {
+                        filter,
+                        destination: path,
+                    }),
+                    Ok(None) => {}
+                    Err(e) => self.notice = Some((e.to_string(), true)),
+                },
             }
         }
     }
@@ -420,6 +433,15 @@ fn overview(ui: &mut Ui, state: &mut State, data: &Snapshot, busy: bool) -> Opti
         }
         if ui
             .add_enabled(
+                !busy && connected && state.current().is_some(),
+                egui::Button::new("Export agency preparation CSV"),
+            )
+            .clicked()
+        {
+            out = Some(Intent::ExportPreparation);
+        }
+        if ui
+            .add_enabled(
                 !busy && connected && data.access.role == Role::Administrator,
                 egui::Button::new("Record remittance"),
             )
@@ -442,6 +464,7 @@ fn overview(ui: &mut Ui, state: &mut State, data: &Snapshot, busy: bool) -> Opti
             }));
         }
     });
+    ui.add(egui::Label::new("Agency preparation CSV contains the selected agency's registered identifiers and legal names. Keep it private to HR; it is an internal worksheet, not an upload file.").wrap());
     if !connected && !preview {
         ui.label("Company account sign-in is required for government reconciliation.");
         return out;

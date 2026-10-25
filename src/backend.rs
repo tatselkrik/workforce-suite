@@ -1714,6 +1714,7 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
 }
 
 pub enum Command {
+    GovernmentPreparation {filter:crate::payroll_government::Filter,destination:std::path::PathBuf},
     GovernmentRegistration {employee_id:Option<Uuid>,save:Option<crate::payroll_government::registration::Save>},
     Government {filter:crate::payroll_government::Filter,action:Option<crate::payroll_government::Action>,destination:Option<std::path::PathBuf>},
     PayrollReport {filter:crate::payroll_reporting::Filter,destination:Option<std::path::PathBuf>},
@@ -1896,6 +1897,14 @@ pub fn worker(
                             );
                         }
                         crate::reports::save_csv(&destination, &preview.error_csv()?)?;
+                        Ok(current.clone())
+                    })()
+                }
+                Command::GovernmentPreparation{filter,destination}=>{
+                    (||->Result<Snapshot>{
+                        let client=cloud.as_mut().context("Company sign-in is required for agency preparation exports.")?;
+                        government_result=Some(client.government_preparation(&current,filter,&destination)?);
+                        message="Agency preparation worksheet exported with current registered identifiers. This is an internal HR file, not an agency upload.".into();
                         Ok(current.clone())
                     })()
                 }

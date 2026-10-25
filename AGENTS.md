@@ -220,3 +220,10 @@ names, assigned identifiers, supporting references and history HR/Admin-private,
 including against an Employee's own-record access. Unknowns remain blank; shape
 checks never imply agency verification. Preserve actor-bound retry receipts and
 immutable before/after revisions without changing employment, branding or pay.
+
+Agency preparation follows docs/GOVERNMENT-PREPARATION.md. Export only the chosen
+agency's registered fields through the fresh protected single-statement projection;
+recheck access after rendering and before file IO. Internal CSV is not an agency
+upload/return. The SSS reference encoder is not a released file control; preserve
+namesakes, exact cents and explicit declarations. Never infer current rates or
+agency acceptance from a legacy generator's output alone.

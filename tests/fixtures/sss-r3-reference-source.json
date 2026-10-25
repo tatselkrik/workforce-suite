@@ -1,0 +1,15 @@
+{
+  "source": "https://www.sss.gov.ph/wp-content/uploads/2024/08/R3FileGenerator_2023.zip",
+  "archive_sha256": "7a4382eb1db65daf860fdda44a463f3e4b53f4cda8b72bd8659d4177a860a8fc",
+  "reference_jar_sha256": "d50eff3d044f393b432370b64b353ba7f0b505bce8b51e4caaf3b4468af4cbae",
+  "base_update_model_and_writer_classes_identical": [
+    "R3File",
+    "Contribution",
+    "Employee",
+    "Employer",
+    "Utility"
+  ],
+  "fictional_month_vectors": 12,
+  "oracle": "Inspected DTO and private string-format methods invoked by a headless independent harness; no GUI, network, serialized input, file writer or rate validator.",
+  "validation_limit": "Reference layout only; government acceptance, reserved-slot semantics and broader encoding remain unverified. No R3 download control is exposed."
+}

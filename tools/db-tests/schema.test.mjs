@@ -76,6 +76,7 @@ try {
   const governmentMigrations=[];
   const governmentReconciliationMigrations=[];
   const governmentRegistrationMigrations=[];
+  const governmentPreparationMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -89,6 +90,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_government_preparation_exports.sql')){governmentPreparationMigrations.push(filename);continue;}
     if(filename.endsWith('_government_registration_records.sql')){governmentRegistrationMigrations.push(filename);continue;}
     if(filename.endsWith('_government_reconciliation.sql')){governmentReconciliationMigrations.push(filename);continue;}
     if(filename.endsWith('_government_payroll_sources.sql')){governmentMigrations.push(filename);continue;}
@@ -447,6 +449,11 @@ try {
   for(const filename of governmentRegistrationMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
   for(const t of registrationTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,registrationBefore[t],'Registration migration preserves '+t);
   const{runGovernmentRegistrationTests}=await import('./government-registration.test.mjs');await runGovernmentRegistrationTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
+  await db.exec('reset role');const preparationBefore={};const preparationTables=(await db.query("select tablename from pg_tables where schemaname='public'order by tablename")).rows.map(r=>r.tablename);
+  for(const t of preparationTables)preparationBefore[t]=(await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows;
+  for(const filename of governmentPreparationMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  const{runGovernmentPreparationTests}=await import('./government-preparation.test.mjs');await runGovernmentPreparationTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
+  await db.exec('reset role');for(const t of preparationTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,preparationBefore[t],'Read-only agency preparation preserves '+t);
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

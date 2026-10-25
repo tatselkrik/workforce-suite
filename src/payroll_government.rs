@@ -5,9 +5,11 @@ use chrono::{DateTime, Datelike, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
+pub mod preparation;
 #[cfg(any(test, feature = "qa-screenshot"))]
 mod preview;
 pub mod registration;
+pub mod sss_r3;
 mod workflow;
 #[cfg(any(test, feature = "qa-screenshot"))]
 pub(crate) use preview::fixture as preview;
