@@ -9,7 +9,7 @@ Kirk approved this order on24October2026 and resumed continuous work and the
 existing usage-reset follow-up. This supersedes the stop-after0.1.41 boundary.
 The original roadmap status remains in [ROADMAP.md](ROADMAP.md).
 
-Latest instruction25October2026: Kirk resumed the roadmap, reactivated the same
+Earlier resumption25October2026: Kirk resumed the roadmap, reactivated the same
 usage-reset scheduler and requested continuous work. The stop-after-portal0.1.3
 and cleanup-only pause are superseded. Finish remaining local portal work first.
 
@@ -49,10 +49,10 @@ unconfigured external connection to a completed integration.
 
 ## Progress and boundaries
 
-- Desktop0.1.44 is installed and verified; retain0.1.43 as rollback. Kirk authorized
+- Desktop0.1.45 is installed and verified; retain0.1.44 as rollback. Kirk authorized
   0.1.42 and future verified releases to the same private channel on25October2026.
-  The held0.1.42–0.1.44 updates are published, authenticated downloads/signatures
-  verified and0.1.44 serves as latest. Do not repeat completed installations.
+  Releases0.1.42–0.1.45 are published, authenticated downloads/signatures
+  verified and0.1.45 serves as latest. Do not repeat completed installations.
 - Portal milestone1: ~~own correction/overtime requests, cancellation and decision
   history~~ are implemented in the0.1.2 increment, with25 Rust tests,3,275 database
   assertions and seven actual hosted proof groups. See [portal verification](EMPLOYEE-PORTAL.md).
@@ -111,9 +111,15 @@ unconfigured external connection to a completed integration.
   and fresh60migration replay pass. Hosted checks cover four native-decoded
   agency responses, role/revocation/privacy and unchanged payroll/Auth/employer
   facts. Four native layouts pass; installed payloads/Windows Apps/launch match.
-  SSS reference rendering matches12fictional month vectors but has no product
-  download control. Exact agency files/validator acceptance remain queued; the
+  SSS reference rendering matches12fictional month vectors; its bounded draft
+  control followed in0.1.45. Exact agency files/validator acceptance remain queued; the
   full government milestone stays partial. See [0.1.44 evidence](GOVERNMENT-0.1.44-VERIFICATION.md).
+- ~~Bounded SSS R3 reference draft~~ is delivered, installed and privately
+  published in 0.1.45. The 442 default Rust checks, exact installer/recovery and
+  four fictional native layouts pass. Fresh source/registration/receipt binding,
+  explicit declarations and current-role checks guard a new local `.txt` file.
+  My.SSS acceptance, broader encoding, reserved-slot semantics and other agency
+  file adapters remain pending. See [0.1.45 evidence](GOVERNMENT-0.1.45-VERIFICATION.md).
 - Effective-date policies, balances and delegation follow the existing saved
   charges/plans and immutable history rules; they do not rewrite older requests.
 - Install each verified authorized desktop release, preserving unsaved work and

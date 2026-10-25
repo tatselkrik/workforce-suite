@@ -37,7 +37,7 @@ The final 0.1.45 delivery status is in its
   review reset after an edit. See the [0.1.45 steps](GOVERNMENT-0.1.45-CHECKLIST.md).
 - [ ] **Access and layout:** Managers must not see Government/private legal
   registrations. Check sign-out clearing, unsaved-form protection, normal/compact
-  layouts and your chosen theme. Update availability must persist across tabs.
+  layouts and your chosen theme.
 
 ## Separate portal — local packages, not part of the desktop installer
 

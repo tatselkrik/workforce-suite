@@ -1,14 +1,18 @@
 # Prototype verification — 2026-10-25
 
-## SSS reference draft —0.1.45 candidate
+## SSS reference draft —0.1.45 installed and privately published
 
-442default Rust checks and four inspected fictional native layouts pass. New
+442default Rust checks, the exact real-installer/recovery check and four
+inspected fictional native layouts pass. New
 checks cover fresh source/registration/receipt binding, explicit declarations,
 revocation before file creation, existing-file protection and compact geometry.
 No schema/rate/payroll mutation; migration60's prior database/hosted evidence is
-retained rather than represented as a new run. Delivery/installation/channel
-proof is a separate final gate in [0.1.45 evidence](docs/GOVERNMENT-0.1.45-VERIFICATION.md).
+retained rather than represented as a new run. Actual installed hashes/BUILD,
+Windows Apps and normal launch/close match; company files/0.1.44 rollback remain.
+Authenticated private download/signature and public/Employee denial pass; staff
+feed serves0.1.45. See [delivery evidence](docs/GOVERNMENT-0.1.45-VERIFICATION.md).
 Current My.SSS acceptance remains unverified. The government milestone is partial.
+Work and the existing scheduler are paused at Kirk's requested boundary.
 
 ## Agency preparation — 0.1.44 installed and privately published
 

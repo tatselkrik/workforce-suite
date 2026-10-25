@@ -232,8 +232,9 @@ immutable before/after revisions without changing employment, branding or pay.
 Agency preparation follows docs/GOVERNMENT-PREPARATION.md. Export only the chosen
 agency's registered fields through the fresh protected single-statement projection;
 recheck access after rendering and before file IO. Internal CSV is not an agency
-upload/return. The SSS reference encoder is not a released file control; preserve
-namesakes, exact cents and explicit declarations. Never infer current rates or
+upload/return. The bounded0.1.45 SSS control produces an HR-review reference draft;
+current agency acceptance is unverified. Preserve namesakes, exact cents and
+explicit declarations. Never infer current rates or
 agency acceptance from a legacy generator's output alone.
 
 ## Latest stop boundary — current SSS increment
@@ -244,3 +245,5 @@ and the remaining roadmap. The existing scheduler is paused. This supersedes
 continuous continuation; do not start the next increment until Kirk resumes it.
 Standing prototype SQL and verified private-channel publication authorizations
 remain in effect; this stop changes work scheduling, not those target guards.
+This boundary is now satisfied:0.1.45 is installed and privately published.
+Keep work and the same scheduler paused pending Kirk's explicit resumption.

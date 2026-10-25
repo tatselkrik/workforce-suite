@@ -139,7 +139,7 @@ inspection remains unavailable. Pictures/account-security controls stay pending.
 Kirk subsequently completed storage cleanup and resumed work/scheduling25October.
 Portal0.1.4 adds private own circular photos and company sign-in branding, with
 automated/live checks and current visual verification still pending. Password/
-email controls follow next. Use [the ordered checklist](REMAINING-ROADMAP.md)
+email controls followed in0.1.5. Use [the ordered checklist](REMAINING-ROADMAP.md)
 for current scope/status rather than historical stop/resume paragraphs above.
 
 ## Government reconciliation — locally installed0.1.42
@@ -153,7 +153,8 @@ names/identifiers, supporting review and retained revision history. See
 [0.1.43 evidence](GOVERNMENT-0.1.43-VERIFICATION.md). Current
 portal0.1.5 account controls are separately delivered, with actual email confirmation
 and current browser/phone visuals unverified. The ordered checklist is current;
-older stop/pause paragraphs above are historical. Work and scheduling remain active.
+older stop/pause paragraphs above are historical. Work and scheduling are paused
+after the completed0.1.45 increment at Kirk's latest requested boundary.
 See [0.1.42 delivery evidence](GOVERNMENT-0.1.42-VERIFICATION.md).
 
 ~~Agency-specific internal preparation CSV~~ follows in installed/private-channel
@@ -162,5 +163,11 @@ reconciliation. See [0.1.44 evidence](GOVERNMENT-0.1.44-VERIFICATION.md). Exact
 agency file controls/validator acceptance remain pending; the government milestone
 is partial. Standing private-channel publication is authorized for future verified
 releases to the existing destination, as recorded in AGENTS.md/private authorization.
+
+~~Bounded SSS R3 reference draft~~ is delivered, installed and privately published
+in 0.1.45 with fresh source/registration/receipt binding and explicit declarations.
+See [0.1.45 evidence](GOVERNMENT-0.1.45-VERIFICATION.md). Current agency validator
+acceptance, broader formats and other agency adapters remain pending; the full
+government milestone stays partial.
 
 The sequence may change when the company has a more urgent requirement. Payroll, biometric devices and external integrations require company-specific decisions; they are not generic plug-ins already working in this prototype.
