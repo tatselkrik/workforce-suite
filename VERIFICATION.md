@@ -1,14 +1,21 @@
 # Prototype verification — 2026-10-25
 
-## Lifecycle notifications —0.1.46 candidate
+## Lifecycle notifications —0.1.46 installed and privately published
 
 The additive notification contract passes4,549local PostgreSQL assertions
 and a fresh61migration chronological replay. Portal checks pass48Rust tests
 (one isolated visual preview intentionally ignored) and15JavaScript checks.
-Native fictional light/dark/compact previews were inspected. Hosted deployment,
-exact packaging and installation remain pending; this is not a delivery claim.
+448default native Rust checks and the exact installer/recovery check pass.
+Four native fictional light/dark/compact/Manager previews were inspected. Hosted
+deployment preserves92prior public record sets and267functions; actual Auth,
+own receipts, current reporting, forged roles, CSRF/read and revocation checks
+pass. All prior payroll/Auth/employer facts remain. Installed hash/BUILD/Windows
+Apps and normal launch/close match. Private download/signature and public/Employee
+denial pass. Portal0.1.6 is separately delivered; running0.1.5 is preserved.
 See docs/LIFECYCLE-NOTIFICATIONS.md and docs/NOTIFICATIONS-0.1.46-CHECKLIST.md.
 Continuous work/scheduling resumed after0.1.45. Paid dependencies are on hold.
+See [delivery evidence](docs/NOTIFICATIONS-0.1.46-VERIFICATION.md). Current portal
+visuals/actual email confirmation and agency acceptance remain unverified.
 
 ## SSS reference draft —0.1.45 installed and privately published
 

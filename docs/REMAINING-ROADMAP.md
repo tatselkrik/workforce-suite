@@ -34,8 +34,9 @@ unconfigured external connection to a completed integration.
 2. **Government payroll exports and reconciliation.** Prepare reviewed BIR, SSS,
    PhilHealth and Pag-IBIG outputs and reconcile with approved payroll. Verify
    current official formats/rules. Actual government filing is separate.
-3. **Payroll, appraisal and training notifications.** Payslip/payment notices,
-   review deadlines, training reminders and certificate-expiry alerts.
+3. ~~**Payroll, appraisal and training notifications.** Payslip/payment notices,
+   review deadlines, training reminders and certificate-expiry alerts.~~ Delivered
+   in desktop0.1.46 and local portal0.1.6; in-app only. External delivery is item8.
 4. **Effective-date leave policies and balances.** Scheduled policy changes,
    entered/imported opening balances and audited credit adjustments.
 5. **Approval delegation.** Temporary substitute approvers with retained history,
@@ -54,6 +55,18 @@ unconfigured external connection to a completed integration.
    be evaluated within the standing physical-verification boundary.
 
 ## Progress and boundaries
+
+- Desktop0.1.46 is installed and privately published, source
+  `e7efe56e9dcd4486f6629ae9870517a8ab2ec768`;0.1.45 is retained for rollback.
+  448default Rust checks plus exact installer/recovery,4,549PostgreSQL assertions,
+  fresh61migration replay and four fictional layouts pass. Hosted checks verify
+  current scope, individual receipts, old-client compatibility and revocation;
+  all prior payroll/Auth/employer facts remain. Migration61 preserves92prior
+  public record sets and267functions. See [notification checks](NOTIFICATIONS-0.1.46-CHECKLIST.md).
+- The separate local portal0.1.6 package is delivered:48Rust/15JavaScript checks,
+  optimized actual hosted own-notice/CSRF/read/revocation proof and package smoke
+  pass. The running0.1.5 portal and its drafts/sessions were preserved. Portal
+  visuals/actual mail confirmation and government agency acceptance remain partial.
 
 - Desktop0.1.45 is installed and verified; retain0.1.44 as rollback. Kirk authorized
   0.1.42 and future verified releases to the same private channel on25October2026.

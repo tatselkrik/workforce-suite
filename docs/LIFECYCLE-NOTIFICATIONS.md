@@ -1,6 +1,6 @@
 # Payroll, appraisal and learning notifications — implementation contract
 
-This is the next free in-app milestone after0.1.45. It introduces no paid
+Delivered in desktop0.1.46 and the separate local portal0.1.6. It introduces no paid
 delivery provider, external messages, money movement or payroll calculation.
 Portal visuals/email confirmation and exact government-file acceptance remain
 explicitly pending while this independent authorized work proceeds.
@@ -33,3 +33,19 @@ Verification must cover owner/foreign/disabled/role-change/forged metadata,
 old-client compatibility, exact receipt date versus event date, private-field
 omission, duplicate keys, read-state concurrency and time-zone/stage boundaries.
 Implementations and current status are recorded below as work is verified.
+
+Verified25October2026:448default native Rust checks,48portal Rust checks and15JS
+checks;4,549PostgreSQL assertions and fresh61migration replay. The additive
+migration preserves92prior public record sets and267functions. Hosted normal
+synthetic pay approval/individual receipt, current HR/Manager/reporting scope,
+forged role/target denial, legacy portal compatibility, native decoding and actual
+optimized portal own inbox/CSRF/read/revocation pass. Existing payroll, employer
+registration and Auth facts remain unchanged. The synthetic receipt is clearly
+labeled prototype QA and sends no money. No real person's account was changed.
+
+Desktop0.1.46 is installed with matching hash/BUILD/Windows Apps and normal
+launch/close, exact installer recovery and private-channel download/signature
+verification. Portal0.1.6 is delivered separately, preserving running0.1.5 drafts.
+See [evidence](NOTIFICATIONS-0.1.46-VERIFICATION.md). Portal current visuals and
+actual mail confirmation remain unverified. Email/push delivery is a separate
+held/unconfigured scope; no provider or billing settings changed.

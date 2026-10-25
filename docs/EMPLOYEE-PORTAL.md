@@ -1,5 +1,13 @@
 # Separate employee portal
 
+Local package0.1.6 adds own payroll/appraisal/learning notices using the compatible
+v2 inbox. Monthly statements open My payslips; other own notices are informational
+until their record views exist here.48Rust/15JS checks, optimized hosted own-scope/
+CSRF/read/revocation and packaged loopback startup pass. The running0.1.5 server
+and drafts were preserved. Current visuals/real email confirmation remain
+unverified. See [notification evidence](NOTIFICATIONS-0.1.46-VERIFICATION.md).
+No public hosting, paid provider, billing change or external message was added.
+
 The native desktop remains the staff workspace. `employee-portal/` is a separate
 Rust/Axum service and responsive browser interface, with its own version and
 application identifier `io.github.tatselkrik.hrisportal`.
