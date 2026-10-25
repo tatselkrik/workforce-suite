@@ -55,6 +55,15 @@ The legacy starting policy is a compatibility snapshot, not reconstructed prior
 history. Protected dated entitlement storage/native UI remain to be implemented;
 selectors alone do not complete roadmap4 or authorize a release.
 
+The Rust foundation currently passes24targeted checks across takeover arithmetic,
+prospective selection and a captured current-year entitlement basis. The latter
+rejects dates before its known-from capture instead of inventing past grants.
+Private deterministic PostgreSQL helper arithmetic is staged separately in
+`20261025143356_leave_opening_arithmetic.sql`; it creates no ledger/public RPC and
+changes no active balance behavior. Its isolated test covers conservation across
+bookings/credits, expiry/cancellations and private execution denial. It is not
+deployed or sufficient evidence for completing the feature.
+
 ## Original requirements retained
 
 An opening must establish an explicitly reviewed balance without granting the
