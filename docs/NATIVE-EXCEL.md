@@ -1,6 +1,6 @@
 # Native Excel exchange
 
-Candidate0.1.50 adds local `.xlsx` support using pinned free Rust libraries. It
+Delivered0.1.50 adds local `.xlsx` support using pinned free Rust libraries. It
 requires no Microsoft Office installation, subscription or external conversion
 service. CSV remains supported. No schema change is needed beyond installed
 schema66, and existing protected transactions remain authoritative.

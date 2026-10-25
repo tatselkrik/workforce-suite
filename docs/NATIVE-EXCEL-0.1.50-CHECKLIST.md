@@ -1,7 +1,7 @@
 # Review checklist — native Excel0.1.50
 
-Candidate checklist; delivery status will be recorded separately. Use fictional
-records for import checks. The full attendance/leave-import milestone stays open.
+0.1.50 is installed and privately published; see the separate verification file.
+Use fictional records for import checks. Full attendance/leave-import scope stays open.
 
 1. **Reports:** run attendance, leave, employee summary, headcount or trends.
    Export Excel. Confirm the same filters, row count and selected column order as

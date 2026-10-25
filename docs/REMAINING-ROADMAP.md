@@ -66,11 +66,11 @@ unconfigured external connection to a completed integration.
    current permissions, self-approval restrictions and clear validity periods.~~
    Delivered/installed in0.1.48 for leave, attendance corrections and overtime.
    Salary/account/personnel authority remains outside delegation.
-6. **Attendance/leave imports and Excel support.** Validated imports, previews,
-   error reports and native XLSX import/export; employee CSV imports already work.
-   Native XLSX is now a verified local0.1.50candidate for employee/opening files
-   and attendance/leave/workforce report exports; release delivery is pending.
-   Attendance/leave request batch imports are still queued. See
+6. **Attendance/leave imports and Excel support.** Validated request imports,
+   previews/error reports and ~~native XLSX import/export~~; employee CSV imports
+   already work. Native Excel is delivered/installed in0.1.50 for employee/opening
+   files and attendance/leave/workforce report exports. Attendance/leave request
+   batch imports are next, so the whole milestone remains open. See
    [the exchange plan](TABULAR-EXCHANGE.md) and [Excel evidence](NATIVE-EXCEL-0.1.50-VERIFICATION.md).
 7. **Accounting and external payroll integration foundations.** Configurable data
    exchange, reconciliation, retries and integration history. Actual connections
@@ -84,6 +84,15 @@ unconfigured external connection to a completed integration.
    resumption; do not treat the placeholder as a working connection.
 
 ## Progress and boundaries
+
+- Desktop0.1.50 is installed and privately published, frozen source
+  `23bd86873651faed5e10e8b4a69abb285e67f8ad`;0.1.49 rollback is retained.
+  522default Rust checks,16new Excel cases, independent reading of eight native
+  workbooks and the exact real installer/recovery pass. Four fictional native
+  layouts were inspected. Actual hash/BUILD/Apps/normal launch and private
+  download/signature/access checks pass. No new database migration is introduced;
+  schema66 is unchanged. See [the Excel checklist](NATIVE-EXCEL-0.1.50-CHECKLIST.md).
+  The remaining part of6is protected attendance/leave pending-request imports.
 
 - Desktop0.1.49 is installed and privately published, frozen source
   `623174fbde1e4b2f53ee3895f16083dcbb6b838a`;0.1.48 rollback is retained.
