@@ -1,5 +1,13 @@
 # Remaining HRIS roadmap — agreed order
 
+**Scope refinement25October2026:** browser verification is the current portal
+priority. Free mobile-width browser checks may be included; physical-phone and
+actual email-confirmation verification are deferred when no approved no-charge
+setup is available and do not block the browser milestone. Item8 now means the
+existing portal inbox only; external company email/background push are deferred.
+Kirk has no biometric hardware: item9 remains visible but disabled, with actual
+integration deferred. Other authorized free work/scheduling continues.
+
 **Latest resumption25October2026:** Kirk reactivated the same scheduler and
 resumed the remaining roadmap continuously after delivered0.1.45. This
 supersedes the finish-after0.1.45 pause. HRIS must remain completely free for now:
@@ -30,13 +38,15 @@ unconfigured external connection to a completed integration.
 1. **Finish the employee portal — local only.** Own attendance-correction and
    overtime requests; notifications; company/profile pictures; password/email
    controls. Existing own records, contacts, attendance, breaks, leave and monthly
-   payslips remain supported. Status: in progress; no public hosting/LAN/tunnel.
+   payslips remain supported. Browser verification remains in progress; no public
+   hosting/LAN/tunnel. Physical-phone/email-confirmation verification is separately
+   deferred as above, not a prerequisite for browser-only completion.
 2. **Government payroll exports and reconciliation.** Prepare reviewed BIR, SSS,
    PhilHealth and Pag-IBIG outputs and reconcile with approved payroll. Verify
    current official formats/rules. Actual government filing is separate.
 3. ~~**Payroll, appraisal and training notifications.** Payslip/payment notices,
    review deadlines, training reminders and certificate-expiry alerts.~~ Delivered
-   in desktop0.1.46 and local portal0.1.6; in-app only. External delivery is item8.
+   in desktop0.1.46 and local portal0.1.6; in-app only. External delivery is deferred.
 4. **Effective-date leave policies and balances.** Scheduled policy changes,
    entered/imported opening balances and ~~audited credit adjustments~~.
    Credit deltas/reversals are delivered in0.1.47; the whole milestone stays open.
@@ -47,13 +57,13 @@ unconfigured external connection to a completed integration.
 7. **Accounting and external payroll integration foundations.** Configurable data
    exchange, reconciliation, retries and integration history. Actual connections
    require resolved company software/vendor targets.
-8. **Email/push notification delivery.** A company-approved provider, resolved
-   destinations, delivery/retry history and required specific sending authority.
-   Paid providers/plans are on hold; use an approved no-charge option only.
-9. **Actual biometric/device integration.** Select hardware/protocol and verify
-   physical operation. Keep the visible control disabled until then. New hardware
-   purchases or paid vendor licenses are on hold; an existing selected device may
-   be evaluated within the standing physical-verification boundary.
+8. ~~**Portal-only notification display for now.**~~ The own inbox, unread counts
+   and read history are delivered in portal0.1.6, as part of item3. External company
+   email and background browser/OS push are **deferred**, not implemented.
+9. **Biometric/device integration — deferred; no hardware available.** The
+   ~~visible disabled biometric control~~ is complete. Keep Connect device
+   disabled. Actual integration/purchases wait for supplied hardware and Kirk's
+   resumption; do not treat the placeholder as a working connection.
 
 ## Progress and boundaries
 

@@ -1,5 +1,14 @@
 # Separate employee portal
 
+Current verification scope25October2026: browser verification first, using
+existing no-charge tools. Mobile-width browser layouts may be checked for free;
+physical-phone and actual email-confirmation verification can remain deferred
+without blocking browser-only completion. Preserve Auth confirmation rules.
+Notifications appear inside the own portal inbox for now; external company
+email and background browser/OS push delivery are deferred. Existing desktop
+staff alerts continue. This scope change does not claim unperformed visual or
+confirmation checks have passed, and the portal remains loopback-only.
+
 Local package0.1.6 adds own payroll/appraisal/learning notices using the compatible
 v2 inbox. Monthly statements open My payslips; other own notices are informational
 until their record views exist here.48Rust/15JS checks, optimized hosted own-scope/

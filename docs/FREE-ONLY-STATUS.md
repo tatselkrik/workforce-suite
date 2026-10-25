@@ -9,11 +9,12 @@ purchase hardware/services. Existing free-tier limits remain hard boundaries.
 | Native HRIS and local portal | Continue with existing local/free dependencies. Preserve running portal sessions/drafts. |
 | In-app payroll/appraisal/training reminders | Continue; no mail/push provider or subscription is required. |
 | Government files | Continue supported public-specification/offline work. Current agency acceptance is unverified; no real filing or payment is authorized. |
-| Portal current browser/phone visuals | Pending: both supported UI runtimes again fail kernel-assets initialization. Earlier API/code checks are not current visual proof. |
-| Actual email confirmation/delivery | Pending an approved no-charge sender and controlled destinations; existing hosted synthetic requests were rejected. Do not weaken confirmation rules. |
+| Portal browser visuals | Current priority. Use existing no-charge tools, including mobile-width checks where possible. Supported UI runtimes previously failed initialization; API/code checks are not visual proof. Physical-phone testing is deferred and does not block browser completion. |
+| Actual account email confirmation | Deferred until an approved no-charge setup is available; do not spend or weaken existing confirmation rules. Unverified confirmation does not block browser-only completion. |
+| Company notification delivery | Portal inbox only for now; this display scope is already delivered. External company email and background browser/OS push are deferred, including otherwise-free provider setup. Existing native alerts continue. |
 | Paid delivery/hosting/accounting/device services | On hold wherever a selected feature requires a paid plan/license. Independent free exchange foundations may continue. |
 | Subscription-gated security add-ons | Keep paid-only add-ons disabled/on hold; existing access controls, RLS, validation and session protections continue independently. |
-| Physical devices | Needs an identified already-available device/protocol and physical verification. New hardware purchases are on hold; biometric control remains disabled. |
+| Physical devices | Kirk has no biometric hardware. Keep the section visible and Connect device disabled. Actual device/driver/protocol work and purchases are deferred until hardware is supplied and scope resumed. |
 
 Supabase documents that its default SMTP only sends to organization-team
 addresses and requires a configured SMTP sender for general user delivery.

@@ -271,3 +271,22 @@ within its no-charge limits; it is not permission for overage or auto-upgrades.
 Record cost dependencies and unresolved targets explicitly instead of silently
 calling an unconfigured integration complete. Actual email/push delivery and
 physical device connections retain their separate target/authority requirements.
+
+## Latest verification, delivery and hardware scope — 25 October 2026
+
+Kirk prioritizes portal browser verification for now. Mobile-width layout checks
+may use existing no-charge browser tools; physical-phone verification and actual
+email confirmation need not block that browser milestone. Keep unverified results
+explicit. Defer any verification requiring payment; actual confirmation may wait
+for an approved no-charge setup. Preserve existing Auth confirmation rules.
+
+Roadmap item8 is narrowed to notifications appearing inside the portal inbox for
+now. Existing native staff alerts remain. External company email delivery and
+background browser/OS push are deferred; do not configure a delivery provider or
+begin an external sending workflow under older roadmap wording. The existing own
+portal inbox satisfies this narrowed display scope, not external delivery.
+
+Kirk has no biometric hardware. Keep the biometric section visible and Connect
+device disabled. Actual device/driver/protocol work and hardware purchases are
+deferred until Kirk supplies hardware and resumes that scope. The rest of the
+authorized free roadmap and the same scheduler remain active.
