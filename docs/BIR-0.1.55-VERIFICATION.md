@@ -1,6 +1,6 @@
 # Desktop 0.1.55 — read-only BIR source preflight
 
-**Native implementation verified; installation/private delivery pending.**
+**Installed and privately published.** Frozen source `d7a2b6bc6d2e72c3f5cb11cc023256a991c22b47`; previous0.1.54 is retained for rollback.
 This increment adds local published-structure checks for unvalidated1604C
 Schedule 1 plaintext files and private CSV/Excel diagnostic exports. It does not
 generate an agency return from payroll or establish official validator acceptance.
@@ -37,10 +37,27 @@ reference archives stayed untouched; no BIR installer/program was executed.
 
 ## Delivery boundary and limitations
 
-The normal optimized binary, frozen source archive, existing-key signed updater,
-exact installer/recovery, actual installed hash/BUILD/Windows Apps/normal launch
-and private authenticated download are verified separately before delivery is
-called complete. Current source is not yet that delivered release.
+The normal optimized configured sign-in launched and closed normally. The exact
+existing-key Ed25519 updater passes real silent update and failed-installer
+recovery checks. Actual PC installation at 2026-10-26T12:13:21.7259709Z verifies
+the exact executable hash, BUILD/source, Windows Apps registration and normal
+launch/close. Company connection/branding, verification keys and unrelated files
+are preserved; no unsaved work was discarded.
+
+The authorized existing private channel returns the exact signed update; size,
+hash and Rust signature verification pass. Employee/public download is denied,
+the staff feed selects0.1.55 and all69required frozen-source migrations are
+present. No SQL/schema deployment was repeated. Existing Auth leaked-password
+warning remains; no Auth/billing/plan setting changed. Project storage before
+publication was241,014,690bytes, candidate7,007,676bytes, database32,773,811bytes.
+These are project headroom checks, not organization-wide billing/egress claims.
+
+| Artifact | SHA256 |
+| --- | --- |
+| Installed executable | `bd1053cc1989aefc2f6184bb5a5df3fe44c6df3a8f0607fa36b90628d9621d27` |
+| Full installer | `7822e259bf73d27fbffbfe7b979dc94e67be0720850f8d1f83b821d300daea41` |
+| Signed updater | `3b918b1d52bafe8d5bd665b0655b3a9420d79c3f8901291cb627885f72be6a8f` |
+| Frozen source ZIP | `1dff6b11342ce503faf81b874236d2af8cd43a60014788cbb7309995c6629079` |
 
 Actual signed-in native file-dialog interaction, Office UI, remote CI,
 Authenticode and official BIR validator/filing acceptance are unverified.

@@ -6,9 +6,9 @@ scheduler is active again. Portal browser verification is deferred to a separate
 reminder. Kirk has supplied the BIR7.4 module/archive and reference downloads in
 the private reference folder; inspect before execution. The earlier input pause
 below is superseded. Government preparation/reconciliation native Excel exports
-are delivered in054. BIR published-structure preflight055 is the current
-increment; official module acceptance remains unverified. Delivered049–054 must
-not be repeated, and055is not delivered before installation/private verification.
+are delivered in054. BIR published-structure preflight055 is also installed/private-published;
+official module acceptance remains unverified. Delivered049–055 must not be
+repeated. Continue the next verified government-format increment from the checkpoint.
 
 **Latest immediate queue25October2026:** Kirk authorized starting item4 now,
 resuming it across a usage reset if unfinished, then continuing item6 imports/
@@ -80,8 +80,9 @@ unconfigured external connection to a completed integration.
    ~~Internal CSV/native Excel preparation and reconciliation worksheets~~ are
    delivered/installed in044/054, with selected legal identities and protected
    source-aware totals. Exact agency files/validator acceptance remain pending;
-   the SSS draft is internal review. The BIR7.4 download is now supplied for the
-   next investigation. See [054verification](GOVERNMENT-0.1.54-VERIFICATION.md).
+   the SSS draft is internal review. The BIR7.4 download is supplied and inspected. Read-only Schedule1
+   file preflight is delivered in055, including source-hash-bound private
+   findings and exact PERA controls; this does not complete agency acceptance. See [054verification](GOVERNMENT-0.1.54-VERIFICATION.md).
 3. ~~**Payroll, appraisal and training notifications.** Payslip/payment notices,
    review deadlines, training reminders and certificate-expiry alerts.~~ Delivered
    in desktop0.1.46 and local portal0.1.6; in-app only. External delivery is deferred.
@@ -116,6 +117,15 @@ unconfigured external connection to a completed integration.
    resumption; do not treat the placeholder as a working connection.
 
 ## Progress and boundaries
+
+- Desktop **0.1.55** is installed and privately published, frozen source
+  `d7a2b6bc6d2e72c3f5cb11cc023256a991c22b47`; retain0.1.54rollback.595default Rust
+  checks, four explicit opt-in executions, eight independently checked findings
+  workbooks and nine fictional native views pass. Normal hosted HR/Admin positive,
+  Manager/Employee/metadata-forgery denial, revocation and source preservation pass.
+  Exact installer/recovery, actual installed state and private signed download
+  pass. Schema69/rates/dependencies are unchanged; official BIR runtime acceptance
+  remains unverified. See [055checklist](BIR-0.1.55-CHECKLIST.md).
 
 - Desktop **0.1.54** is installed and privately published, frozen source
   `15c490f5a58777d6676dfe261c5cbc469de64ecd`; keep0.1.53rollback.574default Rust

@@ -5,7 +5,7 @@ downloads in the prepared private reference folder. Do not request them again.
 The native government Excel increment is delivered/installed in054. Bounded
 inert inspection of the supplied installer found a published-versus-readable-form
 PERA control-column conflict; no government program was executed. A read-only
-published-structure preflight is being implemented as described in
+published-structure preflight is installed/private-published in055as described in
 [BIR file preflight](BIR-FILE-PREFLIGHT.md). It is not official validator acceptance.
 
 As of 26 October 2026, desktop0.1.44 has delivered internal preparation CSVs;

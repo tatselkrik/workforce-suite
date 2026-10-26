@@ -1,6 +1,6 @@
 # Desktop 0.1.55 — BIR file checks to try
 
-Release verification and actual installation are recorded separately. Use a
+Installed/private delivery is verified in [the evidence note](BIR-0.1.55-VERIFICATION.md). Use a
 fictional, unvalidated plaintext1604C Schedule 1 file; never upload real employee
 files to another service for these checks.
 
