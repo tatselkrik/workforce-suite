@@ -9,7 +9,19 @@ policies, captured entitlements, entered openings and atomic CSV openings.
 [Verification](LEAVE-OPENINGS-0.1.49-VERIFICATION.md) records the local, hosted,
 visual, installer and private-channel evidence and remaining verification limits.
 Items4–7 are delivered in049–053. Remaining portal-browser and government-file
-verification/investigation retain their recorded limits; the same scheduler remains active.
+verification/investigation retain the26October required-input boundary below.
+
+**26October2026 verification boundary:**049–053 complete the immediate queue.
+The remaining government source review has inspected both2025 BIR annexes, all
+five SSS document images and the currently linked PhilHealth RF1. Current agency
+validator/template evidence remains unavailable; BIR ordinary retrieval returned
+403 and Pag-IBIG documents returned a browser challenge. Neither was bypassed.
+See [the exact findings and next inputs](GOVERNMENT-FILE-REVIEW.md).
+Portal browser tooling retains its recorded initialization failure and was not
+repeated without a changed runtime. Paid/external/device scope stays deferred.
+The same scheduler is paused at this required-input boundary, rather than
+repeating blocked checks. Resume from the checkpoint after references or working
+browser tooling become available; do not repeat completed deliveries.
 
 **Scope refinement25October2026:** browser verification is the current portal
 priority. Free mobile-width browser checks may be included; physical-phone and

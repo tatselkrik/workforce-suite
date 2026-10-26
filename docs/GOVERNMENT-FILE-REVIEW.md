@@ -1,6 +1,6 @@
 # Government file adapters — review in progress
 
-As of 25 October 2026, desktop0.1.44 has delivered internal preparation CSVs;
+As of 26 October 2026, desktop0.1.44 has delivered internal preparation CSVs;
 the0.1.45 increment adds a bounded local SSS reference-draft control. Current
 agency validator acceptance is not claimed. This note
 prevents repeating completed source inspection and identifies the next work.
@@ -14,9 +14,26 @@ free-text employment type or archiving. Prior/current compensation categories,
 MWE region/factor and per-person declarations still need evidenced input and
 cross-checks. Check the exact schedule and validator before creating any file.
 [RMC15-2025](https://bir-cdn.bir.gov.ph/BIR/pdf/RMC%20No.%2015-2025.pdf) announces
-module 7.4; its [naming annex](https://bir-cdn.bir.gov.ph/BIR/pdf/RMC%20No.%2015-2025%20Annex%20B.pdf)
-is distinct from the compensation schema. The current downloads landing page
-did not expose a directly inspectable validator link in its rendered text.
+module 7.4. Both pages of its
+[2025 Annex A](https://bir-cdn.bir.gov.ph/BIR/pdf/RMC%20No.%2015-2025%20Annex%20A.pdf)
+and its one-page
+[naming annex](https://bir-cdn.bir.gov.ph/BIR/pdf/RMC%20No.%2015-2025%20Annex%20B.pdf)
+were visually inspected on26October. Annex A contains the SAWT header/details/
+control layout and shared declaration code lists; it does not contain a1604C
+compensation schedule. Do not use SAWT as a replacement compensation schema or
+assume the older compensation schedule is unchanged because these pages omit it.
+Annex B distinguishes annual MMDDYYYY return periods from MMYYYY monthly/quarterly
+naming periods and preserves the nine-digit TIN and four-digit branch as text.
+
+Published module7.4 patch advisories concern ATCs and do not independently
+establish a complete compensation file contract:
+[June2025](https://bir-cdn.bir.gov.ph/BIR/pdf/Tax%20Advisory%20dtd%20June%2023%2C%202025%20re%20Updated%20Software%20Patch%20for%20Alphalist%20Module%20v%207.4.pdf),
+[November2025](https://bir-cdn.bir.gov.ph/BIR/pdf/Tax%20Advisory%20re%20Updated%20Software%20Patch%20of%20the%20newly%20created%20ATCs%20for%20Alphalist%20Data%20Entry%20v%207.4.pdf).
+The downloads landing page did not expose an inspectable validator link in its
+rendered text; ordinary direct HTTP retrieval returned403 on26October. No access
+restriction was bypassed and no BIR installer/validator was run. A current official
+offline validator, compensation specification and fictional acceptance/error
+fixtures remain the next BIR input.
 
 The [current SSS downloads page](https://www.sss.gov.ph/download-forms-and-electronic-applications/)
 links [R3FileGenerator_2023.zip](https://www.sss.gov.ph/wp-content/uploads/2024/08/R3FileGenerator_2023.zip).
@@ -25,8 +42,11 @@ or following its internal-network link. SHA256:
 `7a4382eb1db65daf860fdda44a463f3e4b53f4cda8b72bd8659d4177a860a8fc`.
 It contains two DOCX documents, a library file, a nested RAR and an update EXE.
 The readable documents describe a library replacement rather than a full flat-file
-schema. The nested application was subsequently inspected as described below;
-embedded DOCX screenshots remain uninspected.
+schema. The nested application was subsequently inspected as described below.
+All five embedded DOCX screenshots were extracted within bounded archive limits
+and visually inspected on26October. They show download locations and library
+replacement steps only; they add no current machine-file specification or
+validator evidence. Their depicted internal-network locations were not opened.
 Do not treat a 2023 generator/library as evidence for current contribution rates.
 
 The nested JAR and self-extracting update were inspected without launching their
@@ -45,10 +65,38 @@ remain unresolved. The bounded [0.1.45 reference draft](SSS-REFERENCE-DRAFT.md)
 adds source/receipt/registration readiness and explicit declarations; it is not
 a verified agency upload control.
 
-Next: finish the exact SSS/BIR format and offline-validator investigation using
-fictional data, then implement a bounded adapter with explicit missing-input
-errors. Preserve existing issued figures and reviewed earned/received periods;
-never fabricate identifiers, classifications, employer shares or certificates.
-Primary PhilHealth/Pag-IBIG limits remain in
-[PAYROLL-GOVERNMENT.md](PAYROLL-GOVERNMENT.md). No government login, employee-data
-upload, filing, payment or browser-challenge bypass is included.
+The current [PhilHealth downloads page](https://www.philhealth.gov.ph/downloads/)
+links a one-page [RF1 form](https://www.philhealth.gov.ph/downloads/employer/rf1.pdf),
+downloaded, hashed and visually inspected on26October. It is marked February2014
+and shows ten employee rows, explicit employer/report types, structured names,
+PIN, PS/ES shares, status/effective dates and receipt details. It refers to back
+instructions, but the linked PDF contains only one page. Its historical salary-
+bracket field is not authority to infer current salary bases/rates. A paper layout
+is not a current EPRS upload contract. The
+[employer procedures](https://www.philhealth.gov.ph/partners/employers/pay_procedures.php)
+require EPRS; a current no-charge template/specification and validation evidence
+remain necessary before implementing an electronic RF1 adapter.
+
+The official Pag-IBIG
+[MCRF encoding instructions](https://www.pagibigfund.gov.ph/document/pdf/dlforms/providentrelated/Instructions%20in%20Encoding%20of%20MCRF.pdf)
+and [eSRS guide](https://www.pagibigfund.gov.ph/document/pdf/payments/ESRS.pdf)
+again returned a browser challenge on26October. Do not guess column order or
+bypass the challenge. Native XLSX is delivered in050; that does not establish
+MCRF template compatibility.
+
+## Next inputs and completion boundary
+
+The free local exchange foundations are delivered in053. Government milestone2
+remains partial. This public-source review adds no application feature, SQL, rate
+pack, release or agency-acceptance claim. PDFs, hashes and five SSS images are
+retained in the ignored review folder with `public-source-review-20261026.json`.
+
+Resume one agency at a time when its current official specification/offline
+validator or a sanitized accepted reference is available. Start with the BIR
+compensation module and Pag-IBIG MCRF template downloaded through their normal
+official pages. Use fictional identities in local validators; fixture acceptance
+still does not establish live filing acceptance. Keep the SSS control an internal
+reference draft. Preserve issued figures and reviewed earned/received periods;
+reject missing/ambiguous inputs. Never fabricate identifiers, classifications,
+shares or certificates. Current employer portal credentials, employee-data
+uploads, actual filing/payment and challenge bypass remain outside this task.
