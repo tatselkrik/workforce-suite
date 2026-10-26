@@ -76,6 +76,11 @@ unconfigured external connection to a completed integration.
 2. **Government payroll exports and reconciliation.** Prepare reviewed BIR, SSS,
    PhilHealth and Pag-IBIG outputs and reconcile with approved payroll. Verify
    current official formats/rules. Actual government filing is separate.
+   ~~Internal CSV/native Excel preparation and reconciliation worksheets~~ are
+   delivered/installed in044/054, with selected legal identities and protected
+   source-aware totals. Exact agency files/validator acceptance remain pending;
+   the SSS draft is internal review. The BIR7.4 download is now supplied for the
+   next investigation. See [054verification](GOVERNMENT-0.1.54-VERIFICATION.md).
 3. ~~**Payroll, appraisal and training notifications.** Payslip/payment notices,
    review deadlines, training reminders and certificate-expiry alerts.~~ Delivered
    in desktop0.1.46 and local portal0.1.6; in-app only. External delivery is deferred.
@@ -110,6 +115,16 @@ unconfigured external connection to a completed integration.
    resumption; do not treat the placeholder as a working connection.
 
 ## Progress and boundaries
+
+- Desktop **0.1.54** is installed and privately published, frozen source
+  `15c490f5a58777d6676dfe261c5cbc469de64ecd`; keep0.1.53rollback.574default Rust
+  checks, three explicit opt-ins,24independently checked native workbooks/280rows,
+  eight actual hosted projections and five fictional native layouts pass. Real
+  local-client/hosted permission and revocation, source preservation, exact
+  installer/recovery, actual installation and private signed download pass.
+  Schema69is unchanged; no full DB suite was repeated. Continue BIR investigation
+  from Kirk's supplied official downloads. The same scheduler remains active.
+  See [the testing checklist](GOVERNMENT-0.1.54-CHECKLIST.md).
 
 - Desktop **0.1.53** is installed and privately published, frozen source
   `5a02301ca75863de035065f61ee7080565dd8497`; retain **0.1.52** rollback.560 native

@@ -1,5 +1,8 @@
 # Government review Excel exports
 
+Delivered, installed and privately published in0.1.54; see
+[verification](GOVERNMENT-0.1.54-VERIFICATION.md).
+
 In **Payroll → Government → Reconciliation**, generate the agency/month, choose
 **Excel (.xlsx)** and use **Export fresh review** or **Export agency preparation**.
 CSV remains available from the same format selector. Both controls load a new
