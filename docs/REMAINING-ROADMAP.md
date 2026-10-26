@@ -117,6 +117,11 @@ unconfigured external connection to a completed integration.
    delivered/installed in059 with fresh internal CSV/Excel amount worksheets.
    This does not calculate expected tax or equate a source total to a file field.
    [Delivery](GOVERNMENT-0.1.59-DELIVERY.md).
+   ~~Annual issued-pay component review and separate fresh CSV/native Excel~~ are
+   delivered/installed in060, retaining exact source/receipt bindings and unknown
+   fields without repeating final contained pay, prior13thentitlement or annual
+   tax basis. Component fields overlap and are not expected BIR classifications.
+   [Delivery](GOVERNMENT-0.1.60-DELIVERY.md).
    Expected declaration amounts, historical/agency identity/certificate checks
    and official acceptance remain pending; recorded withholding is not
    automatically a1604C field.
