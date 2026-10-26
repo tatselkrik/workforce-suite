@@ -57,7 +57,7 @@ impl State {
         }
     }
 }
-fn kind(k: &str) -> &str {
+pub(super) fn kind(k: &str) -> &str {
     match k {
         "monthly" => "Monthly",
         "cutoff" => "Cutoff",

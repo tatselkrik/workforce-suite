@@ -83,6 +83,7 @@ try {
   const datedMigrations=[];
   const attendanceImportMigrations=[];
   const leaveImportMigrations=[];
+  const exchangeMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -96,6 +97,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_payroll_exchange.sql')){exchangeMigrations.push(filename);continue;}
     if(filename.endsWith('_leave_request_imports.sql')){leaveImportMigrations.push(filename);continue;}
     if(filename.endsWith('_attendance_request_imports.sql')){attendanceImportMigrations.push(filename);continue;}
     if(filename.endsWith('_leave_opening_arithmetic.sql')||filename.endsWith('_leave_openings_and_policy_schedule.sql')){datedMigrations.push(filename);continue;}
@@ -510,6 +512,14 @@ try {
   for(const filename of leaveImportMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
   for(const t of leaveImportTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,leaveImportBefore[t],'Leave imports preserve prior '+t+' records');
   for(const f of leaveImportFunctions)eq((await db.query('select md5(pg_get_functiondef($1::regprocedure))digest',[f.identity])).rows[0].digest,f.digest,'Leave imports preserve every existing function '+f.identity);
+  await db.exec('reset role');
+  const exchangeTables=(await db.query("select tablename from pg_tables where schemaname='public'order by tablename")).rows.map(r=>r.tablename);
+  const exchangeBefore={};for(const t of exchangeTables)exchangeBefore[t]=(await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows;
+  const exchangeFunctions=(await db.query("select p.oid::regprocedure::text identity,md5(pg_get_functiondef(p.oid))digest from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in('public','hris_private')and p.prokind='f'order by 1")).rows;
+  for(const filename of exchangeMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  for(const t of exchangeTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,exchangeBefore[t],'Exchange migration preserves '+t);
+  for(const f of exchangeFunctions)eq((await db.query('select md5(pg_get_functiondef($1::regprocedure))digest',[f.identity])).rows[0].digest,f.digest,'Exchange migration preserves every existing function '+f.identity);
+  const{runPayrollExchangeTests}=await import('./payroll-exchange.test.mjs');await runPayrollExchangeTests({db,eq,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

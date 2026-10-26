@@ -10,6 +10,7 @@ pub(super) struct State {
     pub(super) government:super::government_view::State,
     pub(super) amendments:super::amendment_view::State,
     pub(super) reports:super::payroll_report_view::State,
+    pub(super) exchange:super::payroll_exchange_view::State,
     pub(super) wages: super::wage_view::State,
     pub(super) finals: super::final_view::State,
     pub(super) payments: super::payment_view::State,
@@ -474,6 +475,7 @@ impl HrisApp {
                 "Wage compliance",
                 "Amendments",
                 "Government",
+                "Data exchange",
             ]
             .iter()
             .enumerate()
@@ -507,6 +509,7 @@ impl HrisApp {
             11 => self.payroll_wages(ui),
             12 => self.payroll_amendments(ui),
             13 => self.payroll_government(ui),
+            14 => self.payroll_exchange(ui),
             _ => {
                 card(ui, |ui| {
                     ui.heading("Philippine private-sector payroll");
@@ -1394,6 +1397,7 @@ impl HrisApp {
             return;
         }
         self.page = Page::Payroll;
+        if form.starts_with("payroll-exchange"){self.prepare_exchange_preview(&form);return;}
         if form.starts_with("payroll-government"){self.prepare_government_preview(&form);return;}
         if form.starts_with("payroll-amendment"){self.prepare_amendment_preview(&form);return;}
         if form.starts_with("payroll-report"){self.prepare_consolidated_report_preview(&form);return;}

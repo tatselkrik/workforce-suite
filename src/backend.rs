@@ -3,6 +3,7 @@ mod performance_adapter;
 mod learning_adapter;
 mod career_adapter;
 mod payroll_adapter;
+mod payroll_exchange_adapter;
 use crate::access::{Access, AccessEvent, AdminAction, ManagedAccount};
 use crate::account::{self, AccountAction, AccountProfile, DisplayPreferences, PersonalDetails};
 use crate::documents::{self, DocumentAction, DocumentState, EmployeeDocument};
@@ -1862,6 +1863,7 @@ pub enum Command {
     GovernmentRegistration {employee_id:Option<Uuid>,save:Option<crate::payroll_government::registration::Save>},
     Government {filter:crate::payroll_government::Filter,action:Option<crate::payroll_government::Action>,destination:Option<std::path::PathBuf>},
     PayrollReport {filter:crate::payroll_reporting::Filter,destination:Option<std::path::PathBuf>},
+    PayrollExchange(crate::payroll_exchange::Operation),
     PayrollExport { kind:String, record_id:Option<Uuid>, year:i32, destination:std::path::PathBuf },
     ImportErrors {
         preview: crate::imports::Preview,
@@ -1901,6 +1903,7 @@ pub struct Update {
     pub government_registration:Option<crate::payroll_government::registration::Snapshot>,
     pub government:Option<crate::payroll_government::Reconciliation>,
     pub payroll_report:Option<crate::payroll_reporting::Report>,
+    pub payroll_exchange:Option<crate::payroll_exchange::Update>,
     pub report: Option<crate::reports::Report>,
     pub result: std::result::Result<Snapshot, String>,
     pub message: String,
@@ -1945,12 +1948,17 @@ pub fn worker(
             let mut opening_import_preview_result=None;
             let mut report_result = None;
             let mut payroll_report_result = None;
+            let mut payroll_exchange_result = None;
             let mut government_result = None;
             let mut registration_result = None;
             let mut sss_result=None;
             let mut update_state = None;
             let mut check_after_sign_in = false;
             let mut result: Result<Snapshot> = match command {
+                Command::PayrollExchange(operation)=>{
+                    let changed=(||{let client=cloud.as_mut().context("Sign in to the configured company to record payroll exchanges.")?;let data=client.snapshot()?;let update=client.payroll_exchange(&data,&operation)?;Ok((data,update))})();
+                    changed.map(|(data,update)|{message=if let Some(attempt)=&update.resolved{if attempt.committed{"Retained attempt was already committed; original history is preserved.".into()}else{"No committed attempt found. Its old identity is now closed against delayed requests; review the draft before submitting again.".into()}}else{"Payroll exchange refreshed. No payroll payments changed.".into()};payroll_exchange_result=Some(update);data})
+                }
                 Command::LeaveImportHistory=>{
                     let changed=match cloud.as_mut(){Some(client)=>client.leave_import_history(),None=>demo.as_ref().context("Sign in to view leave import history.").and_then(|s|demo_leave_imports.history(&s.data).map(|h|(s.data.clone(),h)))};
                     changed.map(|(data,h)|{leave_import_history_result=Some(h);message="Leave import history refreshed.".into();data})
@@ -2318,6 +2326,7 @@ pub fn worker(
                     government:government_result,
                     report: report_result,
                     payroll_report:payroll_report_result,
+                    payroll_exchange:payroll_exchange_result,
                     result: result.map_err(|e| e.to_string()),
                     message,
                     account: cloud
@@ -2353,6 +2362,7 @@ pub fn worker(
                             government:None,
                             report: None,
                             payroll_report:None,
+                            payroll_exchange:None,
                             result: Ok(current.clone()),
                             message: String::new(),
                             account: None,

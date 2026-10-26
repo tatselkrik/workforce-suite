@@ -8,7 +8,7 @@ Item4 is delivered in installed/private desktop0.1.49, including protected dated
 policies, captured entitlements, entered openings and atomic CSV openings.
 [Verification](LEAVE-OPENINGS-0.1.49-VERIFICATION.md) records the local, hosted,
 visual, installer and private-channel evidence and remaining verification limits.
-Continue item6, then item7; the same scheduler remains active.
+Item6 is delivered in050–052. Continue item7; the same scheduler remains active.
 
 **Scope refinement25October2026:** browser verification is the current portal
 priority. Free mobile-width browser checks may be included; physical-phone and

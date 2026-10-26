@@ -87,6 +87,10 @@ pub(crate) struct CsvRow {
 // Strict comma CSV with escaped quotes and quoted multiline cells. Track
 // physical source lines, so an address newline does not shift error locations.
 pub(crate) fn parse(text: &str) -> Result<Vec<CsvRow>> {
+    parse_bounded(text, MAX_ROWS, HEADERS.len())
+}
+pub(crate) fn parse_bounded(text: &str, max_rows: usize, max_columns: usize) -> Result<Vec<CsvRow>> {
+    ensure!(max_rows <= 1000 && max_columns <= 100, "Unsupported CSV bounds.");
     ensure!(
         text.len() <= MAX_BYTES,
         "CSV exceeds 2 MiB. Split it into smaller files."
@@ -124,8 +128,8 @@ pub(crate) fn parse(text: &str) -> Result<Vec<CsvRow>> {
                 cells.clear();
             }
             ensure!(
-                rows.len() <= MAX_ROWS + 1,
-                "Import at most 500 employee rows per file."
+                rows.len() <= max_rows + 1,
+                "Import at most {max_rows} rows per file."
             );
             state = 0;
             row_line = line;
@@ -147,7 +151,7 @@ pub(crate) fn parse(text: &str) -> Result<Vec<CsvRow>> {
             (0 | 1 | 3, ',') => {
                 cells.push(std::mem::take(&mut field));
                 ensure!(
-                    cells.len() < HEADERS.len(),
+                    cells.len() < max_columns,
                     "Line {line}: too many CSV columns."
                 );
                 state = 0;
@@ -174,8 +178,8 @@ pub(crate) fn parse(text: &str) -> Result<Vec<CsvRow>> {
         });
     }
     ensure!(
-        rows.len() <= MAX_ROWS + 1,
-        "Import at most 500 employee rows per file."
+        rows.len() <= max_rows + 1,
+        "Import at most {max_rows} rows per file."
     );
     ensure!(
         rows.len() >= 2,

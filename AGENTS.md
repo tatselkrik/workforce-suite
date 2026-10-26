@@ -374,3 +374,12 @@ transactions. Render fresh scoped reports before the final protected access
 check/file write, and never overwrite existing exports. Agency adapters remain
 separate. Native XLSX alone does not complete the attendance/leave batch imports
 in docs/TABULAR-EXCHANGE.md. Preserve the new free dependency license notices.
+
+Local payroll exchange follows docs/PAYROLL-EXCHANGE.md. Keep Admin-only versioned
+column profiles, protected HR/Admin report-v2 snapshots and exact original CSV
+bytes. Preserve actor/full-payload retries, closed unused identities, atomic
+acknowledgement revisions and linked reasoned Admin resets. Reconciliation never
+records a payroll payment or vendor acceptance. Keep source net, cash, final-pay
+offsets, contained pay and tax advice distinct. Fail explicitly on history/budget
+limits; never remove history or start a paid upgrade. Actual vendor connections
+require a selected company target and separate authority.

@@ -48,6 +48,7 @@ mod final_view;
 mod amendment_view;
 mod wage_view;
 mod payroll_report_view;
+mod payroll_exchange_view;
 mod government_view;
 mod government_registration_view;
 mod government_collection_view;
@@ -1193,6 +1194,7 @@ impl HrisApp {
                     if let Some(record)=update.government_registration{self.payroll_state.government.accept_registration(record,&data);}
                     if let Some(report)=update.government{self.payroll_state.government.accept(report,&data);}
                     if let Some(report)=update.payroll_report{self.payroll_state.reports.accept(report,&data);}
+                    if let Some(exchange)=update.payroll_exchange{self.payroll_state.exchange.accept(exchange,&data);}
                     if let Some(report) = update.report {
                         if report.filter == self.report_state.filter {
                             self.report_state.result = Some(report);
@@ -1973,6 +1975,7 @@ impl HrisApp {
             || self.exit_state.editing()
             || (self.performance_state.editing() || self.learning_state.editing() || self.career_state.editing())
             || self.payroll_state.editing()
+            || self.payroll_state.exchange.has_draft()
             || self.recruiting_state.editing()
             || self.report_state.view_draft.is_some()
             || self.account_form.is_some()
