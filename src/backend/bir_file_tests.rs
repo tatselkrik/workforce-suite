@@ -260,6 +260,37 @@ fn bir_actual_client_denies_non_hr_and_unchecked_export_before_network_or_source
 }
 
 #[test]
+fn bir_mwe_actual_client_keeps_mwe_review_and_all_40_totals_with_private_findings() {
+    let data = DemoStore::new().data;
+    let (root, p, _) = folder();
+    let raw = bir::mwe_tests::fictional_source();
+    std::fs::write(&p, &raw).unwrap();
+    let hash = format!("{:x}", sha2::Sha256::digest(&raw));
+    for ext in ["csv", "xlsx"] {
+        let (url, handle) = server(&data, 4, None, false);
+        let mut c = client(url, &data);
+        let out = root.join(format!("mwe.{ext}"));
+        let report = c
+            .government_bir_check(&data, &p, Some(&hash), Some(&out))
+            .unwrap();
+        handle.join().unwrap();
+        assert_eq!(
+            (
+                report.schedule,
+                report.errors,
+                report.reviews,
+                report.totals.len()
+            ),
+            (bir::Schedule::Two, 0, 2, 40)
+        );
+        assert_eq!(std::fs::read(&p).unwrap(), raw);
+        std::fs::remove_file(out).unwrap();
+    }
+    std::fs::remove_file(p).unwrap();
+    std::fs::remove_dir(root).unwrap();
+}
+
+#[test]
 #[ignore = "Explicit normal hosted synthetic session supplied only through child environment."]
 fn bir_hosted_native_check_and_findings() {
     let input: Value = serde_json::from_str(
@@ -280,7 +311,11 @@ fn bir_hosted_native_check_and_findings() {
     let root = PathBuf::from(std::env::var("HRIS_BIR_LIVE_OUT").unwrap());
     std::fs::create_dir(&root).unwrap();
     let p = root.join("0123456780000123120261604C.DAT");
-    let raw = source();
+    let raw = if input["schedule"] == "2" {
+        bir::mwe_tests::fictional_source()
+    } else {
+        source()
+    };
     std::fs::write(&p, &raw).unwrap();
     let first = c
         .government_bir_check(&data, &p, None, None)
@@ -295,5 +330,5 @@ fn bir_hosted_native_check_and_findings() {
         .expect("Native protected findings export");
     }
     assert_eq!(std::fs::read(&p).unwrap(), raw);
-    std::fs::write(&root.join("proof.json"),&serde_json::to_vec_pretty(&json!({"role":role,"source_unchanged":true,"errors":first.errors,"reviews":first.reviews,"details":first.details,"employer_match":first.employer_match,"sha256":first.sha256})).unwrap()).unwrap();
+    std::fs::write(&root.join("proof.json"),&serde_json::to_vec_pretty(&json!({"role":role,"schedule":first.schedule,"source_unchanged":true,"errors":first.errors,"reviews":first.reviews,"details":first.details,"employer_match":first.employer_match,"sha256":first.sha256,"totals":first.totals})).unwrap()).unwrap();
 }

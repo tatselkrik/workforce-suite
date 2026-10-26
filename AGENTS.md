@@ -384,6 +384,10 @@ establish official validator acceptance or file a return. Kirk has supplied the
 current module and references; do not request those downloads again. Preserve
 the published PERA control column and record the readable-method conflict until
 actual official-runtime behavior is verified with fictional data.
+Standalone Schedule 2 follows the published 59 D2 / 45 C2 columns and 40 money
+controls. Keep the days/year factor out of monetary totals, retain PERA/net-basic
+controls, always flag MWE eligibility/wage/factor basis as unverified, and refuse
+mixed schedules whole-file until their ordering/routing contract is established.
 
 Local payroll exchange follows docs/PAYROLL-EXCHANGE.md. Keep Admin-only versioned
 column profiles, protected HR/Admin report-v2 snapshots and exact original CSV

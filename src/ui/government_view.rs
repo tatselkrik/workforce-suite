@@ -1085,7 +1085,7 @@ impl HrisApp {
             state.agency=Some(g::Agency::Bir);state.month=report.filter().month.to_string();
             if preview.ends_with("overview"){state.report=None;return;}
             state.bir_open=true;
-            state.bir=super::bir_file_view::State::preview(preview.contains("errors"),preview.contains("totals"));
+            state.bir=super::bir_file_view::State::preview(preview.contains("errors"),preview.contains("totals"),preview.contains("mwe"));
             return;
         }
         state.export_excel = preview.contains("-excel");
@@ -1214,7 +1214,7 @@ mod tests {
     #[test]
     fn bir_read_only_results_clear_on_scope_change_and_cannot_reopen_a_closed_view(){
         let data=DemoStore::new().data;let mut state=State::default();state.bind(&data);
-        let report=g::bir_file::Report{company_id:data.company.id,user_id:data.access.user_id,sha256:"a".repeat(64),
+        let report=g::bir_file::Report{schedule:g::bir_file::Schedule::One,company_id:data.company.id,user_id:data.access.user_id,sha256:"a".repeat(64),
             file_name:"fictional.dat".into(),year:Some(2026),details:1,employer_match:None,errors:0,reviews:1,issues:Vec::new(),totals:Vec::new()};
         state.accept_bir(report.clone(),&data);assert!(state.bir.report.is_none());
         state.bir_open=true;state.accept_bir(report.clone(),&data);assert!(state.bir.report.is_some()&&!state.editing());

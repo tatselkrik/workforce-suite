@@ -1,4 +1,4 @@
-//! Read-only preflight of the published 1604C Schedule 1 plaintext structure.
+//! Read-only preflight of a published 1604C standalone Schedule 1 or 2 source.
 //! This is not the official validator, a tax computation or payroll reconciliation.
 use anyhow::{Context, Result, ensure};
 use chrono::{Datelike, NaiveDate};
@@ -66,6 +66,128 @@ pub const FIELDS: [&str; 49] = [
     "PERA tax credit",
 ];
 
+pub const MWE_MONEY_COLUMNS: [usize; 40] = [
+    12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 33, 34, 35, 36, 37, 38,
+    39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 57, 58,
+];
+pub const MWE_FIELDS: [&str; 59] = [
+    "Schedule",
+    "Form",
+    "Employer TIN",
+    "Employer branch",
+    "Return period",
+    "Sequence",
+    "Employee TIN",
+    "Employee branch",
+    "Last name",
+    "First name",
+    "Middle name",
+    "Region",
+    "Previous gross compensation",
+    "Previous exempt statutory basic",
+    "Previous holiday pay",
+    "Previous overtime pay",
+    "Previous night differential",
+    "Previous hazard pay",
+    "Previous exempt 13th-month/benefits",
+    "Previous de minimis",
+    "Previous exempt contributions/dues",
+    "Previous other exempt salaries",
+    "Previous exempt total",
+    "Previous taxable 13th-month/benefits",
+    "Previous other taxable salaries",
+    "Previous taxable total",
+    "Employment from",
+    "Employment to",
+    "Present gross compensation",
+    "Present statutory basic per day",
+    "Present statutory basic per month",
+    "Present statutory basic per year",
+    "Reported days/year factor",
+    "Present holiday pay",
+    "Present overtime pay",
+    "Present night differential",
+    "Present hazard pay",
+    "Present exempt 13th-month/benefits",
+    "Present de minimis",
+    "Present exempt contributions/dues",
+    "Present other exempt salaries",
+    "Present exempt total",
+    "Present taxable 13th-month/benefits",
+    "Present other taxable salaries",
+    "Present taxable total",
+    "Combined gross compensation",
+    "Net taxable compensation",
+    "Declared tax due",
+    "Previous withholding",
+    "Present withholding",
+    "December withholding",
+    "Overwithheld refund",
+    "Actual withholding",
+    "Nationality",
+    "Employment status",
+    "Separation reason",
+    "Substituted filing",
+    "PERA tax credit",
+    "Statutory basic net of contributions/dues",
+];
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub enum Schedule {
+    #[serde(rename = "1")]
+    One,
+    #[serde(rename = "2")]
+    Two,
+}
+impl Schedule {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::One => "Schedule 1",
+            Self::Two => "Schedule 2 — minimum wage earners",
+        }
+    }
+    fn layout(self) -> Layout {
+        match self {
+            Self::One => Layout {
+                detail: "D1",
+                control: "C1",
+                fields: &FIELDS,
+                money: &MONEY_COLUMNS,
+                dates: [23, 24],
+                nationality: 44,
+                status: 45,
+                separation: 46,
+                filing: 47,
+                factor: None,
+            },
+            Self::Two => Layout {
+                detail: "D2",
+                control: "C2",
+                fields: &MWE_FIELDS,
+                money: &MWE_MONEY_COLUMNS,
+                dates: [26, 27],
+                nationality: 53,
+                status: 54,
+                separation: 55,
+                filing: 56,
+                factor: Some(32),
+            },
+        }
+    }
+}
+struct Layout {
+    detail: &'static str,
+    control: &'static str,
+    fields: &'static [&'static str],
+    money: &'static [usize],
+    dates: [usize; 2],
+    nationality: usize,
+    status: usize,
+    separation: usize,
+    filing: usize,
+    factor: Option<usize>,
+}
+
 #[derive(Clone, Debug)]
 pub struct Employer {
     pub tin: String,
@@ -91,6 +213,7 @@ pub struct Total {
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Report {
+    pub schedule: Schedule,
     pub company_id: Uuid,
     pub user_id: Uuid,
     pub sha256: String,
@@ -142,7 +265,8 @@ impl Report {
             }
             .into(),
             format!(
-                "{} detail rows; {} errors; {} review items; {} diagnostics omitted. No tax calculation, identity certification or payroll comparison.",
+                "{}; {} detail rows; {} errors; {} review items; {} diagnostics omitted. No tax calculation, identity certification or payroll comparison.",
+                self.schedule.label(),
                 self.details,
                 self.errors,
                 self.reviews,
@@ -267,7 +391,7 @@ pub fn inspect(
     let rows = crate::imports::parse_bounded(text, 1000, 75)?;
     ensure!(
         !rows.is_empty() && rows.len() <= MAX_DETAILS + 2,
-        "Use one header, at most 500 Schedule 1 details and one control record."
+        "Use one header, at most 500 details from one supported schedule and one control record."
     );
     for r in &rows {
         ensure!(
@@ -276,12 +400,25 @@ pub fn inspect(
                     .first()
                     .map(|s| s.trim().to_ascii_uppercase())
                     .as_deref(),
-                Some("H1604C" | "D1" | "C1")
+                Some("H1604C" | "D1" | "C1" | "D2" | "C2")
             ),
-            "Only unvalidated plaintext 1604C Schedule 1 (H1604C/D1/C1) is supported. Other schedules, validation markers and sealed files need the official module."
+            "Only unvalidated plaintext 1604C Schedule 1 or 2 records are supported. Other schedules, validation markers and sealed files need the official module."
         );
     }
+    let tags: Vec<_> = rows
+        .iter()
+        .map(|r| r.cells[0].trim().to_ascii_uppercase())
+        .collect();
+    let first = tags.iter().any(|s| matches!(s.as_str(), "D1" | "C1"));
+    let second = tags.iter().any(|s| matches!(s.as_str(), "D2" | "C2"));
+    ensure!(
+        !(first && second),
+        "Mixed Schedule 1/2 files are unsupported by this bounded preflight. Use the official module; no schedule was partially checked."
+    );
+    let schedule = if second { Schedule::Two } else { Schedule::One };
+    let layout = schedule.layout();
     let mut report = Report {
+        schedule,
         company_id,
         user_id,
         sha256: format!("{:x}", Sha256::digest(bytes)),
@@ -294,6 +431,10 @@ pub fn inspect(
         issues: Vec::new(),
         totals: Vec::new(),
     };
+    if schedule == Schedule::Two {
+        report.issue(0,"MWE declarations",Severity::Review,
+        "Minimum-wage-earner eligibility, reported statutory wages and the days/year factor basis are unverified. No wage-floor, tax or payroll calculation was performed.");
+    }
     if text.starts_with('\u{feff}') {
         report.issue(
             1,
@@ -305,8 +446,8 @@ pub fn inspect(
     let mut prefix: Option<(String, String, String)> = None;
     let (mut headers, mut controls) = (0, 0);
     let mut control_line = 0;
-    let mut sums = [Some(0i64); 31];
-    let mut declared = [None; 31];
+    let mut sums = vec![Some(0i64); layout.money.len()];
+    let mut declared = vec![None; layout.money.len()];
     let mut seen = HashSet::new();
     let mut sequences = HashSet::new();
     for (position, r) in rows.iter().enumerate() {
@@ -374,7 +515,7 @@ pub fn inspect(
             }
             continue;
         }
-        let detail = tag == "D1";
+        let detail = tag == layout.detail;
         if detail {
             report.details += 1;
         } else {
@@ -402,14 +543,18 @@ pub fn inspect(
                 r.line,
                 "Control",
                 Severity::Error,
-                "Exactly one Schedule 1 control must be last.",
+                "Exactly one schedule control must be last.",
             );
         }
-        let width = if detail { 49 } else { 36 };
+        let width = if detail {
+            layout.fields.len()
+        } else {
+            layout.money.len() + 5
+        };
         if cells.len() != width {
             report.issue(r.line,&tag,Severity::Error,&format!("The published {tag} record requires exactly {width} columns; no extra or padded columns are ignored."));
             if detail {
-                sums = [None; 31];
+                sums.fill(None);
             }
             continue;
         }
@@ -450,14 +595,14 @@ pub fn inspect(
                 );
             }
             if !seen.insert((cells[6].to_owned(), cells[7].to_owned())) {
-                report.issue(r.line,FIELDS[6],Severity::Error,"Duplicate employee TIN/branch in this Schedule 1 file; namesakes with different identifiers remain separate.");
+                report.issue(r.line,FIELDS[6],Severity::Error,"Duplicate employee TIN/branch in this schedule; namesakes with different identifiers remain separate.");
             }
-            for i in [8, 9, 10, 44] {
+            for i in [8, 9, 10, layout.nationality] {
                 if cells[i].len() > 30
                     || cells[i].bytes().any(|b| b.is_ascii_control())
                     || ([8, 9].contains(&i) && cells[i].is_empty())
                 {
-                    report.issue(r.line,FIELDS[i],Severity::Error,"Use at most 30 printable ASCII characters; last and first names are required. Names are not shortened or inferred.");
+                    report.issue(r.line,layout.fields[i],Severity::Error,"Use at most 30 printable ASCII characters; last and first names are required. Names are not shortened or inferred.");
                 }
             }
             if cells[11].is_empty()
@@ -466,42 +611,56 @@ pub fn inspect(
             {
                 report.issue(r.line,FIELDS[11],Severity::Error,"Supply an explicit printable region value fitting the published four-character field. Current agency region assignment is not verified.");
             }
-            let (from, to) = (date(cells[23]), date(cells[24]));
+            let (from, to) = (date(cells[layout.dates[0]]), date(cells[layout.dates[1]]));
             if from.is_none() || to.is_none() || from > to {
                 report.issue(r.line,"Employment dates",Severity::Error,"Use valid MM/DD/YYYY employment dates with From not after To. Dates are not inferred from HRIS employment.");
             }
-            if !["R", "C", "CP", "S", "P", "AL"].contains(&cells[45].to_ascii_uppercase().as_str())
+            if !["R", "C", "CP", "S", "P", "AL"]
+                .contains(&cells[layout.status].to_ascii_uppercase().as_str())
             {
                 report.issue(
                     r.line,
-                    FIELDS[45],
+                    layout.fields[layout.status],
                     Severity::Error,
                     "Use an explicit published employment code: R, C, CP, S, P or AL.",
                 );
             }
-            if !["NA", "T", "TR", "R", "D"].contains(&cells[46].to_ascii_uppercase().as_str()) {
+            if !["NA", "T", "TR", "R", "D"]
+                .contains(&cells[layout.separation].to_ascii_uppercase().as_str())
+            {
                 report.issue(
                     r.line,
-                    FIELDS[46],
+                    layout.fields[layout.separation],
                     Severity::Error,
                     "Use an explicit published separation code: NA, T, TR, R or D.",
                 );
             }
-            if !["Y", "N"].contains(&cells[47].to_ascii_uppercase().as_str()) {
+            if !["Y", "N"].contains(&cells[layout.filing].to_ascii_uppercase().as_str()) {
                 report.issue(
                     r.line,
-                    FIELDS[47],
+                    layout.fields[layout.filing],
                     Severity::Error,
                     "Declare substituted filing as Y or N; eligibility is not inferred.",
                 );
             }
         }
-        for (j, &column) in MONEY_COLUMNS.iter().enumerate() {
+        if detail {
+            if let Some(i) = layout.factor {
+                if cells[i].is_empty()
+                    || cells[i].len() > 3
+                    || !cells[i].bytes().all(|b| b.is_ascii_digit())
+                    || cells[i].parse::<u16>().ok().is_none_or(|n| n == 0)
+                {
+                    report.issue(r.line,layout.fields[i],Severity::Error,"Supply an explicit positive integer factor fitting three digits. The employment/workweek basis is not inferred or certified.");
+                }
+            }
+        }
+        for (j, &column) in layout.money.iter().enumerate() {
             let parsed = money(cells[if detail { column } else { j + 5 }]);
             let field = format!(
                 "{tag} column {} — {}",
                 if detail { column + 1 } else { j + 6 },
-                FIELDS[column]
+                layout.fields[column]
             );
             if parsed.is_none() {
                 report.issue(r.line,&field,Severity::Error,"Use plain nonnegative PHP, at most 11 whole digits/two decimals; blanks, rounding, separators and exponents are unsupported.");
@@ -513,7 +672,7 @@ pub fn inspect(
                     _ => None,
                 };
                 if was_known && sums[j].is_none() && parsed.is_some() {
-                    report.issue(r.line,FIELDS[column],Severity::Error,"An exact detail total is unavailable or exceeds its integer bound; no partial total is certified.");
+                    report.issue(r.line,layout.fields[column],Severity::Error,"An exact detail total is unavailable or exceeds its integer bound; no partial total is certified.");
                 }
             } else {
                 declared[j] = parsed;
@@ -533,7 +692,10 @@ pub fn inspect(
             0,
             "Details",
             Severity::Error,
-            "At least one supported D1 detail is required; an empty schedule is not certified.",
+            &format!(
+                "At least one supported {} detail is required; an empty schedule is not certified.",
+                layout.detail
+            ),
         );
     }
     if controls != 1 {
@@ -541,15 +703,15 @@ pub fn inspect(
             0,
             "Control",
             Severity::Error,
-            "Exactly one C1 control is required.",
+            &format!("Exactly one {} control is required.", layout.control),
         );
     }
-    for (j, &column) in MONEY_COLUMNS.iter().enumerate() {
+    for (j, &column) in layout.money.iter().enumerate() {
         if sums[j].is_some() && declared[j].is_some() && sums[j] != declared[j] {
-            report.issue(control_line,&format!("C1 column {} — {}",j+6,FIELDS[column]),Severity::Error,"The exact C1 control amount differs from the sum of D1 details. No tolerance or automatic adjustment was applied.");
+            report.issue(control_line,&format!("{} column {} — {}",layout.control,j+6,layout.fields[column]),Severity::Error,"The exact schedule control amount differs from the sum of its details. No tolerance or automatic adjustment was applied.");
         }
         report.totals.push(Total {
-            field: FIELDS[column].into(),
+            field: layout.fields[column].into(),
             detail_cents: sums[j],
             control_cents: declared[j],
         });
@@ -557,6 +719,8 @@ pub fn inspect(
     Ok(report)
 }
 
+#[cfg(test)]
+pub(crate) mod mwe_tests;
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -709,7 +873,7 @@ mod tests {
         assert!(
             r.issues
                 .iter()
-                .any(|i| i.message.contains("exact C1 control amount differs"))
+                .any(|i| i.message.contains("exact schedule control amount differs"))
         );
         assert_eq!(
             (r.totals[0].detail_cents, r.totals[0].control_cents),
@@ -994,13 +1158,20 @@ mod tests {
 }
 
 #[cfg(feature = "qa-screenshot")]
-pub(crate) fn preview_report(errors: bool) -> Report {
+pub(crate) fn preview_report(errors: bool, minimum_wage: bool) -> Report {
     // Fictional preview only. No real file, registration or account data is loaded.
+    let schedule = if minimum_wage {
+        Schedule::Two
+    } else {
+        Schedule::One
+    };
+    let layout = schedule.layout();
     let mut r = Report {
+        schedule,
         company_id: Uuid::from_u128(1),
         user_id: Uuid::nil(),
         sha256: "a".repeat(64),
-        file_name: "Fictional Schedule 1 source.dat".into(),
+        file_name: format!("Fictional {} source.dat", schedule.label()),
         year: Some(2026),
         details: 2,
         employer_match: if errors { None } else { Some(true) },
@@ -1009,20 +1180,27 @@ pub(crate) fn preview_report(errors: bool) -> Report {
         issues: Vec::new(),
         totals: Vec::new(),
     };
-    for &i in &MONEY_COLUMNS {
+    for &i in layout.money {
+        let cents = if minimum_wage {
+            match i {
+                28 | 31 => 18_000_000,
+                29 => 50_000,
+                30 => 1_500_000,
+                _ => 0,
+            }
+        } else if [25, 32, 35, 36, 37].contains(&i) {
+            20_000_000
+        } else {
+            0
+        };
         r.totals.push(Total {
-            field: FIELDS[i].into(),
-            detail_cents: Some(if [25, 32, 35, 36, 37].contains(&i) {
-                20_000_000
-            } else {
-                0
-            }),
-            control_cents: Some(if [25, 32, 35, 36, 37].contains(&i) {
-                20_000_000
-            } else {
-                0
-            }),
+            field: layout.fields[i].into(),
+            detail_cents: Some(cents),
+            control_cents: Some(cents),
         });
+    }
+    if minimum_wage {
+        r.issue(0,"MWE declarations",Severity::Review,"Minimum-wage-earner eligibility, reported statutory wages and the days/year factor basis are unverified. No wage-floor, tax or payroll calculation was performed.");
     }
     if errors {
         r.issue(

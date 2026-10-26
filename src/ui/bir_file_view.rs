@@ -29,10 +29,10 @@ impl State {
         }
     }
     #[cfg(feature = "qa-screenshot")]
-    pub(super) fn preview(errors: bool, expand_totals: bool) -> Self {
+    pub(super) fn preview(errors: bool, expand_totals: bool, minimum_wage: bool) -> Self {
         Self {
             source: Some(PathBuf::from("Fictional source.dat")),
-            report: Some(bir::preview_report(errors)),
+            report: Some(bir::preview_report(errors, minimum_wage)),
             expand_totals,
             ..Default::default()
         }
@@ -48,9 +48,9 @@ impl HrisApp {
     pub(super) fn payroll_bir_file(&mut self, ui: &mut Ui) {
         let state = &mut self.payroll_state.government.bir;
         let mut intent = None;
-        ui.heading("BIR Schedule 1 file check");
-        ui.add(egui::Label::new("Read-only checks for the published 1604C Schedule 1 plaintext layout: columns, dates, codes, employer header and exact control totals. The original file and payroll are unchanged.").wrap());
-        ui.add(egui::Label::new(RichText::new("This is not official BIR validation, a tax calculation, a certificate check or an HRIS payroll comparison. Schedule 2, non-ASCII encodings and sealed/validated files need separate review.").weak()).wrap());
+        ui.heading("BIR 1604C file check");
+        ui.add(egui::Label::new("Read-only checks for one published 1604C Schedule 1 or Schedule 2 plaintext layout: columns, dates, codes, employer header and exact control totals. The original file and payroll are unchanged.").wrap());
+        ui.add(egui::Label::new(RichText::new("This is not official BIR validation, a wage/tax calculation, eligibility or certificate check, or an HRIS payroll comparison. Mixed schedules, non-ASCII encodings and sealed/validated files need separate review.").weak()).wrap());
         ui.add_space(8.0);
         let connected = self.data.mode == Mode::Supabase;
         ui.horizontal_wrapped(|ui| {
@@ -121,8 +121,9 @@ impl HrisApp {
                 TEAL
             }));
             ui.label(format!(
-                "{} · Tax year {} · {} details · {} errors · {} review items",
+                "{} · {} · Tax year {} · {} details · {} errors · {} review items",
                 report.file_name,
+                report.schedule.label(),
                 report
                     .year
                     .map(|y| y.to_string())
@@ -140,11 +141,11 @@ impl HrisApp {
                 .wrap(),
             );
             ui.add_space(8.0);
-            egui::CollapsingHeader::new("Exact Schedule 1 control totals")
+            egui::CollapsingHeader::new("Exact file control totals")
                 .default_open(state.expand_totals)
                 .show(ui, |ui| {
                     let field_width = (ui.available_width() * 0.37).clamp(140.0, 330.0);
-                    egui::Grid::new("bir_control_totals")
+                    egui::Grid::new(("bir_control_totals", report.schedule.label()))
                         .striped(true)
                         .max_col_width(field_width)
                         .spacing(Vec2::new(18.0, 10.0))
@@ -223,7 +224,7 @@ impl HrisApp {
             ui.label(if self.busy{"Checking the local file and current company access…"}else{"Choose an unvalidated .dat file. Findings stay in memory and omit employee names and identifiers from the saved diagnostic list."});
         }
         ui.add_space(12.0);
-        ui.add(egui::Label::new(RichText::new("Official module compatibility remains unverified. This check follows the published 49-column D1 / 36-column C1 layout, including PERA. Always run the official BIR module before any filing.").weak()).wrap());
+        ui.add(egui::Label::new(RichText::new("Official module compatibility remains unverified. Published layouts: D1 / C1 has 49 / 36 columns; D2 / C2 has 59 / 45. Both include PERA. Always run the official BIR module before any filing.").weak()).wrap());
         match intent {
             Some(Intent::Back) => {
                 self.payroll_state.government.bir_open = false;
@@ -279,7 +280,7 @@ fn choose_source() -> anyhow::Result<Option<PathBuf>> {
     let filter: Vec<u16> = "BIR plaintext source (*.dat)\0*.dat\0\0"
         .encode_utf16()
         .collect();
-    let title: Vec<u16> = "Check unvalidated BIR1604C Schedule 1 source\0"
+    let title: Vec<u16> = "Check unvalidated BIR1604C source\0"
         .encode_utf16()
         .collect();
     // SAFETY: these buffers outlive the synchronous native file chooser.
@@ -318,6 +319,7 @@ mod tests {
     fn private_results_require_the_same_company_and_user_and_hr_role() {
         let mut data = DemoStore::new().data;
         let make = || bir::Report {
+            schedule: bir::Schedule::One,
             company_id: data.company.id,
             user_id: data.access.user_id,
             sha256: "a".repeat(64),
@@ -351,6 +353,7 @@ mod tests {
     fn a_failed_own_operation_clears_stale_findings_but_unrelated_errors_preserve_them() {
         let data = DemoStore::new().data;
         let r = bir::Report {
+            schedule: bir::Schedule::One,
             company_id: data.company.id,
             user_id: data.access.user_id,
             sha256: "a".repeat(64),
