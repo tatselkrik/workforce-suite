@@ -1,7 +1,9 @@
 # BIR payroll source comparison — proposed next increment
 
-Status: investigation only after delivered 0.1.56. No API, migration, financial
-formula, source comparison or new release is implemented by this document.
+Status: the first annual recorded-source ledger is implemented for 0.1.57;
+see [its contract](GOVERNMENT-ANNUAL-LEDGER.md) and versioned verification.
+This proposal does not itself authorize further scope. File matching, expected
+return amounts and official acceptance remain unimplemented/unverified.
 
 The existing local file check verifies shape and exact internal controls. The
 next useful government-reconciliation step is a separate HR/Admin view of file

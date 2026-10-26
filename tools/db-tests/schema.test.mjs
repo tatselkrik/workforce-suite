@@ -84,6 +84,7 @@ try {
   const attendanceImportMigrations=[];
   const leaveImportMigrations=[];
   const exchangeMigrations=[];
+  const annualLedgerMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -97,6 +98,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_government_annual_recorded_sources.sql')){annualLedgerMigrations.push(filename);continue;}
     if(filename.endsWith('_payroll_exchange.sql')){exchangeMigrations.push(filename);continue;}
     if(filename.endsWith('_leave_request_imports.sql')){leaveImportMigrations.push(filename);continue;}
     if(filename.endsWith('_attendance_request_imports.sql')){attendanceImportMigrations.push(filename);continue;}
@@ -520,6 +522,14 @@ try {
   for(const t of exchangeTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,exchangeBefore[t],'Exchange migration preserves '+t);
   for(const f of exchangeFunctions)eq((await db.query('select md5(pg_get_functiondef($1::regprocedure))digest',[f.identity])).rows[0].digest,f.digest,'Exchange migration preserves every existing function '+f.identity);
   const{runPayrollExchangeTests}=await import('./payroll-exchange.test.mjs');await runPayrollExchangeTests({db,eq,session,company:companyA,owner:uidA,unassigned:uidB});
+  await db.exec('reset role');
+  const annualTables=(await db.query("select tablename from pg_tables where schemaname='public'order by tablename")).rows.map(r=>r.tablename);
+  const annualBefore={};for(const t of annualTables)annualBefore[t]=(await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows;
+  const annualFunctions=(await db.query("select p.oid::regprocedure::text identity,md5(pg_get_functiondef(p.oid))digest from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in('public','hris_private')and p.prokind='f'order by 1")).rows;
+  for(const filename of annualLedgerMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  for(const t of annualTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,annualBefore[t],'Annual ledger migration preserves '+t);
+  for(const f of annualFunctions)eq((await db.query('select md5(pg_get_functiondef($1::regprocedure))digest',[f.identity])).rows[0].digest,f.digest,'Annual ledger migration preserves existing function '+f.identity);
+  const{runGovernmentAnnualTests}=await import('./government-annual.test.mjs');await runGovernmentAnnualTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

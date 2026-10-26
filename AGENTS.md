@@ -409,3 +409,12 @@ private folder; inspect them before running any installer or validator. Continue
 the current government review/export increment, then the unblocked BIR format
 investigation. Preserve explicit internal-review versus agency-acceptance status.
 Do not repeat delivered049–053 or expand the paid/external/device boundaries.
+
+Annual recorded BIR sources follow docs/GOVERNMENT-ANNUAL-LEDGER.md. Preserve
+actual receipt-year inclusion, original service dates, signed centavos and
+identical kind/source deduplication with explicit conflict/budget rejection.
+Observation months are query context, not payment evidence. Missing/unknown is
+not zero; final original-source tax and its additional adjustment count once.
+Keep current HR/Admin access before/after fresh reads/rendering and before new
+file IO. The internal annual worksheet is distinct from minimal BIR findings;
+neither establishes expected return amounts or official validator acceptance.

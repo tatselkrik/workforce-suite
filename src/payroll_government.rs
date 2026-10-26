@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 mod export;
+pub mod annual;
 pub mod bir_file;
 pub mod preparation;
 #[cfg(any(test, feature = "qa-screenshot"))]
@@ -206,6 +207,11 @@ fn add(a: i64, b: i64) -> Result<i64> {
     Ok(n.unwrap())
 }
 fn validate_fact(f: &Fact, cid: Uuid, asof: NaiveDate) -> Result<()> {
+    validate_fact_amounts(f,cid,asof,false)
+}
+// Annual recorded-source review must retain an unavailable legacy BIR amount
+// as unknown. The older monthly reconciliation contract remains strict.
+fn validate_fact_amounts(f: &Fact, cid: Uuid, asof: NaiveDate, allow_unknown_bir_withholding:bool) -> Result<()> {
     ensure!(
         f.company_id == cid && !f.id.is_nil() && !f.employee_id.is_nil(),
         "Government source is outside this company or lacks its immutable identity."
@@ -238,8 +244,11 @@ fn validate_fact(f: &Fact, cid: Uuid, asof: NaiveDate) -> Result<()> {
         );
     }
     if matches!(f.kind, Kind::Monthly | Kind::Cutoff) {
+        let regular_parts_ok=if allow_unknown_bir_withholding && f.agency==Agency::Bir {
+            f.parts.employee_cents.is_none_or(|n|n>=0)
+        }else{f.parts.values().iter().all(|v|v.is_some_and(|n|n>=0))};
         ensure!(
-            f.parts.values().iter().all(|v| v.is_some_and(|n| n >= 0))
+            regular_parts_ok
                 && f.starts_on.with_day(1) == f.ends_on.with_day(1)
                 && (f.agency == Agency::Bir || f.contribution_month == f.starts_on.with_day(1)),
             "Regular contributions require known nonnegative shares and their actual earned month."

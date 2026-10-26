@@ -88,6 +88,21 @@ impl CloudClient {
 }
 
 impl CloudClient {
+    pub fn government_annual_ledger(&mut self,current:&Snapshot,year:i32,destination:Option<&Path>)
+        ->Result<crate::payroll_government::annual::Ledger>{
+        use crate::payroll_government::annual::{self,Ledger,Wire};
+        crate::payroll_reporting::authorize(current)?;
+        annual::validate_year(year,current.company.today())?;
+        let before=self.current_access()?;
+        if before!=current.access{return Err(AccessRevoked.into());}
+        let wire:Wire=decode(self.request(Method::POST,"rpc/government_annual_ledger")?
+            .json(&json!({"p_year":year})).send()?)?;
+        let ledger=Ledger::from_wire(wire,before.company_id,year)?;
+        let bytes=destination.map(|path|ledger.export(path)).transpose()?;
+        if self.current_access()?!=before{return Err(AccessRevoked.into());}
+        if let (Some(path),Some(bytes))=(destination,bytes){crate::reports::save_export(path,&bytes)?;}
+        Ok(ledger)
+    }
     pub fn government_bir_check(&mut self,current:&Snapshot,source:&Path,expected_hash:Option<&str>,destination:Option<&Path>)
         ->Result<crate::payroll_government::bir_file::Report>{
         use crate::payroll_government::bir_file as bir;

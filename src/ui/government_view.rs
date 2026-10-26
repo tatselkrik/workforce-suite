@@ -9,6 +9,8 @@ pub(super) struct State {
     pub(super) collection_export_pending: bool,
     pub(super) bir_open: bool,
     pub(super) bir: super::bir_file_view::State,
+    pub(super) annual_open: bool,
+    pub(super) annual: super::government_annual_view::State,
     scope: Option<(Uuid, Uuid, Role)>,
     month: String,
     agency: Option<g::Agency>,
@@ -78,6 +80,7 @@ enum Intent {
     ExportPreparation,
     PrepareSss,
     CheckBir,
+    Annual,
 }
 impl State {
     pub(super) fn bind(&mut self, data: &Snapshot) {
@@ -95,6 +98,7 @@ impl State {
         self.form.is_some() || self.registration.editing() || self.collection.is_some()
     }
     pub(super) fn scroll_key(&self) -> (u8, Option<Uuid>) {
+        if self.annual_open {return (22,None);}
         if self.bir_open {return (21,None);}
         if let Some(s) = &self.collection {
             return (20, Some(s.basis.receipt.id));
@@ -116,6 +120,9 @@ impl State {
     }
     pub(super) fn accept_bir(&mut self,r:g::bir_file::Report,data:&Snapshot){
         self.bind(data);if self.bir_open {self.bir.accept(r,data);}
+    }
+    pub(super) fn accept_annual(&mut self,r:g::annual::Ledger,data:&Snapshot){
+        self.bind(data);if self.annual_open {self.annual.accept(r,data);}
     }
     pub(super) fn accept_collection(&mut self, b: g::sss_collection::Basis, data: &Snapshot) {
         self.bind(data);
@@ -335,6 +342,7 @@ impl HrisApp {
         if !self.data.access.role.manages_hr() {
             return;
         }
+        if self.payroll_state.government.annual_open {self.payroll_government_annual(ui);return;}
         if self.payroll_state.government.bir_open {self.payroll_bir_file(ui);return;}
         if self.payroll_state.government.collection.is_some() {
             self.payroll_sss_collection(ui);
@@ -382,6 +390,7 @@ impl HrisApp {
                 }
             };
             match intent {
+                Intent::Annual=>{self.payroll_state.government.annual_open=true;},
                 Intent::CheckBir=>{self.payroll_state.government.bir_open=true;},
                 Intent::PrepareSss => self.send(Command::GovernmentSssPrepare { filter }),
                 Intent::Read => self.send(Command::Government {
@@ -467,6 +476,7 @@ fn overview(ui: &mut Ui, state: &mut State, data: &Snapshot, busy: bool) -> Opti
                 });
         });
         if state.agency==Some(g::Agency::Bir) && ui.add_enabled(!busy&&connected,egui::Button::new("Check BIR 1604C file")).clicked(){out=Some(Intent::CheckBir);}
+        if state.agency==Some(g::Agency::Bir) && ui.add_enabled(!busy&&connected,egui::Button::new("Annual recorded sources")).clicked(){out=Some(Intent::Annual);}
         if ui
             .add_enabled(!busy && connected, egui::Button::new("Generate / refresh"))
             .clicked()
@@ -1081,6 +1091,11 @@ impl HrisApp {
             r.submitted_by = None;
         }
         let state = &mut self.payroll_state.government;
+        if preview.starts_with("payroll-government-annual") {
+            state.annual_open=true;
+            state.annual=super::government_annual_view::State::preview(preview);
+            return;
+        }
         if preview.starts_with("payroll-government-bir") {
             state.agency=Some(g::Agency::Bir);state.month=report.filter().month.to_string();
             if preview.ends_with("overview"){state.report=None;return;}

@@ -8,6 +8,8 @@ mod payroll_exchange_adapter;
 mod government_export_tests;
 #[cfg(test)]
 mod bir_file_tests;
+#[cfg(test)]
+mod government_annual_tests;
 use crate::access::{Access, AccessEvent, AdminAction, ManagedAccount};
 use crate::account::{self, AccountAction, AccountProfile, DisplayPreferences, PersonalDetails};
 use crate::documents::{self, DocumentAction, DocumentState, EmployeeDocument};
@@ -1861,6 +1863,7 @@ pub enum Command {
     OpeningImportErrors {report:crate::leave::opening_import::Import,destination:std::path::PathBuf},
     PreviewLeaveOpeningImport(Vec<crate::leave::dated::OpeningRecord>),
     PreviewLeaveOpening(crate::leave::dated::OpeningRecord),
+    GovernmentAnnual {year:i32,destination:Option<std::path::PathBuf>},
     GovernmentSssPrepare {filter:crate::payroll_government::Filter},
     GovernmentBirCheck {source:std::path::PathBuf,expected_hash:Option<String>,destination:Option<std::path::PathBuf>},
     GovernmentSssExport {filter:crate::payroll_government::Filter,request:Box<crate::payroll_government::sss_collection::Request>,destination:std::path::PathBuf},
@@ -1904,6 +1907,7 @@ pub struct Update {
     pub attendance_import_receipt:Option<crate::attendance_imports::Receipt>,
     pub leave_opening_import_preview:Option<crate::leave::opening_import::BatchPreview>,
     pub leave_opening_preview:Option<crate::leave::dated::Preview>,
+    pub government_annual:Option<crate::payroll_government::annual::Ledger>,
     pub government_sss:Option<crate::payroll_government::sss_collection::Basis>,
     pub government_bir:Option<crate::payroll_government::bir_file::Report>,
     pub government_registration:Option<crate::payroll_government::registration::Snapshot>,
@@ -1956,6 +1960,7 @@ pub fn worker(
             let mut payroll_report_result = None;
             let mut payroll_exchange_result = None;
             let mut government_result = None;
+            let mut annual_result = None;
             let mut registration_result = None;
             let mut sss_result=None;
             let mut bir_result=None;
@@ -2141,6 +2146,14 @@ pub fn worker(
                         crate::reports::save_export(&destination, &bytes)?;
                         Ok(current.clone())
                     })()
+                }
+                Command::GovernmentAnnual{year,destination}=>{
+                    (||{let client=cloud.as_mut().context("Sign in to generate annual recorded sources.")?;
+                        let data=client.snapshot()?;
+                        annual_result=Some(client.government_annual_ledger(&data,year,destination.as_deref())?);
+                        message=if destination.is_some(){"Fresh internal annual source worksheet exported. No tax return or payroll payment was changed.".into()}
+                            else{"Annual recorded sources refreshed. Review actual receipt dates and excluded records.".into()};
+                        Ok(data)})()
                 }
                 Command::GovernmentSssPrepare{filter}=>{
                     (||->Result<Snapshot>{
@@ -2336,6 +2349,7 @@ pub fn worker(
                     attendance_import_receipt:attendance_import_receipt_result,
                     leave_opening_import_preview:opening_import_preview_result,
                     leave_opening_preview:opening_preview_result,
+                    government_annual:annual_result,
                     government_sss:sss_result,
                     government_bir:bir_result,
                     government_registration:registration_result,
@@ -2373,6 +2387,7 @@ pub fn worker(
                             leave_import_receipt:None,
                             attendance_import_receipt:None,
                             leave_opening_preview:None,
+                            government_annual:None,
                             government_sss:None,
                             government_bir:None,
                             government_registration:None,
