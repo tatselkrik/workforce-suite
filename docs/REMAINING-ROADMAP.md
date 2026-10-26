@@ -1,5 +1,13 @@
 # Remaining HRIS roadmap — agreed order
 
+**27October2026 current boundary:** Desktop0.1.60 is installed and privately
+published, including annual issued-pay details and separate CSV/Excel. The
+remaining independent government-format investigation reached the concrete
+[input/acceptance boundaries](GOVERNMENT-REMAINING-INPUTS.md). Manual BIR checks
+and the separate portal-browser reminder remain deferred. The same continuation
+automation is paused pending newly actionable input; no completed delivery or
+unchanged failed check should repeat. This supersedes older active-queue notes.
+
 **27October2026 delivered:** Desktop0.1.59 is installed and privately published.
 Its literal BIR declaration/source review is crossed out below; the government
 milestone remains partial. Keep0.1.58rollback and do not repeat059delivery.
