@@ -30,6 +30,15 @@ structurally consistent file reconciled or officially validated.
   fields. Match unambiguous employee TIN/branch pairs, retain namesakes and mark
   missing/duplicate/unmatched identities for review. Current identity matching is
   not historical or agency-assignment certification.
+- Further contract review confirms allocation-source lookup explicitly excludes
+  BIR (`government_allocation_source` only accepts SSS/PhilHealth/Pag-IBIG).
+  Thus current BIR effective facts need no contribution-month redistribution;
+  preserve the existing base source contract instead of projecting private
+  contribution review/remittance history into the annual view.
+- Current payroll source reporting starts in 2025 and rejects future calendar
+  months. A current-year annual wrapper cannot blindly call all twelve months,
+  and file-layout support from 2023 does not establish payroll-source support
+  for 2023/2024. Unsupported/unrecorded years must not become a zero balance.
 
 ## Next safe implementation decision
 
@@ -46,6 +55,28 @@ prior/current employer allocation. Resolve and verify the exact official mapping
 before adding a claimed expected file amount. Any comparison export has its own
 explicit internal worksheet contract; preserve the existing minimal diagnostic
 export's promise to omit raw employee identifiers, names and amounts.
+
+## First increment and verification cases
+
+A bounded annual **recorded-source ledger**, not an expected tax return, can
+precede automatic file reconciliation. Derive supported elapsed months within
+one protected statement, deduplicate identical kind/source IDs, reject conflicting
+duplicates and retain original service dates beside actual receipt dates. Expose
+received-in-year totals separately from approved/unpaid, missing-receipt,
+postdated, withdrawn and review-only facts. Preserve signed centavos; missing or
+unsupported inputs are not zero. Do not total both original source net cash and
+contained final cash. Current BIR registrations can be a minimal selected-agency
+projection, with the existing strict scope/revision/canonical-ID validation.
+
+Required cases include postdated same-key duplication across service/receipt
+months; prior-year service/current-year receipt; signed annual-tax/amendment
+settlements; final original tax plus additional adjustment once; missing receipt;
+unsupported year; row-bound rejection without truncation; namesakes and ambiguous
+or missing identities; HR/Admin positives versus non-HR/metadata forgery denial;
+and revocation after render preventing new-file IO. Stored payroll, receipts,
+company registration and other agencies must remain unchanged. Review the
+current official mapping before presenting any declaration field as an expected
+amount; none of these cases establishes agency acceptance.
 
 Sources already inspected: published RMC25-2024 Annex A pp6–9; supplied7.4 readable
 `val_1604c` method (Schedule1 lines580–641 in the compact private extraction);
