@@ -59,6 +59,7 @@ save the exact frozen file, download a reconciliation template, import reviewed
 acknowledgements and inspect original export/history. The direct connection control
 stays unavailable with a target-required explanation. No external send occurs.
 
-Implementation and delivery are in progress. Do not mark roadmap item7 complete
-until local/server permission, retry, race, exact-byte and immutable-source checks,
-native UI inspection, guarded migration and release/installation have passed.
+Implemented, verified, installed and privately published in desktop 0.1.53.
+See [the testing guide](PAYROLL-EXCHANGE-0.1.53-CHECKLIST.md) and
+[delivery evidence](PAYROLL-EXCHANGE-0.1.53-VERIFICATION.md). Actual vendor
+connections and acceptance remain separate, unresolved scope.

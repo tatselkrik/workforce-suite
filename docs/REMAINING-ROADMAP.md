@@ -8,7 +8,8 @@ Item4 is delivered in installed/private desktop0.1.49, including protected dated
 policies, captured entitlements, entered openings and atomic CSV openings.
 [Verification](LEAVE-OPENINGS-0.1.49-VERIFICATION.md) records the local, hosted,
 visual, installer and private-channel evidence and remaining verification limits.
-Item6 is delivered in050–052. Continue item7; the same scheduler remains active.
+Items4–7 are delivered in049–053. Remaining portal-browser and government-file
+verification/investigation retain their recorded limits; the same scheduler remains active.
 
 **Scope refinement25October2026:** browser verification is the current portal
 priority. Free mobile-width browser checks may be included; physical-phone and
@@ -73,9 +74,12 @@ unconfigured external connection to a completed integration.
    normal engines. See [leave evidence](LEAVE-IMPORTS-0.1.52-VERIFICATION.md),
    [attendance evidence](ATTENDANCE-IMPORTS-0.1.51-VERIFICATION.md) and
    [Excel evidence](NATIVE-EXCEL-0.1.50-VERIFICATION.md).
-7. **Accounting and external payroll integration foundations.** Configurable data
-   exchange, reconciliation, retries and integration history. Actual connections
-   require resolved company software/vendor targets.
+7. ~~**Accounting and external payroll integration foundations.** Configurable
+   data exchange, reconciliation, retries and integration history.~~ Delivered and
+   installed in **0.1.53**: versioned Admin CSV columns, protected original snapshots,
+   human acknowledgement context, atomic posting, exact retries/closed identities,
+   Admin resets and private history. Actual vendor connections remain **deferred**
+   pending selected company software/targets. See [verification](PAYROLL-EXCHANGE-0.1.53-VERIFICATION.md).
 8. ~~**Portal-only notification display for now.**~~ The own inbox, unread counts
    and read history are delivered in portal0.1.6, as part of item3. External company
    email and background browser/OS push are **deferred**, not implemented.
@@ -85,6 +89,14 @@ unconfigured external connection to a completed integration.
    resumption; do not treat the placeholder as a working connection.
 
 ## Progress and boundaries
+
+- Desktop **0.1.53** is installed and privately published, frozen source
+  `5a02301ca75863de035065f61ee7080565dd8497`; retain **0.1.52** rollback.560 native
+  checks,215 new SQL/7,429 schema assertions, fresh69 replay, seven final fictional
+  layouts and six actual hosted native captures pass. Independent CSV/template,
+  live race/permission/freshness, exact installer/recovery, installed-state and
+  private signed-download/access checks pass. Roadmap7 foundations are complete;
+  actual vendors remain unresolved. See [the testing checklist](PAYROLL-EXCHANGE-0.1.53-CHECKLIST.md).
 
 - Desktop0.1.52is installed and privately published, frozen source
   `ab81e383143c71c6e3ef317f4528ea7347c6b70d`; keep0.1.51rollback.541native checks,

@@ -1,6 +1,7 @@
 # HRIS Desktop0.1.53 — local payroll exchange
 
-Release verification is in progress. Installation/publication are not yet claimed.
+Installed and privately published. Use this guide with the accompanying
+[verification record](PAYROLL-EXCHANGE-0.1.53-VERIFICATION.md).
 
 Open **Payroll > Data exchange** with a current HR/Admin account.
 
@@ -11,8 +12,8 @@ Open **Payroll > Data exchange** with a current HR/Admin account.
   employee/search scope. Preview the current issued or received facts, then
   **Create export snapshot**. Missing legacy employee labels need review or an
   explicitly narrower scope; records are never silently omitted.
-- Save the original CSV to a new file. Money is integer PHP centavos, so100 means
-  PHP1.00. Cash, source offsets, final contained pay and tax advice remain separate.
+- Save the original CSV to a new file. Money is integer PHP centavos, so 100 means
+  PHP 1.00. Cash, source offsets, final contained pay and tax advice remain separate.
   Unavailable values stay blank. A reconciliation digest identifies each source.
 - Change or disable a profile, then reopen its old export in **Export history**.
   The original columns, facts, bytes and checksum should remain unchanged.
