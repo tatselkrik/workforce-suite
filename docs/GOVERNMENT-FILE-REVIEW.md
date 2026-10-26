@@ -103,6 +103,16 @@ MCRF template compatibility.
 
 ## Next inputs and completion boundary
 
+27October ordinary public retrieval: the official
+[EPRS v2.1 guide](https://www.philhealth.gov.ph/downloads/employer/EPRS_v2.1_UserManual.pdf)
+downloaded successfully (18 pages; PDF metadata dated8October2012). Its text and
+rendered contents/remittance pages describe old screens and salary brackets,
+without a CSV/upload column specification. It cannot supply a current file
+adapter or current contribution rules. The employer procedures page currently
+links ePOAF access registration, not a publicly documented upload template.
+No registration form was submitted, software executed, employee data uploaded
+or access challenge bypassed. The current file-format/acceptance gap remains.
+
 The free local exchange foundations are delivered in053. Government milestone2
 remains partial. The original public-source review added no application feature,
 SQL, rate pack, release or agency-acceptance claim. Subsequent BIR preflight work

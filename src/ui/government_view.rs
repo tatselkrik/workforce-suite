@@ -132,6 +132,9 @@ impl State {
     pub(super) fn accept_annual(&mut self,r:g::annual::Ledger,data:&Snapshot){
         self.bind(data);if self.annual_open {self.annual.accept(r,data);}
     }
+    pub(super) fn accept_annual_pay(&mut self,r:g::annual_pay::Report,data:&Snapshot){
+        self.bind(data);if self.annual_open {self.annual.accept_pay(r,data);}
+    }
     pub(super) fn accept_declarations(&mut self,r:g::bir_declarations::Report,data:&Snapshot){
         self.bind(data);if self.declarations_open {self.declarations.accept(r,data);}
     }

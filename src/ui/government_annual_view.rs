@@ -8,6 +8,7 @@ use chrono::Datelike;
 pub(super) struct State {
     year: i32,
     report: Option<Ledger>,
+    pay: Option<crate::payroll_government::annual_pay::Report>,
     search: String,
     received_only: bool,
     page: usize,
@@ -21,12 +22,22 @@ impl State {
             && report.wire.year == self.year
         {
             self.report = Some(report);
+            self.pay = None;
+            self.pending = false;
+        }
+    }
+    pub(super) fn accept_pay(&mut self, report: crate::payroll_government::annual_pay::Report, data: &Snapshot) {
+        if data.access.role.manages_hr() && report.ledger.wire.company_id == data.company.id
+            && report.ledger.wire.year == self.year {
+            self.report = Some(report.ledger.clone());
+            self.pay = Some(report);
             self.pending = false;
         }
     }
     pub(super) fn failed(&mut self) {
         if self.pending {
             self.report = None;
+            self.pay = None;
             self.pending = false;
         }
     }
@@ -40,10 +51,17 @@ impl State {
         if name.contains("unknown") {
             wire.entries[1].fact.parts.employee_cents = None;
         }
-        let report = Ledger::from_wire(wire, Uuid::from_u128(1), 2026).unwrap();
+        let mut report = Ledger::from_wire(wire, Uuid::from_u128(1), 2026).unwrap();
+        let pay = if name.contains("details") {
+            let mut r = crate::payroll_government::annual_pay::fixture();
+            if name.contains("unknown") {r.details[0].values.insert("basic".into(),None);r.details[0].source_found=false;
+                r.details[0].values.values_mut().for_each(|n|*n=None);}
+            report=r.ledger.clone();Some(r)
+        }else{None};
         Self {
             year: 2026,
             report: Some(report),
+            pay,
             page: usize::from(name.contains("page2")),
             received_only: name.contains("received"),
             ..Default::default()
@@ -59,6 +77,7 @@ impl HrisApp {
         let mut back = false;
         let mut read = false;
         let mut export = false;
+        let mut export_pay = false;
         ui.heading("Annual recorded sources · BIR");
         ui.add(egui::Label::new("Review withholding recorded on individual receipts in the selected year. Original service dates and unpaid, missing or postdated receipts stay separate. Current records are shown as of today; this does not reconstruct a historical year-end snapshot.").wrap());
         ui.add(egui::Label::new(RichText::new("Internal source worksheet only. This is not expected BIR withholding, a tax calculation, a 1604C/2316 reconciliation or an officially validated return. Prior-employer amounts, PERA and certificate classifications are not inferred.").weak()).wrap());
@@ -79,6 +98,7 @@ impl HrisApp {
                     });
                 if old != state.year {
                     state.report = None;
+                    state.pay = None;
                     state.page = 0;
                 }
                 egui::ComboBox::from_id_salt("government_annual_format")
@@ -104,7 +124,10 @@ impl HrisApp {
                     egui::Button::new("Export fresh annual worksheet"),
                 )
                 .clicked();
+            export_pay = ui.add_enabled(!self.busy && connected && state.pay.is_some(),
+                egui::Button::new("Export fresh pay details")).clicked();
         });
+        if state.pay.is_some() {ui.add(egui::Label::new(crate::payroll_government::annual_pay::NOTE).wrap());}
         if let Some(report) = &state.report {
             let w = &report.wire;
             let s = &report.summary;
@@ -206,12 +229,37 @@ impl HrisApp {
                 let f = &e.fact;
                 let p = report.employee(f.employee_id);
                 egui::Frame::group(ui.style()).show(ui,|ui|{
+                    #[cfg(feature="qa-screenshot")]
+                    {
+                        let target=std::env::var("HRIS_PREVIEW_SCROLL").unwrap_or_default();
+                        if (target=="pay-first"&&f.kind==crate::payroll_government::Kind::Monthly)
+                            ||(target=="pay-thirteenth"&&f.kind==crate::payroll_government::Kind::Thirteenth)
+                            ||(target=="pay-review"&&f.state==SourceState::ReviewOnly) {
+                            ui.scroll_to_cursor(Some(egui::Align::TOP));
+                        }
+                    }
                     ui.set_min_width(ui.available_width());
                     ui.add(egui::Label::new(RichText::new(format!("{} · {}",p.employee_code,p.employee_name)).strong()).wrap());
                     ui.horizontal_wrapped(|ui|{ui.label(f.kind.label());ui.separator();ui.label(f.state.label());});
                     ui.add(egui::Label::new(format!("Service: {} to {} · Actual receipt: {}",f.starts_on,f.ends_on,f.received_on.map(|d|d.to_string()).unwrap_or_else(||"Not recorded".into()))).wrap());
                     ui.label(format!("Recorded withholding: {}",f.parts.employee_cents.map(crate::payroll::money).unwrap_or_else(||"Unknown".into())));
                     ui.add(egui::Label::new(e.treatment()).wrap());
+                    if let Some(pay)=&state.pay {
+                        let d=pay.detail(f.kind,f.id);
+                        egui::CollapsingHeader::new("Recorded pay details").id_salt(("pay",f.kind,f.id))
+                            .default_open(cfg!(feature="qa-screenshot"))
+                            .show(ui,|ui|{
+                                ui.add(egui::Label::new(crate::payroll_government::annual_pay::scope_note(f.kind,f.state)).wrap());
+                                if !d.source_found {ui.label("Issued source unavailable; expected amounts remain unknown.");}
+                                for k in crate::payroll_government::annual_pay::fields(f.kind,f.state) {
+                                    let width=(ui.available_width()*0.58).clamp(120.0,320.0);
+                                    ui.horizontal_top(|ui|{
+                                        ui.allocate_ui_with_layout(egui::vec2(width,20.0),egui::Layout::top_down(egui::Align::Min),|ui|{ui.set_min_width(width);ui.add(egui::Label::new(k.label).wrap());});
+                                        ui.add(egui::Label::new(d.values[k.key].map(crate::payroll::money).unwrap_or_else(||"Unknown".into())).wrap());
+                                    });
+                                }
+                            });
+                    }
                     egui::CollapsingHeader::new("Source reference and observations").id_salt((f.kind,f.id)).show(ui,|ui|{
                         ui.add(egui::Label::new(format!("Source: {}",f.id)).wrap());
                         ui.add(egui::Label::new(format!("Observed in: {}",e.observed_months.iter().map(|d|d.format("%b %Y").to_string()).collect::<Vec<_>>().join(", "))).wrap());
@@ -228,7 +276,13 @@ impl HrisApp {
             return;
         }
         let year = state.year;
-        if export {
+        if export_pay {
+            let extension = if state.excel { "xlsx" } else { "csv" };
+            match crate::reports::choose_export(&format!("HRIS-recorded-pay-details-{year}.{extension}")) {
+                Ok(Some(path))=>{state.pending=true;self.send(Command::GovernmentAnnualPay{year,destination:Some(path)});}
+                Ok(None)=>{},Err(e)=>self.notice=Some((e.to_string(),true)),
+            }
+        } else if export {
             let extension = if state.excel { "xlsx" } else { "csv" };
             match crate::reports::choose_export(&format!(
                 "HRIS-BIR-recorded-sources-{year}.{extension}"
@@ -245,7 +299,7 @@ impl HrisApp {
             }
         } else if read {
             state.pending = true;
-            self.send(Command::GovernmentAnnual {
+            self.send(Command::GovernmentAnnualPay {
                 year,
                 destination: None,
             });
@@ -277,5 +331,15 @@ mod tests {
         state.pending = true;
         state.failed();
         assert!(state.report.is_none());
+    }
+    #[test]
+    fn pay_and_parent_are_accepted_and_cleared_as_one_scope() {
+        let mut data=DemoStore::new().data;let r=crate::payroll_government::annual_pay::fixture();
+        let mut state=State{year:2026,..Default::default()};
+        data.access.role=Role::Manager;state.accept_pay(r.clone(),&data);assert!(state.pay.is_none());
+        data.access.role=Role::Administrator;state.accept_pay(r.clone(),&data);assert!(state.pay.is_some()&&state.report.is_some());
+        state.accept(annual::fixture(),&data);assert!(state.pay.is_none());
+        state.year=2025;state.accept_pay(r.clone(),&data);assert!(state.pay.is_none());
+        state.year=2026;state.accept_pay(r,&data);state.pending=true;state.failed();assert!(state.pay.is_none()&&state.report.is_none());
     }
 }

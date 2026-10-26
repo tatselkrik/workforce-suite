@@ -238,14 +238,22 @@ fn identity_export_keeps_existing_destination_unchanged() {
 #[test]
 #[ignore = "Explicit synthetic Auth session for the installed, target-guarded HRIS project only."]
 fn hosted_native_identity_projection_for_authorized_installation() {
-    hosted_native_bir_projection(false);
+    hosted_native_bir_projection("identities");
 }
 #[test]
 #[ignore = "Explicit synthetic Auth session for the installed, target-guarded HRIS project only."]
 fn hosted_native_declaration_projection_for_authorized_installation() {
-    hosted_native_bir_projection(true);
+    hosted_native_bir_projection("declarations");
 }
-fn hosted_native_bir_projection(declarations: bool) {
+#[test]
+#[ignore = "Explicit synthetic Auth session for installed, target-guarded HRIS pay review only."]
+fn hosted_native_annual_pay_for_authorized_installation() {
+    hosted_native_bir_projection("paydetails");
+}
+fn hosted_native_bir_projection(mode: &str) {
+    assert!(matches!(mode,"identities"|"declarations"|"paydetails"));
+    let declarations=mode=="declarations";
+    let pay=mode=="paydetails";
     use sha2::Digest;
     let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .canonicalize()
@@ -275,7 +283,7 @@ fn hosted_native_bir_projection(declarations: bool) {
         reference
     );
     let session: AuthSession = serde_json::from_str(
-        &std::env::var(if declarations {"HRIS_DECLARATION_AUTH_SESSION"} else {"HRIS_IDENTITY_AUTH_SESSION"})
+        &std::env::var(if pay {"HRIS_PAYDETAIL_AUTH_SESSION"}else if declarations {"HRIS_DECLARATION_AUTH_SESSION"} else {"HRIS_IDENTITY_AUTH_SESSION"})
             .expect("Explicit short-lived synthetic session"),
     )
     .unwrap();
@@ -304,13 +312,24 @@ fn hosted_native_bir_projection(declarations: bool) {
     } else {
         "hr_generalist"
     };
-    let folder = work.join(format!("{}-live-{role}", if declarations {"declarations059"} else {"identities058"}));
+    let folder = work.join(format!("{}-live-{role}", if pay {"paydetails060-verified"}else if declarations {"declarations059"} else {"identities058"}));
     std::fs::create_dir(&folder).unwrap();
     let mut summaries = vec![];
     let mut employer_ready = false;
     for year in [2025, 2026] {
         let before = cloud.current_access().unwrap();
         assert_eq!(before, data.access);
+        if pay {
+            let r=cloud.government_annual_pay_details(&data,year,None).unwrap();
+            let mut exports=vec![];
+            for ext in ["csv","xlsx"] {
+                let bytes=r.export(std::path::Path::new(&format!("memory.{ext}"))).unwrap();
+                exports.push(json!({"format":ext,"bytes":bytes.len(),"sha256":format!("{:x}",sha2::Sha256::digest(&bytes))}));
+            }
+            assert_eq!(cloud.current_access().unwrap(),before);
+            summaries.push(json!({"year":year,"sources":r.ledger.wire.entries.len(),"details":r.details.len(),"in_memory_exports":exports}));
+            continue;
+        }
         let wire: bi::Wire = decode(
             cloud
                 .request(Method::POST, "rpc/government_bir_identities")
@@ -330,7 +349,7 @@ fn hosted_native_bir_projection(declarations: bool) {
         summaries.push(json!({"year":year,"roster_people":basis.people.len(),"source_people":basis.ledger.wire.employees.len()}));
         // Never persist the hosted roster, tax IDs, names or registration history.
     }
-    if !employer_ready {
+    if !employer_ready && !pay {
         let raw = fixture::source(&["234567890"]);
         let source = folder.join(fixture::FILE_NAME);
         std::fs::write(&source, &raw).unwrap();
@@ -351,8 +370,8 @@ fn hosted_native_bir_projection(declarations: bool) {
         assert_eq!(std::fs::read(&source).unwrap(), raw);
         std::fs::remove_file(source).unwrap();
     }
-    let proof = json!({"all_passed":true,"role":role,"snapshots":summaries,"employer_ready":employer_ready,"declaration_adapter":declarations,
-        "missing_configuration_export_guard_exercised":!employer_ready,"fixed_authorized_project_and_local_evidence":true,
+    let proof = json!({"all_passed":true,"role":role,"snapshots":summaries,"employer_ready":employer_ready,"declaration_adapter":declarations,"pay_details_adapter":pay,
+        "missing_configuration_export_guard_exercised":!employer_ready&&!pay,"fixed_authorized_project_and_local_evidence":true,
         "hosted_identity_data_persisted":false,"hosted_full_file_matching_verified":false,"official_acceptance":false});
     std::fs::write(
         folder.join("proof.json"),

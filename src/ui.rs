@@ -1197,6 +1197,7 @@ impl HrisApp {
                     if let Some(report)=update.government_bir_declarations{self.payroll_state.government.accept_declarations(report,&data);}
                     if let Some(report)=update.government_bir_identities{self.payroll_state.government.accept_identities(report,&data);}
                     if let Some(ledger)=update.government_annual{self.payroll_state.government.accept_annual(ledger,&data);}
+                    if let Some(report)=update.government_annual_pay{self.payroll_state.government.accept_annual_pay(report,&data);}
                     if let Some(basis)=update.government_sss{self.payroll_state.government.accept_collection(basis,&data);}
                     if let Some(report)=update.government_bir{self.payroll_state.government.accept_bir(report,&data);}
                     if let Some(record)=update.government_registration{self.payroll_state.government.accept_registration(record,&data);}

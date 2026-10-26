@@ -7,6 +7,7 @@ use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 mod export;
 pub mod annual;
+pub mod annual_pay;
 pub mod bir_identity;
 pub mod bir_declarations;
 pub mod bir_file;

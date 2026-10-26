@@ -1868,6 +1868,7 @@ pub enum Command {
     GovernmentBirDeclarations {year:i32,source:std::path::PathBuf,expected_hash:Option<String>,destination:Option<std::path::PathBuf>},
     GovernmentBirIdentities {year:i32,source:std::path::PathBuf,expected_hash:Option<String>,destination:Option<std::path::PathBuf>},
     GovernmentAnnual {year:i32,destination:Option<std::path::PathBuf>},
+    GovernmentAnnualPay {year:i32,destination:Option<std::path::PathBuf>},
     GovernmentSssPrepare {filter:crate::payroll_government::Filter},
     GovernmentBirCheck {source:std::path::PathBuf,expected_hash:Option<String>,destination:Option<std::path::PathBuf>},
     GovernmentSssExport {filter:crate::payroll_government::Filter,request:Box<crate::payroll_government::sss_collection::Request>,destination:std::path::PathBuf},
@@ -1914,6 +1915,7 @@ pub struct Update {
     pub government_bir_declarations:Option<crate::payroll_government::bir_declarations::Report>,
     pub government_bir_identities:Option<crate::payroll_government::bir_identity::Report>,
     pub government_annual:Option<crate::payroll_government::annual::Ledger>,
+    pub government_annual_pay:Option<crate::payroll_government::annual_pay::Report>,
     pub government_sss:Option<crate::payroll_government::sss_collection::Basis>,
     pub government_bir:Option<crate::payroll_government::bir_file::Report>,
     pub government_registration:Option<crate::payroll_government::registration::Snapshot>,
@@ -1967,6 +1969,7 @@ pub fn worker(
             let mut payroll_exchange_result = None;
             let mut government_result = None;
             let mut annual_result = None;
+            let mut annual_pay_result = None;
             let mut bir_identities_result = None;
             let mut bir_declarations_result = None;
             let mut registration_result = None;
@@ -2166,6 +2169,13 @@ pub fn worker(
                         bir_identities_result=Some(client.government_bir_identities(&data,year,&source,expected_hash.as_deref(),destination.as_deref())?);
                         message=if destination.is_some(){"Fresh internal identity review exported. No tax return, payroll or registration was changed.".into()}
                             else{"Current BIR identity pairs reviewed. Historical assignment and expected tax remain unverified.".into()};Ok(data)})()
+                }
+                Command::GovernmentAnnualPay{year,destination}=>{
+                    (||{let client=cloud.as_mut().context("Sign in to review recorded pay details.")?;
+                        let data=client.snapshot()?;
+                        annual_pay_result=Some(client.government_annual_pay_details(&data,year,destination.as_deref())?);
+                        message=if destination.is_some(){"Fresh recorded pay details exported. Review overlapping components and receipt states separately.".into()}
+                            else{"Annual sources and issued pay details refreshed together.".into()};Ok(data)})()
                 }
                 Command::GovernmentAnnual{year,destination}=>{
                     (||{let client=cloud.as_mut().context("Sign in to generate annual recorded sources.")?;
@@ -2372,6 +2382,7 @@ pub fn worker(
                     government_bir_declarations:bir_declarations_result,
                     government_bir_identities:bir_identities_result,
                     government_annual:annual_result,
+                    government_annual_pay:annual_pay_result,
                     government_sss:sss_result,
                     government_bir:bir_result,
                     government_registration:registration_result,
@@ -2412,6 +2423,7 @@ pub fn worker(
                             government_bir_declarations:None,
                             government_bir_identities:None,
                             government_annual:None,
+                            government_annual_pay:None,
                             government_sss:None,
                             government_bir:None,
                             government_registration:None,

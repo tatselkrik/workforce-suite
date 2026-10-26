@@ -400,6 +400,14 @@ require a selected company target and separate authority.
 
 ## Current resumption —26October2026
 
+Annual recorded pay components follow docs/GOVERNMENT-PAY-DETAILS.md. Keep their
+read-only same-statement source binding and current HR/Admin scope. Project only
+issued component whitelists; missing legacy fields remain unknown. Do not count
+annual tax basis, prior 13th-month entitlement or final-pay contained source net
+as new income. Additional settlement totals include returned deposits: they are
+not automatically taxable gross. Keep the old annual export compatible and new
+pay details separate from BIR return classifications or expected tax.
+
 Kirk resumed the remaining free roadmap and the SAME usage-reset scheduler,
 requesting continuation to the usage limit and again after its actual reset.
 The earlier required-input pause is superseded. Portal browser verification is

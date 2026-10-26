@@ -120,6 +120,21 @@ impl CloudClient {
         if let (Some(path),Some(output))=(destination,output){crate::reports::save_export(path,&output)?;}
         Ok(report)
     }
+    pub fn government_annual_pay_details(&mut self,current:&Snapshot,year:i32,destination:Option<&Path>)
+        ->Result<crate::payroll_government::annual_pay::Report>{
+        use crate::payroll_government::{annual,annual_pay::{Report,Wire}};
+        crate::payroll_reporting::authorize(current)?;
+        annual::validate_year(year,current.company.today())?;
+        let before=self.current_access()?;
+        if before!=current.access{return Err(AccessRevoked.into());}
+        let wire:Wire=decode(self.request(Method::POST,"rpc/government_annual_pay_details")?
+            .json(&json!({"p_year":year})).send()?)?;
+        let report=Report::from_wire(wire,before.company_id,year)?;
+        let bytes=destination.map(|path|report.export(path)).transpose()?;
+        if self.current_access()?!=before{return Err(AccessRevoked.into());}
+        if let (Some(path),Some(bytes))=(destination,bytes){crate::reports::save_export(path,&bytes)?;}
+        Ok(report)
+    }
     pub fn government_annual_ledger(&mut self,current:&Snapshot,year:i32,destination:Option<&Path>)
         ->Result<crate::payroll_government::annual::Ledger>{
         use crate::payroll_government::annual::{self,Ledger,Wire};
