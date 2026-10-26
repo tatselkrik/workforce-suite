@@ -92,6 +92,27 @@ impl Preparation {
     /// Contains only the selected agency's legal fields. Supporting references,
     /// HR notes, actor IDs and other agencies' identifiers are never projected.
     pub fn csv(&self) -> Result<Vec<u8>> {
+        self.table()?.csv()
+    }
+    pub fn xlsx(&self) -> Result<Vec<u8>> {
+        self.table()?.xlsx()
+    }
+    pub fn export(&self, path: &std::path::Path) -> Result<Vec<u8>> {
+        self.table()?.render(path)
+    }
+    fn table(&self) -> Result<super::export::Table> {
+        let checked = Self::from_wire(
+            PreparationWire {
+                version: "government-preparation-v1".into(),
+                review: self.report.wire.clone(),
+                registrations: self.registrations.clone(),
+            },
+            self.report.wire.source.company_id,
+            self.report.filter(),
+        )?;
+        checked.checked_table()
+    }
+    fn checked_table(&self) -> Result<super::export::Table> {
         let s = &self.report.wire.source;
         let company_keys = keys(s.agency, false);
         let person_keys = keys(s.agency, true);
@@ -138,20 +159,7 @@ impl Preparation {
             ]
             .map(str::to_owned),
         );
-        let mut out = String::from("\u{feff}");
-        let line = |row: Vec<String>| -> Result<String> {
-            ensure!(
-                row.len() == headers.len(),
-                "Preparation columns do not match."
-            );
-            Ok(row
-                .iter()
-                .map(|v| crate::reports::csv_cell(v))
-                .collect::<Result<Vec<_>>>()?
-                .join(",")
-                + "\r\n")
-        };
-        out.push_str(&line(headers.clone())?);
+        let mut rows = Vec::new();
         let employer = self.identity(None);
         let prefix = || {
             let mut row = vec![
@@ -237,7 +245,7 @@ impl Preparation {
                 String::new(),
                 flags.join("; "),
             ]);
-            out.push_str(&line(row)?);
+            rows.push(row);
         }
         let sum = &self.report.summary;
         let mut row = prefix();
@@ -260,8 +268,8 @@ impl Preparation {
             decimal(sum.remitted_cents), amount(sum.difference_cents),
             format!("INTERNAL REVIEW ONLY; {} unallocated; {} missing receipts; {} postdated; {} negative person balances; other agency declarations not inferred",
                 sum.unallocated_count,sum.missing_receipt_count,sum.dated_after_as_of_count,sum.negative_balance_count)]);
-        out.push_str(&line(row)?);
-        Ok(out.into_bytes())
+        rows.push(row);
+        Ok(super::export::Table { headers, rows })
     }
 }
 

@@ -4,6 +4,8 @@ mod learning_adapter;
 mod career_adapter;
 mod payroll_adapter;
 mod payroll_exchange_adapter;
+#[cfg(test)]
+mod government_export_tests;
 use crate::access::{Access, AccessEvent, AdminAction, ManagedAccount};
 use crate::account::{self, AccountAction, AccountProfile, DisplayPreferences, PersonalDetails};
 use crate::documents::{self, DocumentAction, DocumentState, EmployeeDocument};

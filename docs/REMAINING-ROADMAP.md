@@ -1,5 +1,14 @@
 # Remaining HRIS roadmap — agreed order
 
+**Latest resumption26October2026:** Kirk requested continuous remaining work to
+the usage limit and automatic continuation after the actual reset. The same
+scheduler is active again. Portal browser verification is deferred to a separate
+reminder. Kirk has supplied the BIR7.4 module/archive and reference downloads in
+the private reference folder; inspect before execution. The earlier input pause
+below is superseded. Government preparation/reconciliation native Excel exports
+are the current independent increment; BIR investigation follows. Neither is
+complete merely because work has started. Delivered049–053 must not be repeated.
+
 **Latest immediate queue25October2026:** Kirk authorized starting item4 now,
 resuming it across a usage reset if unfinished, then continuing item6 imports/
 native Excel and item7 exchange foundations. The next-refresh-only hold is

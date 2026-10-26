@@ -99,9 +99,9 @@ impl CloudClient {
     }
     pub fn government_preparation(&mut self,current:&Snapshot,filter:crate::payroll_government::Filter,destination:&Path)->Result<crate::payroll_government::Reconciliation>{
         let prepared=self.load_government_preparation(current,filter)?;
-        let bytes=prepared.csv()?;
+        let bytes=prepared.export(destination)?;
         if self.current_access()?!=current.access{return Err(AccessRevoked.into());}
-        crate::reports::save_csv(destination,&bytes)?;
+        crate::reports::save_export(destination,&bytes)?;
         Ok(prepared.report)
     }
     pub fn sss_collection_prepare(&mut self,current:&Snapshot,filter:crate::payroll_government::Filter)->Result<crate::payroll_government::sss_collection::Basis>{
@@ -165,8 +165,9 @@ impl CloudClient {
         let wire:crate::payroll_government::ReviewWire=decode(self.request(Method::POST,"rpc/government_reconciliation")?
             .json(&json!({"p_month":filter.month,"p_agency":filter.agency})).send()?)?;
         let report=crate::payroll_government::Reconciliation::from_wire(wire,before.company_id,filter)?;
+        let bytes=destination.map(|path|report.export(path)).transpose()?;
         if self.current_access()?!=before{return Err(AccessRevoked.into());}
-        if let Some(path)=destination{crate::reports::save_csv(path,&report.csv()?)?;}
+        if let (Some(path),Some(bytes))=(destination,bytes){crate::reports::save_export(path,&bytes)?;}
         Ok(report)
     }
     pub fn government_payroll_sources(

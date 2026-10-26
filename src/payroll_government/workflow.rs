@@ -613,22 +613,27 @@ impl Reconciliation {
         }
     }
     pub fn csv(&self) -> Result<Vec<u8>> {
+        self.table()?.csv()
+    }
+    pub fn xlsx(&self) -> Result<Vec<u8>> {
+        self.table()?.xlsx()
+    }
+    pub fn export(&self, path: &std::path::Path) -> Result<Vec<u8>> {
+        self.table()?.render(path)
+    }
+    fn table(&self) -> Result<super::export::Table> {
+        let checked = Self::from_wire(
+            self.wire.clone(),
+            self.wire.source.company_id,
+            self.filter(),
+        )?;
+        checked.checked_table()
+    }
+    fn checked_table(&self) -> Result<super::export::Table> {
         let s = &self.wire.source;
         let summary = &self.summary;
-        let mut out = String::from("\u{feff}");
-        let line = |values: Vec<String>| -> Result<String> {
-            ensure!(
-                values.len() == 22,
-                "Government worksheet columns do not match."
-            );
-            Ok(values
-                .iter()
-                .map(|v| crate::reports::csv_cell(v))
-                .collect::<Result<Vec<_>>>()?
-                .join(",")
-                + "\r\n")
-        };
-        out.push_str(&line(
+        let mut rows = Vec::new();
+        let headers =
             [
                 "record_type",
                 "company",
@@ -655,8 +660,7 @@ impl Reconciliation {
             ]
             .into_iter()
             .map(str::to_owned)
-            .collect(),
-        )?);
+            .collect();
         let prefix = |kind: &str| {
             vec![
                 kind.into(),
@@ -671,7 +675,7 @@ impl Reconciliation {
         let mut row = prefix("summary");
         row.extend([String::new(),String::new(),String::new(),String::new(),String::new(),String::new(),String::new(),if summary.complete{"Sources reconciled".into()}else{"UNRESOLVED".into()},decimal(known.employee_cents.unwrap()),decimal(known.employer_cents.unwrap()),decimal(known.ec_cents.unwrap()),decimal(total),if summary.complete{decimal(total)}else{"UNRESOLVED".into()},decimal(summary.remitted_cents),summary.difference_cents.map(decimal).unwrap_or("UNRESOLVED".into()),format!("{} unallocated; {} missing receipts; {} postdated receipts; {} negative person balances. Review worksheet; filing/payment is separate.",summary.unallocated_count,summary.missing_receipt_count,summary.dated_after_as_of_count,summary.negative_balance_count)]);
         row.insert(13, String::new());
-        out.push_str(&line(row)?);
+        rows.push(row);
         for f in &self.wire.effective_facts {
             let e = self
                 .employee(f.employee_id)
@@ -679,7 +683,7 @@ impl Reconciliation {
             let mut row = prefix("source");
             row.extend([f.id.to_string(),e.employee_code.clone(),e.employee_name.clone(),f.kind.label().into(),f.starts_on.to_string(),f.ends_on.to_string(),f.received_on.map(|d|d.to_string()).unwrap_or_default(),f.state.label().into(),f.parts.employee_cents.map(decimal).unwrap_or("UNKNOWN".into()),f.parts.employer_cents.map(decimal).unwrap_or("UNKNOWN".into()),f.parts.ec_cents.map(decimal).unwrap_or("UNKNOWN".into()),f.parts.total().map(decimal).unwrap_or("UNKNOWN".into()),String::new(),String::new(),String::new(),if matches!(f.state,State::Withdrawn|State::ReviewOnly){"Excluded from liability".into()}else if f.agency!=Agency::Bir&&f.contribution_month.is_none(){"Contribution coverage requires review".into()}else{"Original source / reviewed allocation; receipt and inclusion basis remain distinct".into()}]);
             row.insert(13, self.included(f).to_string());
-            out.push_str(&line(row)?);
+            rows.push(row);
         }
         for r in &self.wire.remittances {
             let mut row = prefix("remittance");
@@ -711,9 +715,9 @@ impl Reconciliation {
                     .into(),
             ]);
             row.insert(13, String::new());
-            out.push_str(&line(row)?);
+            rows.push(row);
         }
-        Ok(out.into_bytes())
+        Ok(super::export::Table { headers, rows })
     }
 }
 

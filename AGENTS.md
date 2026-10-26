@@ -383,3 +383,15 @@ records a payroll payment or vendor acceptance. Keep source net, cash, final-pay
 offsets, contained pay and tax advice distinct. Fail explicitly on history/budget
 limits; never remove history or start a paid upgrade. Actual vendor connections
 require a selected company target and separate authority.
+
+## Current resumption —26October2026
+
+Kirk resumed the remaining free roadmap and the SAME usage-reset scheduler,
+requesting continuation to the usage limit and again after its actual reset.
+The earlier required-input pause is superseded. Portal browser verification is
+deferred to a separate reminder and must not block independent authorized work.
+Kirk has supplied the official BIR module/reference downloads in the prepared
+private folder; inspect them before running any installer or validator. Continue
+the current government review/export increment, then the unblocked BIR format
+investigation. Preserve explicit internal-review versus agency-acceptance status.
+Do not repeat delivered049–053 or expand the paid/external/device boundaries.

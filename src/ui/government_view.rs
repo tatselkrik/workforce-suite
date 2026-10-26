@@ -17,6 +17,7 @@ pub(super) struct State {
     search: String,
     page: usize,
     receipt_page: usize,
+    export_excel: bool,
 }
 enum Form {
     Allocation(AllocationForm),
@@ -388,9 +389,10 @@ impl HrisApp {
                     });
                 }
                 Intent::Export => match crate::reports::choose_export(&format!(
-                    "HRIS-government-{}-{}.csv",
+                    "HRIS-government-{}-{}.{}",
                     filter.agency.label(),
-                    filter.month
+                    filter.month,
+                    if self.payroll_state.government.export_excel { "xlsx" } else { "csv" }
                 )) {
                     Ok(Some(path)) => self.send(Command::Government {
                         filter,
@@ -401,9 +403,10 @@ impl HrisApp {
                     Err(e) => self.notice = Some((e.to_string(), true)),
                 },
                 Intent::ExportPreparation => match crate::reports::choose_export(&format!(
-                    "HRIS-{}-preparation-{}.csv",
+                    "HRIS-{}-preparation-{}.{}",
                     filter.agency.label(),
-                    filter.month
+                    filter.month,
+                    if self.payroll_state.government.export_excel { "xlsx" } else { "csv" }
                 )) {
                     Ok(Some(path)) => self.send(Command::GovernmentPreparation {
                         filter,
@@ -446,6 +449,14 @@ fn overview(ui: &mut Ui, state: &mut State, data: &Snapshot, busy: bool) -> Opti
     let connected = data.mode == Mode::Supabase;
     let preview = cfg!(feature = "qa-screenshot") && state.current().is_some();
     ui.horizontal_wrapped(|ui| {
+        ui.add_enabled_ui(!busy, |ui| {
+            egui::ComboBox::from_id_salt("government_export_format")
+                .selected_text(if state.export_excel { "Excel (.xlsx)" } else { "CSV (.csv)" })
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut state.export_excel, false, "CSV (.csv)");
+                    ui.selectable_value(&mut state.export_excel, true, "Excel (.xlsx)");
+                });
+        });
         if ui
             .add_enabled(!busy && connected, egui::Button::new("Generate / refresh"))
             .clicked()
@@ -455,7 +466,7 @@ fn overview(ui: &mut Ui, state: &mut State, data: &Snapshot, busy: bool) -> Opti
         if ui
             .add_enabled(
                 !busy && connected && state.current().is_some(),
-                egui::Button::new("Export fresh review CSV"),
+                egui::Button::new("Export fresh review"),
             )
             .clicked()
         {
@@ -464,7 +475,7 @@ fn overview(ui: &mut Ui, state: &mut State, data: &Snapshot, busy: bool) -> Opti
         if ui
             .add_enabled(
                 !busy && connected && state.current().is_some(),
-                egui::Button::new("Export agency preparation CSV"),
+                egui::Button::new("Export agency preparation"),
             )
             .clicked()
         {
@@ -506,7 +517,7 @@ fn overview(ui: &mut Ui, state: &mut State, data: &Snapshot, busy: bool) -> Opti
             }));
         }
     });
-    ui.add(egui::Label::new("Agency preparation CSV contains the selected agency's registered identifiers and legal names. Keep it private to HR; it is an internal worksheet, not an upload file.").wrap());
+    ui.add(egui::Label::new("Agency preparation contains the selected agency's registered identifiers and legal names. Keep it private to HR; it is an internal review worksheet. Excel preserves identifiers and exact PHP amounts as text; totals are captured values and do not recalculate when edited.").wrap());
     if !connected && !preview {
         ui.label("Company account sign-in is required for government reconciliation.");
         return out;
@@ -1060,6 +1071,7 @@ impl HrisApp {
             r.submitted_by = None;
         }
         let state = &mut self.payroll_state.government;
+        state.export_excel = preview.contains("-excel");
         if preview.starts_with("payroll-government-sss") {
             let p = g::sss_collection::fixture();
             state.month = p.report.filter().month.to_string();
@@ -1130,6 +1142,23 @@ impl HrisApp {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn export_format_is_account_scoped_and_preserved_by_same_account_refresh() {
+        let mut data = DemoStore::new().data;
+        let mut state = State::default();
+        state.bind(&data);
+        state.export_excel = true;
+        state.bind(&data);
+        assert!(state.export_excel);
+        assert!(!state.editing());
+        data.access.user_id = Uuid::new_v4();
+        state.bind(&data);
+        assert!(!state.export_excel);
+        state.export_excel = true;
+        data.access.role = Role::Manager;
+        state.bind(&data);
+        assert!(!state.export_excel && state.report.is_none());
+    }
     #[test]
     fn unrelated_refresh_and_failed_save_preserve_unsaved_form_but_scope_changes_clear_it() {
         let store = DemoStore::new();
