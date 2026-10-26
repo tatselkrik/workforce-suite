@@ -1,7 +1,9 @@
 # 0.1.57 annual recorded BIR sources — verification
 
-**Implementation and build-time checks passed. Installation/private delivery is
-recorded separately after the frozen package is verified.**
+**Installed and privately published.** Exact artifact, installation and channel
+verification is recorded in [the delivery report](GOVERNMENT-0.1.57-DELIVERY.md).
+The frozen package retains the earlier build-time report; this documentation
+update records later delivery evidence without rewriting that package.
 
 Payroll → Government → BIR → Annual recorded sources adds supported-year review,
 actual receipt totals, separate unresolved/excluded records, source observations

@@ -7,7 +7,7 @@ reminder. Kirk has supplied the BIR7.4 module/archive and reference downloads in
 the private reference folder; inspect before execution. The earlier input pause
 below is superseded. Government preparation/reconciliation native Excel exports
 are delivered in054. BIR published-structure preflight055 is also installed/private-published;
-official module acceptance remains unverified. Delivered049–056 must not be
+official module acceptance remains unverified. Delivered049–057 must not be
 repeated. Continue the next verified government-format increment from the checkpoint.
 
 **Latest immediate queue25October2026:** Kirk authorized starting item4 now,
@@ -83,6 +83,11 @@ unconfigured external connection to a completed integration.
    the SSS draft is internal review. The BIR7.4 download is supplied and inspected. Read-only standalone Schedule1/2
    file preflight is delivered in055/056, including source-hash-bound private
    findings and exact PERA/net-basic controls; this does not complete agency acceptance. See [054verification](GOVERNMENT-0.1.54-VERIFICATION.md).
+   ~~Annual recorded BIR receipt-source review and fresh CSV/native Excel ledger~~
+   is delivered/installed in057, with source deduplication, signed cents and explicit
+   missing/unpaid/postdated states. [Delivery](GOVERNMENT-0.1.57-DELIVERY.md).
+   File identity matching/expected declaration amounts and official acceptance
+   remain pending; recorded withholding is not automatically a1604C field.
 3. ~~**Payroll, appraisal and training notifications.** Payslip/payment notices,
    review deadlines, training reminders and certificate-expiry alerts.~~ Delivered
    in desktop0.1.46 and local portal0.1.6; in-app only. External delivery is deferred.
