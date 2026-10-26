@@ -7,7 +7,7 @@ reminder. Kirk has supplied the BIR7.4 module/archive and reference downloads in
 the private reference folder; inspect before execution. The earlier input pause
 below is superseded. Government preparation/reconciliation native Excel exports
 are delivered in054. BIR published-structure preflight055 is also installed/private-published;
-official module acceptance remains unverified. Delivered049–055 must not be
+official module acceptance remains unverified. Delivered049–056 must not be
 repeated. Continue the next verified government-format increment from the checkpoint.
 
 **Latest immediate queue25October2026:** Kirk authorized starting item4 now,
@@ -80,9 +80,9 @@ unconfigured external connection to a completed integration.
    ~~Internal CSV/native Excel preparation and reconciliation worksheets~~ are
    delivered/installed in044/054, with selected legal identities and protected
    source-aware totals. Exact agency files/validator acceptance remain pending;
-   the SSS draft is internal review. The BIR7.4 download is supplied and inspected. Read-only Schedule1
-   file preflight is delivered in055, including source-hash-bound private
-   findings and exact PERA controls; this does not complete agency acceptance. See [054verification](GOVERNMENT-0.1.54-VERIFICATION.md).
+   the SSS draft is internal review. The BIR7.4 download is supplied and inspected. Read-only standalone Schedule1/2
+   file preflight is delivered in055/056, including source-hash-bound private
+   findings and exact PERA/net-basic controls; this does not complete agency acceptance. See [054verification](GOVERNMENT-0.1.54-VERIFICATION.md).
 3. ~~**Payroll, appraisal and training notifications.** Payslip/payment notices,
    review deadlines, training reminders and certificate-expiry alerts.~~ Delivered
    in desktop0.1.46 and local portal0.1.6; in-app only. External delivery is deferred.
@@ -117,6 +117,15 @@ unconfigured external connection to a completed integration.
    resumption; do not treat the placeholder as a working connection.
 
 ## Progress and boundaries
+
+- Desktop **0.1.56** is installed/private-published, frozen source
+  `134ab49743f9f8d9df99d2632352c242aba12a86`; keep0.1.55rollback.601default Rust
+  checks, four opt-in executions, eight independent findings workbooks/21rows
+  and ten fictional native views pass. Standalone Schedule2/MWE adds40exact
+  controls; factor remains outside monetary sums and eligibility stays unverified.
+  Hosted access/revocation/preservation, exact installer/recovery, actual installed
+  state and private signed download pass. Schema69/rates/dependencies unchanged.
+  Agency acceptance remains pending. See [056checklist](BIR-0.1.56-CHECKLIST.md).
 
 - Desktop **0.1.55** is installed and privately published, frozen source
   `d7a2b6bc6d2e72c3f5cb11cc023256a991c22b47`; retain0.1.54rollback.595default Rust

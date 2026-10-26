@@ -1,6 +1,6 @@
 # Desktop 0.1.56 — standalone minimum-wage file checks
 
-Installation/private delivery is recorded separately in the verification note.
+Installed/private delivery is verified in [the evidence note](BIR-0.1.56-VERIFICATION.md).
 
 1. Open **Payroll → Government → Reconciliation → BIR → Check BIR 1604C file**.
    Choose an unvalidated ASCII file containing only Schedule 2: H1604C,
