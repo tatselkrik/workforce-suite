@@ -2,8 +2,11 @@
 
 Status: the first annual recorded-source ledger is implemented for 0.1.57;
 see [its contract](GOVERNMENT-ANNUAL-LEDGER.md) and versioned verification.
-This proposal does not itself authorize further scope. File matching, expected
-return amounts and official acceptance remain unimplemented/unverified.
+This proposal does not itself authorize further scope. Current exact-registration
+identity review is delivered in058; configured-company hosted matching remains
+unverified while employer setup is incomplete. Expected return amounts,
+historical identity/certificates and official acceptance remain unimplemented/
+unverified. See [the identity contract](BIR-IDENTITY-REVIEW.md).
 
 The existing local file check verifies shape and exact internal controls. The
 next useful government-reconciliation step is a separate HR/Admin view of file

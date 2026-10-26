@@ -1,7 +1,9 @@
 # 0.1.58 current BIR identity review — verification
 
-**Build-time checks passed. Exact installation/private delivery is recorded
-separately after the frozen package is verified.**
+**Installed and privately published.** Exact installation/channel evidence is
+recorded in [the delivery report](GOVERNMENT-0.1.58-DELIVERY.md). The frozen
+package retains its earlier build-time report; this later documentation does
+not rewrite the package.
 
 Adds a local standalone Schedule 1/2 current-registration pair review, distinct
 from minimal BIR diagnostics and the annual recorded-source ledger. Exact unique
