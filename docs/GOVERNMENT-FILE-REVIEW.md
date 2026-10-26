@@ -1,5 +1,14 @@
 # Government file adapters — review in progress
 
+**27October2026:** Desktop057annual receipt-source review and058current identity
+review are installed/private-published. Supplied BIR7.4 members are now prepared
+in a separate inert workspace; ten fictional runtime probes pass the expected
+native-parser outcomes. The official application has not run: native Windows
+control fails kernel-assets initialization (OS error3). See the
+[offline preparation/findings and exact first manual check](BIR-OFFLINE-VALIDATION.md).
+Readable control gating is an unresolved reference finding, not proof of a
+compiled bug. Agency acceptance remains pending.
+
 **Later26October update:** Kirk supplied the7.4 ZIP, patch and job-aid/circular
 downloads in the prepared private reference folder. Do not request them again.
 The native government Excel increment is delivered/installed in054. Bounded

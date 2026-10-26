@@ -1,5 +1,17 @@
 # Remaining HRIS roadmap — agreed order
 
+**27October2026 runtime boundary:**057and058are installed/private-published;
+their annual source/identity review subscopes below are delivered. BIR7.4 inert
+preparation and ten fictional native probes are complete. Actual official-module
+validation remains NOT_RUN because Windows automation fails initialization.
+The next required input is the two baseline reports in the
+[prepared offline check](BIR-OFFLINE-VALIDATION.md). No further desktop release
+or SQL is needed merely to perform that check. Remaining agency adapters,
+historical/financial declaration reconciliation and official acceptance remain
+partial; portal-browser/paid/external/device boundaries are unchanged.
+The same usage-reset scheduler is paused at this genuine manual-input boundary;
+resume the existing queue from the reports/checkpoint after Kirk's response.
+
 **Latest resumption26October2026:** Kirk requested continuous remaining work to
 the usage limit and automatic continuation after the actual reset. The same
 scheduler is active again. Portal browser verification is deferred to a separate
