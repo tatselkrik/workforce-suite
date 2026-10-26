@@ -1,7 +1,7 @@
-# 0.1.59 declaration/source review — candidate checklist
+# What to check in 0.1.59
 
-**Development candidate; not yet installed or privately published.** The installed
-version remains0.1.58 until the release/installation checks are complete.
+Use this checklist after installation. The separate versioned verification and
+delivery records establish the exact installed build and private-channel status.
 
 Open **Payroll → Government → BIR → Review declarations and sources** as HR/Admin.
 

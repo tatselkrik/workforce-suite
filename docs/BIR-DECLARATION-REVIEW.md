@@ -1,15 +1,20 @@
-# BIR declarations beside recorded sources — in progress
+# BIR declarations beside recorded sources
 
 Kirk resumed independent government review work on27October2026 while deferring
-the manual official-module check. This increment remains **undelivered** until
-implementation, proportionate verification, private delivery and installation.
+the manual official-module check. Source implementation is complete; the separate
+versioned verification/delivery records establish packaging and installed status.
 
 Source implementation and the protected adapter/native route are in place. The
-default regression suite passes640checks with20explicit opt-ins ignored; one
+final current-source default regression suite passes640checks with21explicit opt-ins ignored; one
 fictional artifact opt-in was separately executed. Six independently read native
 workbooks/257rows match CSV and preserve literal cells, exact cents and privacy.
-Native inspection caught/fixed narrow and misaligned table cells; final layout
-qualification and the remaining hosted/release/installation gate are in progress.
+Native inspection caught/fixed narrow and misaligned table cells; all11final
+layouts are inspected. Actual hosted HR/Admin projection/configuration guards,
+ordinary Employee/Manager denial, forged metadata and existing-token revocation
+pass while preserving35prior payroll/government sets and prior Auth users.
+The artifact/release/installation gate is recorded separately; full
+configured-company matching is unverified while its employer
+BIR setup is incomplete. No company facts were changed to manufacture a positive.
 No SQL, rate pack or dependency changes are introduced. See the
 [candidate checklist](GOVERNMENT-0.1.59-CHECKLIST.md).
 

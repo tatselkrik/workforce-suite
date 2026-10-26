@@ -437,3 +437,11 @@ does not change the separate minimal diagnostic export. Hosted QA must pin the
 installed profile to the private target authorization/link, reject redirects and
 use fixed project-local aggregate evidence; environment-supplied URL/output
 destinations and persisted hosted identity snapshots are outside this workflow.
+
+BIR declaration/source review follows docs/BIR-DECLARATION-REVIEW.md. Keep literal
+file declarations distinct from recorded payroll facts; do not infer expected
+tax, field allocation, variance or official acceptance. Only unique current pairs
+link scoped sources. Preserve signed/unknown amounts, original service and actual
+receipt states, fresh hash/access/new-file guards and the separate minimal
+diagnostic/identity export contracts. Its explicitly internal amount worksheet
+omits raw tax identifiers, file-declared names and HR evidence/references.

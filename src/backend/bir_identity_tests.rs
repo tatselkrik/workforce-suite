@@ -238,6 +238,14 @@ fn identity_export_keeps_existing_destination_unchanged() {
 #[test]
 #[ignore = "Explicit synthetic Auth session for the installed, target-guarded HRIS project only."]
 fn hosted_native_identity_projection_for_authorized_installation() {
+    hosted_native_bir_projection(false);
+}
+#[test]
+#[ignore = "Explicit synthetic Auth session for the installed, target-guarded HRIS project only."]
+fn hosted_native_declaration_projection_for_authorized_installation() {
+    hosted_native_bir_projection(true);
+}
+fn hosted_native_bir_projection(declarations: bool) {
     use sha2::Digest;
     let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .canonicalize()
@@ -267,7 +275,7 @@ fn hosted_native_identity_projection_for_authorized_installation() {
         reference
     );
     let session: AuthSession = serde_json::from_str(
-        &std::env::var("HRIS_IDENTITY_AUTH_SESSION")
+        &std::env::var(if declarations {"HRIS_DECLARATION_AUTH_SESSION"} else {"HRIS_IDENTITY_AUTH_SESSION"})
             .expect("Explicit short-lived synthetic session"),
     )
     .unwrap();
@@ -296,7 +304,7 @@ fn hosted_native_identity_projection_for_authorized_installation() {
     } else {
         "hr_generalist"
     };
-    let folder = work.join(format!("identities058-live-{role}"));
+    let folder = work.join(format!("{}-live-{role}", if declarations {"declarations059"} else {"identities058"}));
     std::fs::create_dir(&folder).unwrap();
     let mut summaries = vec![];
     let mut employer_ready = false;
@@ -328,8 +336,11 @@ fn hosted_native_identity_projection_for_authorized_installation() {
         std::fs::write(&source, &raw).unwrap();
         let hash = format!("{:x}", sha2::Sha256::digest(&raw));
         let destination = folder.join("must-not-be-created.csv");
-        let result =
-            cloud.government_bir_identities(&data, 2026, &source, Some(&hash), Some(&destination));
+        let result = if declarations {
+            cloud.government_bir_declarations(&data, 2026, &source, Some(&hash), Some(&destination)).map(|_| ())
+        } else {
+            cloud.government_bir_identities(&data, 2026, &source, Some(&hash), Some(&destination)).map(|_| ())
+        };
         assert!(
             result
                 .unwrap_err()
@@ -340,7 +351,7 @@ fn hosted_native_identity_projection_for_authorized_installation() {
         assert_eq!(std::fs::read(&source).unwrap(), raw);
         std::fs::remove_file(source).unwrap();
     }
-    let proof = json!({"all_passed":true,"role":role,"snapshots":summaries,"employer_ready":employer_ready,
+    let proof = json!({"all_passed":true,"role":role,"snapshots":summaries,"employer_ready":employer_ready,"declaration_adapter":declarations,
         "missing_configuration_export_guard_exercised":!employer_ready,"fixed_authorized_project_and_local_evidence":true,
         "hosted_identity_data_persisted":false,"hosted_full_file_matching_verified":false,"official_acceptance":false});
     std::fs::write(
