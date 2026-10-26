@@ -6,6 +6,8 @@ mod payroll_adapter;
 mod payroll_exchange_adapter;
 #[cfg(test)]
 mod government_export_tests;
+#[cfg(test)]
+mod bir_file_tests;
 use crate::access::{Access, AccessEvent, AdminAction, ManagedAccount};
 use crate::account::{self, AccountAction, AccountProfile, DisplayPreferences, PersonalDetails};
 use crate::documents::{self, DocumentAction, DocumentState, EmployeeDocument};
@@ -1860,6 +1862,7 @@ pub enum Command {
     PreviewLeaveOpeningImport(Vec<crate::leave::dated::OpeningRecord>),
     PreviewLeaveOpening(crate::leave::dated::OpeningRecord),
     GovernmentSssPrepare {filter:crate::payroll_government::Filter},
+    GovernmentBirCheck {source:std::path::PathBuf,expected_hash:Option<String>,destination:Option<std::path::PathBuf>},
     GovernmentSssExport {filter:crate::payroll_government::Filter,request:Box<crate::payroll_government::sss_collection::Request>,destination:std::path::PathBuf},
     GovernmentPreparation {filter:crate::payroll_government::Filter,destination:std::path::PathBuf},
     GovernmentRegistration {employee_id:Option<Uuid>,save:Option<crate::payroll_government::registration::Save>},
@@ -1902,6 +1905,7 @@ pub struct Update {
     pub leave_opening_import_preview:Option<crate::leave::opening_import::BatchPreview>,
     pub leave_opening_preview:Option<crate::leave::dated::Preview>,
     pub government_sss:Option<crate::payroll_government::sss_collection::Basis>,
+    pub government_bir:Option<crate::payroll_government::bir_file::Report>,
     pub government_registration:Option<crate::payroll_government::registration::Snapshot>,
     pub government:Option<crate::payroll_government::Reconciliation>,
     pub payroll_report:Option<crate::payroll_reporting::Report>,
@@ -1954,6 +1958,7 @@ pub fn worker(
             let mut government_result = None;
             let mut registration_result = None;
             let mut sss_result=None;
+            let mut bir_result=None;
             let mut update_state = None;
             let mut check_after_sign_in = false;
             let mut result: Result<Snapshot> = match command {
@@ -2144,6 +2149,14 @@ pub fn worker(
                         message="SSS draft sources checked against current registration and recorded remittance.".into();Ok(current.clone())
                     })()
                 }
+                Command::GovernmentBirCheck{source,expected_hash,destination}=>{
+                    (||->Result<Snapshot>{
+                        let client=cloud.as_mut().context("Company sign-in is required for BIR file checks.")?;
+                        bir_result=Some(client.government_bir_check(&current,&source,expected_hash.as_deref(),destination.as_deref())?);
+                        message=if destination.is_some(){"Fresh BIR structure findings saved. No source file, payroll or filing was changed."}else{"BIR file structure checked locally. Official validation and payroll comparison are separate."}.into();
+                        Ok(current.clone())
+                    })()
+                }
                 Command::GovernmentSssExport{filter,request,destination}=>{
                     (||->Result<Snapshot>{
                         let client=cloud.as_mut().context("Company sign-in is required for SSS drafts.")?;
@@ -2324,6 +2337,7 @@ pub fn worker(
                     leave_opening_import_preview:opening_import_preview_result,
                     leave_opening_preview:opening_preview_result,
                     government_sss:sss_result,
+                    government_bir:bir_result,
                     government_registration:registration_result,
                     government:government_result,
                     report: report_result,
@@ -2360,6 +2374,7 @@ pub fn worker(
                             attendance_import_receipt:None,
                             leave_opening_preview:None,
                             government_sss:None,
+                            government_bir:None,
                             government_registration:None,
                             government:None,
                             report: None,

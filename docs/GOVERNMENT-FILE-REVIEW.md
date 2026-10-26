@@ -1,5 +1,13 @@
 # Government file adapters — review in progress
 
+**Later26October update:** Kirk supplied the7.4 ZIP, patch and job-aid/circular
+downloads in the prepared private reference folder. Do not request them again.
+The native government Excel increment is delivered/installed in054. Bounded
+inert inspection of the supplied installer found a published-versus-readable-form
+PERA control-column conflict; no government program was executed. A read-only
+published-structure preflight is being implemented as described in
+[BIR file preflight](BIR-FILE-PREFLIGHT.md). It is not official validator acceptance.
+
 As of 26 October 2026, desktop0.1.44 has delivered internal preparation CSVs;
 the0.1.45 increment adds a bounded local SSS reference-draft control. Current
 agency validator acceptance is not claimed. This note
@@ -31,9 +39,9 @@ establish a complete compensation file contract:
 [November2025](https://bir-cdn.bir.gov.ph/BIR/pdf/Tax%20Advisory%20re%20Updated%20Software%20Patch%20of%20the%20newly%20created%20ATCs%20for%20Alphalist%20Data%20Entry%20v%207.4.pdf).
 The downloads landing page did not expose an inspectable validator link in its
 rendered text; ordinary direct HTTP retrieval returned403 on26October. No access
-restriction was bypassed and no BIR installer/validator was run. A current official
-offline validator, compensation specification and fictional acceptance/error
-fixtures remain the next BIR input.
+restriction was bypassed and no BIR installer/validator was run. The module has
+since been supplied locally by Kirk. Its actual runtime behavior and fictional
+acceptance/error fixtures remain unverified; another download is not required.
 
 The [current SSS downloads page](https://www.sss.gov.ph/download-forms-and-electronic-applications/)
 links [R3FileGenerator_2023.zip](https://www.sss.gov.ph/wp-content/uploads/2024/08/R3FileGenerator_2023.zip).
@@ -87,14 +95,17 @@ MCRF template compatibility.
 ## Next inputs and completion boundary
 
 The free local exchange foundations are delivered in053. Government milestone2
-remains partial. This public-source review adds no application feature, SQL, rate
-pack, release or agency-acceptance claim. PDFs, hashes and five SSS images are
+remains partial. The original public-source review added no application feature,
+SQL, rate pack, release or agency-acceptance claim. Subsequent BIR preflight work
+is documented in [BIR-FILE-PREFLIGHT.md](BIR-FILE-PREFLIGHT.md); delivery and
+official-module acceptance must be recorded independently. PDFs, hashes and five SSS images are
 retained in the ignored review folder with `public-source-review-20261026.json`.
 
 Resume one agency at a time when its current official specification/offline
-validator or a sanitized accepted reference is available. Start with the BIR
-compensation module and Pag-IBIG MCRF template downloaded through their normal
-official pages. Use fictional identities in local validators; fixture acceptance
+validator or a sanitized accepted reference is available. Kirk has already
+supplied the current BIR7.4 module, patch and references; continue from those
+local files, without requesting another download. The Pag-IBIG MCRF template
+still needs ordinary official retrieval. Use fictional identities in local validators; fixture acceptance
 still does not establish live filing acceptance. Keep the SSS control an internal
 reference draft. Preserve issued figures and reviewed earned/received periods;
 reject missing/ambiguous inputs. Never fabricate identifiers, classifications,

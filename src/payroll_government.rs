@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 mod export;
+pub mod bir_file;
 pub mod preparation;
 #[cfg(any(test, feature = "qa-screenshot"))]
 mod preview;

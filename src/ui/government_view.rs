@@ -7,6 +7,8 @@ pub(super) struct State {
     pub(super) registration_open: bool,
     pub(super) collection: Option<super::government_collection_view::State>,
     pub(super) collection_export_pending: bool,
+    pub(super) bir_open: bool,
+    pub(super) bir: super::bir_file_view::State,
     scope: Option<(Uuid, Uuid, Role)>,
     month: String,
     agency: Option<g::Agency>,
@@ -75,6 +77,7 @@ enum Intent {
     Export,
     ExportPreparation,
     PrepareSss,
+    CheckBir,
 }
 impl State {
     pub(super) fn bind(&mut self, data: &Snapshot) {
@@ -92,6 +95,7 @@ impl State {
         self.form.is_some() || self.registration.editing() || self.collection.is_some()
     }
     pub(super) fn scroll_key(&self) -> (u8, Option<Uuid>) {
+        if self.bir_open {return (21,None);}
         if let Some(s) = &self.collection {
             return (20, Some(s.basis.receipt.id));
         }
@@ -109,6 +113,9 @@ impl State {
     pub(super) fn accept_registration(&mut self, r: g::registration::Snapshot, data: &Snapshot) {
         self.bind(data);
         self.registration.accept(r, data);
+    }
+    pub(super) fn accept_bir(&mut self,r:g::bir_file::Report,data:&Snapshot){
+        self.bind(data);if self.bir_open {self.bir.accept(r,data);}
     }
     pub(super) fn accept_collection(&mut self, b: g::sss_collection::Basis, data: &Snapshot) {
         self.bind(data);
@@ -328,6 +335,7 @@ impl HrisApp {
         if !self.data.access.role.manages_hr() {
             return;
         }
+        if self.payroll_state.government.bir_open {self.payroll_bir_file(ui);return;}
         if self.payroll_state.government.collection.is_some() {
             self.payroll_sss_collection(ui);
             return;
@@ -374,6 +382,7 @@ impl HrisApp {
                 }
             };
             match intent {
+                Intent::CheckBir=>{self.payroll_state.government.bir_open=true;},
                 Intent::PrepareSss => self.send(Command::GovernmentSssPrepare { filter }),
                 Intent::Read => self.send(Command::Government {
                     filter,
@@ -457,6 +466,7 @@ fn overview(ui: &mut Ui, state: &mut State, data: &Snapshot, busy: bool) -> Opti
                     ui.selectable_value(&mut state.export_excel, true, "Excel (.xlsx)");
                 });
         });
+        if state.agency==Some(g::Agency::Bir) && ui.add_enabled(!busy&&connected,egui::Button::new("Check BIR 1604C file")).clicked(){out=Some(Intent::CheckBir);}
         if ui
             .add_enabled(!busy && connected, egui::Button::new("Generate / refresh"))
             .clicked()
@@ -1071,6 +1081,13 @@ impl HrisApp {
             r.submitted_by = None;
         }
         let state = &mut self.payroll_state.government;
+        if preview.starts_with("payroll-government-bir") {
+            state.agency=Some(g::Agency::Bir);state.month=report.filter().month.to_string();
+            if preview.ends_with("overview"){state.report=None;return;}
+            state.bir_open=true;
+            state.bir=super::bir_file_view::State::preview(preview.contains("errors"),preview.contains("totals"));
+            return;
+        }
         state.export_excel = preview.contains("-excel");
         if preview.starts_with("payroll-government-sss") {
             let p = g::sss_collection::fixture();
@@ -1193,6 +1210,18 @@ mod tests {
         changed.access.role = Role::Manager;
         s.bind(&changed);
         assert!(s.report.is_none() && !s.editing());
+    }
+    #[test]
+    fn bir_read_only_results_clear_on_scope_change_and_cannot_reopen_a_closed_view(){
+        let data=DemoStore::new().data;let mut state=State::default();state.bind(&data);
+        let report=g::bir_file::Report{company_id:data.company.id,user_id:data.access.user_id,sha256:"a".repeat(64),
+            file_name:"fictional.dat".into(),year:Some(2026),details:1,employer_match:None,errors:0,reviews:1,issues:Vec::new(),totals:Vec::new()};
+        state.accept_bir(report.clone(),&data);assert!(state.bir.report.is_none());
+        state.bir_open=true;state.accept_bir(report.clone(),&data);assert!(state.bir.report.is_some()&&!state.editing());
+        let mut changed=data.clone();changed.access.user_id=Uuid::new_v4();state.bind(&changed);
+        assert!(!state.bir_open&&state.bir.report.is_none());
+        state.bind(&data);state.bir_open=true;state.accept_bir(report.clone(),&data);changed=data.clone();changed.access.role=Role::Manager;
+        state.accept_bir(report,&changed);assert!(!state.bir_open&&state.bir.report.is_none());
     }
     #[test]
     fn stale_and_withdrawn_sources_block_approval_but_allow_returning_the_saved_review() {

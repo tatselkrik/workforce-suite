@@ -375,6 +375,16 @@ check/file write, and never overwrite existing exports. Agency adapters remain
 separate. Native XLSX alone does not complete the attendance/leave batch imports
 in docs/TABULAR-EXCHANGE.md. Preserve the new free dependency license notices.
 
+BIR source preflight follows docs/BIR-FILE-PREFLIGHT.md. Keep selected source
+files local and unchanged, exact centavo controls, bounded whole-file checks,
+current HR/Admin access and source-hash-bound new-file findings exports. Do not
+include raw employee identifiers/names/amounts in findings. Published structure
+checks do not calculate tax, certify identities/certificates, compare payroll,
+establish official validator acceptance or file a return. Kirk has supplied the
+current module and references; do not request those downloads again. Preserve
+the published PERA control column and record the readable-method conflict until
+actual official-runtime behavior is verified with fictional data.
+
 Local payroll exchange follows docs/PAYROLL-EXCHANGE.md. Keep Admin-only versioned
 column profiles, protected HR/Admin report-v2 snapshots and exact original CSV
 bytes. Preserve actor/full-payload retries, closed unused identities, atomic

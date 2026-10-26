@@ -6,8 +6,9 @@ scheduler is active again. Portal browser verification is deferred to a separate
 reminder. Kirk has supplied the BIR7.4 module/archive and reference downloads in
 the private reference folder; inspect before execution. The earlier input pause
 below is superseded. Government preparation/reconciliation native Excel exports
-are the current independent increment; BIR investigation follows. Neither is
-complete merely because work has started. Delivered049–053 must not be repeated.
+are delivered in054. BIR published-structure preflight055 is the current
+increment; official module acceptance remains unverified. Delivered049–054 must
+not be repeated, and055is not delivered before installation/private verification.
 
 **Latest immediate queue25October2026:** Kirk authorized starting item4 now,
 resuming it across a usage reset if unfinished, then continuing item6 imports/

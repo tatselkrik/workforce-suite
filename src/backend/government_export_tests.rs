@@ -4,12 +4,12 @@ use crate::access::Role;
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
 
-fn access_json(a: &Access) -> Value {
+pub(super) fn access_json(a: &Access) -> Value {
     json!({"company_id":a.company_id,"user_id":a.user_id,"role":a.role,
         "employee_id":a.employee_id,"direct_reports":a.direct_reports,"reports_to_name":a.reports_to_name})
 }
 
-fn client(url: String, data: &Snapshot) -> CloudClient {
+pub(super) fn client(url: String, data: &Snapshot) -> CloudClient {
     CloudClient {
         config: ConnectionConfig {
             url,

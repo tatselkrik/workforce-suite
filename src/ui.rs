@@ -52,6 +52,7 @@ mod payroll_exchange_view;
 mod government_view;
 mod government_registration_view;
 mod government_collection_view;
+mod bir_file_view;
 mod organization_view;
 mod overtime_view;
 mod recruiting_view;
@@ -1191,6 +1192,7 @@ impl HrisApp {
                     }
                     self.import_state.applying = false;
                     if let Some(basis)=update.government_sss{self.payroll_state.government.accept_collection(basis,&data);}
+                    if let Some(report)=update.government_bir{self.payroll_state.government.accept_bir(report,&data);}
                     if let Some(record)=update.government_registration{self.payroll_state.government.accept_registration(record,&data);}
                     if let Some(report)=update.government{self.payroll_state.government.accept(report,&data);}
                     if let Some(report)=update.payroll_report{self.payroll_state.reports.accept(report,&data);}
@@ -1332,6 +1334,7 @@ impl HrisApp {
                     self.payroll_state.government.pending = None;
                     self.payroll_state.government.registration.pending = false;
                     self.payroll_state.government.collection_export_pending=false;
+                    self.payroll_state.government.bir.failed();
                     self.recruiting_state.pending = None;
                     self.recruiting_state.resume_pending = None;
                     self.report_state.pending_views = None;

@@ -88,6 +88,25 @@ impl CloudClient {
 }
 
 impl CloudClient {
+    pub fn government_bir_check(&mut self,current:&Snapshot,source:&Path,expected_hash:Option<&str>,destination:Option<&Path>)
+        ->Result<crate::payroll_government::bir_file::Report>{
+        use crate::payroll_government::bir_file as bir;
+        crate::payroll_reporting::authorize(current)?;
+        ensure!(destination.is_none()||expected_hash.is_some(),"Check the BIR source before saving its findings.");
+        let registration=self.government_registration(current,None,None)?;
+        let employer=registration.record.as_ref().and_then(|r|{
+            let tin=r.details.get("bir_tin")?;let branch=r.details.get("bir_branch")?;
+            (!tin.is_empty()&&!branch.is_empty()).then(||bir::Employer{tin:tin.clone(),branch:branch.clone()})
+        });
+        let bytes=bir::read_source(source)?;
+        let report=bir::inspect(&bytes,&source.file_name().context("Choose a BIR source file.")?.to_string_lossy(),
+            current.company.today(),employer.as_ref(),current.company.id,current.access.user_id)?;
+        ensure!(expected_hash.is_none_or(|hash|hash==report.sha256),"The source file changed. Check it again before exporting findings.");
+        let output=destination.map(|path|report.findings_export(path)).transpose()?;
+        if self.current_access()?!=current.access {return Err(AccessRevoked.into());}
+        if let (Some(path),Some(output))=(destination,output){crate::reports::save_export(path,&output)?;}
+        Ok(report)
+    }
     // Callers recheck access after processing and before returning private data/file IO.
     fn load_government_preparation(&mut self,current:&Snapshot,filter:crate::payroll_government::Filter)->Result<crate::payroll_government::preparation::Preparation>{
         use crate::payroll_government::preparation::{Preparation,PreparationWire};
