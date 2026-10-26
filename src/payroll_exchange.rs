@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 pub const KEYS:&[&str]=&["employee_name","department","period_start","period_end","issued_on","received_on","status","basic_cents","gross_cents","employee_contributions_cents","employer_contributions_cents","withholding_cents","net_cents","contained_source_net_cents","cash_cents","offset_cents","tax_adjustment_cents","outstanding_cents","reserved_cents","rule_version","linked_kind","linked_id","review_amount_cents"];
 pub const FIXED:&[&str]=&["exchange_id","record_key","row_sha256","employee_code","source_kind","payment_state","amount_unit"];
-pub const ACK_HEADERS:&[&str]=&["exchange_id","record_key","row_sha256","expected_revision","status","reference","note"];
+pub const ACK_HEADERS:&[&str]=&["exchange_id","record_key","row_sha256","employee_code","employee_name","source_kind","service_period","expected_revision","status","reference","note"];
 fn label(v:&str,max:usize,required:bool)->Result<()>{ensure!(v.chars().count()<=max&&(!required||!v.trim().is_empty())&&!v.chars().any(char::is_control),"Use bounded text without control characters.");Ok(())}
 fn hash(v:&str)->bool{v.len()==64&&v.bytes().all(|c|c.is_ascii_digit()||(b'a'..=b'f').contains(&c))}
 pub fn sha(bytes:&[u8])->String{format!("{:x}",Sha256::digest(bytes))}
@@ -27,7 +27,7 @@ fn columns(cols:&[Column])->Result<()>{
  for c in cols{let mut chars=c.header.chars();ensure!(KEYS.contains(&c.key.as_str())&&keys.insert(&c.key)&&c.header.len()<=64&&chars.next().is_some_and(|c|c.is_ascii_alphabetic())&&chars.all(|c|c.is_ascii_alphanumeric()||" _.-".contains(c))&&headers.insert(c.header.to_ascii_lowercase()),"Use distinct whitelisted fields and safe unique headers.");}Ok(())
 }
 impl Profile{pub fn validate(&self)->Result<()>{ensure!(!self.id.is_nil()&&(0..=99).contains(&self.revision),"Invalid profile identity/revision.");label(&self.name,80,true)?;columns(&self.columns)}}
-pub fn default_columns()->Vec<Column>{["employee_name","department","issued_on","received_on","gross_cents","net_cents","cash_cents","offset_cents","contained_source_net_cents","tax_adjustment_cents","review_amount_cents"].into_iter().map(|k|Column{key:k.into(),header:k.into()}).collect()}
+pub fn default_columns()->Vec<Column>{["employee_name","department","period_start","period_end","issued_on","received_on","gross_cents","net_cents","cash_cents","offset_cents","contained_source_net_cents","tax_adjustment_cents","review_amount_cents"].into_iter().map(|k|Column{key:k.into(),header:k.into()}).collect()}
 #[derive(Clone,Debug,Serialize,Deserialize,PartialEq,Eq)]
 #[serde(deny_unknown_fields)]
 pub struct ProfileChange{pub request_id:Uuid,pub id:Uuid,pub expected_revision:Option<i64>,pub name:String,pub enabled:bool,pub columns:Vec<Column>,pub reason:String}
@@ -49,11 +49,13 @@ pub struct Control{pub record_key:String,pub row_sha256:String}
 #[derive(Clone,Debug,Serialize,Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Basis{pub company_id:Uuid,pub exchange_id:Uuid,pub profile:Profile,pub report:p::Wire,pub controls:Vec<Control>,pub csv:String,pub sha256:String,pub fingerprint:String}
-fn csv_quote(v:&str,literal:bool)->String{
+fn csv_literal(v:&str)->String{
  let clean=v.trim_start_matches(|c:char|c.is_whitespace()||c=='\u{feff}');
- let formula=literal&&(clean.starts_with(['=','+','-','@'])||v.starts_with(['\t','\r','\n']));
- format!("\"{}{}\"",if formula{"'"}else{""},v.replace('"',"\"\""))
+ let formula=clean.starts_with(['=','+','-','@'])||v.starts_with(['\t','\r','\n']);
+ format!("{}{}",if formula{"'"}else{""},v)
 }
+fn csv_quote(v:&str,literal:bool)->String{let s=if literal{csv_literal(v)}else{v.into()};format!("\"{}\"",s.replace('"',"\"\""))}
+fn period(r:&p::Row)->String{format!("{} through {}",r.period_start,r.period_end)}
 impl Basis{
  pub fn validate(&self,a:&Access)->Result<p::Report>{
   ensure!(a.role.manages_hr()&&self.company_id==a.company_id&&!self.exchange_id.is_nil()&&self.controls.len()==self.report.rows.len()&&(1..=1000).contains(&self.controls.len())&&self.csv.len()<=4194304&&hash(&self.sha256)&&hash(&self.fingerprint),"Invalid exchange snapshot or scope.");
@@ -83,6 +85,7 @@ pub struct Event{pub record_key:String,pub revision:i64,pub batch_id:Uuid,pub st
 #[serde(deny_unknown_fields)]
 pub struct Detail{pub version:String,pub company_id:Uuid,pub user_id:Uuid,pub role:Role,pub basis:Basis,pub created_at:DateTime<Utc>,pub events:Vec<Event>}
 impl Detail{
+ pub fn source(&self,key:&str)->Option<&p::Row>{self.basis.controls.iter().position(|c|c.record_key==key).and_then(|n|self.basis.report.rows.get(n))}
  pub fn current(&self,key:&str)->Option<&Event>{self.events.iter().filter(|e|e.record_key==key).max_by_key(|e|e.revision)}
  pub fn validate(&self,a:&Access,id:Uuid)->Result<()>{scope(self.company_id,self.user_id,self.role,a)?;ensure!(self.version=="payroll-exchange-detail-v1"&&self.basis.exchange_id==id&&self.events.len()<=10000,"Invalid exchange detail/history.");self.basis.validate(a)?;
   let keys:BTreeSet<_>=self.basis.controls.iter().map(|c|c.record_key.as_str()).collect();let mut grouped:BTreeMap<&str,Vec<&Event>>=BTreeMap::new();
@@ -90,7 +93,7 @@ impl Detail{
   for mut events in grouped.into_values(){events.sort_by_key(|e|e.revision);let mut prior="pending";for(i,e)in events.iter().enumerate(){ensure!(e.revision==i as i64+1&&((prior=="pending"&&e.status!="pending")||(prior!="pending"&&e.status=="pending"&&!e.note.trim().is_empty())),"Acknowledgement sequence changed or has a gap.");prior=&e.status;}}
   Ok(())
  }
- pub fn template(&self)->Result<Vec<u8>>{crate::imports::csv(ACK_HEADERS,self.basis.controls.iter().map(|c|vec![self.basis.exchange_id.to_string(),c.record_key.clone(),c.row_sha256.clone(),self.current(&c.record_key).map_or(0,|e|e.revision).to_string(),String::new(),String::new(),String::new()]))}
+ pub fn template(&self)->Result<Vec<u8>>{crate::imports::csv(ACK_HEADERS,self.basis.controls.iter().zip(&self.basis.report.rows).map(|(c,r)|vec![self.basis.exchange_id.to_string(),c.record_key.clone(),c.row_sha256.clone(),r.employee_code.clone(),r.employee_name.clone(),r.kind.clone(),period(r),self.current(&c.record_key).map_or(0,|e|e.revision).to_string(),String::new(),String::new(),String::new()]))}
 }
 #[derive(Clone,Debug,Serialize,Deserialize,PartialEq,Eq)]
 #[serde(deny_unknown_fields)]
@@ -108,10 +111,12 @@ impl Ack{
  pub fn from_csv(bytes:&[u8],detail:&Detail,reason:String,a:&Access)->Result<Self>{
   let text=std::str::from_utf8(bytes).context("Use a UTF-8 HRIS acknowledgement CSV.")?;let mut rows=crate::imports::parse_bounded(text,1000,ACK_HEADERS.len())?.into_iter();let header=rows.next().context("Include the acknowledgement header.")?;ensure!(header.cells.iter().map(String::as_str).eq(ACK_HEADERS.iter().copied()),"Use the unchanged HRIS acknowledgement headers.");
   let mut batch=Self{id:Uuid::new_v4(),exchange_id:detail.basis.exchange_id,reason,rows:Vec::new()};
-  for r in rows{ensure!(r.cells.len()==7,"Line{}: expected seven acknowledgement fields.",r.line);if r.cells[4].is_empty(){ensure!(r.cells[5].is_empty()&&r.cells[6].is_empty(),"Line{}: enter a status for a reference/note.",r.line);continue;}
+  for r in rows{ensure!(r.cells.len()==ACK_HEADERS.len(),"Line{}: use the unchanged acknowledgement template fields.",r.line);if r.cells[8].is_empty(){ensure!(r.cells[9].is_empty()&&r.cells[10].is_empty(),"Line{}: enter a status for a reference/note.",r.line);continue;}
    ensure!(r.cells[0]==batch.exchange_id.to_string(),"Line{}: exchange identity differs.",r.line);
-   ensure!(!r.cells[3].is_empty()&&r.cells[3].bytes().all(|c|c.is_ascii_digit())&&r.cells[3].len()<=2,"Line{}: use the exact template revision.",r.line);
-   batch.rows.push(AckRow{record_key:r.cells[1].clone(),row_sha256:r.cells[2].clone(),expected_revision:r.cells[3].parse()?,status:r.cells[4].clone(),reference:r.cells[5].clone(),note:r.cells[6].clone()});
+   let source=detail.source(&r.cells[1]).context("Acknowledgement source is outside this frozen export.")?;
+   ensure!(r.cells[3..7]==[csv_literal(&source.employee_code),csv_literal(&source.employee_name),source.kind.clone(),period(source)],"Line{}: employee, source or service-period context changed. Keep the template context unchanged.",r.line);
+   ensure!(!r.cells[7].is_empty()&&r.cells[7].bytes().all(|c|c.is_ascii_digit())&&r.cells[7].len()<=2,"Line{}: use the exact template revision.",r.line);
+   batch.rows.push(AckRow{record_key:r.cells[1].clone(),row_sha256:r.cells[2].clone(),expected_revision:r.cells[7].parse()?,status:r.cells[8].clone(),reference:r.cells[9].clone(),note:r.cells[10].clone()});
   }batch.validate(detail,a)?;Ok(batch)
  }
  pub fn load(path:&Path,detail:&Detail,reason:String,a:&Access)->Result<Self>{ensure!(path.extension().is_some_and(|e|e.eq_ignore_ascii_case("csv")),"Use the HRIS acknowledgement CSV template.");let file=std::fs::File::open(path).context("Could not open acknowledgement file.")?;let mut bytes=Vec::new();file.take(2*1024*1024+1).read_to_end(&mut bytes)?;ensure!(bytes.len()<=2*1024*1024,"Acknowledgement file exceeds2MiB.");Self::from_csv(&bytes,detail,reason,a)}

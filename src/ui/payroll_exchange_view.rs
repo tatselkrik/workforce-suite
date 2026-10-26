@@ -7,7 +7,7 @@ pub(super) struct State{
  scope:Option<(Uuid,Uuid,Role)>,pub(super) state:Option<x::State>,pub(super) detail:Option<x::Detail>,
  preview:Option<x::Preview>,request:Option<x::Request>,pending:Option<x::Operation>,edit:Option<x::ProfileChange>,
  profile:Option<Uuid>,employee:Option<Uuid>,lo:String,hi:String,axis:String,kind:String,search:String,reason:String,
- ack_reason:String,ack:Option<x::Ack>,reset_key:String,reset_reason:String,tab:usize,page:usize,
+ ack_reason:String,ack:Option<x::Ack>,ack_page:usize,reset_key:String,reset_reason:String,tab:usize,page:usize,
 }
 #[cfg(test)]
 mod tests{
@@ -48,6 +48,7 @@ fn facts(ui:&mut Ui,b:&x::Basis){
  ui.collapsing("Integrity controls",|ui|{ui.label(format!("CSV SHA-256: {}",b.sha256));ui.label(format!("Source fingerprint: {}",b.fingerprint));});
  if let Ok(r)=crate::payroll_reporting::Report::from_wire(b.report.clone(),b.company_id,&b.report.filter){ui.horizontal_wrapped(|ui|{ui.label(format!("Recorded cash: {}",crate::payroll::money(r.totals.recorded_cash_cents)));ui.label(format!("Source offsets: {}",crate::payroll::money(r.totals.source_offset_cents)));});}
 }
+fn source_label(d:&x::Detail,key:&str)->String{d.source(key).map(|r|format!("{} · {} · {} · {} to {}",r.employee_code,r.employee_name,super::payroll_report_view::kind(&r.kind),r.period_start,r.period_end)).unwrap_or_else(||"Choose a recorded outcome".into())}
 fn rows(ui:&mut Ui,b:&x::Basis,page:&mut usize,detail:Option<&x::Detail>){
  let pages=b.report.rows.len().div_ceil(15).max(1);*page=(*page).min(pages-1);
  ui.horizontal(|ui|{if ui.add_enabled(*page>0,egui::Button::new("Previous")).clicked(){*page-=1;}ui.label(format!("Page{}of{}",*page+1,pages));if ui.add_enabled(*page+1<pages,egui::Button::new("Next")).clicked(){*page+=1;}});
@@ -136,16 +137,19 @@ impl HrisApp{
    });
    rows(ui,&d.basis,&mut s.page,Some(d));
    let mut close_ack=false;
-   ui.add_enabled_ui(!locked,|ui|{field(ui,"Private acknowledgement batch reason",&mut s.ack_reason);if ui.add_enabled(!s.ack_reason.trim().is_empty()&&s.edit.is_none()&&s.request.is_none(),egui::Button::new("Load reviewed acknowledgement CSV")).clicked(){match crate::imports::choose_source(){Ok(Some(path))=>match x::Ack::load(&path,d,s.ack_reason.clone(),&self.data.access){Ok(a)=>s.ack=Some(a),Err(e)=>self.notice=Some((e.to_string(),true))},Ok(None)=>{},Err(e)=>self.notice=Some((e.to_string(),true))}}
+   ui.add_enabled_ui(!locked,|ui|{field(ui,"Private acknowledgement batch reason",&mut s.ack_reason);if ui.add_enabled(!s.ack_reason.trim().is_empty()&&s.edit.is_none()&&s.request.is_none(),egui::Button::new("Load reviewed acknowledgement CSV")).clicked(){match crate::imports::choose_source(){Ok(Some(path))=>match x::Ack::load(&path,d,s.ack_reason.clone(),&self.data.access){Ok(a)=>{s.ack=Some(a);s.ack_page=0;},Err(e)=>self.notice=Some((e.to_string(),true))},Ok(None)=>{},Err(e)=>self.notice=Some((e.to_string(),true))}}
     ui.label("Enter accepted or rejected only for reviewed rows. Blank statuses are skipped; pending is an Administrator reset and needs a row note.");
-    if let Some(a)=&s.ack{ui.label(format!("{} reviewed acknowledgement rows, posted together",a.rows.len()));for r in a.rows.iter().take(10){ui.label(format!("{} · {} · revision{}",r.record_key,r.status,r.expected_revision));}if a.rows.len()>10{ui.label(format!("{} more rows in the validated batch",a.rows.len()-10));}if ui.add_enabled(a.validate(d,&self.data.access).is_ok(),egui::Button::new("Record acknowledgement batch")).clicked(){operation=Some(x::Operation::Acknowledge(a.clone()));}if ui.button("Close acknowledgement draft").clicked(){close_ack=true;}}
+    if let Some(a)=&s.ack{ui.label(format!("Validated batch: {} reviewed rows, posted together",a.rows.len()));let pages=a.rows.len().div_ceil(10).max(1);s.ack_page=s.ack_page.min(pages-1);
+     ui.horizontal(|ui|{if ui.add_enabled(s.ack_page>0,egui::Button::new("Previous reviewed rows")).clicked(){s.ack_page-=1;}ui.label(format!("Page {} of {}",s.ack_page+1,pages));if ui.add_enabled(s.ack_page+1<pages,egui::Button::new("Next reviewed rows")).clicked(){s.ack_page+=1;}});
+     for r in a.rows.iter().skip(s.ack_page*10).take(10){ui.group(|ui|{ui.label(source_label(d,&r.record_key));ui.label(format!("Outcome: {}",r.status));if !r.reference.is_empty(){ui.label(format!("Reference: {}",r.reference));}if !r.note.is_empty(){ui.label(&r.note);}});}
+     if ui.add_enabled(a.validate(d,&self.data.access).is_ok(),egui::Button::new("Record acknowledgement batch")).clicked(){operation=Some(x::Operation::Acknowledge(a.clone()));}if ui.button("Close acknowledgement draft").clicked(){close_ack=true;}}
     if self.data.access.role==Role::Administrator{ui.collapsing("Reset a recorded outcome",|ui|{
-     egui::ComboBox::from_id_salt("exchange_reset_key").selected_text(if s.reset_key.is_empty(){"Choose a terminal outcome"}else{&s.reset_key}).show_ui(ui,|ui|{for c in &d.basis.controls{if let Some(e)=d.current(&c.record_key).filter(|e|e.status!="pending"){ui.selectable_value(&mut s.reset_key,c.record_key.clone(),format!("{} · {}",c.record_key,e.status));}}});field(ui,"Reason for resetting to pending",&mut s.reset_reason);
-     if ui.add_enabled(!s.reset_reason.trim().is_empty()&&!s.reset_key.is_empty(),egui::Button::new("Record linked reset to pending")).clicked(){if let Some(c)=d.basis.controls.iter().find(|c|c.record_key==s.reset_key){let a=x::Ack{id:Uuid::new_v4(),exchange_id:d.basis.exchange_id,reason:s.reset_reason.clone(),rows:vec![x::AckRow{record_key:c.record_key.clone(),row_sha256:c.row_sha256.clone(),expected_revision:d.current(&c.record_key).map_or(0,|e|e.revision),status:"pending".into(),reference:String::new(),note:s.reset_reason.clone()}]};match a.validate(d,&self.data.access){Ok(())=>operation=Some(x::Operation::Acknowledge(a)),Err(e)=>self.notice=Some((e.to_string(),true))}}}
+     egui::ComboBox::from_id_salt("exchange_reset_key").width(420.0).selected_text(source_label(d,&s.reset_key)).show_ui(ui,|ui|{for c in &d.basis.controls{if let Some(e)=d.current(&c.record_key).filter(|e|e.status!="pending"){ui.selectable_value(&mut s.reset_key,c.record_key.clone(),format!("{} · {}",source_label(d,&c.record_key),e.status));}}});field(ui,"Reason for resetting to pending",&mut s.reset_reason);
+     if ui.add_enabled(!s.reset_reason.trim().is_empty()&&d.current(&s.reset_key).is_some_and(|e|e.status!="pending"),egui::Button::new("Record linked reset to pending")).clicked(){if let Some(c)=d.basis.controls.iter().find(|c|c.record_key==s.reset_key){let a=x::Ack{id:Uuid::new_v4(),exchange_id:d.basis.exchange_id,reason:s.reset_reason.clone(),rows:vec![x::AckRow{record_key:c.record_key.clone(),row_sha256:c.row_sha256.clone(),expected_revision:d.current(&c.record_key).map_or(0,|e|e.revision),status:"pending".into(),reference:String::new(),note:s.reset_reason.clone()}]};match a.validate(d,&self.data.access){Ok(())=>operation=Some(x::Operation::Acknowledge(a)),Err(e)=>self.notice=Some((e.to_string(),true))}}}
     });}
    });
    if close_ack{s.ack=None;s.ack_reason.clear();}
-   ui.collapsing(format!("Immutable reconciliation history ({} events)",d.events.len()),|ui|{egui::ScrollArea::vertical().max_height(280.).id_salt("exchange_history_scroll").show(ui,|ui|{for e in d.events.iter().rev(){ui.label(format!("{} · {} · v{} · {} UTC",e.record_key,e.status,e.revision,e.created_at.format("%Y-%m-%d %H:%M")));if !e.reference.is_empty(){ui.label(format!("Reference: {}",e.reference));}if !e.note.is_empty(){ui.label(&e.note);}ui.separator();}});});
+   ui.collapsing(format!("Immutable reconciliation history ({} events)",d.events.len()),|ui|{egui::ScrollArea::vertical().max_height(280.).id_salt("exchange_history_scroll").show(ui,|ui|{for e in d.events.iter().rev(){ui.label(format!("{} · {} · v{} · {} UTC",source_label(d,&e.record_key),e.status,e.revision,e.created_at.format("%Y-%m-%d %H:%M")));if !e.reference.is_empty(){ui.label(format!("Reference: {}",e.reference));}if !e.note.is_empty(){ui.label(&e.note);}ui.separator();}});});
   }
   if let Some(operation)=operation{if matches!(operation,x::Operation::SaveProfile(_)|x::Operation::Prepare{..}|x::Operation::Acknowledge(_)){s.pending=Some(operation.clone());}self.send(Command::PayrollExchange(operation));}
  }

@@ -4,8 +4,8 @@ The implementation is locally verified. Guarded deployment, live checks,
 packaging, actual installation and private publication are the remaining delivery
 gates at this source-freeze stage. Installed0.1.52 is retained until they pass.
 
--559default native checks pass;9explicit opt-ins are excluded from that count.
-  These include13exchange cases and5UI draft/recovery/privacy cases. No warnings.
+-560default native checks pass;9explicit opt-ins are excluded from that count.
+  These include14exchange cases and5UI draft/recovery/privacy cases. No warnings.
 -215new PostgreSQL exchange assertions and7,429combined schema/workflow/
   preservation assertions pass, with fresh69migration replay. Existing functions
   and prior records are preserved. The additive migration is

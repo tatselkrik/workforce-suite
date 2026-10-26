@@ -26,7 +26,10 @@ An explicitly narrower employee/search filter can export complete records.
 Reconciliation imports use the HRIS acknowledgement template, not an undocumented
 vendor format. Each row carries the exchange identity, record key, captured row
 digest, expected acknowledgement revision, accepted/rejected status and optional
-private reference/note. All rows validate and post atomically. An uncertain retry
+private reference/note. Read-only employee code/name, source kind and a text service
+period make the template understandable; altered context is rejected. Native batch
+review and reset selection show those human labels. All reviewed rows are available
+through pagination. All rows validate and post atomically. An uncertain retry
 must use the same identity, actor and complete payload. A different actor/payload
 cannot reuse a receipt. Terminal outcomes require an Administrator's separately
 reasoned reset to pending before another outcome; prior events remain immutable.

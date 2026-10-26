@@ -18,6 +18,8 @@ Open **Payroll > Data exchange** with a current HR/Admin account.
   The original columns, facts, bytes and checksum should remain unchanged.
 - Save its acknowledgement template. Enter `accepted` or `rejected` for reviewed
   rows, optionally adding private references/notes. Leave other statuses blank.
+  Keep the employee/source/service-period context unchanged; use it to identify
+  each row. The native batch review includes every row through pagination.
   Load the CSV, review the count and record the whole batch. A bad/stale row must
   prevent the entire batch from posting. Payroll payments do not change.
 - As Administrator, reset an incorrect terminal outcome to pending with a reason.
