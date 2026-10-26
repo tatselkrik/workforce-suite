@@ -272,7 +272,7 @@ impl HrisApp {
 }
 
 #[cfg(windows)]
-fn choose_source() -> anyhow::Result<Option<PathBuf>> {
+pub(super) fn choose_source() -> anyhow::Result<Option<PathBuf>> {
     use anyhow::ensure;
     use std::{ffi::OsString, os::windows::ffi::OsStringExt};
     use windows_sys::Win32::UI::{Controls::Dialogs::*, Input::KeyboardAndMouse::GetActiveWindow};
@@ -308,7 +308,7 @@ fn choose_source() -> anyhow::Result<Option<PathBuf>> {
     }
 }
 #[cfg(not(windows))]
-fn choose_source() -> anyhow::Result<Option<PathBuf>> {
+pub(super) fn choose_source() -> anyhow::Result<Option<PathBuf>> {
     anyhow::bail!("Native source selection is available on Windows.")
 }
 

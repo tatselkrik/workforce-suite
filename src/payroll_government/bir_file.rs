@@ -318,6 +318,19 @@ fn digits(v: &str, n: usize) -> bool {
 fn tin(v: &str) -> bool {
     digits(v, 9) && !["000000000", "111111111", "999999999"].contains(&v)
 }
+pub(crate) fn matchable_identity(t: &str, b: &str) -> bool {tin(t) && digits(b,4)}
+pub(crate) struct IdentityRow {pub line:usize,pub tin:String,pub branch:String}
+pub(crate) fn checked_identities(bytes:&[u8],checked:&Report)->Result<Vec<IdentityRow>> {
+    ensure!(bytes.len()<=MAX_BYTES && checked.errors==0
+        && checked.sha256==format!("{:x}",Sha256::digest(bytes)),"Recheck the complete unchanged BIR file before identity review.");
+    let rows=crate::imports::parse_bounded(std::str::from_utf8(bytes)?,1000,75)?;
+    let tag=if checked.schedule==Schedule::One{"D1"}else{"D2"};
+    let identities=rows.into_iter().filter(|r|r.cells.first().is_some_and(|c|c.trim().eq_ignore_ascii_case(tag)))
+        .map(|r|{ensure!(r.cells.len()>7,"Recheck incomplete BIR identity columns.");
+            Ok(IdentityRow{line:r.line,tin:r.cells[6].trim().into(),branch:r.cells[7].trim().into()})}).collect::<Result<Vec<_>>>()?;
+    ensure!(identities.len()==checked.details && identities.len()<=MAX_DETAILS,"BIR identity rows changed or exceed the review limit.");
+    Ok(identities)
+}
 fn money(v: &str) -> Option<i64> {
     if v.is_empty() || v.len() > 14 {
         return None;

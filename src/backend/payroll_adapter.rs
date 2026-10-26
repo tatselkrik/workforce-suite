@@ -88,6 +88,22 @@ impl CloudClient {
 }
 
 impl CloudClient {
+    pub fn government_bir_identities(&mut self,current:&Snapshot,year:i32,source:&Path,expected_hash:Option<&str>,destination:Option<&Path>)
+        ->Result<crate::payroll_government::bir_identity::Report>{
+        use crate::payroll_government::{annual,bir_file,bir_identity::{self,Basis,Wire}};
+        crate::payroll_reporting::authorize(current)?;annual::validate_year(year,current.company.today())?;
+        ensure!(destination.is_none()||expected_hash.is_some(),"Check file identities before exporting their review.");
+        let before=self.current_access()?;if before!=current.access{return Err(AccessRevoked.into());}
+        let wire:Wire=decode(self.request(Method::POST,"rpc/government_bir_identities")?.json(&json!({"p_year":year})).send()?)?;
+        let basis=Basis::from_wire(wire,before.company_id,year)?;
+        let bytes=bir_file::read_source(source)?;
+        let report=bir_identity::review(basis,&bytes,&source.file_name().context("Choose a BIR file.")?.to_string_lossy(),current.company.today(),before.user_id)?;
+        ensure!(expected_hash.is_none_or(|h|h==report.source_sha256),"The BIR source changed. Recheck its identities before exporting.");
+        let output=destination.map(|p|report.export(p)).transpose()?;
+        if self.current_access()?!=before{return Err(AccessRevoked.into());}
+        if let (Some(path),Some(output))=(destination,output){crate::reports::save_export(path,&output)?;}
+        Ok(report)
+    }
     pub fn government_annual_ledger(&mut self,current:&Snapshot,year:i32,destination:Option<&Path>)
         ->Result<crate::payroll_government::annual::Ledger>{
         use crate::payroll_government::annual::{self,Ledger,Wire};

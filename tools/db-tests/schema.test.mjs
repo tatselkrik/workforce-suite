@@ -85,6 +85,7 @@ try {
   const leaveImportMigrations=[];
   const exchangeMigrations=[];
   const annualLedgerMigrations=[];
+  const birIdentityMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -98,6 +99,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_government_bir_identity_review.sql')){birIdentityMigrations.push(filename);continue;}
     if(filename.endsWith('_government_annual_recorded_sources.sql')){annualLedgerMigrations.push(filename);continue;}
     if(filename.endsWith('_payroll_exchange.sql')){exchangeMigrations.push(filename);continue;}
     if(filename.endsWith('_leave_request_imports.sql')){leaveImportMigrations.push(filename);continue;}
@@ -530,6 +532,14 @@ try {
   for(const t of annualTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,annualBefore[t],'Annual ledger migration preserves '+t);
   for(const f of annualFunctions)eq((await db.query('select md5(pg_get_functiondef($1::regprocedure))digest',[f.identity])).rows[0].digest,f.digest,'Annual ledger migration preserves existing function '+f.identity);
   const{runGovernmentAnnualTests}=await import('./government-annual.test.mjs');await runGovernmentAnnualTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
+  await db.exec('reset role');
+  const identityTables=(await db.query("select tablename from pg_tables where schemaname='public'order by tablename")).rows.map(r=>r.tablename);
+  const identityBefore={};for(const t of identityTables)identityBefore[t]=(await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows;
+  const identityFunctions=(await db.query("select p.oid::regprocedure::text identity,md5(pg_get_functiondef(p.oid))digest from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in('public','hris_private')and p.prokind='f'order by 1")).rows;
+  for(const filename of birIdentityMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  for(const t of identityTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,identityBefore[t],'BIR identity migration preserves '+t);
+  for(const f of identityFunctions)eq((await db.query('select md5(pg_get_functiondef($1::regprocedure))digest',[f.identity])).rows[0].digest,f.digest,'BIR identity migration preserves existing function '+f.identity);
+  const{runBirIdentityTests}=await import('./government-bir-identities.test.mjs');await runBirIdentityTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

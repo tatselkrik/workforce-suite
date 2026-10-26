@@ -418,3 +418,13 @@ not zero; final original-source tax and its additional adjustment count once.
 Keep current HR/Admin access before/after fresh reads/rendering and before new
 file IO. The internal annual worksheet is distinct from minimal BIR findings;
 neither establishes expected return amounts or official validator acceptance.
+
+Current BIR identity review follows docs/BIR-IDENTITY-REVIEW.md. Match exact unique
+current TIN/branch pairs only; retain namesakes, ambiguous/unmatched identities,
+archived history and source counts without implying expected tax or historical
+assignment. Keep source files local, current HR/Admin checks and unchanged-hash/
+new-file guards. The explicit identity worksheet omits raw tax IDs/amounts and
+does not change the separate minimal diagnostic export. Hosted QA must pin the
+installed profile to the private target authorization/link, reject redirects and
+use fixed project-local aggregate evidence; environment-supplied URL/output
+destinations and persisted hosted identity snapshots are outside this workflow.

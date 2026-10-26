@@ -7,6 +7,7 @@ use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 mod export;
 pub mod annual;
+pub mod bir_identity;
 pub mod bir_file;
 pub mod preparation;
 #[cfg(any(test, feature = "qa-screenshot"))]
