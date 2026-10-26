@@ -1,5 +1,11 @@
 # Remaining HRIS roadmap — agreed order
 
+**Latest human resumption27October2026:** Kirk deferred the manual BIR baseline
+check and requested continuation with anything remaining. The same scheduler is
+active again. Continue independent free government declaration/source review;
+those reports are not a blocker for that work. Official acceptance, portal
+browser, external/paid and device limitations retain their recorded status.
+
 **27October2026 runtime boundary:**057and058are installed/private-published;
 their annual source/identity review subscopes below are delivered. BIR7.4 inert
 preparation and ten fictional native probes are complete. Actual official-module

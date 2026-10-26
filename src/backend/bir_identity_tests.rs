@@ -103,6 +103,39 @@ fn server(data: &Snapshot, scenario: Scenario) -> (String, thread::JoinHandle<Ve
     (url, handle)
 }
 #[test]
+fn declaration_adapter_uses_fresh_scoped_wire_and_preserves_new_file_guards() {
+    use sha2::Digest;
+    let mut data=DemoStore::new().data;data.access.user_id=Uuid::from_u128(4);
+    let folder=std::env::temp_dir().join(format!("hris-declarations-http-{}",Uuid::new_v4()));
+    std::fs::create_dir(&folder).unwrap();let source=folder.join(fixture::FILE_NAME);
+    let raw=fixture::source(&["234567890"]);std::fs::write(&source,&raw).unwrap();
+    let hash=format!("{:x}",sha2::Sha256::digest(&raw));
+    for scenario in [Scenario::Good,Scenario::RevokedAfter,Scenario::ForeignBinding,Scenario::NoEmployer,Scenario::StaleHash] {
+        for extension in ["csv","xlsx"] {
+            let (url,server)=server(&data,scenario);let mut cloud=client(url,&data);
+            let path=folder.join(format!("{scenario:?}.{extension}"));
+            let result=cloud.government_bir_declarations(&data,2026,&source,
+                Some(if scenario==Scenario::StaleHash{"stale"}else{&hash}),Some(&path));
+            server.join().unwrap();
+            if scenario==Scenario::Good {
+                let report=result.unwrap();assert_eq!(report.rows[0].sources.len(),7);
+                assert_eq!(report.rows[0].declared.len(),31);assert!(path.exists());
+            } else {assert!(result.is_err());assert!(!path.exists());}
+        }
+    }
+    let existing=folder.join("preserve.csv");std::fs::write(&existing,b"preserve existing export").unwrap();
+    let (url,server)=server(&data,Scenario::Good);let mut cloud=client(url,&data);
+    assert!(cloud.government_bir_declarations(&data,2026,&source,Some(&hash),Some(&existing)).is_err());
+    server.join().unwrap();assert_eq!(std::fs::read(&existing).unwrap(),b"preserve existing export");
+    for role in [Role::Manager,Role::Employee] {
+        data.access.role=role;let mut cloud=client("http://127.0.0.1:1".into(),&data);
+        assert!(cloud.government_bir_declarations(&data,2026,&source,Some(&hash),Some(&folder.join("denied.csv"))).is_err());
+        assert!(!folder.join("denied.csv").exists());
+    }
+    assert_eq!(std::fs::read(&source).unwrap(),raw);
+    std::fs::remove_dir_all(folder).unwrap();
+}
+#[test]
 fn real_identity_adapter_protects_fresh_hash_role_roster_and_new_file_io() {
     use sha2::Digest;
     let mut data = DemoStore::new().data;

@@ -1865,6 +1865,7 @@ pub enum Command {
     OpeningImportErrors {report:crate::leave::opening_import::Import,destination:std::path::PathBuf},
     PreviewLeaveOpeningImport(Vec<crate::leave::dated::OpeningRecord>),
     PreviewLeaveOpening(crate::leave::dated::OpeningRecord),
+    GovernmentBirDeclarations {year:i32,source:std::path::PathBuf,expected_hash:Option<String>,destination:Option<std::path::PathBuf>},
     GovernmentBirIdentities {year:i32,source:std::path::PathBuf,expected_hash:Option<String>,destination:Option<std::path::PathBuf>},
     GovernmentAnnual {year:i32,destination:Option<std::path::PathBuf>},
     GovernmentSssPrepare {filter:crate::payroll_government::Filter},
@@ -1910,6 +1911,7 @@ pub struct Update {
     pub attendance_import_receipt:Option<crate::attendance_imports::Receipt>,
     pub leave_opening_import_preview:Option<crate::leave::opening_import::BatchPreview>,
     pub leave_opening_preview:Option<crate::leave::dated::Preview>,
+    pub government_bir_declarations:Option<crate::payroll_government::bir_declarations::Report>,
     pub government_bir_identities:Option<crate::payroll_government::bir_identity::Report>,
     pub government_annual:Option<crate::payroll_government::annual::Ledger>,
     pub government_sss:Option<crate::payroll_government::sss_collection::Basis>,
@@ -1966,6 +1968,7 @@ pub fn worker(
             let mut government_result = None;
             let mut annual_result = None;
             let mut bir_identities_result = None;
+            let mut bir_declarations_result = None;
             let mut registration_result = None;
             let mut sss_result=None;
             let mut bir_result=None;
@@ -2151,6 +2154,12 @@ pub fn worker(
                         crate::reports::save_export(&destination, &bytes)?;
                         Ok(current.clone())
                     })()
+                }
+                Command::GovernmentBirDeclarations{year,source,expected_hash,destination}=>{
+                    (||{let client=cloud.as_mut().context("Sign in to review BIR declarations and sources.")?;let data=client.snapshot()?;
+                        bir_declarations_result=Some(client.government_bir_declarations(&data,year,&source,expected_hash.as_deref(),destination.as_deref())?);
+                        message=if destination.is_some(){"Fresh internal declaration/source worksheet exported. No expected tax or return was calculated.".into()}
+                            else{"Literal BIR declarations and recorded payroll sources loaded separately. Official validation remains unverified.".into()};Ok(data)})()
                 }
                 Command::GovernmentBirIdentities{year,source,expected_hash,destination}=>{
                     (||{let client=cloud.as_mut().context("Sign in to review current BIR identities.")?;let data=client.snapshot()?;
@@ -2360,6 +2369,7 @@ pub fn worker(
                     attendance_import_receipt:attendance_import_receipt_result,
                     leave_opening_import_preview:opening_import_preview_result,
                     leave_opening_preview:opening_preview_result,
+                    government_bir_declarations:bir_declarations_result,
                     government_bir_identities:bir_identities_result,
                     government_annual:annual_result,
                     government_sss:sss_result,
@@ -2399,6 +2409,7 @@ pub fn worker(
                             leave_import_receipt:None,
                             attendance_import_receipt:None,
                             leave_opening_preview:None,
+                            government_bir_declarations:None,
                             government_bir_identities:None,
                             government_annual:None,
                             government_sss:None,

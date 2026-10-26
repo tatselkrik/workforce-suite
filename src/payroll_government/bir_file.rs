@@ -331,6 +331,40 @@ pub(crate) fn checked_identities(bytes:&[u8],checked:&Report)->Result<Vec<Identi
     ensure!(identities.len()==checked.details && identities.len()<=MAX_DETAILS,"BIR identity rows changed or exceed the review limit.");
     Ok(identities)
 }
+
+/// Literal declaration values, after whole-file preflight. Never an expected tax.
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+pub struct DeclaredAmount {
+    /// Published one-based detail column, not a control-column position.
+    pub column: usize,
+    pub field: String,
+    pub cents: i64,
+}
+pub(crate) fn checked_declared_money(
+    bytes: &[u8], checked: &Report,
+) -> Result<Vec<(usize, Vec<DeclaredAmount>)>> {
+    ensure!(bytes.len() <= MAX_BYTES && checked.errors == 0
+        && checked.sha256 == format!("{:x}", Sha256::digest(bytes)),
+        "Recheck the complete unchanged BIR source before reviewing declarations.");
+    let layout = checked.schedule.layout();
+    let rows = crate::imports::parse_bounded(std::str::from_utf8(bytes)?, 1000, 75)?;
+    let mut result = Vec::new();
+    for row in rows.into_iter().filter(|r| r.cells.first()
+        .is_some_and(|s| s.trim().eq_ignore_ascii_case(layout.detail))) {
+        ensure!(row.cells.len() == layout.fields.len(),
+            "BIR declaration columns changed after preflight.");
+        let amounts = layout.money.iter().map(|&column| Ok(DeclaredAmount {
+            column: column + 1,
+            field: layout.fields[column].into(),
+            cents: money(row.cells[column].trim())
+                .context("Recheck a missing or invalid BIR declaration amount.")?,
+        })).collect::<Result<Vec<_>>>()?;
+        result.push((row.line, amounts));
+    }
+    ensure!(result.len() == checked.details && result.len() <= MAX_DETAILS,
+        "BIR declaration rows changed or exceed the review limit.");
+    Ok(result)
+}
 fn money(v: &str) -> Option<i64> {
     if v.is_empty() || v.len() > 14 {
         return None;

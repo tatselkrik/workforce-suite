@@ -410,6 +410,15 @@ the current government review/export increment, then the unblocked BIR format
 investigation. Preserve explicit internal-review versus agency-acceptance status.
 Do not repeat delivered049–053 or expand the paid/external/device boundaries.
 
+## Latest resumption —27October2026
+
+Kirk deferred the manual BIR module check until later and instructed continuation
+with remaining independent free work. Do not make those two baseline reports a
+prerequisite for unrelated government review/reconciliation work. The same
+scheduler is active again. Preserve the explicit distinction between file-declared
+values, recorded payroll facts and an officially validated/expected return; the
+deferred runtime check grants no new software-execution or filing authority.
+
 Annual recorded BIR sources follow docs/GOVERNMENT-ANNUAL-LEDGER.md. Preserve
 actual receipt-year inclusion, original service dates, signed centavos and
 identical kind/source deduplication with explicit conflict/budget rejection.
