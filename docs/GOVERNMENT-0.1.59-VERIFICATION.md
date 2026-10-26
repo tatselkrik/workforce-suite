@@ -62,3 +62,8 @@ external providers, paid services and hardware are unchanged.
 
 See [the review checklist](GOVERNMENT-0.1.59-CHECKLIST.md) and
 [the declaration/source contract](BIR-DECLARATION-REVIEW.md).
+
+**Delivery update:** optimized startup, signature/exact installer/recovery,
+actual installation and private signed download/access checks subsequently
+passed. See [the exact installed/delivery evidence](GOVERNMENT-0.1.59-DELIVERY.md).
+The source-time package copy remains immutable and predates this update.

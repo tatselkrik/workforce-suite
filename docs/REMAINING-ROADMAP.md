@@ -1,5 +1,10 @@
 # Remaining HRIS roadmap — agreed order
 
+**27October2026 delivered:** Desktop0.1.59 is installed and privately published.
+Its literal BIR declaration/source review is crossed out below; the government
+milestone remains partial. Keep0.1.58rollback and do not repeat059delivery.
+See [the testing checklist](GOVERNMENT-0.1.59-CHECKLIST.md).
+
 **Latest human resumption27October2026:** Kirk deferred the manual BIR baseline
 check and requested continuation with anything remaining. The same scheduler is
 active again. Continue independent free government declaration/source review;
@@ -108,6 +113,10 @@ unconfigured external connection to a completed integration.
    with exact unique BIR pairs and explicit unmatched/ambiguous rows. Employer
    setup is incomplete, so configured-company hosted full matching remains
    unverified. [Delivery](GOVERNMENT-0.1.58-DELIVERY.md).
+   ~~Literal file-declaration amounts beside scoped recorded sources~~ are
+   delivered/installed in059 with fresh internal CSV/Excel amount worksheets.
+   This does not calculate expected tax or equate a source total to a file field.
+   [Delivery](GOVERNMENT-0.1.59-DELIVERY.md).
    Expected declaration amounts, historical/agency identity/certificate checks
    and official acceptance remain pending; recorded withholding is not
    automatically a1604C field.
