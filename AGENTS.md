@@ -533,3 +533,29 @@ remaining domain-permission rollout, hosted activation, Payroll extraction or th
 later HR-function milestones. They remain queued. Existing exact-target standing
 SQL/private-publication authority and privacy/free-only boundaries are unchanged;
 this pause grants no new release or activation scope.
+## Latest resumption —27October2026, after the editor pause
+
+Kirk explicitly said "resume". The pause after the locally verified Account
+Manager editor is superseded. Resume the approved workspaces queue from its
+checkpoint: atomic employee/contact/account/multi-role provisioning and employee
+editor access integration, then complete specialist data/action permissions before
+activation, followed by the remaining ordered milestones. The SAME usage-reset
+scheduler is ACTIVE again. Preserve all existing free-only, privacy, immutable
+financial/history, exact-target and deferred agency/external/device boundaries.
+Do not repeat completed editor checks/deliveries without a new change or concern.
+## Current finish-and-pause boundary —27October2026
+
+Kirk instructed pausing after Account Manager provisioning AND permission work.
+Finish that complete milestone, including atomic provisioning, employee-editor
+integration, specialist native/server/storage/portal/updater permissions and its
+verified authorized delivery/installation. Continue this bounded work across actual
+usage resets with the SAME scheduler until complete; then PAUSE work and scheduler.
+Do not start the wider workspace reorganization, separate Payroll application or
+later HR-function milestones until Kirk resumes. This narrows the resumption above;
+all existing target, privacy, financial, compatibility and free-only rules remain.
+Staff provisioning follows docs/STAFF-PROVISIONING.md. Keep its reserved Auth UUID,
+credential-free actor/full-payload intents, linked replacement/cancellation history,
+current membership/source guards and atomic employee/contact/role commit. Auth is
+a separate service: never claim cross-service SQL atomicity or delete/reset an Auth
+identity after uncertain delivery. Recovery must reuse the reserved identity and
+frozen receipt. Passwords/tokens stay in memory; confirmation is an explicit action.

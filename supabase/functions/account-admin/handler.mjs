@@ -1,3 +1,4 @@
+import {provisionStaff} from './provision.mjs';
 // Dependency-free handler shared with local tests. Never log request bodies, keys or tokens.
 const roles = new Set(['administrator', 'hr_generalist', 'manager', 'employee']);
 const uuid = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -58,6 +59,8 @@ export function createAccountHandler({ url, serviceKey, anonKey }, fetcher = fet
       if (!accessResponse.ok) return answer(403, 'Only active administrators can manage accounts.');
       const access = await accessResponse.json();
       if (access.user_id !== identity.id || access.role !== 'administrator') return answer(403, 'Only active administrators can manage accounts.');
+
+      if (body.operation === 'create_staff_v2') return provisionStaff({body,access,call,answer});
 
       if (body.operation === 'resend') {
         if (!uuid(body.user_id)) return answer(400, 'Choose an account.');

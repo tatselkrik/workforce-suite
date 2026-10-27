@@ -64,7 +64,7 @@ jobs:
         working-directory: tools/db-tests
         run: npm test
       - name: Test privileged account provisioning
-        run: node --test tests/account_admin_edge.test.mjs
+        run: node --test tests/account_admin_edge.test.mjs tests/staff_provision_edge.test.mjs
       - name: Test signed update publication
         run: node --test tests/desktop_release_edge.test.mjs
 

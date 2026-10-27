@@ -89,6 +89,7 @@ try {
   const annualPayMigrations=[];
   const staffRoleMigrations=[];
   const staffTransactionMigrations=[];
+  const staffProvisionMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -102,6 +103,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_staff_account_provisioning.sql')){staffProvisionMigrations.push(filename);continue;}
     if(filename.endsWith('_staff_role_transactions.sql')){staffTransactionMigrations.push(filename);continue;}
     if(filename.endsWith('_staff_role_foundation.sql')){staffRoleMigrations.push(filename);continue;}
     if(filename.endsWith('_government_annual_pay_details.sql')){annualPayMigrations.push(filename);continue;}
@@ -582,6 +584,15 @@ try {
   const transactionContext=(await db.query('select public.staff_role_admin_context(true)c')).rows[0].c;
   eq(transactionContext.account_count,transactionContext.accounts.length,'Admin context does not silently omit member identities');
   await deny('select public.set_staff_roles($1::jsonb)',[JSON.stringify({id:'00000000-0000-0000-0000-000000999999',user_id:uidB,expected_revision:1,expected_base_role:'employee',expected_member_updated_at:'2026-10-27T00:00:00Z',active:true,roles:['recruiter'],reason:'Fictional rollout gate test'})],['42501']);
+  await db.exec('reset role');
+  const provisionTables=(await db.query("select tablename from pg_tables where schemaname='public'order by tablename")).rows.map(r=>r.tablename);
+  const provisionBefore={};for(const t of provisionTables)provisionBefore[t]=(await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows;
+  const provisionFunctions=(await db.query("select p.oid::regprocedure::text identity,md5(pg_get_functiondef(p.oid))digest from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in('public','hris_private')and p.prokind='f'order by 1")).rows;
+  for(const filename of staffProvisionMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  for(const t of provisionTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,provisionBefore[t],'Provisioning migration preserves '+t);
+  for(const f of provisionFunctions)eq((await db.query('select md5(pg_get_functiondef($1::regprocedure))digest',[f.identity])).rows[0].digest,f.digest,'Provisioning migration preserves prior function '+f.identity);
+  await session(uidA);eq((await db.query('select public.pending_staff_provisions()p')).rows[0].p.entry_count,0,'Additive provisioning has no synthetic hosted-style intents');
+  eq((await db.query('select public.staff_role_context()c')).rows[0].c.runtime_ready,false,'Provisioning migration keeps specialist rollout disabled');
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

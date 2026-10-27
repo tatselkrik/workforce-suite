@@ -1,6 +1,9 @@
 # HRIS workspaces and Payroll implementation — approved27October2026
 
-**Latest instruction:** finish the current native Account Manager editor only, then **pause**. The SAME scheduler is **PAUSED** until Kirk explicitly resumes. The ordered implementation below remains queued; no incomplete specialist role is enabled.
+**Current boundary —27October2026:** finish Account Manager provisioning and complete permissions, verify and deliver it, then **pause work and the SAME scheduler**. Later workspace/Payroll/HR-function milestones remain queued. Continue this milestone across resets if needed.
+
+
+**Latest instruction —27October2026:** Kirk explicitly resumed. Work and the SAME usage-reset scheduler are **ACTIVE**. Continue from the verified local editor into atomic provisioning and remaining permission boundaries. No incomplete specialist role is enabled.
 
 Kirk approved the reviewed proposal and authorized implementation plus automatic
 continuation across actual usage resets. This supersedes the preview-only hold
