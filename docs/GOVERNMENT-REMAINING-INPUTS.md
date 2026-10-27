@@ -1,11 +1,11 @@
 # Remaining government inputs after0.1.62
 
-**Required input boundary after the27October review:**062delivery is complete.
-Current blank agency templates/specifications were requested; the ignored local
-folder`work/agency-reference-inputs/` is prepared. The SAME scheduler is paused
-while those inputs block the remaining adapters. This is not a subscription or
-hardware requirement, and no SQL confirmation is pending. Continue any newly
-unblocked authorized free work when actionable inputs arrive.
+**Deferred by Kirk27October2026:** he has no current blank agency templates and
+instructed **"no. defer this"**. Hold SSS AMS-CCL, PhilHealth EPRS and Pag-IBIG MCRF
+upload adapters until he resumes that scope. The template request is closed;
+keep the SAME scheduler paused rather than requesting the files repeatedly.
+062delivery is complete. The ignored reference folder remains available for
+future use, without any current handoff or SQL confirmation pending.
 
 The local explicit-declaration BIR file builder is installed/private-published
 in062; see [delivery](BIR-0.1.62-DELIVERY.md). Its configured-employer completeness

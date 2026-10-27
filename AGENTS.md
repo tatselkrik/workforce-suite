@@ -469,3 +469,13 @@ heartbeat active and its context current. Continue independent supportable agenc
 file preparation while recording official-acceptance/input limits. Preserve the
 separate deferred software-execution, filing, external-provider/vendor and device
 authority boundaries; generic resumption does not resolve those targets.
+
+## Agency-template deferral —27October2026
+
+Kirk answered that no current blank agency templates are available and explicitly
+said to defer this work. Hold the template-dependent SSS AMS-CCL, PhilHealth EPRS
+and Pag-IBIG MCRF upload adapters until he resumes that scope. Do not repeat the
+template handoff or restart these adapters merely because a usage window resets.
+Keep the existing scheduler paused. The delivered0.1.62BIR builder and existing
+internal worksheets/remittance workflows retain their completed status; official
+acceptance and the previously deferred external/device work remain separate.

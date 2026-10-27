@@ -1,5 +1,12 @@
 # Remaining HRIS roadmap — agreed order
 
+**Latest human decision27October2026:** Kirk has no current blank agency templates
+and said **"no. defer this"**. SSS AMS-CCL, PhilHealth EPRS and Pag-IBIG MCRF upload
+adapters are **deferred until he resumes that scope**. The previous template
+handoff is closed; do not keep requesting those files. The SAME scheduler remains
+paused. Existing internal exports/remittances and the installed0.1.62BIR draft
+builder remain implemented. This deferral does not mark agency acceptance done.
+
 **27October2026 input boundary, after062delivery:** the local BIR builder is
 installed/private-published and delivered. The next bounded official-source review
 confirmed the current EPRS4.9employer-access route but found no upload schema;

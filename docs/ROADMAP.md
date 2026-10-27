@@ -32,6 +32,8 @@ and the private versioned delivery records.
    recorded sources and bounded BIR file checks are delivered through0.1.61.
    Local BIR declaration-template/DAT assembly is delivered in0.1.62; official
    acceptance and automatic classification remain separate requirements.
+   Kirk explicitly deferred the template-dependent SSS AMS-CCL, PhilHealth EPRS
+   and Pag-IBIG MCRF upload adapters on27October2026.
    The SSS draft stays internal review. The reviewed cross-year final-pay pack
    covers2025 separation/2026 receipt, not arbitrary historical/future years.
 7. ~~Applicant tracking, résumé attachments, interviews/feedback, offers,
