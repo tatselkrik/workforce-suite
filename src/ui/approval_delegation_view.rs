@@ -68,6 +68,7 @@ impl HrisApp {
                 employee_id: e.id,
                 name: e.full_name.clone(),
                 role: Role::Manager,
+                staff_roles: None,
             })
             .collect();
         let staff = self.data.approvals.as_ref().unwrap().staff.clone();
@@ -185,13 +186,13 @@ impl HrisApp {
                         ui.label("Workflow");egui::ComboBox::from_id_salt("delegation-workflow").selected_text(state.workflow.label()).show_ui(ui,|ui|{for s in Scope::ALL{ui.selectable_value(&mut state.workflow,s,s.label());}});
                     });
                     egui::Grid::new("delegation-staff").num_columns(2).spacing([16.0,10.0]).show(ui,|ui|{
-                        ui.label("Original approver");egui::ComboBox::from_id_salt("delegation-principal").width(340.0).selected_text(c.staff.iter().find(|s|Some(s.user_id)==state.principal).map(|s|format!("{} · {}",s.name,s.role.label())).unwrap_or_else(||"Choose staff member".into())).show_ui(ui,|ui|{for s in &c.staff{ui.selectable_value(&mut state.principal,Some(s.user_id),format!("{} · {}",s.name,s.role.label()));}});ui.end_row();
+                        ui.label("Original approver");egui::ComboBox::from_id_salt("delegation-principal").width(340.0).selected_text(c.staff.iter().find(|s|Some(s.user_id)==state.principal).map(|s|format!("{} · {}",s.name,s.label())).unwrap_or_else(||"Choose staff member".into())).show_ui(ui,|ui|{for s in &c.staff{ui.selectable_value(&mut state.principal,Some(s.user_id),format!("{} · {}",s.name,s.label()));}});ui.end_row();
                         ui.label("Substitute approver");let original=c.staff.iter().find(|s|Some(s.user_id)==state.principal);
-                        egui::ComboBox::from_id_salt("delegation-substitute").width(340.0).selected_text(c.staff.iter().find(|s|Some(s.user_id)==state.delegate).map(|s|format!("{} · {}",s.name,s.role.label())).unwrap_or_else(||"Choose substitute".into())).show_ui(ui,|ui|{for s in c.staff.iter().filter(|s|original.is_some_and(|p|p.user_id!=s.user_id&&approvals::substitute_role(p.role,s.role))){ui.selectable_value(&mut state.delegate,Some(s.user_id),format!("{} · {}",s.name,s.role.label()));}});ui.end_row();
+                        egui::ComboBox::from_id_salt("delegation-substitute").width(340.0).selected_text(c.staff.iter().find(|s|Some(s.user_id)==state.delegate).map(|s|format!("{} · {}",s.name,s.label())).unwrap_or_else(||"Choose substitute".into())).show_ui(ui,|ui|{for s in c.staff.iter().filter(|s|original.is_some_and(|p|p.user_id!=s.user_id&&approvals::substitute_roles(state.workflow,&p.roles(),&s.roles()))){ui.selectable_value(&mut state.delegate,Some(s.user_id),format!("{} · {}",s.name,s.label()));}});ui.end_row();
                         ui.label("Starts on");ui.add(egui::TextEdit::singleline(&mut state.starts).desired_width(180.0).hint_text("YYYY-MM-DD"));ui.end_row();
                         ui.label("Ends on (inclusive)");ui.add(egui::TextEdit::singleline(&mut state.ends).desired_width(180.0).hint_text("YYYY-MM-DD"));ui.end_row();
                     });
-                    ui.label(RichText::new("HR requires an HR/Admin substitute. Administrator steps require another Administrator. Use one delegation per workflow; overlapping assignments for the same original approver are blocked.").small().color(muted(ui)));
+                    ui.label(RichText::new("HR Generalist requires an HR/Admin substitute. Administrator steps require another Administrator. Other staff cover named leave assignments only unless they also hold team-review authority. Use one delegation per workflow; overlapping assignments for the same original approver are blocked.").small().color(muted(ui)));
                 }
                 ui.label("Reason");ui.add(egui::TextEdit::multiline(&mut state.reason).desired_rows(2).desired_width(f32::INFINITY).char_limit(500));
                 if state.revoke.is_none(){ui.label("Reference (optional, HR/Admin only)");ui.add(egui::TextEdit::singleline(&mut state.reference).desired_width(400.0).char_limit(200));}
@@ -237,7 +238,7 @@ impl HrisApp {
             });
         }
         ui.add_space(12.0);
-        ui.heading(if self.data.access.role.manages_hr() {
+        ui.heading(if self.data.access.allows(crate::staff_roles::Capability::LeaveAdministration) {
             "Delegation history"
         } else {
             "Your delegation assignments"

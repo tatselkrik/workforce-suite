@@ -61,3 +61,14 @@ the updated settings before submitting again.
 
 The separate portal retains its existing own-record contracts. This module adds
 no external messages, paid service, device connection or public deployment.
+
+## Specialist-role update, local implementation only
+
+The pending Account Manager release binds each grant to both complete protected
+role sets. A specialty change suspends its use even when the compatible base role
+stays Employee or Manager. Existing grants retain their saved legacy mapping and
+history. Staff without HR/team authority can cover only a specifically named
+leave approval; every action must still prove the original principal's exact
+request/step authority. The native version2 projection displays complete staff
+roles without adding Account Manager access to substitutes. This is verified
+locally; installed0.1.62 and hosted specialist activation remain unchanged.

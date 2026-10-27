@@ -35,6 +35,8 @@ pub struct Staff {
     pub employee_id: Uuid,
     pub name: String,
     pub role: Role,
+    #[serde(default)]
+    pub staff_roles: Option<crate::staff_roles::StaffRoles>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -47,6 +49,10 @@ pub struct Grant {
     pub delegate_employee_id: Uuid,
     pub principal_role: Role,
     pub delegate_role: Role,
+    #[serde(default)]
+    pub principal_staff_roles: Option<crate::staff_roles::StaffRoles>,
+    #[serde(default)]
+    pub delegate_staff_roles: Option<crate::staff_roles::StaffRoles>,
     pub principal_name: String,
     pub delegate_name: String,
     pub starts_on: NaiveDate,
@@ -136,6 +142,25 @@ pub fn substitute_role(principal: Role, delegate: Role) -> bool {
         Role::Employee => false,
     }
 }
+pub fn substitute_roles(scope: Scope, principal: &crate::staff_roles::StaffRoles, delegate: &crate::staff_roles::StaffRoles) -> bool {
+    use crate::staff_roles::Capability as C;
+    if !principal.uses_desktop() || !delegate.uses_desktop() { return false; }
+    if principal.allows(C::AccountAdministration) { return delegate.allows(C::AccountAdministration); }
+    if principal.allows(C::LeaveAdministration) { return delegate.allows(C::LeaveAdministration); }
+    match scope {
+        Scope::Leave => true,
+        Scope::Attendance | Scope::Overtime => principal.allows(C::TeamReview)
+            && (delegate.allows(C::TeamReview) || delegate.allows(C::AttendanceAdministration)),
+    }
+}
+impl Staff {
+    pub fn roles(&self) -> crate::staff_roles::StaffRoles {
+        self.staff_roles.clone().unwrap_or_else(|| crate::staff_roles::StaffRoles::legacy(self.role))
+    }
+    pub fn label(&self) -> String {
+        self.roles().as_slice().iter().map(|r| r.label()).collect::<Vec<_>>().join(", ")
+    }
+}
 fn clean(s: &str, min: usize, max: usize) -> bool {
     (min..=max).contains(&s.chars().count()) && !s.chars().any(char::is_control)
 }
@@ -155,6 +180,7 @@ impl Context {
                     employee_id: a.employee_id?,
                     name: data.employee_name(a.employee_id?).into(),
                     role: a.role,
+                    staff_roles: (data.access.staff_contract_version == 1).then(|| crate::staff_roles::StaffRoles::legacy(a.role)),
                 })
             })
             .collect::<Vec<_>>();
@@ -169,11 +195,12 @@ impl Context {
                     employee_id: e.id,
                     name: e.full_name.clone(),
                     role: Role::Manager,
+                    staff_roles: (data.access.staff_contract_version == 1).then(|| crate::staff_roles::StaffRoles::legacy(Role::Manager)),
                 })
                 .collect();
         }
         Self {
-            version: "approval-delegation-v1".into(),
+            version: if data.access.staff_contract_version == 1 {"approval-delegation-v2"} else {"approval-delegation-v1"}.into(),
             company_id: data.company.id,
             user_id: data.access.user_id,
             employee_id: data.access.employee_id,
@@ -194,7 +221,7 @@ impl Context {
     }
     pub fn validate_access(&self, access: &Access, today: NaiveDate) -> Result<()> {
         ensure!(
-            self.version == "approval-delegation-v1"
+            self.version == if access.staff_contract_version == 1 {"approval-delegation-v2"} else {"approval-delegation-v1"}
                 && self.company_id == access.company_id
                 && self.user_id == access.user_id
                 && self.employee_id == access.employee_id
@@ -223,7 +250,14 @@ impl Context {
                     && !g.delegate_employee_id.is_nil()
                     && g.principal_id != g.delegate_id
                     && g.principal_employee_id != g.delegate_employee_id
-                    && substitute_role(g.principal_role, g.delegate_role)
+                    && if self.version == "approval-delegation-v2" {
+                        match (&g.principal_staff_roles, &g.delegate_staff_roles) {
+                            (Some(p), Some(d)) => p.compatible_base_role() == g.principal_role
+                                && d.compatible_base_role() == g.delegate_role && substitute_roles(g.scope,p,d),
+                            _ => false,
+                        }
+                    } else { g.principal_staff_roles.is_none() && g.delegate_staff_roles.is_none()
+                        && substitute_role(g.principal_role, g.delegate_role) }
                     && clean(&g.principal_name, 1, 120)
                     && clean(&g.delegate_name, 1, 120)
                     && g.ends_on >= g.starts_on
@@ -245,14 +279,16 @@ impl Context {
                 !g.current
                     || g.delegate_id != access.user_id
                     || (g.delegate_role == access.role
-                        && Some(g.delegate_employee_id) == access.employee_id),
+                        && Some(g.delegate_employee_id) == access.employee_id
+                        && (self.version != "approval-delegation-v2" || g.delegate_staff_roles.as_ref() == Some(&access.staff_roles()?))),
                 "Delegation substitute binding changed."
             );
             ensure!(
                 !g.current
                     || g.principal_id != access.user_id
                     || (g.principal_role == access.role
-                        && Some(g.principal_employee_id) == access.employee_id),
+                        && Some(g.principal_employee_id) == access.employee_id
+                        && (self.version != "approval-delegation-v2" || g.principal_staff_roles.as_ref() == Some(&access.staff_roles()?))),
                 "Delegation original approver binding changed."
             );
         }
@@ -302,7 +338,9 @@ impl Context {
             ensure!(
                 !s.user_id.is_nil()
                     && !s.employee_id.is_nil()
-                    && s.role.uses_desktop()
+                    && s.roles().uses_desktop()
+                    && s.roles().compatible_base_role() == s.role
+                    && (s.staff_roles.is_some() == (self.version == "approval-delegation-v2"))
                     && clean(&s.name, 1, 120)
                     && users.insert(s.user_id)
                     && employees.insert(s.employee_id),
@@ -560,7 +598,7 @@ impl Change {
                 ensure!(
                     p.user_id != d.user_id
                         && p.employee_id != d.employee_id
-                        && substitute_role(p.role, d.role),
+                        && substitute_roles(*scope, &p.roles(), &d.roles()),
                     "Choose distinct staff; HR needs HR/Admin, and Administrator needs another Administrator."
                 );
                 ensure!(
@@ -628,6 +666,8 @@ pub fn apply_demo(data: &mut Snapshot, change: &Change) -> Result<()> {
                 delegate_employee_id: d.employee_id,
                 principal_role: p.role,
                 delegate_role: d.role,
+                principal_staff_roles: p.staff_roles.clone(),
+                delegate_staff_roles: d.staff_roles.clone(),
                 principal_name: p.name.clone(),
                 delegate_name: d.name.clone(),
                 starts_on: *starts_on,

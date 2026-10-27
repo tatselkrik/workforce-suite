@@ -1050,7 +1050,7 @@ impl CloudClient {
             || lifecycle_notifications.employee_id!=access.employee_id || lifecycle_notifications.role!=access.role { return Err(AccessRevoked.into()); }
         lifecycle_notifications.validate(&access, company.today())?;
         ensure!(lifecycle_notifications.items.iter().all(|i| employees.iter().any(|e| e.company_id==company.id && e.id==i.employee_id)), "Lifecycle subject is outside the current employee directory.");
-        let approvals:crate::approvals::Context=decode(self.request(Method::POST,"rpc/approval_delegation_context")?.json(&json!({})).send()?)?;
+        let approvals:crate::approvals::Context=decode(self.request(Method::POST,if access.staff_contract_version == 1 {"rpc/approval_delegation_staff_context"} else {"rpc/approval_delegation_context"})?.json(&json!({})).send()?)?;
         if approvals.company_id!=access.company_id||approvals.user_id!=access.user_id||approvals.employee_id!=access.employee_id||approvals.role!=access.role{return Err(AccessRevoked.into());}
         approvals.validate_access(&access,company.today())?;
         let snapshot=Snapshot {

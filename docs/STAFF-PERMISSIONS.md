@@ -71,13 +71,29 @@ exports invalidate when the protected role set/revision changes, including when
 the compatible four-code role is unchanged. Descriptive import/audit actor codes
 record the actual actor without granting authority.
 
+Operational delegation now freezes both protected role sets in a separate
+immutable binding. Existing grants are backfilled from their original saved role
+codes, never today's assignments. Current full role/binding/status checks suspend
+mismatches even when the compatible base code is unchanged. Matching restored
+roles can resume an unrevoked grant inside its dates; explicit revocation remains
+final for that grant. Named leave-plan assignments remain request-specific and
+cannot be forwarded. HR operational authority requires HR/Admin substitutes;
+Administrator authority requires another Administrator. Other specialties cannot
+use a named assignment as attendance/overtime authority. Financial delegation
+remains excluded. The separate version2 context retains version1 compatibility.
+New local evidence:83chronological migrations,615delegation assertions and11native
+delegation regressions pass; the unchanged public data/function grants pass the
+12,353assertion preservation suite. The new tests include actual named leave
+submission/decision, both-side same-base role changes, restoration, revocation,
+immutable receipts and direct private access denials. No hosted rollout occurred.
+
 The repository formatting check currently reports90files, including untouched
 pre-resume source. Its required final release check remains unresolved; no CI
 success or delivery is claimed by these local checks.
 
 ## Remaining before activation and delivery
 
-Complete delegation, notifications/updater and legacy-write boundaries;
+Complete notifications/updater and legacy-write boundaries;
 review every direct RPC, RLS/storage path and native snapshot/action/menu. Add the
 remaining scoped roster and current-role labels, reconcile legacy account writes
 with protected assignment/history, and finish role/access audit/recovery usability.
