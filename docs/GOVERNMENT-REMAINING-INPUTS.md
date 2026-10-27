@@ -1,4 +1,10 @@
-# Remaining government inputs after0.1.61
+# Remaining government inputs after0.1.62
+
+The local explicit-declaration BIR file builder is installed/private-published
+in062; see [delivery](BIR-0.1.62-DELIVERY.md). Its configured-employer completeness
+guard works; current company BIR facts remain incomplete and were not invented.
+Official acceptance and automatic historical/classification mapping still require
+the evidence below. Other supportable free agency-format work may continue.
 
 Local declared-compensation subtotal review is now delivered/installed in0.1.61;
 see [the delivery record](BIR-0.1.61-DELIVERY.md). This does not replace the
@@ -51,9 +57,9 @@ with connection disabled.
 
 Kirk subsequently resumed the remaining free work after061and reactivated the
 SAME continuation automation. The local explicit-declaration file builder is now
-in progress; these inputs still limit official acceptance and automatic mappings,
-but do not block that independent assembly work. No government runtime execution
+delivered; these inputs still limit official acceptance and automatic mappings,
+but do not block other independent supported format work. No government runtime execution
 or external connection is inferred from generic resumption. Read the current
-checkpoint/instructions first. Preserve completed049–061 and migrations through72. Do not
+checkpoint/instructions first. Preserve completed049–062 and migrations through72. Do not
 repeat unchanged searches, failed tooling, installation or publication. Continue
 any newly unblocked authorized free work.

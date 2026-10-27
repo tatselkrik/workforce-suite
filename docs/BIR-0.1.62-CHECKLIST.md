@@ -1,7 +1,7 @@
 # Desktop0.1.62 — what to check after delivery
 
-**Candidate checklist.** Installation/private publication are still pending;
-the installed0.1.61 does not contain this new builder yet. See
+**Installed and privately published.** This builder starts in0.1.62;
+earlier0.1.61does not contain it. See
 [verification and limits](BIR-0.1.62-VERIFICATION.md).
 
 1. Sign in as HR/Administrator and open **Payroll → Government → Reconciliation**,

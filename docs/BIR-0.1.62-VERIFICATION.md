@@ -1,7 +1,9 @@
-# Desktop0.1.62 — BIR declaration builder candidate verification
+# Desktop0.1.62 — BIR declaration builder verification
 
-**Candidate; not installed or published yet.** Desktop0.1.61 remains the verified
-installed/private release. This increment adds local published-layout DAT draft
+**Installed and privately published.** Frozen source
+`cc95725d1d6037f139694d94497ed993153f89c4`; keep0.1.61rollback. The
+[delivery record](BIR-0.1.62-DELIVERY.md) contains exact package, installer/recovery,
+installed-state and private-channel proofs. This adds local published-layout DAT draft
 assembly from explicit declarations, not automatic payroll classifications,
 tax computation, official validation or submission. Its
 [contract](BIR-DECLARATION-BUILDER.md) records the reviewed official sources.
@@ -57,7 +59,7 @@ whose creation timestamps differed. The test now compares the literal template
 schema; the final guarded runs pass. Initial proof/log/tree are preserved under
 `work/bir062-live-initial`, with cleanup confirmed after the first attempt.
 
-## Evidence paths and remaining release gate
+## Evidence and delivery gate
 
 - `work/bir062-{rust,builder-all-targeted,grid-targeted,vectors}.log`
 - `work/bir062-independent-artifacts.json`, `work/bir062-vectors/`
@@ -70,10 +72,10 @@ sign-in window closes normally. Executable SHA256:
 `eb6ce7379d9d25c0ccf3ed66a46e34bf3769a851f3daccffd3a5426fbcf47825`.
 See `work/bir062-normal-startup.json` and `work/bir062-rust-final.log`.
 
-Source freeze, signed package, exact real-installer/recovery, actual PC
-installation, private downloaded hash/
-signature/access and local delivery remain to be completed and recorded. No
-release/installation or remote-CI success is claimed by these candidate checks.
+Source/archive privacy, same-key signature, exact real-installer/recovery, actual
+PC installation/hash/BUILD/Windows Apps/normal launch and private downloaded
+size/hash/signature/access checks pass; see the separate delivery record. No
+remote-CI or Authenticode success is claimed.
 No full SQL suite/replay was needed for this native-only change.
 
 Official7.4 runtime acceptance remains NOT_RUN. Mixed schedules, non-ASCII names,

@@ -1,6 +1,6 @@
 # HRIS development roadmap
 
-## Original roadmap status — updated through0.1.61
+## Original roadmap status — updated through0.1.62
 
 Strikethrough means implemented within the prototype's documented limits. It
 does not imply external filing, bank transfer, public portal hosting or verified
@@ -30,6 +30,8 @@ and the private versioned delivery records.
    government-agency files, unresolved declaration mapping and official validator/
    upload acceptance.** Internal remittance/reconciliation, CSV/Excel worksheets,
    recorded sources and bounded BIR file checks are delivered through0.1.61.
+   Local BIR declaration-template/DAT assembly is delivered in0.1.62; official
+   acceptance and automatic classification remain separate requirements.
    The SSS draft stays internal review. The reviewed cross-year final-pay pack
    covers2025 separation/2026 receipt, not arbitrary historical/future years.
 7. ~~Applicant tracking, résumé attachments, interviews/feedback, offers,
@@ -46,8 +48,8 @@ and the private versioned delivery records.
     connections.** Company software/hardware targets are unresolved. External
     email/background push are deferred; no paid service or purchase is enabled.
 
-Desktop0.1.61 is installed and privately published; see
-[delivery and verification](BIR-0.1.61-DELIVERY.md). The local portal browser
+Desktop0.1.62 is installed and privately published; see
+[delivery and verification](BIR-0.1.62-DELIVERY.md). The local portal browser
 milestone is delivered in[portal0.1.7](PORTAL-0.1.7-DELIVERY.md). Current remaining
 agency inputs are in[GOVERNMENT-REMAINING-INPUTS.md](GOVERNMENT-REMAINING-INPUTS.md).
 The stage descriptions below retain historical increment details; use this

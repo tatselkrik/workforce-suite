@@ -4,10 +4,13 @@
 remaining work without subscriptions/hardware, continuing to the actual usage
 limit and again after the reported five-hour reset. The SAME scheduler is ACTIVE
 again; the required-input scheduling pause below is superseded. The next free
-increment is local BIR declaration file assembly from explicit reviewed CSV/Excel
-rows, with current employer/source binding and published control totals. It is
-in progress, not delivered or crossed out; installed061/portal017stay unchanged.
-See [the builder contract](BIR-DECLARATION-BUILDER.md). Official acceptance,
+increment, local BIR declaration file assembly from explicit reviewed CSV/Excel
+rows, is now installed/private-published in0.1.62. Current employer/source binding,
+exact controls,679Rust checks, explicit opt-ins, independent files, native layouts,
+exact installer/actual installation and signed private download are verified.
+Keep061rollback; portal017remains unchanged. See
+[062delivery](BIR-0.1.62-DELIVERY.md). Continue supportable free agency-format work.
+Official acceptance,
 government-software execution and paid/external/hardware boundaries remain.
 
 **Delivered061, before the latest resumption:** Kirk requested remaining work without stopping;
@@ -167,6 +170,10 @@ unconfigured external connection to a completed integration.
    and installed in061, with separate arithmetic counts and minimal CSV/Excel
    findings. It preserves structure/control semantics and excludes ambiguous
    combined/exempt and tax-adjustment relationships. [Delivery](BIR-0.1.61-DELIVERY.md).
+   ~~Local BIR Schedule1/2 declaration-template and DAT draft assembly~~ is
+   delivered/installed in062. It preserves explicit reviewed fields, current
+   employer/source binding, exact controls and existing files; it does not infer
+   payroll classifications or complete official acceptance. [Delivery](BIR-0.1.62-DELIVERY.md).
 3. ~~**Payroll, appraisal and training notifications.** Payslip/payment notices,
    review deadlines, training reminders and certificate-expiry alerts.~~ Delivered
    in desktop0.1.46 and local portal0.1.6; in-app only. External delivery is deferred.
