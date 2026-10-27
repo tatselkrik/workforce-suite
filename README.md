@@ -6,6 +6,11 @@ Application identifier: `io.github.tatselkrik.hrisdesktop`.
 
 ## What works
 
+- **BIR declaration sums:** the local1604C file check includes a separate review
+  of supported compensation subtotal relationships, exact one-cent differences
+  and private CSV/Excel findings. This does not calculate expected tax or establish
+  official acceptance. See [the0.1.61 checklist](docs/BIR-0.1.61-CHECKLIST.md).
+
 - **Government reconciliation:** **Payroll → Government** reviews SSS, PhilHealth, Pag-IBIG and BIR sources by month. Evidenced contribution allocations retain the issued employee deduction and need an independent Administrator. Administrator remittance records, voids and linked corrections retain history; fresh CSV worksheets omit private evidence. Agency upload files remain a separate increment. See [workflow rules](docs/PAYROLL-GOVERNMENT.md) and the [0.1.42 checklist](docs/GOVERNMENT-0.1.42-CHECKLIST.md).
 
 - **Linked payroll amendments:** **Payroll → Amendments** retains paid originals while issuing independently approved supplements, reviewed same-year statutory refunds and separate overpayment discrepancies without automatic recovery. Own PDF/CSV statements and consolidated report-v2 show supplemental cash once. Final pay also supports prior-year separation with evidenced2026 receipt dates. See [amendment rules](docs/PAYROLL-AMENDMENTS.md) and the [0.1.41 review checklist](docs/AMENDMENTS-0.1.41-CHECKLIST.md).

@@ -10,6 +10,13 @@ or substituted-filing eligibility, certify2316s, reconcile HRIS payroll, validat
 assigned identities or replace the official BIR module. Delivery is recorded
 separately after proportionate verification and actual installation.
 
+Desktop0.1.61 adds a **separate declared-compensation arithmetic review** after
+complete structure/control success. It compares five supported sums per D1 row
+or seven per D2 row, with independent counts and generic minimal findings.
+These relationships are not expected HRIS pay or tax. Existing structure/control
+errors and literal declaration readers keep their established contracts. See
+[equations, exclusions and whole-file rules](BIR-DECLARATION-ARITHMETIC.md).
+
 The reference is [RMC25-2024 AnnexA](https://bir-cdn.bir.gov.ph/BIR/pdf/RMC%20No.%2025-2024%20Annex%20A.pdf),
 PDF pages 6–9. The supplied module 7.4 is advertised for 2023 onward; this
 preflight accepts2023through the current company calendar year. The

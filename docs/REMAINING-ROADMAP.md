@@ -1,5 +1,14 @@
 # Remaining HRIS roadmap — agreed order
 
+**Latest resumption27October2026:** Kirk requested remaining work without stopping;
+the same scheduler is ACTIVE again. Desktop0.1.61 source work adds separate local
+declared-compensation subtotal review using supported published relationships.
+Default657Rust checks pass; hosted/native/artifact/delivery verification is in
+progress. This is not an expected-tax calculation or agency acceptance; do not
+cross out the new increment until its release/installation checks complete.
+See [the arithmetic contract](BIR-DECLARATION-ARITHMETIC.md). Earlier paused notes
+below are historical and superseded by this resumption.
+
 **27October2026 current boundary:** Portal0.1.7 is delivered and running locally
 at localhost:3032, including the mobile navigation/hover and payslip-print fixes.
 The scoped browser milestone below is crossed out.48Rust/15JS,22fictional browser

@@ -9,6 +9,7 @@ use uuid::Uuid;
 
 pub const MAX_BYTES: usize = 2 * 1024 * 1024;
 pub const MAX_DETAILS: usize = 500;
+pub mod arithmetic;
 const MAX_ISSUES: usize = 500;
 pub const MONEY_COLUMNS: [usize; 31] = [
     12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37,
@@ -225,6 +226,9 @@ pub struct Report {
     pub reviews: usize,
     pub issues: Vec<Issue>,
     pub totals: Vec<Total>,
+    /// Separate from the established file-structure/control error counts.
+    #[serde(default)]
+    pub arithmetic: arithmetic::Review,
 }
 impl Report {
     fn issue(&mut self, line: usize, field: &str, severity: Severity, message: &str) {
@@ -265,7 +269,7 @@ impl Report {
             }
             .into(),
             format!(
-                "{}; {} detail rows; {} errors; {} review items; {} diagnostics omitted. No tax calculation, identity certification or payroll comparison.",
+                "{}; {} detail rows; {} errors; {} review items; {} diagnostics omitted. Structure/control result only; see the separate arithmetic summary. No tax calculation, identity certification or payroll comparison.",
                 self.schedule.label(),
                 self.details,
                 self.errors,
@@ -288,6 +292,22 @@ impl Report {
             rows.push(vec!["PREFLIGHT_ONLY_NOT_OFFICIAL_VALIDATION".into(),self.sha256.clone(),
             self.year.map(|y|y.to_string()).unwrap_or_default(),"0".into(),"Diagnostics limit".into(),"INCOMPLETE_LIST".into(),
             "More issues exist than can be listed. Fix these and check the source again; no data rows were treated as verified.".into()]);
+        }
+        rows.push(vec!["PREFLIGHT_ONLY_NOT_OFFICIAL_VALIDATION".into(),self.sha256.clone(),
+            self.year.map(|y|y.to_string()).unwrap_or_default(),"0".into(),
+            "Declared compensation arithmetic".into(),
+            if !self.arithmetic.checked(){"NOT_CHECKED"}else if self.arithmetic.differences>0{"DECLARED_SUM_DIFFERENCES"}else{"DECLARED_SUMS_CONSISTENT"}.into(),
+            self.arithmetic.summary()]);
+        rows.extend(self.arithmetic.findings.iter().map(|f|vec![
+            "PREFLIGHT_ONLY_NOT_OFFICIAL_VALIDATION".into(),self.sha256.clone(),
+            self.year.map(|y|y.to_string()).unwrap_or_default(),f.line.to_string(),f.field.clone(),
+            "DECLARED_SUM_DIFFERENCE".into(),
+            format!("{}; declared compensation subtotal differs from its related fields. No amount was adjusted or certified.",f.equation)]));
+        if self.arithmetic.omitted()>0 {
+            rows.push(vec!["PREFLIGHT_ONLY_NOT_OFFICIAL_VALIDATION".into(),self.sha256.clone(),
+                self.year.map(|y|y.to_string()).unwrap_or_default(),"0".into(),
+                "Arithmetic findings limit".into(),"INCOMPLETE_LIST".into(),
+                "Further arithmetic findings exist beyond the displayed list. Counts include all supported rows; the file has not passed arithmetic review.".into()]);
         }
         super::export::Table {
             headers: [
@@ -477,6 +497,7 @@ pub fn inspect(
         reviews: 0,
         issues: Vec::new(),
         totals: Vec::new(),
+        arithmetic: arithmetic::Review::default(),
     };
     if schedule == Schedule::Two {
         report.issue(0,"MWE declarations",Severity::Review,
@@ -762,6 +783,9 @@ pub fn inspect(
             detail_cents: sums[j],
             control_cents: declared[j],
         });
+    }
+    if report.errors == 0 {
+        report.arithmetic = arithmetic::inspect(schedule, &rows)?;
     }
     Ok(report)
 }
@@ -1226,6 +1250,7 @@ pub(crate) fn preview_report(errors: bool, minimum_wage: bool) -> Report {
         reviews: 0,
         issues: Vec::new(),
         totals: Vec::new(),
+        arithmetic: arithmetic::Review::default(),
     };
     for &i in layout.money {
         let cents = if minimum_wage {
@@ -1264,6 +1289,8 @@ pub(crate) fn preview_report(errors: bool, minimum_wage: bool) -> Report {
             "Company BIR registration is incomplete; employer matching is unverified.",
         );
         r.totals[0].detail_cents = None;
+    } else {
+        r.arithmetic=arithmetic::preview(schedule,false);
     }
     r
 }

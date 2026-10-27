@@ -250,10 +250,16 @@ fn hosted_native_declaration_projection_for_authorized_installation() {
 fn hosted_native_annual_pay_for_authorized_installation() {
     hosted_native_bir_projection("paydetails");
 }
+#[test]
+#[ignore = "Explicit synthetic session for fixed authorized installation and local arithmetic evidence only."]
+fn hosted_native_compensation_arithmetic_for_authorized_installation() {
+    hosted_native_bir_projection("arithmetic");
+}
 fn hosted_native_bir_projection(mode: &str) {
-    assert!(matches!(mode,"identities"|"declarations"|"paydetails"));
+    assert!(matches!(mode,"identities"|"declarations"|"paydetails"|"arithmetic"));
     let declarations=mode=="declarations";
     let pay=mode=="paydetails";
+    let arithmetic=mode=="arithmetic";
     use sha2::Digest;
     let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .canonicalize()
@@ -283,7 +289,7 @@ fn hosted_native_bir_projection(mode: &str) {
         reference
     );
     let session: AuthSession = serde_json::from_str(
-        &std::env::var(if pay {"HRIS_PAYDETAIL_AUTH_SESSION"}else if declarations {"HRIS_DECLARATION_AUTH_SESSION"} else {"HRIS_IDENTITY_AUTH_SESSION"})
+        &std::env::var(if arithmetic {"HRIS_ARITHMETIC_AUTH_SESSION"}else if pay {"HRIS_PAYDETAIL_AUTH_SESSION"}else if declarations {"HRIS_DECLARATION_AUTH_SESSION"} else {"HRIS_IDENTITY_AUTH_SESSION"})
             .expect("Explicit short-lived synthetic session"),
     )
     .unwrap();
@@ -312,8 +318,35 @@ fn hosted_native_bir_projection(mode: &str) {
     } else {
         "hr_generalist"
     };
-    let folder = work.join(format!("{}-live-{role}", if pay {"paydetails060-verified"}else if declarations {"declarations059"} else {"identities058"}));
+    let folder = work.join(format!("{}-live-{role}", if arithmetic {"arithmetic061-native"}else if pay {"paydetails060-verified"}else if declarations {"declarations059"} else {"identities058"}));
     std::fs::create_dir(&folder).unwrap();
+    if arithmetic {
+        use crate::payroll_government::bir_file as bir;
+        let mut cases=vec![];
+        for (name,schedule,different) in [("s1-match",bir::Schedule::One,false),("s1-cent",bir::Schedule::One,true),
+            ("s2-match",bir::Schedule::Two,false),("s2-cent",bir::Schedule::Two,true)] {
+            let dir=folder.join(name);std::fs::create_dir(&dir).unwrap();
+            let source=dir.join("0123456780000123120261604C.DAT");
+            let raw=bir::arithmetic::fictional_source(schedule,different);std::fs::write(&source,&raw).unwrap();
+            let hash=format!("{:x}",sha2::Sha256::digest(&raw));
+            let r=cloud.government_bir_check(&data,&source,None,None).unwrap();
+            assert_eq!(r.errors,0,"Configured employer mismatch must remain a blocking finding; never manufacture employer facts for QA.");
+            assert_eq!(r.arithmetic.differences,usize::from(different));assert!(r.arithmetic.checked());
+            for ext in ["csv","xlsx"] {
+                let checked=cloud.government_bir_check(&data,&source,Some(&hash),Some(&dir.join(format!("findings.{ext}")))).unwrap();
+                assert_eq!(checked.arithmetic,r.arithmetic);
+            }
+            assert_eq!(std::fs::read(&source).unwrap(),raw);
+            cases.push(json!({"case":name,"schedule":schedule,"source_sha256":hash,"source_unchanged":true,
+                "structural_errors":r.errors,"employer_match":r.employer_match,"arithmetic":r.arithmetic}));
+        }
+        assert_eq!(cloud.current_access().unwrap(),data.access);
+        let proof=json!({"all_passed":true,"role":role,"cases":cases,
+            "fixed_authorized_project_and_local_evidence":true,"hosted_identity_data_persisted":false,
+            "official_acceptance":false});
+        std::fs::write(folder.join("proof.json"),serde_json::to_vec(&proof).unwrap()).unwrap();
+        return;
+    }
     let mut summaries = vec![];
     let mut employer_ready = false;
     for year in [2025, 2026] {

@@ -291,6 +291,27 @@ fn bir_mwe_actual_client_keeps_mwe_review_and_all_40_totals_with_private_finding
 }
 
 #[test]
+fn native_compensation_arithmetic_keeps_structural_counts_separate_and_minimal_exports_private() {
+    let data=DemoStore::new().data;
+    for schedule in [bir::Schedule::One,bir::Schedule::Two] {
+        let (root,p,_)=folder();
+        let raw=bir::arithmetic::fictional_source(schedule,true);
+        std::fs::write(&p,&raw).unwrap();let hash=format!("{:x}",sha2::Sha256::digest(&raw));
+        let (url,handle)=server(&data,4,None,false);let mut c=client(url,&data);
+        let out=root.join("minimal.csv");
+        let report=c.government_bir_check(&data,&p,Some(&hash),Some(&out)).unwrap();
+        handle.join().unwrap();
+        assert_eq!(report.errors,0);assert_eq!(report.arithmetic.differences,1);
+        assert!(report.arithmetic.checked());
+        let export=std::fs::read_to_string(&out).unwrap();
+        assert!(export.contains("DECLARED_SUM_DIFFERENCE"));
+        for value in ["234567890","FICTIONAL PERSON","190.11","570.76"] {assert!(!export.contains(value));}
+        assert_eq!(std::fs::read(&p).unwrap(),raw);
+        std::fs::remove_file(out).unwrap();std::fs::remove_file(p).unwrap();std::fs::remove_dir(root).unwrap();
+    }
+}
+
+#[test]
 #[ignore = "Explicit normal hosted synthetic session supplied only through child environment."]
 fn bir_hosted_native_check_and_findings() {
     let input: Value = serde_json::from_str(

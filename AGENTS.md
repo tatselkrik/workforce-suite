@@ -389,6 +389,12 @@ controls. Keep the days/year factor out of monetary totals, retain PERA/net-basi
 controls, always flag MWE eligibility/wage/factor basis as unverified, and refuse
 mixed schedules whole-file until their ordering/routing contract is established.
 
+Separate declared compensation arithmetic follows docs/BIR-DECLARATION-ARITHMETIC.md.
+Compare only supported within-file subtotals after complete structure/control
+success. Keep its counts/findings separate, exact centavos and minimal exports.
+Do not infer ambiguous combined-compensation or exempt-component bases, tax
+adjustments, classifications, payroll agreement or official acceptance.
+
 Local payroll exchange follows docs/PAYROLL-EXCHANGE.md. Keep Admin-only versioned
 column profiles, protected HR/Admin report-v2 snapshots and exact original CSV
 bytes. Preserve actor/full-payload retries, closed unused identities, atomic

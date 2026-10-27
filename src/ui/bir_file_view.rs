@@ -7,6 +7,7 @@ pub(super) struct State {
     source: Option<PathBuf>,
     pub(super) report: Option<bir::Report>,
     page: usize,
+    arithmetic_page: usize,
     excel: bool,
     pending: bool,
     expand_totals: bool,
@@ -19,6 +20,7 @@ impl State {
         {
             self.report = Some(report);
             self.page = 0;
+            self.arithmetic_page = 0;
             self.pending = false;
         }
     }
@@ -26,6 +28,12 @@ impl State {
         if self.pending {
             self.report = None;
             self.pending = false;
+        }
+    }
+    #[cfg(feature = "qa-screenshot")]
+    pub(super) fn preview_arithmetic(&mut self) {
+        if let Some(report)=&mut self.report {
+            report.arithmetic=bir::arithmetic::preview(report.schedule,true);
         }
     }
     #[cfg(feature = "qa-screenshot")]
@@ -38,6 +46,37 @@ impl State {
         }
     }
 }
+fn compensation_arithmetic(ui: &mut Ui, review: &bir::arithmetic::Review, page: &mut usize) {
+    ui.push_id("bir_compensation_arithmetic", |ui| {
+        egui::CollapsingHeader::new("Declared compensation arithmetic")
+            .default_open(true)
+            .show(ui, |ui| {
+                ui.add(egui::Label::new(review.summary()).wrap());
+                ui.add(egui::Label::new(RichText::new("Only supported subtotal relationships are checked. Exemptions, wage bases, combined-compensation basis, tax due, withholding and official acceptance remain outside this review.").weak()).wrap());
+                if !review.findings.is_empty() {
+                    let pages=review.findings.len().div_ceil(5).max(1);
+                    *page=(*page).min(pages-1);
+                    ui.horizontal_wrapped(|ui| {
+                        if ui.add_enabled(*page>0,egui::Button::new("Previous arithmetic findings")).clicked(){*page-=1;}
+                        ui.label(format!("Page {} of {}",*page+1,pages));
+                        if ui.add_enabled(*page+1<pages,egui::Button::new("Next arithmetic findings")).clicked(){*page+=1;}
+                    });
+                    for finding in review.findings.iter().skip(*page*5).take(5) {
+                        ui.group(|ui| {
+                            ui.add(egui::Label::new(RichText::new(format!("Line {} — {}",finding.line,finding.field)).strong()).wrap());
+                            ui.add(egui::Label::new(&finding.equation).wrap());
+                            ui.add(egui::Label::new("The declared subtotal differs from its related fields. Check the original source; no amount was changed.").wrap());
+                        });
+                    }
+                }
+                if review.omitted()>0 {
+                    ui.add(egui::Label::new(format!("{} additional differences are not listed. Counts include every supported row; recheck after correction.",review.omitted())).wrap());
+                }
+            });
+    });
+    ui.add_space(8.0);
+}
+
 enum Intent {
     Back,
     Choose,
@@ -49,7 +88,7 @@ impl HrisApp {
         let state = &mut self.payroll_state.government.bir;
         let mut intent = None;
         ui.heading("BIR 1604C file check");
-        ui.add(egui::Label::new("Read-only checks for one published 1604C Schedule 1 or Schedule 2 plaintext layout: columns, dates, codes, employer header and exact control totals. The original file and payroll are unchanged.").wrap());
+        ui.add(egui::Label::new("Read-only checks for one published 1604C Schedule 1 or Schedule 2 plaintext layout: columns, dates, codes, employer header, exact control totals and a separate review of declared compensation sums. The original file and payroll are unchanged.").wrap());
         ui.add(egui::Label::new(RichText::new("This is not official BIR validation, a wage/tax calculation, eligibility or certificate check, or an HRIS payroll comparison. Mixed schedules, non-ASCII encodings and sealed/validated files need separate review.").weak()).wrap());
         ui.add_space(8.0);
         let connected = self.data.mode == Mode::Supabase;
@@ -110,28 +149,29 @@ impl HrisApp {
         if let Some(report) = &state.report {
             let label = if report.errors > 0 {
                 "Issues found"
+            } else if report.arithmetic.differences>0 {
+                "Declared compensation sums differ — review needed"
             } else if report.reviews > 0 {
                 "Structure consistent — review still needed"
             } else {
                 "Structure and exact control totals consistent"
             };
-            ui.label(RichText::new(label).strong().color(if report.errors > 0 {
+            ui.label(RichText::new(label).strong().color(if report.errors > 0 || report.arithmetic.differences>0 {
                 Color32::from_rgb(196, 71, 63)
             } else {
                 TEAL
             }));
             ui.label(format!(
-                "{} · {} · Tax year {} · {} details · {} errors · {} review items",
+                "{} · {} · Tax year {} · {} details",
                 report.file_name,
                 report.schedule.label(),
                 report
                     .year
                     .map(|y| y.to_string())
                     .unwrap_or_else(|| "unresolved".into()),
-                report.details,
-                report.errors,
-                report.reviews
+                report.details
             ));
+            ui.label(format!("Structure/control findings: {} errors · {} review items",report.errors,report.reviews));
             ui.label(match report.employer_match{Some(true)=>"Header matches this company's registered BIR TIN/branch; agency assignment is not certified.",
                 Some(false)=>"Header belongs to a different registered employer. Review the chosen file; it has not been imported.",None=>"Employer matching is unverified because company BIR registration is incomplete."});
             ui.add(
@@ -141,6 +181,7 @@ impl HrisApp {
                 .wrap(),
             );
             ui.add_space(8.0);
+            compensation_arithmetic(ui, &report.arithmetic, &mut state.arithmetic_page);
             egui::CollapsingHeader::new("Exact file control totals")
                 .default_open(state.expand_totals)
                 .show(ui, |ui| {
@@ -331,6 +372,7 @@ mod tests {
             reviews: 0,
             issues: Vec::new(),
             totals: Vec::new(),
+            arithmetic: bir::arithmetic::Review::default(),
         };
         let mut s = State::default();
         let r = make();
@@ -365,6 +407,7 @@ mod tests {
             reviews: 0,
             issues: Vec::new(),
             totals: Vec::new(),
+            arithmetic: bir::arithmetic::Review::default(),
         };
         let mut s = State {
             source: Some(PathBuf::from("retained-source.dat")),
