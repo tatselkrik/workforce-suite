@@ -479,3 +479,45 @@ template handoff or restart these adapters merely because a usage window resets.
 Keep the existing scheduler paused. The delivered0.1.62BIR builder and existing
 internal worksheets/remittance workflows retain their completed status; official
 acceptance and the previously deferred external/device work remain separate.
+
+
+## Combined Learning and Performance — 27 October 2026
+
+Kirk explicitly chose one Development workspace inside HRIS for Learning and
+Performance, with Goals, Appraisals, Training, Certifications and Career plans
+as internal sections. The current Employees > Development entry already groups
+these functions. Preserve this combined organization instead of creating separate
+Learning and Performance applications or top-level workspaces.
+
+The approved specialist-role design is one Learning & Performance Officer role,
+replacing the earlier proposal for separate Learning Officer and Performance
+Officer roles. This is a saved design decision: the installed four-role contract
+has not yet been extended. Introduce and verify the combined role with the broader
+permissions update; retain current assignment/own-team scopes, private notes and
+certificate evidence restrictions, independent review and immutable history.
+See docs/ACCOUNT-MANAGER.md for the approved design and implementation boundary.
+
+## Approved implementation and continuous resumption — 27 October 2026
+
+Kirk approved the reviewed workspaces proposal and explicitly instructed updating
+context, implementing it and continuing across actual usage resets. The earlier
+preview-only hold and scheduler pause are superseded for the ordered queue in
+docs/WORKSPACES-IMPLEMENTATION.md. Start protected multi-role staff permissions,
+then focused workspaces, separate Payroll Desktop with shared Rust code/the same
+company Supabase, then staged employee relations, employee services, expanded
+benefits administration and leadership reporting. Keep the combined Development
+workspace and one Learning & Performance Officer role. Preserve seven intended
+roles, independent Administrator financial approval, prior owner access, current
+client compatibility and domain-private/own-team scopes through additive rollout.
+Do not give specialists broad HR access as a shortcut. The existing native/portal
+work and immutable financial history remain intact until verified replacement.
+
+Reactivate and reuse the SAME usage-reset scheduler for this authorized queue.
+Follow the existing context-freshness protocol; checkpoint meaningful milestones,
+check both usage windows and arm/retime actual reset +2minutes. Older agency inputs,
+official government software execution/acceptance, paid features, external delivery,
+unresolved vendors and actual devices remain deferred. No repeated handoff is needed
+for these deferred items. Existing exact-target SQL/private HRIS publication authority
+continues; separate Payroll release identities/destinations need their own resolved
+setup and authority. Install each verified authorized desktop release and preserve
+unsaved work. No new role, migration or release is complete merely because designed.

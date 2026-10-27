@@ -1,5 +1,12 @@
 # Remaining HRIS roadmap — agreed order
 
+**Latest human approval —27October2026:** Kirk approved the workspaces preview,
+authorized implementation and reactivated continuous work across actual usage resets.
+The active ordered extension is [Workspaces and Payroll implementation](WORKSPACES-IMPLEMENTATION.md).
+Its role/workspace/Payroll and later HR-function checklist supersedes the prior
+preview-only hold and scheduler pause. The agency/external/device tasks below
+retain their existing deferrals; delivered milestones are not to be repeated.
+
 **Latest human decision27October2026:** Kirk has no current blank agency templates
 and said **"no. defer this"**. SSS AMS-CCL, PhilHealth EPRS and Pag-IBIG MCRF upload
 adapters are **deferred until he resumes that scope**. The previous template

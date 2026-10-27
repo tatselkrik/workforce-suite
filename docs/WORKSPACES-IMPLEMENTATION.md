@@ -1,0 +1,102 @@
+# HRIS workspaces and Payroll implementation — approved27October2026
+
+Kirk approved the reviewed proposal and authorized implementation plus automatic
+continuation across actual usage resets. This supersedes the preview-only hold
+and scheduling pause for this queue. The older agency templates, official module
+execution/acceptance, paid services, external delivery/vendor connections and
+physical-device work remain deferred. This is an industry-neutral Philippine
+prototype for small companies and larger employers, including BPOs.
+
+## Ordered delivery checklist
+
+- [ ] Staff roles, protected permissions and multi-role Account Manager.
+  Keep Administrator, HR Generalist, Manager and Employee; add Recruiter,
+  Learning & Performance Officer and Payroll Officer. A single employee/account
+  can hold several staff responsibilities. Employee alone remains portal-only.
+  Administrator remains highest application authority; developer access is an
+  explicitly authorized company account, never an embedded support backdoor.
+- [ ] Focused native workspaces and optional-module visibility.
+  Retain one Employees > Development workspace for Goals, Appraisals, Training,
+  Certifications, Career plans and administrative Review cycles. Use one combined
+  Learning & Performance Officer role. Preserve manager assignments and private
+  HR notes/evidence boundaries. Company configuration must suit general employers
+  without requiring BPO-specific client/campaign terminology.
+- [ ] Separate native Payroll Desktop using shared Rust code and the same company
+  Supabase. Keep one repository and existing financial sources/history. Payroll
+  Officer is a distinct permission regardless of company size; one person may
+  also hold HR Generalist. Preserve independent Administrator financial approval,
+  self-review exclusions and exact source/revision/receipt controls. Verify full
+  feature parity and local delivery before removing payroll screens from HRIS.
+- [ ] Employee-relations case workflow with confidential, assigned access and
+  immutable history. Preserve existing personnel/exit/payroll facts.
+- [ ] Employee-service requests with ownership, routing, status and retained history.
+- [ ] Expanded benefits administration for eligibility, enrollment and dependents;
+  approved monetary effects remain explicit payroll inputs, never automatic pay
+  or deduction changes from an unreviewed benefits edit.
+- [ ] Expanded HR leadership reporting using defined, supportable historical facts.
+  Keep unknown turnover/service dates explicit; no invented staffing forecasts.
+
+Cross out only implemented, proportionately verified and delivered scope. Record
+partial foundations without claiming a usable specialist role or completed release.
+
+## Role boundaries
+
+| Role | Intended scope |
+| --- | --- |
+| Administrator | Company administration, full authorized oversight and independent restricted approvals |
+| HR Generalist | Personnel, attendance/leave and general HR services/relations/benefits; additional specialties are explicit assignments |
+| Recruiter | Company applicants, interviews, offers and hiring/onboarding responsibilities |
+| Learning & Performance Officer | Development administration and authorized metadata; separate HR-private notes/document evidence stay protected |
+| Payroll Officer | Financial preparation, sources and reports; payroll approval remains independent Administrator work |
+| Manager | Existing own/current-team and assigned-review/task scope |
+| Employee | Existing own portal scope, without desktop admission |
+
+Roles are access responsibilities rather than mandatory separate jobs. A company
+may combine assignments on one account. Payroll preparation and approval remain
+separate actors without creating a separate Payroll Approver role.
+
+## Compatibility and implementation gate
+
+The current installed application/database still have four roles. The interactive
+preview establishes intended navigation only, not working authorization. Inspect
+all affected RPCs, RLS/storage policies, source snapshots, Account Manager provisioning,
+portal admission and native gates. Never grant a specialist the broad HR role merely
+to make one screen load. Keep current membership checks independent of user metadata.
+Use versioned additive contracts and fail closed for unsupported clients. Preserve
+existing owner access, company identity, employment links, drafts and audit records.
+Existing broad HR assignments need an explicit, audited compatibility mapping to
+retain their current rights during transition; new assignments follow the new scope.
+
+Implement and test local permission foundations before hosted rollout. An assignment
+must not be described as usable until its complete native/server data and action
+boundaries pass verification. Check direct API denial and revocation, not only menus.
+
+For each authorized app release, verify/package/install the exact candidate and keep
+rollback. Existing HRIS private update publication is already authorized at its exact
+private guard. A separate Payroll identity/feed must be resolved and authorized before
+publishing there; complete independent local development and delivery first.
+
+## Recovery and current evidence
+
+Use AGENTS.md's current context-freshness protocol and this chat's private checkpoint.
+The SAME resume-hris-after-usage-reset scheduler is ACTIVE again. Check both five-hour
+and weekly limits, arm the actual five-hour reset +2minutes before substantive work,
+checkpoint at meaningful milestones/around80% usage, and retime before exhaustion.
+The computer and desktop app must be available for local continuation. Do not repeat
+completed desktop0.1.62, portal0.1.7 or migrations through72.
+
+## Local role foundation progress —27October2026
+
+The seven-role capability model, bounded/canonical role sets, protected actor-bound
+contexts, legacy-compatible base-role projection and version-negotiated native
+admission are implemented locally. An additive private registry captures prior
+membership rights with immutable compatibility history. Specialist activation
+remains gated off: no new role is assignable in the installed app yet.
+
+Local evidence: the first full normal Rust run passed690checks with28intentional
+opt-ins ignored. After access binding changes,11role-model,4existing-access,
+9delegation,7new access-binding and6local HTTP adapter cases passed. The local
+PostgreSQL suite passed10,251workflow/preservation assertions, fresh73migration
+replay and129role-foundation assertions. Shared capability cases match native/SQL.
+These are local checks; no hosted migration, role activation, release or installation
+has occurred. Role editing and complete module read/write boundaries remain next.

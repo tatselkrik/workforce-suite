@@ -87,6 +87,7 @@ try {
   const annualLedgerMigrations=[];
   const birIdentityMigrations=[];
   const annualPayMigrations=[];
+  const staffRoleMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -100,6 +101,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_staff_role_foundation.sql')){staffRoleMigrations.push(filename);continue;}
     if(filename.endsWith('_government_annual_pay_details.sql')){annualPayMigrations.push(filename);continue;}
     if(filename.endsWith('_government_bir_identity_review.sql')){birIdentityMigrations.push(filename);continue;}
     if(filename.endsWith('_government_annual_recorded_sources.sql')){annualLedgerMigrations.push(filename);continue;}
@@ -550,6 +552,19 @@ try {
   for(const t of payTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,payBefore[t],'Pay detail migration preserves '+t);
   for(const f of payFunctions)eq((await db.query('select md5(pg_get_functiondef($1::regprocedure))digest',[f.identity])).rows[0].digest,f.digest,'Pay detail migration preserves existing function '+f.identity);
   const{runAnnualPayTests}=await import('./government-annual-pay.test.mjs');await runAnnualPayTests({db,eq,deny,session,company:companyA,owner:uidA,unassigned:uidB});
+  await db.exec('reset role');
+  const staffTables=(await db.query("select tablename from pg_tables where schemaname='public'order by tablename")).rows.map(r=>r.tablename);
+  const staffBefore={};for(const t of staffTables)staffBefore[t]=(await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows;
+  const staffFunctions=(await db.query("select p.oid::regprocedure::text identity,md5(pg_get_functiondef(p.oid))digest from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in('public','hris_private')and p.prokind='f'order by 1")).rows;
+  for(const filename of staffRoleMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  for(const t of staffTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,staffBefore[t],'Role foundation preserves '+t);
+  for(const f of staffFunctions)eq((await db.query('select md5(pg_get_functiondef($1::regprocedure))digest',[f.identity])).rows[0].digest,f.digest,'Role foundation preserves existing function '+f.identity);
+  eq((await db.query('select count(*)::int n from hris_private.staff_role_assignments')).rows[0].n,(await db.query('select count(*)::int n from public.company_members')).rows[0].n,'Every current membership receives an audited compatibility role set');
+  eq((await db.query('select count(*)::int n from hris_private.staff_role_events')).rows[0].n,(await db.query('select count(*)::int n from public.company_members')).rows[0].n,'Every compatibility assignment has immutable history');
+  await session(uidA);
+  const staffContext=(await db.query('select public.staff_role_context()c')).rows[0].c;
+  eq(staffContext.user_id,uidA,'Protected role context retains current actor');
+  eq(staffContext.runtime_ready,false,'Foundation does not activate incomplete specialist paths');
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

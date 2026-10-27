@@ -14,6 +14,8 @@ mod bir_builder_tests;
 mod government_annual_tests;
 #[cfg(test)]
 mod bir_identity_tests;
+#[cfg(test)]
+mod staff_roles_tests;
 use crate::access::{Access, AccessEvent, AdminAction, ManagedAccount};
 use crate::account::{self, AccountAction, AccountProfile, DisplayPreferences, PersonalDetails};
 use crate::documents::{self, DocumentAction, DocumentState, EmployeeDocument};
@@ -767,29 +769,34 @@ impl CloudClient {
     }
 
     fn current_access(&mut self) -> Result<Access> {
-        let response = self
-            .request(Method::POST, "rpc/my_hris_access")?
-            .json(&json!({}))
-            .send()
+        let response = self.request(Method::POST, "rpc/my_hris_access")?
+            .json(&json!({})).send()
             .context("Could not verify your current HRIS access. Check your connection.")?;
-        if matches!(
-            response.status(),
-            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN
-        ) {
+        if matches!(response.status(), StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN) {
             return Err(AccessRevoked.into());
         }
-        let access: Access = decode(response)?;
-        ensure!(
-            access.user_id == self.session.user.id,
-            "The access response did not match your account."
-        );
-        if !access.role.uses_desktop() {
+        let mut access: Access = decode(response)?;
+        ensure!(access.user_id == self.session.user.id, "The access response did not match your account.");
+        if access.staff_contract_version > crate::staff_roles::SCHEMA_VERSION {
+            return Err(anyhow::Error::new(AccessRevoked).context("Update HRIS to use the current staff-permissions contract."));
+        }
+        if access.staff_contract_version == crate::staff_roles::SCHEMA_VERSION {
+            let response = self.request(Method::POST, "rpc/staff_role_context")?
+                .json(&json!({})).send()
+                .context("Could not verify your staff-role permissions. Check your connection.")?;
+            if matches!(response.status(), StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN) {
+                return Err(AccessRevoked.into());
+            }
+            let context: crate::staff_roles::Context = decode(response)
+                .map_err(|_| anyhow::Error::new(AccessRevoked))?;
+            access.bind_staff_context(context).map_err(|_| anyhow::Error::new(AccessRevoked))?;
+        }
+        if !access.uses_desktop() {
             let _ = self.sign_out_scope("local");
             return Err(PortalAccount.into());
         }
         Ok(access)
     }
-
     pub fn report(
         &mut self,
         filter: &crate::reports::Filter,

@@ -6,7 +6,7 @@ use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-pub const EMPLOYEE_PORTAL_NOTICE: &str = "This employee account is for the employee portal, which is planned for a later update. Desktop access requires an assigned staff role. Contact your administrator.";
+pub const EMPLOYEE_PORTAL_NOTICE: &str = "This employee account is for the Employee Portal. Desktop access requires an assigned staff role. Contact your administrator for the local portal address.";
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -45,7 +45,7 @@ impl Role {
                 "View own and direct reports' records; review direct reports' leave. Record own attendance and leave."
             }
             Self::Employee => {
-                "Employee portal (planned): own record, attendance and leave. No desktop access."
+                "Employee Portal: own record, attendance and leave. No desktop access."
             }
         }
     }
@@ -82,11 +82,36 @@ pub struct Access {
     pub direct_reports: Vec<Uuid>,
     #[serde(default)]
     pub reports_to_name: Option<String>,
+    #[serde(default)]
+    pub staff_contract_version: u16,
+    // Bound separately from the protected RPC, never from legacy JSON or Auth metadata.
+    #[serde(skip)]
+    pub staff_context: Option<crate::staff_roles::Context>,
 }
 
 impl Access {
+    pub fn bind_staff_context(&mut self, context: crate::staff_roles::Context) -> Result<()> {
+        context.validate(self)?;
+        self.staff_context = Some(context);
+        Ok(())
+    }
+    pub fn staff_roles(&self) -> Result<crate::staff_roles::StaffRoles> {
+        if let Some(context) = &self.staff_context {
+            context.validate(self)?;
+            Ok(context.effective_roles())
+        } else {
+            Ok(crate::staff_roles::StaffRoles::legacy(self.role))
+        }
+    }
+    pub fn allows(&self, capability: crate::staff_roles::Capability) -> bool {
+        self.staff_roles().is_ok_and(|roles| roles.allows(capability))
+    }
+    pub fn uses_desktop(&self) -> bool {
+        self.allows(crate::staff_roles::Capability::Desktop)
+    }
     pub fn can_read_contacts(&self, employee: Uuid) -> bool {
-        self.role.manages_hr() || self.employee_id == Some(employee)
+        self.staff_roles().is_ok_and(|roles| roles.allows(crate::staff_roles::Capability::Personnel)
+            || self.employee_id == Some(employee))
     }
 
     pub fn demo_admin() -> Self {
@@ -98,12 +123,14 @@ impl Access {
         }
     }
     pub fn can_record(&self, employee: Uuid) -> bool {
-        self.role.manages_hr() || self.employee_id == Some(employee)
+        self.staff_roles().is_ok_and(|roles| roles.allows(crate::staff_roles::Capability::AttendanceAdministration)
+            || self.employee_id == Some(employee))
     }
     pub fn can_review(&self, employee: Uuid) -> bool {
-        self.employee_id != Some(employee)
-            && (self.role.manages_hr()
-                || (self.role == Role::Manager && self.direct_reports.contains(&employee)))
+        self.employee_id != Some(employee) && self.staff_roles().is_ok_and(|roles|
+            roles.allows(crate::staff_roles::Capability::LeaveAdministration)
+            || (roles.allows(crate::staff_roles::Capability::TeamReview)
+                && self.direct_reports.contains(&employee)))
     }
     pub fn authorize(&self, action: &Action, data: &Snapshot) -> Result<()> {
         let allowed = match action {

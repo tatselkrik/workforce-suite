@@ -40,3 +40,24 @@ Role changes are managed through Account Manager. There is no employee portal UI
 ## Verification
 
 Run `cargo test --locked`, `npm test` in `tools/db-tests`, and `node --test tests/account_admin_edge.test.mjs`. Database tests exercise all four roles, direct reports, denied operations, metadata tampering, disabled access, owner protection, cycles and private photos. Node tests cover the privileged provisioning boundary, failure cleanup, delivery retries and credential redaction. Native QA previews support `HRIS_PREVIEW_ROLE` and the `accounts` page for administrator/nonadministrator layout checks.
+
+
+## Approved combined Development design — 27 October 2026
+
+Kirk chose one **Development** workspace containing Goals, Appraisals, Training,
+Certifications and Career plans. These functions are already grouped under
+**Employees > Development** in the current desktop; Review cycles remain an
+internal administrative section. Learning and Performance stay inside HRIS.
+
+Use one **Learning & Performance Officer** specialist role in the planned
+permissions extension. This supersedes the proposal for separate Learning Officer
+and Performance Officer roles. A company can assign the combined responsibility
+to one person; Managers continue their assigned team reviews and progress work.
+
+**Implementation status:** the combined workspace exists. The specialist role
+is approved design only; the installed application/database still use the four
+roles documented above. Its protected permissions, Account Manager controls and
+verification must be implemented together before the new role can be assigned.
+Grouping the workspace must preserve current reporting/assignment boundaries,
+private HR notes and certificate evidence, self-review exclusions and immutable
+published review/history records.
