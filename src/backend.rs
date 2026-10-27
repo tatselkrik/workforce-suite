@@ -1907,6 +1907,7 @@ pub enum Command {
     SignOutEverywhere,
     Account(AccountAction),
     Admin(AdminAction),
+    StaffRoles(crate::staff_roles::admin::Operation),
     Connect {
         config: ConnectionConfig,
         email: String,
@@ -1915,6 +1916,8 @@ pub enum Command {
 }
 
 pub struct Update {
+    pub staff_role_rejected: bool,
+    pub staff_roles: Option<crate::staff_roles::admin::Update>,
     pub leave_import_history:Option<crate::leave::request_import::History>,
     pub attendance_import_history:Option<crate::attendance_imports::History>,
     pub leave_import_preview:Option<crate::leave::request_import::Preview>,
@@ -1976,6 +1979,7 @@ pub fn worker(
             let mut leave_import_receipt_result=None;
             let mut attendance_import_receipt_result=None;
             let mut opening_import_preview_result=None;
+            let mut staff_roles_result = None;
             let mut report_result = None;
             let mut payroll_report_result = None;
             let mut payroll_exchange_result = None;
@@ -2361,6 +2365,14 @@ pub fn worker(
                         current.clone()
                     })
                 }
+                Command::StaffRoles(operation) => {
+                    let changed = cloud.as_mut().context("Sign in to manage protected staff assignments.")
+                        .and_then(|client| client.execute_staff_roles(operation, &current));
+                    changed.map(|(data,update)| {
+                        message = if update.receipt.is_some() {"Staff responsibilities and sign-in access saved."} else {"Staff assignments refreshed."}.into();
+                        staff_roles_result = Some(update); data
+                    })
+                }
                 Command::Admin(action) => {
                     let changed = match cloud.as_mut() {
                         Some(client) => client.execute_admin(action, &current),
@@ -2396,6 +2408,8 @@ pub fn worker(
             }
             if events
                 .send(Update {
+                    staff_role_rejected: result.as_ref().err().is_some_and(|e|e.is::<staff_roles_adapter::Rejected>()),
+                    staff_roles: staff_roles_result,
                     leave_import_history:leave_import_history_result,
                     attendance_import_history:attendance_import_history_result,
                     leave_import_preview:leave_import_preview_result,
@@ -2438,6 +2452,8 @@ pub fn worker(
                         .unwrap_or_else(|e| UpdateState::Failed(e.to_string()));
                     if events
                         .send(Update {
+                            staff_role_rejected: false,
+                            staff_roles: None,
                             leave_opening_import_preview:None,
                             leave_import_history:None,
                             attendance_import_history:None,

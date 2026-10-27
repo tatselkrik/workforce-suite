@@ -1,5 +1,7 @@
 # Remaining HRIS roadmap — agreed order
 
+**Latest instruction —27October2026:** finish only the current native Account Manager editor increment, then **pause** until Kirk resumes. The SAME scheduler is **PAUSED**. This supersedes the continuous-work text below; the workspaces queue remains saved.
+
 **Latest human approval —27October2026:** Kirk approved the workspaces preview,
 authorized implementation and reactivated continuous work across actual usage resets.
 The active ordered extension is [Workspaces and Payroll implementation](WORKSPACES-IMPLEMENTATION.md).

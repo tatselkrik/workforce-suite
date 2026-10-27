@@ -7,6 +7,16 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 use uuid::Uuid;
 
+pub enum Operation {
+    Refresh,
+    Save(RoleChange),
+}
+
+pub struct Update {
+    pub context: AdminContext,
+    pub receipt: Option<Receipt>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Account {

@@ -30,7 +30,7 @@ fn wire(d: &Snapshot, role: StaffRole, ready: bool) -> Value {
     })
     .unwrap()
 }
-fn server(replies: Vec<(&str, u16, Value)>) -> (String, thread::JoinHandle<Vec<String>>) {
+fn server(replies: Vec<(&str, u16, Value)>) -> (String, thread::JoinHandle<Vec<(String, Value)>>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     listener.set_nonblocking(true).unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
@@ -84,7 +84,14 @@ fn server(replies: Vec<(&str, u16, Value)>) -> (String, thread::JoinHandle<Vec<S
             let text = body.to_string();
             let label = if status == 200 { "OK" } else { "Forbidden" };
             write!(socket,"HTTP/1.1 {status} {label}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{text}",text.len()).unwrap();
-            paths.push(path);
+            paths.push((
+                path,
+                if bytes.is_empty() {
+                    Value::Null
+                } else {
+                    serde_json::from_slice(&bytes).unwrap()
+                },
+            ));
         }
         paths
     });
@@ -403,4 +410,101 @@ fn incomplete_rollout_cannot_send_an_assignment_transaction() {
     ]);
     assert!(client(url, &d).set_staff_roles(&req).is_err());
     assert_eq!(handle.join().unwrap().len(), 2);
+}
+
+#[test]
+fn staff_editor_worker_returns_bound_context_and_exact_request_receipt() {
+    use crate::staff_roles::admin::Operation;
+    let d = data(Role::Administrator);
+    let req = request(&d);
+    let mut current = d.clone();
+    current.access.staff_contract_version = 1;
+    current
+        .access
+        .bind_staff_context(
+            serde_json::from_value(wire(&d, StaffRole::Administrator, true)).unwrap(),
+        )
+        .unwrap();
+    let mut replies = vec![
+        ("/rest/v1/rpc/my_hris_access", 200, base_wire(&d)),
+        (
+            "/rest/v1/rpc/staff_role_context",
+            200,
+            wire(&d, StaffRole::Administrator, true),
+        ),
+    ];
+    replies.extend(transaction_replies(&d, false, false));
+    let (url, handle) = server(replies);
+    let (snapshot, update) = client(url, &d)
+        .execute_staff_roles(Operation::Save(req.clone()), &current)
+        .unwrap();
+    assert_eq!(snapshot.access, current.access);
+    assert_eq!(update.receipt.unwrap().id, req.id);
+    assert_eq!(update.context.accounts[1].roles, req.roles);
+    let requests = handle.join().unwrap();
+    assert_eq!(requests.len(), 9);
+    assert_eq!(requests[5].0, "/rest/v1/rpc/set_staff_roles");
+    assert_eq!(requests[5].1, json!({"p_change":req}));
+}
+#[test]
+fn staff_editor_worker_refuses_changed_actor_before_sending_a_save() {
+    use crate::staff_roles::admin::Operation;
+    let d = data(Role::Administrator);
+    let req = request(&d);
+    let (url, handle) = server(vec![
+        ("/rest/v1/rpc/my_hris_access", 200, base_wire(&d)),
+        (
+            "/rest/v1/rpc/staff_role_context",
+            200,
+            wire(&d, StaffRole::Administrator, true),
+        ),
+    ]);
+    assert!(
+        client(url, &d)
+            .execute_staff_roles(Operation::Save(req), &d)
+            .err()
+            .unwrap()
+            .is::<AccessRevoked>()
+    );
+    assert_eq!(handle.join().unwrap().len(), 2);
+}
+
+#[test]
+fn only_a_confirmed_transaction_rejection_releases_the_editor_retry() {
+    for (status, code, rejected) in [
+        (400, "23514", true),
+        (400, "PGRST000", false),
+        (500, "XX000", false),
+    ] {
+        let d = data(Role::Administrator);
+        let req = request(&d);
+        let original = req.clone();
+        let mut replies = transaction_replies(&d, false, false);
+        replies.truncate(4);
+        replies[3].1 = status;
+        replies[3].2 = json!({"code":code,"message":"Fictional rejection"});
+        let (url, handle) = server(replies);
+        let error = client(url, &d).set_staff_roles(&req).unwrap_err();
+        assert_eq!(error.is::<super::staff_roles_adapter::Rejected>(), rejected);
+        assert_eq!(req, original);
+        assert_eq!(handle.join().unwrap().len(), 4);
+    }
+}
+
+#[test]
+fn temporary_post_save_refresh_failure_preserves_the_pending_retry() {
+    let d = data(Role::Administrator);
+    let req = request(&d);
+    let original = req.clone();
+    let mut replies = transaction_replies(&d, false, false);
+    replies.truncate(5);
+    replies[4].1 = 503;
+    replies[4].2 = json!({"message":"Fictional temporary refresh failure"});
+    let (url, handle) = server(replies);
+    let error = client(url, &d).set_staff_roles(&req).unwrap_err();
+    assert!(!error.is::<AccessRevoked>());
+    assert!(!error.is::<super::staff_roles_adapter::Rejected>());
+    assert!(error.to_string().contains("recorded"));
+    assert_eq!(req, original);
+    assert_eq!(handle.join().unwrap().len(), 5);
 }

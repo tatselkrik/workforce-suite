@@ -1,5 +1,7 @@
 # HRIS workspaces and Payroll implementation — approved27October2026
 
+**Latest instruction:** finish the current native Account Manager editor only, then **pause**. The SAME scheduler is **PAUSED** until Kirk explicitly resumes. The ordered implementation below remains queued; no incomplete specialist role is enabled.
+
 Kirk approved the reviewed proposal and authorized implementation plus automatic
 continuation across actual usage resets. This supersedes the preview-only hold
 and scheduling pause for this queue. The older agency templates, official module
@@ -79,7 +81,7 @@ publishing there; complete independent local development and delivery first.
 ## Recovery and current evidence
 
 Use AGENTS.md's current context-freshness protocol and this chat's private checkpoint.
-The SAME resume-hris-after-usage-reset scheduler is ACTIVE again. Check both five-hour
+The SAME resume-hris-after-usage-reset scheduler is PAUSED. On a later explicit human resumption, check both five-hour
 and weekly limits, arm the actual five-hour reset +2minutes before substantive work,
 checkpoint at meaningful milestones/around80% usage, and retime before exhaustion.
 The computer and desktop app must be available for local continuation. Do not repeat
@@ -119,3 +121,29 @@ policy remains FALSE. Migrations73/74 are local only; no hosted role activation,
 new desktop release, installation or usable specialist role is claimed. Native
 Account Manager editing/provisioning and complete domain read/write boundaries
 remain required before rollout.
+## Local Account Manager editor finished; work paused —27October2026
+
+The existing-account editor and native worker routing are implemented locally.
+Administrators can prepare multiple responsibilities, sign-in access and a reason
+against the exact saved account source. Uncertain delivery retains one immutable
+retry; a confirmed transaction rejection keeps the draft for explicit re-review.
+Temporary post-save refresh failures retain the pending request. Only a matching
+receipt closes it. Actor changes block a save; personal/company data are cleared
+on access changes. The app's unsaved-work guard includes these drafts.
+
+Final local verification:722normal Rust checks passed,28explicit opt-ins ignored.
+This includes real loopback HTTP request/receipt/access tests, stale/rejected and
+uncertain-draft cases, and automated editor geometry/immutability at480,760and1100
+pixels in light/dark themes and pending/editable states. Headless checks are not
+manual inspection of the installed application. The earlier unchanged SQL passed
+10,764workflow/preservation assertions, fresh74migration replay,129foundation and
+76transaction assertions.
+
+The runtime gate is still FALSE. Migrations73/74 were not deployed; no new desktop
+release was packaged, published or installed. Desktop0.1.62/portal0.1.7 deliveries
+remain unchanged. New specialist roles are not yet usable. Atomic new-account
+provisioning and complete module/RLS/RPC/storage/portal/updater permissions remain
+queued before activation, followed by the remaining approved order above.
+
+Kirk requested pausing after this editor increment. The same scheduler is PAUSED;
+resume only after a newer explicit human instruction and the current checkpoint.

@@ -3,7 +3,41 @@ use crate::staff_roles::{
     Capability, RoleChange, SCHEMA_VERSION,
     admin::{AdminContext, Receipt},
 };
+#[derive(Debug)]
+pub(super) struct Rejected;
+impl std::fmt::Display for Rejected {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Nothing was saved. Refresh assignments, then cancel this draft and reopen the account before reviewing another change.")
+    }
+}
+impl std::error::Error for Rejected {}
+
 impl CloudClient {
+    pub fn execute_staff_roles(
+        &mut self,
+        operation: crate::staff_roles::admin::Operation,
+        current: &Snapshot,
+    ) -> Result<(Snapshot, crate::staff_roles::admin::Update)> {
+        use crate::staff_roles::admin::{Operation, Update};
+        let (access, context, receipt) = match operation {
+            Operation::Refresh => {
+                let (a, c) = self.staff_role_admin_context(true)?;
+                (a, c, None)
+            }
+            Operation::Save(request) => {
+                if self.current_access()? != current.access {
+                    return Err(AccessRevoked.into());
+                }
+                let (a, r, c) = self.set_staff_roles(&request)?;
+                (a, c, Some(r))
+            }
+        };
+        if access != current.access {
+            return Err(AccessRevoked.into());
+        }
+        Ok((current.clone(), Update { context, receipt }))
+    }
+
     fn staff_role_admin_for(
         &mut self,
         access: &Access,
@@ -28,6 +62,11 @@ impl CloudClient {
             StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN
         ) {
             return Err(AccessRevoked.into());
+        }
+        // A temporary HTTP failure is not proof of revoked membership. Keep
+        // the exact pending save when its post-write refresh is unavailable.
+        if !response.status().is_success() {
+            return decode(response);
         }
         let context: AdminContext =
             decode(response).map_err(|_| anyhow::Error::new(AccessRevoked))?;
@@ -80,6 +119,20 @@ impl CloudClient {
             StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN
         ) {
             return Err(AccessRevoked.into());
+        }
+        if matches!(
+            response.status(),
+            StatusCode::BAD_REQUEST | StatusCode::CONFLICT
+        ) {
+            let error: Value = response
+                .json()
+                .context("The server response could not be verified. Retain the exact retry.")?;
+            if error.get("code").and_then(Value::as_str) == Some("23514") {
+                return Err(Rejected.into());
+            }
+            bail!(
+                "The server could not accept this change. Retain the original request and refresh your access before retrying."
+            );
         }
         let receipt: Receipt = decode(response)?;
         receipt

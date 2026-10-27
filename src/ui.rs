@@ -22,6 +22,7 @@ const TEAL: Color32 = Color32::from_rgb(0, 123, 112);
 const BG: Color32 = Color32::from_rgb(245, 247, 250);
 const LINE: Color32 = Color32::from_rgb(226, 232, 238);
 
+mod staff_roles_view;
 mod breaks_view;
 mod calculations_view;
 mod hiring_view;
@@ -220,6 +221,7 @@ pub struct HrisApp {
     session_confirmation: Option<SessionChoice>,
     account_form: Option<AccountDraft>,
     show_disabled_staff: bool,
+    staff_roles_state: crate::staff_roles::editor::State,
     profile_contacts_draft: Option<EmployeeContacts>,
     update_state: UpdateState,
     update_confirmation: bool,
@@ -449,6 +451,7 @@ impl HrisApp {
             session_confirmation: None,
             account_form: None,
             show_disabled_staff: false,
+            staff_roles_state: Default::default(),
             profile_contacts_draft: None,
             update_state: UpdateState::Idle,
             update_confirmation: false,
@@ -1112,6 +1115,7 @@ impl HrisApp {
                         self.leave_state.saving_revision = None;
                     }
                     if self.data.access != data.access {
+                        self.staff_roles_state=Default::default();
                         self.organization = organization_view::State::default();
                         self.leave_state = leave_view::State::default();
                         self.shift_state = shifts_view::State::default();
@@ -1264,6 +1268,11 @@ impl HrisApp {
                     let career_saved = self.career_state.accept(&data);
                     let hiring_saved = hiring_record_saved && recruiting_saved && onboarding_saved && exit_saved && performance_saved && learning_saved && career_saved && payroll_saved;
                     self.data = data;
+                    if let Some(roles)=update.staff_roles {
+                        if let Err(error)=self.staff_roles_state.accept(&self.data.access,roles) {
+                            self.notice=Some((error.to_string(),true));
+                        }
+                    }
                     self.leave_request_import_state.sync(&self.data);
                     if let Some(p)=update.leave_import_preview{self.leave_request_import_state.accept_preview(p,&self.data);}
                     if let Some(r)=update.leave_import_receipt{self.leave_request_import_state.accept_receipt(r,&self.data);}
@@ -1332,6 +1341,7 @@ impl HrisApp {
                     }
                 }
                 Err(error) => {
+                    if update.staff_role_rejected {self.staff_roles_state.reject();}
                     if !update.background{self.attendance_import_state.failed(&error);self.leave_request_import_state.failed(&error);}
                     self.hiring_state.pending = None;
                     self.onboarding_state.pending = None;
@@ -1995,6 +2005,7 @@ impl HrisApp {
             || self.recruiting_state.editing()
             || self.report_state.view_draft.is_some()
             || self.account_form.is_some()
+            || self.staff_roles_state.has_draft()
             || !company_fields_equal(&self.company_draft, &self.data.company)
             || self.profile_contacts_draft.as_ref().is_some_and(|draft| {
                 self.data.access.employee_id.is_some_and(|id| {
@@ -2715,6 +2726,9 @@ impl HrisApp {
     fn accounts(&mut self, ui: &mut Ui) {
         if !self.data.access.role.manages_accounts() {
             return;
+        }
+        if self.data.access.staff_context.as_ref().is_some_and(|c|c.runtime_ready) {
+            self.staff_roles_panel(ui);return;
         }
         let staff: Vec<_> = self
             .data

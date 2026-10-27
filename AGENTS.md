@@ -521,3 +521,15 @@ for these deferred items. Existing exact-target SQL/private HRIS publication aut
 continues; separate Payroll release identities/destinations need their own resolved
 setup and authority. Install each verified authorized desktop release and preserve
 unsaved work. No new role, migration or release is complete merely because designed.
+
+## Latest pause — current Account Manager editor,27October2026
+
+Kirk instructed: finish the current native Account Manager editor increment, then
+pause until he says to continue. This supersedes continuous work/reset continuation
+for the approved workspaces queue. The SAME usage-reset scheduler is PAUSED. Finish
+only the editor's current implementation and proportionate local verification,
+save the checkpoint/source, then stop. Do not start atomic multi-role provisioning,
+remaining domain-permission rollout, hosted activation, Payroll extraction or the
+later HR-function milestones. They remain queued. Existing exact-target standing
+SQL/private-publication authority and privacy/free-only boundaries are unchanged;
+this pause grants no new release or activation scope.
