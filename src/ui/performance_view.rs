@@ -89,7 +89,7 @@ pub(super) fn employee_choice(
             ui.selectable_value(selected, None, "Choose an employee");
             for e in data.active().filter(|e| {
                 if review {
-                    data.access.role.manages_hr() && Some(e.id) != data.access.employee_id
+                    data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration) && Some(e.id) != data.access.employee_id
                 } else {
                     performance::manages_goal(data, e.id)
                 }
@@ -162,7 +162,7 @@ impl HrisApp {
             self.performance_note_form(ui);
             return;
         }
-        let hr = self.data.access.role.manages_hr();
+        let hr = self.data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration);
         if !hr && self.performance_state.tab == Tab::Cycles {
             self.performance_state.tab = Tab::Goals;
         }
@@ -326,7 +326,7 @@ impl HrisApp {
                 );
             });
             self.performance_filter(ui);
-            if !self.data.access.role.manages_hr() {
+            if !self.data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration) {
                 ui.label("Your Manager or HR assigns goals. You can record your own progress; current reporting Managers manage their team goals.");
             }
         });
@@ -445,7 +445,7 @@ impl HrisApp {
         }
         card(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
-                if self.data.access.role.manages_hr() && ui.button("Assign appraisal").clicked() {
+                if self.data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration) && ui.button("Assign appraisal").clicked() {
                     let person = self
                         .performance_state
                         .employee
@@ -459,7 +459,7 @@ impl HrisApp {
                 );
             });
             self.performance_filter(ui);
-            if !self.data.access.role.manages_hr() {
+            if !self.data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration) {
                 ui.label("Review your assigned current reports and read your own published appraisals. Drafts and private HR notes remain restricted.");
             }
         });
@@ -509,7 +509,7 @@ impl HrisApp {
         }
     }
     fn performance_review_detail(&mut self, ui: &mut Ui, r: &performance::Review) {
-        let hr = self.data.access.role.manages_hr();
+        let hr = self.data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration);
         card(ui, |ui| {
             if ui.button("< All appraisals").clicked() {
                 self.performance_state.review_id = None;
@@ -631,7 +631,7 @@ impl HrisApp {
                 }
             }
         });
-        if hr {
+        if self.data.access.allows(crate::staff_roles::Capability::PrivateHrNotes) {
             ui.add_space(10.0);
             let note = self
                 .data
@@ -684,7 +684,7 @@ impl HrisApp {
         });
     }
     fn performance_cycles(&mut self, ui: &mut Ui) {
-        if !self.data.access.role.manages_hr() {
+        if !self.data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration) {
             return;
         }
         card(ui, |ui| {
@@ -1013,7 +1013,7 @@ impl HrisApp {
                         ui.selectable_value(
                             &mut d.reviewer_employee_id,
                             Some(s.employee_id),
-                            format!("{} · {}", s.full_name, s.role.label()),
+                            format!("{} · {}", s.full_name, s.role_label()),
                         );
                     }
                 });
@@ -1188,6 +1188,7 @@ impl HrisApp {
                     employee_id: id,
                     full_name: data.employee_name(id).into(),
                     role: a.role,
+                    roles: None,
                 })
             })
             .collect();
@@ -1203,6 +1204,7 @@ impl HrisApp {
                     employee_id: own,
                     full_name: data.employee_name(own).into(),
                     role: access.role,
+                    roles: None,
                 });
         }
         let mut gd = GoalDraft::new(&data, Some(person));
@@ -1368,7 +1370,7 @@ impl HrisApp {
             }
             _ => {}
         }
-        if !self.data.access.role.manages_hr() {
+        if !self.data.access.allows(crate::staff_roles::Capability::PrivateHrNotes) {
             self.data.performance.notes.clear();
             let ids: Vec<_> = performance::visible_events(&self.data)
                 .into_iter()

@@ -9,7 +9,7 @@ impl CloudClient {
             goals: self.rows("performance_goals", company)?,
             cycles: self.rows("performance_cycles", company)?,
             reviews: self.rows("performance_reviews", company)?,
-            notes: if access.role.manages_hr() {
+            notes: if access.allows(crate::staff_roles::Capability::PrivateHrNotes) {
                 self.rows("performance_hr_notes", company)?
             } else {
                 Vec::new()

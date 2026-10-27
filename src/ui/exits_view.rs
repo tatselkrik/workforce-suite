@@ -546,6 +546,7 @@ impl HrisApp {
             employee_id: own,
             full_name: data.employee_name(own).into(),
             role: access.role,
+            roles: None,
         }];
         let mut d = CaseDraft::new(&data, Some(employee));
         d.reason = "Fictional exit preparation".into();

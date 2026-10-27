@@ -14,7 +14,7 @@ pub(super) struct State {
 }
 impl State {
     pub(super) fn accept(&mut self, r: Report, data: &Snapshot) {
-        if data.access.role.manages_hr()
+        if data.access.allows(crate::staff_roles::Capability::GovernmentPreparation)
             && r.company_id == data.company.id
             && r.user_id == data.access.user_id
             && r.year == self.year

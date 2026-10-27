@@ -96,7 +96,7 @@ impl HrisApp {
             self.learning_evidence_form(ui);
             return;
         }
-        let hr = self.data.access.role.manages_hr();
+        let hr = self.data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration);
         card(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
                 if hr
@@ -238,7 +238,7 @@ impl HrisApp {
         }
     }
     fn learning_training_card(&mut self, ui: &mut Ui, t: &learning::Training) {
-        let hr = self.data.access.role.manages_hr();
+        let hr = self.data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration);
         card(ui, |ui| {
             ui.label(RichText::new(&t.title).strong().size(18.0));
             ui.label(format!("{} · {}", t.employee_code, t.employee_name));
@@ -339,7 +339,7 @@ impl HrisApp {
         });
     }
     fn learning_certificate_card(&mut self, ui: &mut Ui, c: &learning::Certificate) {
-        let hr = self.data.access.role.manages_hr();
+        let hr = self.data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration);
         card(ui, |ui| {
             ui.label(RichText::new(&c.title).strong().size(18.0));
             ui.label(format!("{} · {}", c.employee_code, c.employee_name));
@@ -360,12 +360,12 @@ impl HrisApp {
             if !c.reference_number.is_empty() {
                 ui.label(format!("Reference: {}", c.reference_number));
             }
-            if hr {
+            if hr || self.data.access.allows(crate::staff_roles::Capability::PersonnelDocuments) {
                 ui.horizontal_wrapped(|ui| {
-                    if !c.archived && ui.button("Edit certification").clicked() {
+                    if hr && !c.archived && ui.button("Edit certification").clicked() {
                         self.learning_state.certificate_form = Some(CertificateDraft::existing(c));
                     }
-                    if !c.archived && ui.button("Private file evidence").clicked() {
+                    if self.data.access.allows(crate::staff_roles::Capability::PersonnelDocuments) && !c.archived && ui.button("Private file evidence").clicked() {
                         self.learning_state.evidence_form = Some(
                             self.data
                                 .learning
@@ -382,13 +382,13 @@ impl HrisApp {
                         archived: !c.archived,
                         reason: String::new(),
                     };
-                    if ui
+                    if hr && ui
                         .button(if c.archived { "Restore" } else { "Archive" })
                         .clicked()
                     {
                         self.learning_state.decision = Some(a);
                     }
-                    if !c.archived
+                    if hr && !c.archived
                         && ui
                             .button(if c.status == "valid" {
                                 "Revoke"
@@ -410,6 +410,7 @@ impl HrisApp {
                         });
                     }
                 });
+                if self.data.access.allows(crate::staff_roles::Capability::PersonnelDocuments) {
                 if let Some(doc) = self
                     .data
                     .learning
@@ -432,6 +433,7 @@ impl HrisApp {
                 if ui.button("Open employee 201 files").clicked() {
                     self.open_employee(c.employee_id);
                     self.contacts_section = ContactSection::Documents;
+                }
                 }
             }
             self.learning_history(ui, None, Some(c.id));
@@ -810,7 +812,7 @@ impl HrisApp {
         self.learning_state.employee = Some(person);
         self.data = data;
         match preview.as_str(){"learn-training-form"=>{let mut d=TrainingDraft::existing(&self.data.learning.training[0]);d.reason="Fictional training schedule correction".into();self.learning_state.training_form=Some(d);},"learn-certificate-form"=>{let mut d=CertificateDraft::existing(&self.data.learning.certificates[0]);d.reason="Fictional issuer/reference confirmation".into();self.learning_state.certificate_form=Some(d);},"learn-evidence"=>{let mut d=EvidenceDraft::existing(&self.data.learning.evidence[0]);d.reason="Fictional private file reference check".into();self.learning_state.evidence_form=Some(d);},"learn-progress"|"learn-manager-progress"=>self.learning_state.decision=Some(Change::Progress{id:tid,revision:1,note:"Fictional practice handover completed; scheduled feedback discussion follows.".into(),reason:"Fictional progress evidence".into()}),"learn-completion"=>self.learning_state.decision=Some(Change::TrainingStatus{id:tid,revision:1,status:"completed".into(),completed_on:today.to_string(),learning_minutes:Some(90),outcome:"Fictional completion: demonstrated the agreed handover and service-documentation checklist.".into(),reason:"Fictional HR learning completion".into()}),"learn-certificate-revoke"=>self.learning_state.decision=Some(Change::CertificateStatus{id:cid,revision:0,status:"revoked".into(),reason:"Fictional recorded revocation reference".into()}),"learn-certificate-archive"=>self.learning_state.decision=Some(Change::CertificateArchive{id:cid,revision:0,archived:true,reason:"Fictional certificate archival".into()}),_=>{}}
-        if !self.data.access.role.manages_hr() {
+        if !self.data.access.allows(crate::staff_roles::Capability::PersonnelDocuments) {
             self.data.documents.clear();
             self.data.learning.evidence.clear();
             self.data

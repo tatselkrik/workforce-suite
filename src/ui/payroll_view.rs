@@ -455,7 +455,7 @@ impl HrisApp {
             self.payroll_forms(ui);
             return;
         }
-        let hr = self.data.access.role.manages_hr();
+        let hr = self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation);
         if !hr && ![3, 6, 7, 8, 10, 12].contains(&self.payroll_state.tab) {
             self.payroll_state.tab = 3;
         }
@@ -1237,7 +1237,7 @@ impl HrisApp {
         }
     }
     fn payroll_slips(&mut self, ui: &mut Ui) {
-        let visible:Vec<_>=self.data.payroll.slips.iter().filter(|s|s.company_id==self.data.company.id && (self.data.access.role.manages_hr() || self.data.access.employee_id==Some(s.employee_id))).cloned().collect();
+        let visible:Vec<_>=self.data.payroll.slips.iter().filter(|s|s.company_id==self.data.company.id && (self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation) || self.data.access.employee_id==Some(s.employee_id))).cloned().collect();
         if let Some(id) = self.payroll_state.slip {
             if let Some(s) = visible.iter().find(|s| s.id == id).cloned() {
                 if ui.button("Back to payslips").clicked() {
@@ -1301,7 +1301,7 @@ impl HrisApp {
             }
             self.payroll_state.slip = None;
         }
-        ui.label(if self.data.access.role.manages_hr(){"Approved payslips. HR/Admin can open any approved employee payslip; Managers see only their own."}else{"Your approved payslips. Salary profiles, draft payroll and team pay remain private to HR/Admin."});
+        ui.label(if self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation){"Approved payslips. HR/Admin can open any approved employee payslip; Managers see only their own."}else{"Your approved payslips. Salary profiles, draft payroll and team pay remain private to HR/Admin."});
         let mut rows = visible.clone();
         rows.sort_by_key(|s| std::cmp::Reverse(s.month));
         for s in rows {

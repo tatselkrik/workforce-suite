@@ -84,8 +84,8 @@ publishing there; complete independent local development and delivery first.
 ## Recovery and current evidence
 
 Use AGENTS.md's current context-freshness protocol and this chat's private checkpoint.
-The SAME resume-hris-after-usage-reset scheduler is PAUSED. On a later explicit human resumption, check both five-hour
-and weekly limits, arm the actual five-hour reset +2minutes before substantive work,
+The SAME resume-hris-after-usage-reset scheduler is ACTIVE for this bounded milestone. Check both five-hour
+and weekly limits and arm the actual five-hour reset +2minutes before substantive work,
 checkpoint at meaningful milestones/around80% usage, and retime before exhaustion.
 The computer and desktop app must be available for local continuation. Do not repeat
 completed desktop0.1.62, portal0.1.7 or migrations through72.
@@ -150,3 +150,8 @@ queued before activation, followed by the remaining approved order above.
 
 Kirk requested pausing after this editor increment. The same scheduler is PAUSED;
 resume only after a newer explicit human instruction and the current checkpoint.
+## Current local permissions progress —28October2026
+
+See STAFF-PERMISSIONS.md for the verified local payroll/development/directory scopes
+and remaining activation requirements. Specialist activation remains FALSE. Continue
+only Account Manager provisioning/permissions through verified delivery, then pause.

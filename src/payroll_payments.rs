@@ -64,7 +64,7 @@ pub fn effective(
 pub fn candidates(data: &Snapshot) -> Result<Vec<Candidate>> {
     ensure!(
         data.mode != Mode::SignedOut
-            && data.access.role.manages_hr()
+            && data.access.allows(crate::staff_roles::Capability::PayrollPreparation)
             && data.access.company_id == data.company.id,
         "HR access is required to review payment records."
     );

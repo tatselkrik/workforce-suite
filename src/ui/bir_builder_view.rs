@@ -20,7 +20,7 @@ impl State {
             report:None, excel:true, reviewed:false, pending:false,totals_open:false}
     }
     pub(super) fn accept(&mut self, report:Preview, data:&Snapshot) {
-        if data.access.role.manages_hr() && report.company_id==data.company.id
+        if data.access.allows(crate::staff_roles::Capability::GovernmentPreparation) && report.company_id==data.company.id
             && report.user_id==data.access.user_id && report.selection==self.selection
             && self.source.is_some() {
             self.report=Some(report);self.pending=false;self.reviewed=false;
@@ -53,7 +53,7 @@ enum Intent {Back,Template,Choose,Preview,Save}
 
 impl HrisApp {
     pub(super) fn payroll_bir_builder(&mut self,ui:&mut Ui) {
-        if !self.data.access.role.manages_hr() {ui.label("BIR drafts require current HR/Administrator access.");return;}
+        if !self.data.access.allows(crate::staff_roles::Capability::GovernmentPreparation) {ui.label("BIR drafts require current HR/Administrator access.");return;}
         let connected=self.data.mode==Mode::Supabase;
         let state=&mut self.payroll_state.government.builder;
         let mut intent=None;

@@ -271,7 +271,7 @@ fn text(s: &str, max: usize, required: bool, multiline: bool) -> Result<()> {
 }
 fn hr(data: &Snapshot) -> Result<()> {
     ensure!(
-        data.access.role.manages_hr(),
+        data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration),
         "Only HR and Administrators manage training completion and certifications."
     );
     Ok(())
@@ -284,9 +284,9 @@ fn person(data: &Snapshot, id: Uuid) -> Result<&Employee> {
 }
 pub fn in_scope(data: &Snapshot, id: Uuid) -> bool {
     person(data, id).is_ok_and(|e| {
-        data.access.role.manages_hr()
+        (data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration) || data.access.allows(crate::staff_roles::Capability::PersonnelDocuments))
             || Some(e.id) == data.access.employee_id
-            || (data.access.role == Role::Manager
+            || (data.access.allows(crate::staff_roles::Capability::TeamReview)
                 && data.access.employee_id.is_some()
                 && e.reports_to == data.access.employee_id)
     })
@@ -421,7 +421,7 @@ impl LearningAction {
         ensure!(
             data.mode != Mode::SignedOut
                 && data.access.company_id == data.company.id
-                && data.access.role.uses_desktop(),
+                && data.access.uses_desktop(),
             "Active desktop staff access is required."
         );
         let (op, p) = self.record()?;
@@ -451,6 +451,7 @@ impl LearningAction {
             }
             Self::Progress { id, revision, .. } => {
                 let t = training(data, *id)?;
+                ensure!(data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration) || data.access.employee_id==Some(t.employee_id) || (data.access.allows(crate::staff_roles::Capability::TeamReview) && person(data,t.employee_id)?.reports_to==data.access.employee_id), "Only the employee, current Manager or development staff record progress.");
                 ensure!(
                     t.revision == *revision
                         && ["planned", "in_progress"].contains(&t.status.as_str())
@@ -546,7 +547,7 @@ impl LearningAction {
                 );
             }
             Self::EvidenceSave(d) => {
-                hr(data)?;
+                ensure!(data.access.allows(crate::staff_roles::Capability::PersonnelDocuments), "Certificate files are private to HR and Administrators.");
                 let c = certificate(data, d.certificate_id)?;
                 let retry =
                     d.original.is_none() && data.learning.evidence.iter().any(|e| e.id == d.id);
@@ -652,7 +653,7 @@ pub fn visible_events(
             e.company_id == data.company.id
                 && training_id.is_none_or(|id| e.training_id == Some(id))
                 && certificate_id.is_none_or(|id| e.certificate_id == Some(id))
-                && (data.access.role.manages_hr()
+                && (data.access.allows(crate::staff_roles::Capability::PersonnelDocuments)
                     || (e.evidence_id.is_none()
                         && (e.training_id.is_some_and(|id| training(data, id).is_ok())
                             || e.certificate_id

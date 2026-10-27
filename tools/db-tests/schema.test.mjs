@@ -91,6 +91,8 @@ try {
   const staffTransactionMigrations=[];
   const staffProvisionMigrations=[];
   const staffCapabilityMigrations=[];
+  const staffPermissionMigrations=[];
+  const staffWorkflowMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -104,6 +106,8 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_staff_workflow_people.sql')){staffWorkflowMigrations.push(filename);continue;}
+    if(/_staff_.*_permissions\.sql$/.test(filename)){staffPermissionMigrations.push(filename);continue;}
     if(filename.endsWith('_staff_permission_capabilities.sql')){staffCapabilityMigrations.push(filename);continue;}
     if(filename.endsWith('_staff_account_provisioning.sql')){staffProvisionMigrations.push(filename);continue;}
     if(filename.endsWith('_staff_role_transactions.sql')){staffTransactionMigrations.push(filename);continue;}
@@ -604,6 +608,14 @@ try {
   for(const f of capFunctions)eq((await db.query('select md5(pg_get_functiondef($1::regprocedure))digest',[f.identity])).rows[0].digest,f.digest,'Capability kernel preserves existing function '+f.identity);
   await session(uidA);eq((await db.query("select hris_private.has_staff_capability($1,'account_administration')c",[companyA.id])).rows[0].c,true,'Existing owner retains capability');
   eq((await db.query('select public.staff_role_context()c')).rows[0].c.runtime_ready,false,'Capability kernel does not activate incomplete permission paths');
+  await db.exec('reset role');
+  const permissionBefore={};for(const t of capTables)permissionBefore[t]=(await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows;
+  const permissionAcl=(await db.query("select p.oid::regprocedure::text identity,p.prosecdef,p.provolatile,p.proconfig,p.proacl::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in('public','hris_private')and p.prokind='f'order by 1")).rows;
+  for(const filename of staffPermissionMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  for(const filename of staffWorkflowMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  for(const t of capTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,permissionBefore[t],'Permission rollout preserves '+t);
+  for(const f of permissionAcl)eq((await db.query('select p.oid::regprocedure::text identity,p.prosecdef,p.provolatile,p.proconfig,p.proacl::text from pg_proc p where p.oid=$1::regprocedure',[f.identity])).rows[0],f,'Permission rollout preserves signature, owner execution and grants '+f.identity);
+  await session(uidA);eq((await db.query('select public.staff_role_context()c')).rows[0].c.runtime_ready,false,'Module permission patches do not activate incomplete roles');
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

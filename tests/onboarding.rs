@@ -14,6 +14,7 @@ fn fixture() -> (DemoStore, OfferDraft) {
             employee_id: own,
             full_name: "Fictional staff".into(),
             role: Role::Administrator,
+            roles: None,
         });
     let mut a = ApplicantDraft::new(s.data.company.today());
     a.full_name = "Synthetic approved hire".into();

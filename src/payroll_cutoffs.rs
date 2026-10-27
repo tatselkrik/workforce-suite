@@ -111,7 +111,7 @@ fn text(v: &Value, key: &str, max: usize) -> Result<()> {
 pub fn payload(a: &payroll::PayrollAction, data: &Snapshot) -> Result<Value> {
     ensure!(
         data.mode != Mode::SignedOut
-            && data.access.role.manages_hr()
+            && data.access.allows(crate::staff_roles::Capability::PayrollPreparation)
             && data.access.company_id == data.company.id,
         "Only HR and Administrators manage cutoff payroll."
     );

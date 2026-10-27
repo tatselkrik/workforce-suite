@@ -5,7 +5,7 @@ impl CloudClient {
         Ok(crate::learning::Setup {
             training: self.rows("employee_training", company)?,
             certificates: self.rows("employee_certifications", company)?,
-            evidence: if access.role.manages_hr() {
+            evidence: if access.allows(crate::staff_roles::Capability::PersonnelDocuments) {
                 self.rows("certification_evidence", company)?
             } else {
                 Vec::new()

@@ -14,7 +14,7 @@ impl CloudClient {
         setup.amendments.slips=self.rows("payroll_amendment_slips",company)?;
         setup.amendments.statuses=self.rows("payroll_amendment_status",company)?;
         setup.tax.slips = self.rows("payroll_tax_slips", company)?;
-        if a.role.manages_hr() {
+        if a.allows(crate::staff_roles::Capability::PayrollPreparation) {
             setup.amendments.records=self.rows("payroll_amendment_cases",company)?;
             setup.wages.classifications=self.rows("payroll_wage_classifications",company)?;
             setup.wages.settings=self.rows("payroll_wage_settings",company)?;
@@ -41,7 +41,7 @@ impl CloudClient {
                     && s.item.employee_id == s.employee_id
                     && s.item.run_id == s.run_id
                     && s.item.id == s.id
-                    && (a.role.manages_hr() || Some(s.employee_id) == a.employee_id),
+                    && (a.allows(crate::staff_roles::Capability::PayrollPreparation) || Some(s.employee_id) == a.employee_id),
                 "Payslip is outside your current access."
             );
         }
@@ -53,7 +53,7 @@ impl CloudClient {
                     && p.item.employee_id == p.employee_id
                     && p.item.run_id == p.run_id
                     && p.item.id == p.id
-                    && (a.role.manages_hr() || Some(p.employee_id) == a.employee_id),
+                    && (a.allows(crate::staff_roles::Capability::PayrollPreparation) || Some(p.employee_id) == a.employee_id),
                 "Cutoff payslip is outside your current access."
             );
             ensure!(
@@ -71,18 +71,18 @@ impl CloudClient {
                     && s.item.id == s.id
                     && s.item.employee_id == s.employee_id
                     && s.item.run_id == s.run_id
-                    && (a.role.manages_hr() || Some(s.employee_id) == a.employee_id)
+                    && (a.allows(crate::staff_roles::Capability::PayrollPreparation) || Some(s.employee_id) == a.employee_id)
                     && s.year == s.as_of.year(),
                 "Annual benefit slip is outside your current access."
             );
         }
         for s in &setup.tax.slips {
-            ensure!(s.company_id==a.company_id && s.year==s.as_of.year() && (a.role.manages_hr() || Some(s.employee_id)==a.employee_id), "Annual tax advice is outside your current access.");
+            ensure!(s.company_id==a.company_id && s.year==s.as_of.year() && (a.allows(crate::staff_roles::Capability::PayrollPreparation) || Some(s.employee_id)==a.employee_id), "Annual tax advice is outside your current access.");
         }
-        ensure!(setup.finals.slips.iter().all(|s|s.company_id==a.company_id&&(a.role.manages_hr()||a.employee_id==Some(s.employee_id)))&&setup.finals.statuses.iter().all(|s|s.company_id==a.company_id&&(a.role.manages_hr()||a.employee_id==Some(s.employee_id))),"Final pay is outside your current access.");
+        ensure!(setup.finals.slips.iter().all(|s|s.company_id==a.company_id&&(a.allows(crate::staff_roles::Capability::PayrollPreparation)||a.employee_id==Some(s.employee_id)))&&setup.finals.statuses.iter().all(|s|s.company_id==a.company_id&&(a.allows(crate::staff_roles::Capability::PayrollPreparation)||a.employee_id==Some(s.employee_id))),"Final pay is outside your current access.");
         ensure!(setup.wages.classifications.iter().all(|c|c.company_id==a.company_id)&&setup.wages.settings.iter().all(|s|s.company_id==a.company_id)&&setup.wages.checks.iter().all(|c|c.company_id==a.company_id),"Wage reviews are outside this company.");
-        ensure!(setup.receipts.iter().all(|r|r.company_id==a.company_id && a.role.manages_hr()), "Payment receipt is outside your current access.");
-        ensure!(setup.amendments.slips.iter().all(|s|s.company_id==a.company_id&&(a.role.manages_hr()||a.employee_id==Some(s.employee_id)))&&setup.amendments.statuses.iter().all(|s|s.company_id==a.company_id&&(a.role.manages_hr()||a.employee_id==Some(s.employee_id)))&&setup.amendments.records.iter().all(|r|r.company_id==a.company_id&&a.role.manages_hr()),"Payroll amendments are outside your current access.");
+        ensure!(setup.receipts.iter().all(|r|r.company_id==a.company_id && a.allows(crate::staff_roles::Capability::PayrollPreparation)), "Payment receipt is outside your current access.");
+        ensure!(setup.amendments.slips.iter().all(|s|s.company_id==a.company_id&&(a.allows(crate::staff_roles::Capability::PayrollPreparation)||a.employee_id==Some(s.employee_id)))&&setup.amendments.statuses.iter().all(|s|s.company_id==a.company_id&&(a.allows(crate::staff_roles::Capability::PayrollPreparation)||a.employee_id==Some(s.employee_id)))&&setup.amendments.records.iter().all(|r|r.company_id==a.company_id&&a.allows(crate::staff_roles::Capability::PayrollPreparation)),"Payroll amendments are outside your current access.");
         Ok(setup)
     }
 }

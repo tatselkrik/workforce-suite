@@ -135,6 +135,7 @@ impl HrisApp {
             employee_id: own,
             full_name: data.employee_name(own).into(),
             role: access.role,
+            roles: None,
         }];
         let mut past = InterviewDraft::new(&data, app.id);
         past.interviewer = Some(own);
@@ -574,7 +575,7 @@ impl HrisApp {
                             ui.selectable_value(
                                 &mut draft.interviewer,
                                 Some(s.employee_id),
-                                format!("{} ({})", s.full_name, s.role.label()),
+                                format!("{} ({})", s.full_name, s.role_label()),
                             );
                         }
                     });

@@ -329,7 +329,7 @@ pub fn payload(a: &PayrollAction, data: &Snapshot) -> Result<Value> {
     ensure!(
         data.mode != Mode::SignedOut
             && data.access.company_id == data.company.id
-            && data.access.role.manages_hr(),
+            && data.access.allows(crate::staff_roles::Capability::PayrollPreparation),
         "Only HR/Admin manage wage reviews."
     );
     ensure!(

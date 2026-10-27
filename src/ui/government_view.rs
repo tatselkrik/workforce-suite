@@ -94,7 +94,7 @@ enum Intent {
 impl State {
     pub(super) fn bind(&mut self, data: &Snapshot) {
         let scope = Some((data.company.id, data.access.user_id, data.access.role));
-        if self.scope != scope || !data.access.role.manages_hr() {
+        if self.scope != scope || !data.access.allows(crate::staff_roles::Capability::GovernmentPreparation) {
             *self = Self {
                 scope,
                 month: crate::payroll::month_start(data.company.today()).to_string(),
@@ -150,7 +150,7 @@ impl State {
     }
     pub(super) fn accept_collection(&mut self, b: g::sss_collection::Basis, data: &Snapshot) {
         self.bind(data);
-        if data.access.role.manages_hr()
+        if data.access.allows(crate::staff_roles::Capability::GovernmentPreparation)
             && b.company_id == data.company.id
             && self
                 .filter()
@@ -167,7 +167,7 @@ impl State {
         self.bind(data);
         if self.filter().is_ok_and(|f| r.filter() == f)
             && r.wire.source.company_id == data.company.id
-            && data.access.role.manages_hr()
+            && data.access.allows(crate::staff_roles::Capability::GovernmentPreparation)
         {
             if self.collection_export_pending {
                 self.collection = None;
@@ -364,7 +364,7 @@ impl HrisApp {
     pub(super) fn payroll_government(&mut self, ui: &mut Ui) {
         self.payroll_state.government.bind(&self.data);
         if self.payroll_state.government.builder_open {self.payroll_bir_builder(ui);return;}
-        if !self.data.access.role.manages_hr() {
+        if !self.data.access.allows(crate::staff_roles::Capability::GovernmentPreparation) {
             return;
         }
         if self.payroll_state.government.declarations_open {self.payroll_bir_declarations(ui);return;}
@@ -1114,7 +1114,7 @@ impl HrisApp {
             self.data.access.role = Role::Manager;
         }
         self.payroll_state.government.bind(&self.data);
-        if !self.data.access.role.manages_hr() {
+        if !self.data.access.allows(crate::staff_roles::Capability::GovernmentPreparation) {
             return;
         }
         let mut report = g::preview();

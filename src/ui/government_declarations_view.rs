@@ -134,7 +134,7 @@ impl State {
     }
     pub(super) fn accept(&mut self, r: Report, data: &Snapshot) {
         let identity = &r.identity;
-        if data.access.role.manages_hr()
+        if data.access.allows(crate::staff_roles::Capability::GovernmentPreparation)
             && identity.company_id == data.company.id
             && identity.user_id == data.access.user_id
             && identity.year == self.year

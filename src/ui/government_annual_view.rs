@@ -17,7 +17,7 @@ pub(super) struct State {
 }
 impl State {
     pub(super) fn accept(&mut self, report: Ledger, data: &Snapshot) {
-        if data.access.role.manages_hr()
+        if data.access.allows(crate::staff_roles::Capability::GovernmentPreparation)
             && report.wire.company_id == data.company.id
             && report.wire.year == self.year
         {
@@ -27,7 +27,7 @@ impl State {
         }
     }
     pub(super) fn accept_pay(&mut self, report: crate::payroll_government::annual_pay::Report, data: &Snapshot) {
-        if data.access.role.manages_hr() && report.ledger.wire.company_id == data.company.id
+        if data.access.allows(crate::staff_roles::Capability::GovernmentPreparation) && report.ledger.wire.company_id == data.company.id
             && report.ledger.wire.year == self.year {
             self.report = Some(report.ledger.clone());
             self.pay = Some(report);

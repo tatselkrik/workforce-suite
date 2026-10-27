@@ -50,6 +50,7 @@ fn fixture() -> (DemoStore, Uuid, Uuid, Uuid) {
                     employee_id: id,
                     full_name: s.data.employee_name(id).into(),
                     role: a.role,
+                    roles: None,
                 })
         })
         .collect();

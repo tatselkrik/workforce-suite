@@ -150,6 +150,7 @@ fn manager_gets_own_task_actions_without_private_case_or_waiver_rights() {
             employee_id: person,
             full_name: "Synthetic manager".into(),
             role: Role::Manager,
+            roles: None,
         });
     let assigned_id = s.data.exits.tasks[0].id;
     let mut d = TaskDraft::existing(&s.data.exits.tasks[0]);

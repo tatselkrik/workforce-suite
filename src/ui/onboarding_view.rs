@@ -945,6 +945,7 @@ impl HrisApp {
             employee_id: own,
             full_name: data.employee_name(own).into(),
             role: access.role,
+            roles: None,
         }];
         let mut a = crate::hiring::ApplicantDraft::new(data.company.today());
         a.full_name = "Fictional Onboarding Candidate".into();

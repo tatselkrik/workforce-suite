@@ -27,8 +27,8 @@ impl State{
   "prepare"=>{self.request=None;self.preview=None;if committed{self.reason.clear();}},
   "ack"=>{if committed{self.ack=None;self.ack_reason.clear();self.reset_reason.clear();}else if let Some(ack)=&mut self.ack{ack.id=Uuid::new_v4();}},_=>{}
  }}
- fn bind(&mut self,d:&Snapshot){let scope=Some((d.company.id,d.access.user_id,d.access.role));if self.scope!=scope||!d.access.role.manages_hr(){let year=d.company.today().year();*self=Self{scope,lo:format!("{year}-01-01"),hi:format!("{year}-12-31"),axis:"issued".into(),kind:"all".into(),..Default::default()};}}
- pub(super) fn accept(&mut self,update:x::Update,d:&Snapshot){self.bind(d);if !d.access.role.manages_hr(){return;}
+ fn bind(&mut self,d:&Snapshot){let scope=Some((d.company.id,d.access.user_id,d.access.role));if self.scope!=scope||!d.access.allows(crate::staff_roles::Capability::PayrollPreparation){let year=d.company.today().year();*self=Self{scope,lo:format!("{year}-01-01"),hi:format!("{year}-12-31"),axis:"issued".into(),kind:"all".into(),..Default::default()};}}
+ pub(super) fn accept(&mut self,update:x::Update,d:&Snapshot){self.bind(d);if !d.access.allows(crate::staff_roles::Capability::PayrollPreparation){return;}
   if let Some(state)=update.state.filter(|s|s.validate(&d.access).is_ok()){self.state=Some(state);}
   if let Some(id)=update.profile_saved{if matches!(&self.pending,Some(x::Operation::SaveProfile(c))if c.request_id==id){self.pending=None;self.edit=None;}}
   if let Some(resolved)=update.resolved{if resolved.validate(&d.access,&resolved.kind,resolved.id).is_ok()&&self.pending.as_ref().and_then(x::Operation::attempt).is_some_and(|(kind,id,_)|kind==resolved.kind&&id==resolved.id){self.finish_attempt(&resolved.kind,resolved.committed);}}
@@ -80,7 +80,7 @@ impl HrisApp{
   if form.ends_with("manager"){self.data.access.role=Role::Manager;self.payroll_state.tab=3;}
  }
  pub(super) fn payroll_exchange(&mut self,ui:&mut Ui){
-  self.payroll_state.exchange.bind(&self.data);if !self.data.access.role.manages_hr(){return;}
+  self.payroll_state.exchange.bind(&self.data);if !self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation){return;}
   ui.heading("Data exchange");ui.label("Prepare local payroll CSV files, save their original snapshots and record reconciliation.");
   ui.label("CSV amounts use PHP centavos: PHP1.00 = 100. Cash, source net, final-pay offsets and tax advice have separate columns; unknown amounts stay blank.");
   let mut operation=None;let s=&mut self.payroll_state.exchange;let locked=self.busy||s.pending.is_some();

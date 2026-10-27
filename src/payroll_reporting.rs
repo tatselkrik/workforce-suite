@@ -199,7 +199,7 @@ pub fn authorize(data: &Snapshot) -> Result<()> {
     ensure!(
         data.mode != Mode::SignedOut
             && data.access.company_id == data.company.id
-            && data.access.role.manages_hr(),
+            && data.access.allows(crate::staff_roles::Capability::PayrollReports),
         "Only current HR/Admin can generate company payroll reports."
     );
     Ok(())

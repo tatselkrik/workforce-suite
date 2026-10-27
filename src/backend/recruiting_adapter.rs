@@ -43,8 +43,12 @@ impl CloudClient {
 
     pub(super) fn recruiting_snapshot(&mut self, access: &Access) -> Result<Setup> {
         let company = access.company_id;
-        let hr = access.role.manages_hr();
-        let interviewers = if hr {
+        let hr = access.allows(crate::staff_roles::Capability::Recruiting);
+        let interviewers = if access.staff_context.as_ref().is_some_and(|c|c.runtime_ready) {
+            let directory:crate::staff_roles::workflow::Directory=decode(self.request(Method::POST,"rpc/staff_workflow_people")?.json(&json!({})).send()?)?;
+            directory.validate(access)?;
+            directory.people
+        } else if hr {
             decode(
                 self.request(Method::POST, "rpc/recruiting_interviewers")?
                     .json(&json!({}))

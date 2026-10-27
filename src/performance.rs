@@ -326,8 +326,8 @@ fn employee(data: &Snapshot, id: Uuid) -> Result<&Employee> {
         .context("Employee not found in your current access. Refresh.")
 }
 pub fn manages_goal(data: &Snapshot, person: Uuid) -> bool {
-    data.access.role.manages_hr()
-        || (data.access.role == Role::Manager
+    data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration)
+        || (data.access.allows(crate::staff_roles::Capability::TeamReview)
             && data.access.employee_id.is_some()
             && employee(data, person).is_ok_and(|e| e.reports_to == data.access.employee_id))
 }
@@ -339,7 +339,7 @@ pub fn goal(data: &Snapshot, id: Uuid) -> Result<&Goal> {
         .find(|g| g.id == id && g.company_id == data.company.id)
         .context("Goal not found. Refresh.")?;
     ensure!(
-        manages_goal(data, g.employee_id) || Some(g.employee_id) == data.access.employee_id,
+        manages_goal(data, g.employee_id) || data.access.allows(crate::staff_roles::Capability::PrivateHrNotes) || Some(g.employee_id) == data.access.employee_id,
         "Your role cannot read this goal."
     );
     Ok(g)
@@ -352,9 +352,9 @@ pub fn review(data: &Snapshot, id: Uuid) -> Result<&Review> {
         .find(|r| r.id == id && r.company_id == data.company.id)
         .context("Appraisal not found. Refresh.")?;
     ensure!(
-        data.access.role.manages_hr()
+        (data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration) || data.access.allows(crate::staff_roles::Capability::PrivateHrNotes))
             || (Some(r.employee_id) == data.access.employee_id && r.status == "published")
-            || (data.access.role == Role::Manager
+            || (data.access.allows(crate::staff_roles::Capability::TeamReview)
                 && Some(r.reviewer_employee_id) == data.access.employee_id
                 && manages_goal(data, r.employee_id)),
         "This appraisal is outside your current access."
@@ -372,14 +372,14 @@ pub fn eligible_reviewer(data: &Snapshot, person: Uuid, reviewer: Uuid) -> bool 
     person != reviewer
         && data.recruiting.interviewers.iter().any(|s| {
             s.employee_id == reviewer
-                && (s.role.manages_hr()
-                    || (s.role == Role::Manager
+                && (s.allows(crate::staff_roles::Capability::DevelopmentAdministration)
+                    || (s.allows(crate::staff_roles::Capability::TeamReview)
                         && employee(data, person).is_ok_and(|e| e.reports_to == Some(reviewer))))
         })
 }
 fn hr(data: &Snapshot) -> Result<()> {
     ensure!(
-        data.access.role.manages_hr(),
+        data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration),
         "Only HR and Administrators manage appraisal cycles and assignments."
     );
     Ok(())
@@ -511,7 +511,7 @@ impl PerformanceAction {
         ensure!(
             data.mode != Mode::SignedOut
                 && data.access.company_id == data.company.id
-                && data.access.role.uses_desktop(),
+                && data.access.uses_desktop(),
             "Active desktop staff access is required."
         );
         let (op, p) = self.record()?;
@@ -578,7 +578,7 @@ impl PerformanceAction {
                     status != "completed" || g.progress == 100,
                     "Record 100% progress before completing the goal."
                 );
-                if !(data.access.role.manages_hr() && status == "cancelled") {
+                if !(data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration) && status == "cancelled") {
                     active(data, g.employee_id)?;
                 }
             }
@@ -714,7 +714,7 @@ impl PerformanceAction {
                 }
             }
             Self::NoteSave(d) => {
-                hr(data)?;
+                ensure!(data.access.allows(crate::staff_roles::Capability::PrivateHrNotes), "HR notes are private to HR and Administrators.");
                 let r = review(data, d.review_id)?;
                 independent(data, r.employee_id)?;
                 if let Some(old) = &d.original {
@@ -784,11 +784,11 @@ impl PerformanceAction {
 pub fn can_assess(data: &Snapshot, r: &Review) -> bool {
     Some(r.reviewer_employee_id) == data.access.employee_id
         && r.reviewer_employee_id != r.employee_id
-        && (data.access.role.manages_hr()
-            || (data.access.role == Role::Manager && manages_goal(data, r.employee_id)))
+        && (data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration)
+            || (data.access.allows(crate::staff_roles::Capability::TeamReview) && manages_goal(data, r.employee_id)))
 }
 fn reviewer_current(data: &Snapshot, r: &Review) -> bool {
-    if data.access.role.manages_hr() {
+    if data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration) {
         eligible_reviewer(data, r.employee_id, r.reviewer_employee_id)
     } else {
         can_assess(data, r)
@@ -1167,12 +1167,13 @@ pub fn visible_events(data: &Snapshot) -> Vec<&Event> {
             if e.company_id != data.company.id {
                 return false;
             }
-            if data.access.role.manages_hr() {
+            if data.access.allows(crate::staff_roles::Capability::PrivateHrNotes) {
                 return true;
             }
             if e.note_id.is_some() {
                 return false;
             }
+            if data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration) { return true; }
             if let Some(id) = e.goal_id {
                 return goal(data, id).is_ok();
             }

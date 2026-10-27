@@ -16,7 +16,7 @@ pub(super) struct State {
 impl State {
     pub(super) fn bind(&mut self, data: &Snapshot) {
         let scope = Some((data.company.id, data.access.user_id, data.access.role));
-        if self.scope != scope || !data.access.role.manages_hr() {
+        if self.scope != scope || !data.access.allows(crate::staff_roles::Capability::PayrollReports) {
             let year = data.company.today().year();
             *self = Self {
                 scope,
@@ -48,7 +48,7 @@ impl State {
     }
     pub(super) fn accept(&mut self, report: p::Report, data: &Snapshot) {
         self.bind(data);
-        if data.access.role.manages_hr()
+        if data.access.allows(crate::staff_roles::Capability::PayrollReports)
             && report.wire.company_id == data.company.id
             && self.filter().is_ok_and(|f| f == report.wire.filter)
         {
@@ -81,7 +81,7 @@ fn amount(ui:&mut Ui,label:&str,n:i64){entry(ui,label,&crate::payroll::money(n))
 impl HrisApp {
     pub(super) fn payroll_reports(&mut self, ui: &mut Ui) {
         self.payroll_state.reports.bind(&self.data);
-        if !self.data.access.role.manages_hr() {
+        if !self.data.access.allows(crate::staff_roles::Capability::PayrollReports) {
             return;
         }
         ui.heading("Consolidated payroll reports");

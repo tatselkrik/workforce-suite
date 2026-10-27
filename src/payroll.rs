@@ -591,7 +591,7 @@ impl PayrollAction {
         }
         ensure!(
             data.mode != Mode::SignedOut
-                && data.access.role.manages_hr()
+                && data.access.allows(crate::staff_roles::Capability::PayrollPreparation)
                 && data.access.company_id == data.company.id,
             "Only HR and Administrators manage payroll."
         );
@@ -1194,7 +1194,7 @@ pub fn export_csv(data: &Snapshot, kind: &str, id: Option<Uuid>, year: i32) -> R
         ["register", "statutory", "annual", "payslip"].contains(&kind),
         "Choose a payroll report."
     );
-    let hr = data.access.role.manages_hr();
+    let hr = data.access.allows(crate::staff_roles::Capability::PayrollPreparation);
     ensure!(
         kind == "payslip" || hr,
         "Only HR and Administrators export company payroll."

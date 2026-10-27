@@ -323,7 +323,7 @@ pub fn payload(a: &PayrollAction, data: &Snapshot) -> Result<Value> {
     ensure!(
         data.mode != Mode::SignedOut
             && data.access.company_id == data.company.id
-            && data.access.role.manages_hr(),
+            && data.access.allows(crate::staff_roles::Capability::PayrollPreparation),
         "Only HR and Administrators manage payroll amendments."
     );
     let op = a
@@ -458,7 +458,7 @@ pub fn export_csv(data: &Snapshot, kind: &str, id: Option<Uuid>) -> Result<Vec<u
         .find(|s| {
             Some(s.id) == id
                 && s.company_id == data.company.id
-                && (data.access.role.manages_hr() || data.access.employee_id == Some(s.employee_id))
+                && (data.access.allows(crate::staff_roles::Capability::PayrollPreparation) || data.access.employee_id == Some(s.employee_id))
         })
         .context("Only an available own issued amendment may be exported.")?;
     let mut rows = vec![

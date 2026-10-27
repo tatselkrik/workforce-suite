@@ -12,6 +12,7 @@ fn fixture() -> (DemoStore, uuid::Uuid, InterviewDraft) {
         employee_id: own,
         full_name: "Fictional Reviewer".into(),
         role: Role::Administrator,
+        roles: None,
     });
     let mut app = ApplicantDraft::new(s.data.company.today());
     app.full_name = "Synthetic Recruiting Candidate".into();

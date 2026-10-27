@@ -13,7 +13,7 @@ pub const ACK_HEADERS:&[&str]=&["exchange_id","record_key","row_sha256","employe
 fn label(v:&str,max:usize,required:bool)->Result<()>{ensure!(v.chars().count()<=max&&(!required||!v.trim().is_empty())&&!v.chars().any(char::is_control),"Use bounded text without control characters.");Ok(())}
 fn hash(v:&str)->bool{v.len()==64&&v.bytes().all(|c|c.is_ascii_digit()||(b'a'..=b'f').contains(&c))}
 pub fn sha(bytes:&[u8])->String{format!("{:x}",Sha256::digest(bytes))}
-fn scope(cid:Uuid,uid:Uuid,role:Role,a:&Access)->Result<()>{ensure!(cid==a.company_id&&uid==a.user_id&&role==a.role&&a.role.manages_hr(),"Current HR/Admin exchange scope changed. Sign in or refresh.");Ok(())}
+fn scope(cid:Uuid,uid:Uuid,role:Role,a:&Access)->Result<()>{ensure!(cid==a.company_id&&uid==a.user_id&&role==a.role&&a.allows(crate::staff_roles::Capability::PayrollPreparation),"Current HR/Admin exchange scope changed. Sign in or refresh.");Ok(())}
 
 #[derive(Clone,Debug,Serialize,Deserialize,PartialEq,Eq)]
 #[serde(deny_unknown_fields)]
@@ -58,7 +58,7 @@ fn csv_quote(v:&str,literal:bool)->String{let s=if literal{csv_literal(v)}else{v
 fn period(r:&p::Row)->String{format!("{} through {}",r.period_start,r.period_end)}
 impl Basis{
  pub fn validate(&self,a:&Access)->Result<p::Report>{
-  ensure!(a.role.manages_hr()&&self.company_id==a.company_id&&!self.exchange_id.is_nil()&&self.controls.len()==self.report.rows.len()&&(1..=1000).contains(&self.controls.len())&&self.csv.len()<=4194304&&hash(&self.sha256)&&hash(&self.fingerprint),"Invalid exchange snapshot or scope.");
+  ensure!(a.allows(crate::staff_roles::Capability::PayrollPreparation)&&self.company_id==a.company_id&&!self.exchange_id.is_nil()&&self.controls.len()==self.report.rows.len()&&(1..=1000).contains(&self.controls.len())&&self.csv.len()<=4194304&&hash(&self.sha256)&&hash(&self.fingerprint),"Invalid exchange snapshot or scope.");
   self.profile.validate()?;
   let report=p::Report::from_wire(self.report.clone(),a.company_id,&self.report.filter)?;
   ensure!(self.sha256==sha(self.csv.as_bytes())&&self.csv==self.render()?,"Frozen exchange bytes do not match their checksum or selected fields.");Ok(report)

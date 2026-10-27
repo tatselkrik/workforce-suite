@@ -231,6 +231,19 @@ pub struct Interviewer {
     pub employee_id: Uuid,
     pub full_name: String,
     pub role: Role,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub roles: Option<crate::staff_roles::StaffRoles>,
+}
+impl Interviewer {
+    pub fn allows(&self, capability: crate::staff_roles::Capability) -> bool {
+        match &self.roles {
+            Some(roles) => roles.compatible_base_role()==self.role && roles.allows(capability),
+            None => crate::staff_roles::StaffRoles::legacy(self.role).allows(capability),
+        }
+    }
+    pub fn role_label(&self) -> String {
+        self.roles.as_ref().map(|roles| roles.as_slice().iter().map(|r|r.label()).collect::<Vec<_>>().join(", ")).unwrap_or_else(||self.role.label().into())
+    }
 }
 #[derive(Clone, Debug, Default)]
 pub struct Setup {
@@ -303,7 +316,7 @@ impl InterviewDraft {
             data.recruiting
                 .interviewers
                 .iter()
-                .any(|s| s.employee_id == interviewer && s.role.uses_desktop()),
+                .any(|s| s.employee_id == interviewer && s.allows(crate::staff_roles::Capability::Desktop)),
             "Choose an active staff interviewer with desktop access."
         );
         text(&self.title, 120, true, false, "Interview title")?;
