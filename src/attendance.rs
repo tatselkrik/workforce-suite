@@ -17,6 +17,7 @@ pub fn daily_roster(data: &Snapshot, date: NaiveDate) -> Vec<DailyRow> {
     let mut rows: Vec<_> = data
         .employees
         .iter()
+        .filter(|employee|data.access.can_read_operational_employee(employee))
         .filter_map(|employee| {
             let attendance = data
                 .attendance

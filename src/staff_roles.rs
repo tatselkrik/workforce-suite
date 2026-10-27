@@ -556,7 +556,7 @@ mod tests {
             "../tests/fixtures/staff_role_capabilities.json"
         ))
         .unwrap();
-        assert_eq!(cases.len(), 9);
+        assert_eq!(cases.len(), 14);
         for case in cases {
             let expected: BTreeSet<_> = case.capabilities.iter().cloned().collect();
             assert_eq!(expected.len(), case.capabilities.len());

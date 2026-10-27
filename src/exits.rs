@@ -246,7 +246,7 @@ pub enum ExitAction {
 }
 pub fn case(data: &Snapshot, id: Uuid) -> Result<&Case> {
     ensure!(
-        data.access.role.manages_hr(),
+        data.access.allows(crate::staff_roles::Capability::Personnel),
         "Only HR and Administrators can see private exit records."
     );
     data.exits
@@ -263,8 +263,8 @@ fn task(data: &Snapshot, id: Uuid) -> Result<&Task> {
         .find(|t| t.id == id && t.company_id == data.company.id)
         .context("Clearance task not found. Refresh.")?;
     ensure!(
-        data.access.role.manages_hr()
-            || (data.access.role == Role::Manager
+        data.access.allows(crate::staff_roles::Capability::Personnel)
+            || (data.access.uses_desktop()
                 && t.assigned_employee_id.is_some()
                 && t.assigned_employee_id == data.access.employee_id),
         "This clearance task is not assigned to you."
@@ -285,13 +285,13 @@ impl ExitAction {
         ensure!(
             data.mode != Mode::SignedOut
                 && data.access.company_id == data.company.id
-                && data.access.role.uses_desktop(),
+                && data.access.uses_desktop(),
             "Active desktop staff access is required."
         );
         let (op, p) = match self {
             Self::CaseSave(d) => {
                 ensure!(
-                    data.access.role.manages_hr(),
+                    data.access.allows(crate::staff_roles::Capability::Personnel),
                     "Only HR manages exit details."
                 );
                 let employee = d.employee_id.context("Choose an active employee.")?;
@@ -337,7 +337,7 @@ impl ExitAction {
             }
             Self::TaskSave(d) => {
                 ensure!(
-                    data.access.role.manages_hr(),
+                    data.access.allows(crate::staff_roles::Capability::Personnel),
                     "Only HR assigns clearance tasks."
                 );
                 ensure!(
@@ -382,7 +382,7 @@ impl ExitAction {
                     "This task changed, or the action is unavailable. Refresh."
                 );
                 ensure!(
-                    data.access.role.manages_hr() || (status != "waived" && t.status != "waived"),
+                    data.access.allows(crate::staff_roles::Capability::Personnel) || (status != "waived" && t.status != "waived"),
                     "HR handles clearance waivers."
                 );
                 (
@@ -495,7 +495,7 @@ pub const DEFAULT_TASKS: [&str; 5] = [
 ];
 pub fn readiness(data: &Snapshot, id: Uuid) -> Option<Readiness> {
     let today=data.company.today();
-    if !data.access.role.manages_hr() {
+    if !data.access.allows(crate::staff_roles::Capability::Personnel) {
         return None;
     }
     if data.mode != Mode::Demo {

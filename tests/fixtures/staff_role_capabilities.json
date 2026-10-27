@@ -1,11 +1,201 @@
 [
- {"roles":["administrator"],"capabilities":["own_records","desktop","personnel","attendance_administration","leave_administration","private_hr_notes","personnel_documents","general_hr_reports","recruiting","development_administration","payroll_preparation","government_preparation","payroll_reports","team_review","account_administration","company_configuration","payroll_approval","payment_recording"]},
- {"roles":["hr_generalist"],"capabilities":["own_records","desktop","personnel","attendance_administration","leave_administration","private_hr_notes","personnel_documents","general_hr_reports"]},
- {"roles":["recruiter"],"capabilities":["own_records","desktop","recruiting"]},
- {"roles":["learning_performance_officer"],"capabilities":["own_records","desktop","development_administration"]},
- {"roles":["payroll_officer"],"capabilities":["own_records","desktop","payroll_preparation","government_preparation","payroll_reports"]},
- {"roles":["manager"],"capabilities":["own_records","desktop","team_review"]},
- {"roles":["employee"],"capabilities":["own_records"]},
- {"roles":["hr_generalist","payroll_officer"],"capabilities":["own_records","desktop","personnel","attendance_administration","leave_administration","private_hr_notes","personnel_documents","general_hr_reports","payroll_preparation","government_preparation","payroll_reports"]},
- {"roles":["recruiter","learning_performance_officer"],"capabilities":["own_records","desktop","recruiting","development_administration"]}
+  {
+    "roles": [
+      "administrator"
+    ],
+    "capabilities": [
+      "own_records",
+      "desktop",
+      "personnel",
+      "attendance_administration",
+      "leave_administration",
+      "private_hr_notes",
+      "personnel_documents",
+      "general_hr_reports",
+      "recruiting",
+      "development_administration",
+      "payroll_preparation",
+      "government_preparation",
+      "payroll_reports",
+      "team_review",
+      "account_administration",
+      "company_configuration",
+      "payroll_approval",
+      "payment_recording"
+    ]
+  },
+  {
+    "roles": [
+      "hr_generalist"
+    ],
+    "capabilities": [
+      "own_records",
+      "desktop",
+      "personnel",
+      "attendance_administration",
+      "leave_administration",
+      "private_hr_notes",
+      "personnel_documents",
+      "general_hr_reports"
+    ]
+  },
+  {
+    "roles": [
+      "recruiter"
+    ],
+    "capabilities": [
+      "own_records",
+      "desktop",
+      "recruiting"
+    ]
+  },
+  {
+    "roles": [
+      "learning_performance_officer"
+    ],
+    "capabilities": [
+      "own_records",
+      "desktop",
+      "development_administration"
+    ]
+  },
+  {
+    "roles": [
+      "payroll_officer"
+    ],
+    "capabilities": [
+      "own_records",
+      "desktop",
+      "payroll_preparation",
+      "government_preparation",
+      "payroll_reports"
+    ]
+  },
+  {
+    "roles": [
+      "manager"
+    ],
+    "capabilities": [
+      "own_records",
+      "desktop",
+      "team_review"
+    ]
+  },
+  {
+    "roles": [
+      "employee"
+    ],
+    "capabilities": [
+      "own_records"
+    ]
+  },
+  {
+    "roles": [
+      "hr_generalist",
+      "payroll_officer"
+    ],
+    "capabilities": [
+      "own_records",
+      "desktop",
+      "personnel",
+      "attendance_administration",
+      "leave_administration",
+      "private_hr_notes",
+      "personnel_documents",
+      "general_hr_reports",
+      "payroll_preparation",
+      "government_preparation",
+      "payroll_reports"
+    ]
+  },
+  {
+    "roles": [
+      "recruiter",
+      "learning_performance_officer"
+    ],
+    "capabilities": [
+      "own_records",
+      "desktop",
+      "recruiting",
+      "development_administration"
+    ]
+  },
+  {
+    "roles": [
+      "hr_generalist",
+      "manager"
+    ],
+    "capabilities": [
+      "own_records",
+      "desktop",
+      "personnel",
+      "attendance_administration",
+      "leave_administration",
+      "private_hr_notes",
+      "personnel_documents",
+      "general_hr_reports",
+      "team_review"
+    ]
+  },
+  {
+    "roles": [
+      "recruiter",
+      "manager"
+    ],
+    "capabilities": [
+      "own_records",
+      "desktop",
+      "recruiting",
+      "team_review"
+    ]
+  },
+  {
+    "roles": [
+      "learning_performance_officer",
+      "manager"
+    ],
+    "capabilities": [
+      "own_records",
+      "desktop",
+      "development_administration",
+      "team_review"
+    ]
+  },
+  {
+    "roles": [
+      "payroll_officer",
+      "manager"
+    ],
+    "capabilities": [
+      "own_records",
+      "desktop",
+      "payroll_preparation",
+      "government_preparation",
+      "payroll_reports",
+      "team_review"
+    ]
+  },
+  {
+    "roles": [
+      "hr_generalist",
+      "recruiter",
+      "learning_performance_officer",
+      "payroll_officer"
+    ],
+    "capabilities": [
+      "own_records",
+      "desktop",
+      "personnel",
+      "attendance_administration",
+      "leave_administration",
+      "private_hr_notes",
+      "personnel_documents",
+      "general_hr_reports",
+      "recruiting",
+      "development_administration",
+      "payroll_preparation",
+      "government_preparation",
+      "payroll_reports"
+    ]
+  }
 ]

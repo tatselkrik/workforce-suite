@@ -492,7 +492,7 @@ impl HrisApp {
                         "employee" => Role::Employee,
                         _ => Role::Administrator,
                     };
-                    if !app.data.access.role.manages_hr() {
+                    if !app.data.access.allows(crate::staff_roles::Capability::Personnel) {
                         let own = Uuid::from_u128(if app.data.access.role == Role::Manager {
                             103
                         } else {
@@ -521,7 +521,7 @@ impl HrisApp {
                     if !app.data.access.role.manages_accounts() {
                         app.data.accounts.clear();
                     }
-                    if !app.data.access.role.uses_desktop() {
+                    if !app.data.access.uses_desktop() {
                         app.login_branding = branding::LoginBranding {
                             company_name: app.data.company.name.clone(),
                             logo_png: app.data.logo_png.clone(),
@@ -923,7 +923,7 @@ impl HrisApp {
                         }
                     }
                     app.open_employee(person);
-                    if app.data.access.role.manages_hr() {
+                    if app.data.access.allows(crate::staff_roles::Capability::Personnel) {
                         app.contacts_section = ContactSection::Documents;
                     }
                     if preview == "documents-archived" {
@@ -1021,7 +1021,7 @@ impl HrisApp {
                     }
                     app.data = store.data;
                     app.open_employee(target);
-                    if app.data.access.role.manages_hr() {
+                    if app.data.access.allows(crate::staff_roles::Capability::Personnel) {
                         app.contacts_section = ContactSection::History;
                     }
                 }
@@ -1449,7 +1449,7 @@ impl HrisApp {
     }
 
     fn new_employee(&mut self) {
-        if !self.data.access.role.manages_hr() {
+        if !self.data.access.allows(crate::staff_roles::Capability::Personnel) {
             return;
         }
         self.contacts_form = Some(EmployeeContacts::empty(self.data.company.id, Uuid::nil()));
@@ -1501,7 +1501,7 @@ impl HrisApp {
         let versioned_staff=self.data.access.staff_context.as_ref().is_some_and(|c|c.runtime_ready);
         if versioned_staff{access=None;}
         let mut transferred=false;
-        let editable = self.data.access.role.manages_hr();
+        let editable = self.data.access.allows(crate::staff_roles::Capability::Personnel);
         let private_visible = editable
             || draft
                 .id
@@ -1760,7 +1760,7 @@ impl HrisApp {
                     if page == Page::Accounts && !self.data.access.role.manages_accounts() {
                         continue;
                     }
-                    if page == Page::Hiring && !self.data.access.role.uses_desktop() {
+                    if page == Page::Hiring && !self.data.access.uses_desktop() {
                         continue;
                     }
                     let selected = self.page == page;
@@ -1803,15 +1803,15 @@ impl HrisApp {
                 .or_else(|| self.account.as_ref().map(|a| a.details.display_name()))
                 .unwrap_or("Your account");
             let role = if self.data.mode == Mode::Demo {
-                "Demo account"
+                "Demo account".to_owned()
             } else {
-                self.data.access.role.label()
+                self.data.access.role_label()
             };
             if profile_link(
                 ui,
                 self.avatar.as_ref(),
                 name,
-                role,
+                &role,
                 self.page == Page::Profile,
             )
             .clicked()
@@ -2106,7 +2106,7 @@ impl HrisApp {
 
     fn overview(&mut self, ui: &mut Ui) {
         let today = self.data.company.today();
-        let active = self.data.active().count();
+        let active = self.data.active().filter(|e|self.data.access.can_read_operational_employee(e)).count();
         let attendance = self
             .data
             .attendance
@@ -2129,7 +2129,7 @@ impl HrisApp {
             .count();
         ui.columns(4, |columns| {
             for (ui, (label, value, caption)) in columns.iter_mut().zip([
-                ("ACTIVE EMPLOYEES", active, "People you can access"),
+                ("ACTIVE EMPLOYEES", active, "Your attendance and leave scope"),
                 ("CHECKED IN TODAY", attendance, "Daily attendance records"),
                 ("AWAITING REVIEW", pending, "Pending leave requests"),
                 ("ON LEAVE TODAY", away, "Approved time away"),
@@ -2245,7 +2245,7 @@ impl HrisApp {
         });
         ui.add_space(10.0);
         ui.horizontal(|ui| {
-            if self.data.access.role.manages_hr() && primary(ui, "+ Add employee") {
+            if self.data.access.allows(crate::staff_roles::Capability::Personnel) && primary(ui, "+ Add employee") {
                 self.new_employee();
             }
             if ui.button("+ Request leave").clicked() {
@@ -2352,7 +2352,7 @@ impl HrisApp {
                     .color(muted(ui)),
             );
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if self.data.access.role.manages_hr() && primary(ui, "+ Add employee") {
+                if self.data.access.allows(crate::staff_roles::Capability::Personnel) && primary(ui, "+ Add employee") {
                     self.new_employee();
                 }
             });
@@ -2440,7 +2440,7 @@ impl HrisApp {
                                         .map(|d| d.to_string())
                                         .unwrap_or_else(|| "Not set".into()),
                                 );
-                                if let Some(kind) =
+                                if !self.data.access.can_read_operational_employee(employee) { ui.label("Restricted"); } else if let Some(kind) =
                                     self.data.leave_setup.policy.leave_type("annual")
                                 {
                                     let today = self.data.company.today();
@@ -2463,7 +2463,7 @@ impl HrisApp {
                                     employee.status == EmployeeStatus::Active,
                                 );
                                 ui.horizontal(|ui| {
-                                    if self.data.access.role.manages_hr()
+                                    if self.data.access.allows(crate::staff_roles::Capability::Personnel)
                                         && ui.button("Edit").clicked()
                                     {
                                         self.open_employee(employee.id);
@@ -2521,7 +2521,7 @@ impl HrisApp {
         card(ui, |ui| {
             ui.label(RichText::new("Record a check-in").strong());
             ui.horizontal_wrapped(|ui| {
-                if date < today && self.data.access.role.manages_hr() {
+                if date < today && self.data.access.allows(crate::staff_roles::Capability::Personnel) {
                     egui::ComboBox::from_id_salt("past_attendance_employee")
                         .width(250.0)
                         .selected_text(
@@ -2565,7 +2565,7 @@ impl HrisApp {
                         }
                     }
                 });
-                if self.data.access.role.manages_hr() {
+                if self.data.access.allows(crate::staff_roles::Capability::Personnel) {
                     if ui
                         .add_enabled(
                             date <= today && self.check_in_employee.is_some(),
@@ -2583,7 +2583,7 @@ impl HrisApp {
                     }
                 }
             });
-            ui.label(RichText::new(if self.data.access.role.manages_hr() { "Check in records the current server time. Past entries and changed times require a reason and are kept in correction history." } else { "Check in records the current server time. Ask HR to resolve missing or incorrect attendance." }).color(muted(ui)).size(12.0));
+            ui.label(RichText::new(if self.data.access.allows(crate::staff_roles::Capability::Personnel) { "Check in records the current server time. Past entries and changed times require a reason and are kept in correction history." } else { "Check in records the current server time. Ask HR to resolve missing or incorrect attendance." }).color(muted(ui)).size(12.0));
         });
         ui.add_space(8.0);
         let rows = crate::attendance::daily_roster(&self.data, date);
@@ -2675,7 +2675,7 @@ impl HrisApp {
                                             self.send(Command::Change(Action::CheckOut(record.id)));
                                         }
                                     }
-                                    if self.data.access.role.manages_hr() {
+                                    if self.data.access.allows(crate::staff_roles::Capability::Personnel) {
                                         if ui.button("Correct").clicked() {
                                             self.open_correction(record.employee_id, date);
                                         }
@@ -2707,7 +2707,7 @@ impl HrisApp {
                                     },
                                     false,
                                 );
-                                if self.data.access.role.manages_hr()
+                                if self.data.access.allows(crate::staff_roles::Capability::Personnel)
                                     && ui.button("Record").clicked()
                                 {
                                     self.open_correction(row.employee.id, date);
@@ -3082,7 +3082,7 @@ impl HrisApp {
                 avatar(ui,self.avatar.as_ref(),&employee_name,86.0);
                 ui.vertical(|ui| {
                     ui.label(RichText::new(&employee_name).size(22.0).strong());
-                    ui.label(RichText::new(if signed_in { self.data.access.role.label() } else { "Demo account" }).color(muted(ui)));
+                    ui.label(RichText::new(if signed_in { self.data.access.role_label() } else { "Demo account".to_owned() }).color(muted(ui)));
                     ui.horizontal_wrapped(|ui| {
                         if ui.button("Change photo").clicked() {
                             match account::choose_photo() {
@@ -3150,7 +3150,7 @@ impl HrisApp {
                 card(ui, |ui| {
                     ui.label(RichText::new("Sign-in account").strong());
                     ui.label(&profile.email);
-                    ui.label(format!("Staff role: {}", self.data.access.role.label()));
+                    ui.label(format!("Staff role: {}", self.data.access.role_label()));
                     if ui.button("Manage account security").clicked() {
                         self.profile_section = ProfileSection::Security;
                     }
@@ -4077,7 +4077,7 @@ impl eframe::App for HrisApp {
         };
         ctx.set_theme(theme.preference());
         if (self.page == Page::Accounts && !self.data.access.role.manages_accounts())
-            || (matches!(self.page, Page::Hiring | Page::Exits) && !self.data.access.role.uses_desktop())
+            || (matches!(self.page, Page::Hiring | Page::Exits) && !self.data.access.uses_desktop())
         {
             self.navigate(Page::Overview, &ctx);
         }
@@ -4811,11 +4811,11 @@ fn profile_link(
                 )
                 .truncate(),
             );
-            ui.label(
+            ui.add(egui::Label::new(
                 RichText::new(role)
                     .color(Color32::from_rgb(175, 206, 208))
                     .size(11.0),
-            );
+            ).truncate()).on_hover_text(role);
         });
     });
     response

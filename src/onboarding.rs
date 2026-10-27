@@ -312,7 +312,7 @@ fn text(s: &str, max: usize, required: bool, multiline: bool) -> Result<()> {
 }
 pub fn offer(data: &Snapshot, id: Uuid) -> Result<&Offer> {
     ensure!(
-        data.access.role.manages_hr(),
+        data.access.allows(crate::staff_roles::Capability::Recruiting),
         "Only HR and Administrators can see offer terms."
     );
     data.onboarding
@@ -329,8 +329,8 @@ fn task(data: &Snapshot, id: Uuid) -> Result<&Task> {
         .find(|r| r.id == id && r.company_id == data.company.id)
         .context("Task not found. Refresh.")?;
     ensure!(
-        data.access.role.manages_hr()
-            || (data.access.role == Role::Manager
+        data.access.allows(crate::staff_roles::Capability::Recruiting)
+            || (data.access.uses_desktop()
                 && r.assigned_employee_id == data.access.employee_id),
         "This task is not assigned to you."
     );
@@ -341,7 +341,7 @@ impl HiringAction {
         ensure!(
             data.mode != crate::domain::Mode::SignedOut
                 && data.access.company_id == data.company.id
-                && data.access.role.uses_desktop(),
+                && data.access.uses_desktop(),
             "Desktop staff access is required."
         );
         let (op, p) = match self {
@@ -531,7 +531,7 @@ impl HiringAction {
                     "Refresh the task and select an available status."
                 );
                 ensure!(
-                    data.access.role.manages_hr() || (status != "waived" && r.status != "waived"),
+                    data.access.allows(crate::staff_roles::Capability::Recruiting) || (status != "waived" && r.status != "waived"),
                     "HR handles task waivers."
                 );
                 (

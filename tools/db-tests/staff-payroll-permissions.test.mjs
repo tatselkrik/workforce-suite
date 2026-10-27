@@ -39,6 +39,7 @@ try{
  const sources=[['select public.government_payroll_sources($1,$2)',['2026-09-01','sss']],['select public.government_registration(null)',[]],['select public.payroll_report($1::jsonb)',[JSON.stringify(filter)]],['select public.payroll_report_v2($1::jsonb)',[JSON.stringify(filter)]],['select public.payroll_exchange_state()',[]]];
  const mutable=['manage_payroll','manage_payroll_cutoff','manage_payroll_thirteenth','manage_payroll_tax','manage_payroll_final','manage_payroll_amendment','manage_payroll_wage','manage_government_allocation'];
  const invariant=(await db.query('select to_jsonb(p)r from public.payroll_profiles p order by id')).rows;
+ let nextMonth=2;
  for(const [index,test]of cases.entries()){
   await session(owner);const context=(await db.query('select public.staff_role_admin_context(true)c')).rows[0].c;const current=context.accounts.find(a=>a.user_id===subject);
   const change={id:id(),user_id:subject,active:true,expected_revision:current.revision,expected_base_role:current.base_role,expected_member_updated_at:current.member_updated_at,roles:test.roles,reason:'Reviewed fictional payroll permission assignment'};
@@ -49,7 +50,7 @@ try{
   eq((await db.query('select hris_private.payroll_hr($1)c',[owner])).rows[0].c,false,'No cross-company payroll selection');
   for(const [sql,params]of sources){if(payroll){await db.query(sql,params);checks++;}else await denied(sql,params);}
   if(payroll){
-   const run=await call('run_create',{id:id(),month:`2026-${String(index+2).padStart(2,'0')}-01`,title:'Fictional role scope run',reason:'Reviewed preparation permission'});
+   const run=await call('run_create',{id:id(),month:`2026-${String(nextMonth++).padStart(2,'0')}-01`,title:'Fictional role scope run',reason:'Reviewed preparation permission'});
    eq(run.status,'draft','Protected specialist can prepare real payroll');
    if(!test.roles.includes('administrator')){
     await denied('select public.manage_payroll($1,$2::jsonb)',['run_paid',JSON.stringify({id:run.id,expected_revision:run.revision,reason:'Attempt restricted payment'})]);

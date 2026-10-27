@@ -27,16 +27,47 @@ The audited legacy four-specialty mapping retains existing broad HR rights.
   actual writes recheck the assigned person's current protected authority.
   Unknown, malformed, duplicate or foreign directory scope is rejected.
 
-Current local evidence:748normal Rust checks pass with28intentional opt-ins
-ignored;12,353PostgreSQL migration/workflow/preservation assertions pass against
-staged79migrations;136actual payroll/government/RLS checks and463development,
-private-field, legacy workflow and directory assertions pass. These checks use
+Current local evidence: the full normal Rust run passed749checks with28intentional
+opt-ins ignored. After the final snapshot/label changes,55focused staff checks pass,
+including14shared role combinations and unchanged-base-role revocation. The final
+full release run remains required. Staged81SQL passes12,353workflow/preservation
+assertions; dedicated checks pass298capability,209payroll,562development,
+298Personnel and247Recruiting assertions. These checks use
 fictional records and managed Auth/Storage fixtures; they are not hosted or
 installed-screen verification. No financial calculation/rate was changed.
 
+## Additional local Personnel and Recruiting boundaries
+
+Personnel alone permits employment/contact maintenance, private 201 files,
+employment history and separation-case administration. Other staff can maintain
+own contacts and complete their exact assigned clearance tasks, without private
+case details, other assignments or waivers. Private file RLS also protects direct
+Storage requests. A read-only employment directory is separate from the generic
+operational employee scope; it does not grant attendance/leave histories, balances,
+private contacts, document evidence or salary access. Native daily attendance and
+balance displays retain that operational scope rather than infer missing records.
+
+Recruiting controls applicants, assessments, resumes, offers, hiring and company
+onboarding. Other current staff can access exact assigned interviews/tasks and
+write their own feedback. Offer approval remains Administrator-only. Accepted
+conversion atomically creates one employee/contact record and five tasks, preserves
+retry/history and creates no Auth account. A Recruiter without Personnel cannot
+subsequently edit the employee or open their private contacts. Fourteen shared
+cases cover combined Manager duties and the explicit retained legacy HR bundle.
+
+The descriptive actor-role audit columns retain the four-code membership contract;
+those codes are not permission authority. No existing audit row was rewritten.
+The version1 desktop snapshot rechecks the entire protected role set/revision after
+scoped reads; changed access clears cached forms even when its base code is unchanged.
+Long current-role labels are truncated in the sidebar with their full hover text.
+
+The repository formatting check currently reports90files, including untouched
+pre-resume source. Its required final release check remains unresolved; no CI
+success or delivery is claimed by these local checks.
+
 ## Remaining before activation and delivery
 
-Complete Personnel/201-files, attendance/leave/approval and Recruiting boundaries;
+Complete attendance/leave/approval, notifications/updater and legacy-write boundaries;
 review every direct RPC, RLS/storage path and native snapshot/action/menu. Add the
 remaining scoped roster and current-role labels, reconcile legacy account writes
 with protected assignment/history, and finish role/access audit/recovery usability.

@@ -510,3 +510,24 @@ fn temporary_post_save_refresh_failure_preserves_the_pending_retry() {
     assert_eq!(req, original);
     assert_eq!(handle.join().unwrap().len(), 5);
 }
+
+
+#[test]
+fn snapshot_end_rechecks_role_sets_even_when_the_legacy_membership_role_is_unchanged() {
+    for changed in [false,true] {
+        let mut d=data(Role::Employee);
+        d.access.staff_contract_version=1;
+        let expected:StaffContext=serde_json::from_value(wire(&d,StaffRole::HrGeneralist,true)).unwrap();
+        d.access.bind_staff_context(expected).unwrap();
+        let mut raw=access_json(&d.access);raw["staff_contract_version"]=json!(1);
+        let mut roles=wire(&d,if changed{StaffRole::PayrollOfficer}else{StaffRole::HrGeneralist},true);
+        if changed{roles["revision"]=json!(2);}
+        let (url,handle)=server(vec![
+            ("/rest/v1/rpc/my_hris_access",200,raw),
+            ("/rest/v1/rpc/staff_role_context",200,roles),
+        ]);
+        let result=client(url,&d).verify_snapshot_staff_scope(&d.access);
+        if changed{assert!(result.unwrap_err().is::<AccessRevoked>());}else{result.unwrap();}
+        assert_eq!(handle.join().unwrap().len(),2);
+    }
+}

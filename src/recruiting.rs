@@ -414,8 +414,8 @@ pub fn interview(data: &Snapshot, id: Uuid) -> Result<&Interview> {
     ensure!(
         data.mode != Mode::SignedOut
             && data.access.company_id == data.company.id
-            && (data.access.role.manages_hr()
-                || (data.access.role == Role::Manager
+            && (data.access.allows(crate::staff_roles::Capability::Recruiting)
+                || (data.access.uses_desktop()
                     && data.access.employee_id == Some(i.interviewer_employee_id))),
         "This interview is outside your access."
     );

@@ -780,7 +780,9 @@ impl CloudClient {
             return Err(AccessRevoked.into());
         }
         let mut access: Access = decode(response)?;
-        ensure!(access.user_id == self.session.user.id, "The access response did not match your account.");
+        if access.user_id != self.session.user.id {
+            return Err(anyhow::Error::new(AccessRevoked).context("The access response did not match your account."));
+        }
         if access.staff_contract_version > crate::staff_roles::SCHEMA_VERSION {
             return Err(anyhow::Error::new(AccessRevoked).context("Update HRIS to use the current staff-permissions contract."));
         }
@@ -800,6 +802,14 @@ impl CloudClient {
             return Err(PortalAccount.into());
         }
         Ok(access)
+    }
+    fn verify_snapshot_staff_scope(&mut self, expected: &Access) -> Result<()> {
+        // Legacy schema0 has no explicit staff contract. The deployed version1
+        // contract must still match AFTER all scoped reads, including revision.
+        if expected.staff_contract_version > 0 && self.current_access()? != *expected {
+            return Err(AccessRevoked.into());
+        }
+        Ok(())
     }
     pub fn report(
         &mut self,
@@ -936,12 +946,12 @@ impl CloudClient {
                     .then(a.id.cmp(&b.id))
             });
         }
-        let employment_history = if access.role.manages_hr() {
+        let employment_history = if access.allows(crate::staff_roles::Capability::Personnel) {
             self.rows("employment_history", Some(company.id))?
         } else {
             Vec::new()
         };
-        let (documents, document_events) = if access.role.manages_hr() {
+        let (documents, document_events) = if access.allows(crate::staff_roles::Capability::PersonnelDocuments) {
             (
                 self.rows("employee_documents", Some(company.id))?,
                 self.rows("employee_document_events", Some(company.id))?,
@@ -993,7 +1003,7 @@ impl CloudClient {
             records: self.rows("overtime_requests", Some(company.id))?,
             events: self.rows("overtime_events", Some(company.id))?,
         };
-        let imports = if access.role.manages_hr() {
+        let imports = if access.allows(crate::staff_roles::Capability::Personnel) {
             crate::imports::Setup {
                 batches: self.rows("employee_import_batches", Some(company.id))?,
                 items: self.rows("employee_import_items", Some(company.id))?,
@@ -1001,7 +1011,7 @@ impl CloudClient {
         } else {
             Default::default()
         };
-        let hiring = if access.role.manages_hr() {
+        let hiring = if access.allows(crate::staff_roles::Capability::Recruiting) {
             crate::hiring::Setup {
                 records: self.rows("applicants", Some(company.id))?,
                 events: self.rows("applicant_events", Some(company.id))?,
@@ -1086,6 +1096,7 @@ impl CloudClient {
             document_events,
         };
         snapshot.approvals.as_ref().unwrap().validate(&snapshot)?;
+        self.verify_snapshot_staff_scope(&snapshot.access)?;
         Ok(snapshot)
     }
 

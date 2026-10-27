@@ -272,7 +272,7 @@ pub enum DocumentAction {
 
 pub fn authorize(data: &Snapshot, employee: Uuid) -> Result<()> {
     ensure!(
-        data.access.role.manages_hr()
+        data.access.allows(crate::staff_roles::Capability::PersonnelDocuments)
             && data.access.company_id == data.company.id
             && data
                 .employees

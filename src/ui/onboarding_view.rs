@@ -119,7 +119,7 @@ impl HrisApp {
         true
     }
     pub(super) fn applicant_offers(&mut self, ui: &mut Ui, applicant: Uuid) {
-        if !self.data.access.role.manages_hr() {
+        if !self.data.access.allows(crate::staff_roles::Capability::Recruiting) {
             return;
         }
         if self.hiring_decision(ui) {
@@ -433,7 +433,7 @@ impl HrisApp {
             self.onboarding_task_form(ui);
             return;
         }
-        let hr = self.data.access.role.manages_hr();
+        let hr = self.data.access.allows(crate::staff_roles::Capability::Recruiting);
         if !hr {
             self.assigned_onboarding(ui);
             return;
@@ -632,7 +632,7 @@ impl HrisApp {
         }
     }
     fn onboarding_task_card(&mut self, ui: &mut Ui, t: &onboarding::Task) {
-        let hr = self.data.access.role.manages_hr();
+        let hr = self.data.access.allows(crate::staff_roles::Capability::Recruiting);
         card(ui, |ui| {
             ui.label(RichText::new(&t.title).strong().size(17.0));
             ui.horizontal_wrapped(|ui| {
@@ -1070,7 +1070,7 @@ impl HrisApp {
                 });
             }
         }
-        if !access.role.manages_hr() {
+        if !access.allows(crate::staff_roles::Capability::Recruiting) {
             self.data.hiring = Default::default();
             self.data.onboarding.offers.clear();
             self.data.onboarding.offer_events.clear();

@@ -4,7 +4,7 @@ impl CloudClient {
     pub(super) fn exits_snapshot(&mut self, access: &Access) -> Result<crate::exits::Setup> {
         let mut setup = crate::exits::Setup::default();
         let company = Some(access.company_id);
-        if access.role.manages_hr() {
+        if access.allows(crate::staff_roles::Capability::Personnel) {
             setup.cases = self.rows("exit_cases", company)?;
             setup.readiness = decode(
                 self.request(Method::POST, "rpc/exit_readiness_list")?
@@ -30,7 +30,7 @@ impl CloudClient {
     ) -> Result<crate::onboarding::Setup> {
         let mut setup = crate::onboarding::Setup::default();
         let company = Some(access.company_id);
-        if access.role.manages_hr() {
+        if access.allows(crate::staff_roles::Capability::Recruiting) {
             setup.offers = self.rows("hiring_offers", company)?;
             setup.offer_events = self.rows("hiring_offer_events", company)?;
             setup.conversions = self.rows("hire_conversions", company)?;
@@ -87,7 +87,7 @@ impl CloudClient {
         current: &Snapshot,
     ) -> Result<(Snapshot, String)> {
         ensure!(
-            current.access.role.manages_hr(),
+            current.access.allows(crate::staff_roles::Capability::Recruiting),
             "Only HR and Administrators can manage application attachments."
         );
         let message = match action {

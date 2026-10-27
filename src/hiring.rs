@@ -431,7 +431,7 @@ pub fn authorize(access: &Access, data: &Snapshot) -> Result<()> {
     ensure!(
         data.mode != Mode::SignedOut
             && access.company_id == data.company.id
-            && access.role.manages_hr(),
+            && access.allows(crate::staff_roles::Capability::Recruiting),
         "Only active HR staff and Administrators can access applicant records."
     );
     Ok(())

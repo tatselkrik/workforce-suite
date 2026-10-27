@@ -1,5 +1,4 @@
 use crate::{
-    access::Role,
     domain::{Employee, EmployeeStatus, Mode, Snapshot},
     employment::EmploymentFilter,
 };
@@ -52,7 +51,7 @@ pub fn readable(data: &Snapshot) -> Vec<&Employee> {
     if data.mode == Mode::SignedOut
         || data.company.id.is_nil()
         || data.access.company_id != data.company.id
-        || !data.access.role.uses_desktop()
+        || !data.access.uses_desktop()
     {
         return Vec::new();
     }
@@ -60,8 +59,8 @@ pub fn readable(data: &Snapshot) -> Vec<&Employee> {
         .iter()
         .filter(|employee| {
             employee.company_id == data.company.id
-                && (data.access.role.manages_hr()
-                    || (data.access.role == Role::Manager
+                && (data.access.has_full_employee_directory()
+                    || (data.access.allows(crate::staff_roles::Capability::TeamReview)
                         && (data.access.employee_id == Some(employee.id)
                             || (employee.status == EmployeeStatus::Active
                                 && employee.reports_to == data.access.employee_id
@@ -77,7 +76,7 @@ impl Chart {
             .into_iter()
             .filter(|e| {
                 e.status == EmployeeStatus::Active
-                    || (data.access.role.manages_hr() && filters.include_archived)
+                    || (data.access.has_full_employee_directory() && filters.include_archived)
             })
             .cloned()
             .collect();
