@@ -281,7 +281,7 @@ impl BreakAction {
                         Self::Start { .. } | Self::End { .. } => {
                             access.employee_id == Some(a.employee_id)
                         }
-                        Self::Save(_) | Self::Void { .. } => access.role.manages_hr(),
+                        Self::Save(_) | Self::Void { .. } => access.allows(crate::staff_roles::Capability::AttendanceAdministration),
                     }
             })
     }

@@ -109,6 +109,9 @@ impl Access {
     pub fn uses_desktop(&self) -> bool {
         self.allows(crate::staff_roles::Capability::Desktop)
     }
+    pub fn can_manage_reports(&self) -> bool {
+        self.allows(crate::staff_roles::Capability::GeneralHrReports) || self.allows(crate::staff_roles::Capability::TeamReview)
+    }
     pub fn has_full_employee_directory(&self) -> bool {
         [crate::staff_roles::Capability::Personnel,crate::staff_roles::Capability::Recruiting,crate::staff_roles::Capability::DevelopmentAdministration,crate::staff_roles::Capability::PayrollPreparation].into_iter().any(|cap|self.allows(cap))
     }

@@ -192,7 +192,7 @@ impl HrisApp {
                     }
                 }
             }
-            if self.data.access.role.manages_hr()
+            if self.data.access.allows(crate::staff_roles::Capability::AttendanceAdministration)
                 && ui
                     .add_enabled(
                         !self.busy && self.break_state.void_target.is_none(),
@@ -204,7 +204,7 @@ impl HrisApp {
             }
         });
         ui.add_space(8.0);
-        if self.data.access.role.manages_hr() {
+        if self.data.access.allows(crate::staff_roles::Capability::AttendanceAdministration) {
             ui.checkbox(&mut self.break_state.show_voided, "Show voided breaks");
         }
         let mut records: Vec<_> = self
@@ -249,7 +249,7 @@ impl HrisApp {
                         breaks::duration(b.seconds())
                     ));
                 }
-                if self.data.access.role.manages_hr() && !b.voided {
+                if self.data.access.allows(crate::staff_roles::Capability::AttendanceAdministration) && !b.voided {
                     ui.add_enabled_ui(!self.busy && self.break_state.void_target.is_none(), |ui| {
                         ui.horizontal_wrapped(|ui| {
                             if ui.button("Correct times").clicked() {
@@ -298,7 +298,7 @@ impl HrisApp {
                 ui.label(RichText::new("Voiding removes this break from totals and retains its original record and history.").small().color(muted(ui)));
             });
         }
-        if self.data.access.role.manages_hr() {
+        if self.data.access.allows(crate::staff_roles::Capability::AttendanceAdministration) {
             let history = egui::CollapsingHeader::new("Break history");
             #[cfg(feature = "qa-screenshot")]
             let history = history

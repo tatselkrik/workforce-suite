@@ -232,7 +232,7 @@ impl HrisApp {
                     });
                 }
                 if row.live()
-                    && (self.data.access.role.manages_hr()
+                    && (self.data.access.allows(crate::staff_roles::Capability::LeaveAdministration)
                         || (self.data.access.employee_id == Some(row.employee_id)
                             && (row.status == LeaveStatus::Pending
                                 || row.starts_on >= self.data.company.today())))
@@ -429,7 +429,7 @@ impl HrisApp {
                             if ui.add_enabled(i>0,egui::Button::new("Move up").small()).clicked(){movement=Some(i);}
                             if ui.add_enabled(chain_len>1,egui::Button::new("Remove").small()).clicked(){removal=Some(i);}
                         });
-                        if s.kind==ApproverKind::Person {egui::ComboBox::from_id_salt("approver_person").selected_text(s.employee_id.map(|id|self.data.employee_name(id)).unwrap_or("Choose staff member")).show_ui(ui,|ui|{for a in self.data.accounts.iter().filter(|a|a.active&&a.role.uses_desktop()){if let Some(id)=a.employee_id{ui.selectable_value(&mut s.employee_id,Some(id),self.data.employee_name(id));}}});}else{s.employee_id=None;}
+                        if s.kind==ApproverKind::Person {egui::ComboBox::from_id_salt("approver_person").selected_text(s.employee_id.map(|id|self.data.employee_name(id)).unwrap_or("Choose staff member")).show_ui(ui,|ui|{if self.data.mode==Mode::Demo {for account in self.data.accounts.iter().filter(|a|a.active&&a.role.uses_desktop()){if let Some(id)=account.employee_id{ui.selectable_value(&mut s.employee_id,Some(id),self.data.employee_name(id));}}}else{for person in self.data.recruiting.interviewers.iter().filter(|p|p.allows(crate::staff_roles::Capability::Desktop)){ui.selectable_value(&mut s.employee_id,Some(person.employee_id),&person.full_name);}}});}else{s.employee_id=None;}
                     });}
                     if let Some(i)=movement{t.approval_chain.swap(i,i-1);}
                     if let Some(i)=removal{if t.approval_chain.len()>1{t.approval_chain.remove(i);}}

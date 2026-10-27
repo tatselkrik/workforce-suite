@@ -17,7 +17,7 @@ impl State {
 }
 impl HrisApp {
     pub(super) fn employee_import(&mut self, ui: &mut Ui) {
-        if !self.data.access.role.manages_hr() {
+        if !self.data.access.allows(crate::staff_roles::Capability::Personnel) {
             empty(
                 ui,
                 "Only HR and Administrators can import employee records.",

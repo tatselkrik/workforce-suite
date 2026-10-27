@@ -220,7 +220,7 @@ fn option_reference(option: Option<&EmploymentOption>) -> Value {
 impl Preview {
     pub fn from_csv(data: &Snapshot, filename: String, bytes: &[u8]) -> Result<Self> {
         ensure!(
-            data.access.role.manages_hr() && data.access.company_id == data.company.id,
+            data.access.allows(crate::staff_roles::Capability::Personnel) && data.access.company_id == data.company.id,
             "Only HR or Administrators can preview employee imports."
         );
         ensure!(
@@ -232,7 +232,7 @@ impl Preview {
         Self::from_rows(data, filename, parse(text)?)
     }
     fn from_rows(data: &Snapshot, filename: String, mut parsed: Vec<CsvRow>) -> Result<Self> {
-        ensure!(data.access.role.manages_hr() && data.access.company_id == data.company.id,
+        ensure!(data.access.allows(crate::staff_roles::Capability::Personnel) && data.access.company_id == data.company.id,
             "Only HR or Administrators can preview employee imports.");
         ensure!(!parsed.is_empty() && parsed.len() <= MAX_ROWS + 1, "Include headers and at most 500 employee rows.");
         ensure!(
@@ -441,7 +441,7 @@ impl Preview {
     }
     pub fn validate_current(&self, data: &Snapshot) -> Result<()> {
         ensure!(
-            data.access.role.manages_hr()
+            data.access.allows(crate::staff_roles::Capability::Personnel)
                 && data.access.company_id == self.company_id
                 && data.company.id == self.company_id,
             "Only HR or Administrators in this company can apply the import."
@@ -558,7 +558,7 @@ pub fn template_xlsx() -> Result<Vec<u8>> {
 }
 pub fn apply_demo(store: &mut DemoStore, preview: Preview, reason: String) -> Result<()> {
     ensure!(
-        store.data.access.role.manages_hr() && store.data.company.id == preview.company_id,
+        store.data.access.allows(crate::staff_roles::Capability::Personnel) && store.data.company.id == preview.company_id,
         "Only HR or Administrators can import employees."
     );
     let payload = preview.payload(&reason)?;

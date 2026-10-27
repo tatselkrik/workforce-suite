@@ -78,7 +78,7 @@ impl Import {
     }
     fn from_rows(data: &Snapshot, filename: &str, rows: Vec<crate::imports::CsvRow>) -> Result<Self> {
         ensure!(
-            data.access.role.manages_hr(),
+            data.access.allows(crate::staff_roles::Capability::LeaveAdministration),
             "HR access is required for opening imports."
         );
         let c = data
@@ -264,7 +264,7 @@ pub struct BatchPreview {
 impl BatchPreview {
     pub fn validate(&self, data: &Snapshot, records: &[OpeningRecord]) -> Result<()> {
         ensure!(
-            data.access.role.manages_hr()
+            data.access.allows(crate::staff_roles::Capability::LeaveAdministration)
                 && self.version == "leave-opening-batch-preview-v1"
                 && self.company_id == data.company.id
                 && self.user_id == data.access.user_id

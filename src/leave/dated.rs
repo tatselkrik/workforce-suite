@@ -63,9 +63,9 @@ fn clean(s: &str, min: usize, max: usize) -> bool {
     (min..=max).contains(&s.chars().count()) && !s.chars().any(char::is_control)
 }
 fn in_scope(access: &Access, id: Uuid) -> bool {
-    access.role.manages_hr()
+    access.allows(crate::staff_roles::Capability::LeaveAdministration)
         || access.employee_id == Some(id)
-        || access.direct_reports.contains(&id)
+        || (access.allows(crate::staff_roles::Capability::TeamReview) && access.direct_reports.contains(&id))
 }
 impl Context {
     pub fn empty(data: &Snapshot) -> Self {
@@ -96,7 +96,7 @@ impl Context {
                 && self.employee_id == access.employee_id
                 && self.role == access.role
                 && self.as_of == today
-                && access.role.uses_desktop(),
+                && access.uses_desktop(),
             "Dated leave does not match current staff access/date."
         );
         ensure!(
@@ -175,7 +175,7 @@ impl Context {
                 "Invalid withdrawal receipt."
             );
         }
-        if access.role.manages_hr() {
+        if access.allows(crate::staff_roles::Capability::LeaveAdministration) {
             ensure!(
                 self.audit.len() == ids.len()
                     && self.withdrawals.len()
@@ -411,7 +411,7 @@ pub struct OpeningRecord {
 impl OpeningRecord {
     pub fn validate(&self, data: &Snapshot) -> Result<()> {
         ensure!(
-            data.access.role.manages_hr(),
+            data.access.allows(crate::staff_roles::Capability::LeaveAdministration),
             "HR access is required to preview opening balances."
         );
         let c = data

@@ -151,11 +151,13 @@ pub fn same_scope(a: &Access, b: &Access) -> bool {
         && a.user_id == b.user_id
         && a.employee_id == b.employee_id
         && a.role == b.role
+        && a.staff_contract_version == b.staff_contract_version
+        && a.staff_context == b.staff_context
         && left == right
 }
 pub fn permitted(data: &Snapshot, employee: Uuid) -> bool {
-    data.access.role.manages_hr()
-        || (data.access.role == Role::Manager
+    data.access.allows(crate::staff_roles::Capability::GeneralHrReports)
+        || (data.access.allows(crate::staff_roles::Capability::TeamReview)
             && (data.access.employee_id == Some(employee)
                 || data.access.direct_reports.contains(&employee)))
 }
@@ -312,7 +314,7 @@ pub fn build(data: &Snapshot, f: &Filter, now: DateTime<Utc>) -> Result<Report> 
     f.validate()?;
     ensure!(
         data.mode != Mode::SignedOut
-            && data.access.role.uses_desktop()
+            && data.access.can_manage_reports()
             && !data.company.id.is_nil()
             && data.access.company_id == data.company.id,
         "Sign in with an assigned staff role to run reports."

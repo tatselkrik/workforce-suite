@@ -831,7 +831,7 @@ impl CloudClient {
     }
 
     fn leave_import_history_for(&mut self,data:&Snapshot)->Result<crate::leave::request_import::History>{
-        ensure!(data.access.role.manages_hr(),"Current HR access is required for leave import history.");
+        ensure!(data.access.allows(crate::staff_roles::Capability::Personnel),"Current HR access is required for leave import history.");
         let h:crate::leave::request_import::History=decode(self.request(Method::POST,"rpc/leave_import_context")?.json(&json!({})).send().context("Could not refresh leave import history.")?)?;
         h.validate(data)?;if self.current_access()?!=data.access{return Err(AccessRevoked.into());}Ok(h)
     }
@@ -849,7 +849,7 @@ impl CloudClient {
         let data=self.snapshot()?;receipt.validate(&data,post)?;let history=self.leave_import_history_for(&data)?;Ok((data,receipt,history))
     }
     fn attendance_import_history_for(&mut self,data:&Snapshot)->Result<crate::attendance_imports::History>{
-        ensure!(data.access.role.manages_hr(),"Current HR access is required for attendance import history.");
+        ensure!(data.access.allows(crate::staff_roles::Capability::Personnel),"Current HR access is required for attendance import history.");
         let h:crate::attendance_imports::History=decode(self.request(Method::POST,"rpc/attendance_import_context")?.json(&json!({})).send().context("Could not refresh attendance import history.")?)?;
         h.validate(data)?;if self.current_access()?!=data.access{return Err(AccessRevoked.into());}Ok(h)
     }
@@ -867,7 +867,7 @@ impl CloudClient {
         let data=self.snapshot()?;receipt.validate(&data,post)?;let history=self.attendance_import_history_for(&data)?;Ok((data,receipt,history))
     }
     pub fn withdraw_attendance_import(&mut self,change:&crate::attendance_imports::Withdraw)->Result<(Snapshot,crate::attendance_imports::History)>{
-        ensure!(self.current_access()?.role.manages_hr(),"Current HR access is required to withdraw an imported request.");
+        ensure!(self.current_access()?.allows(crate::staff_roles::Capability::AttendanceAdministration),"Current HR access is required to withdraw an imported request.");
         let receipt:Value=decode(self.request(Method::POST,"rpc/withdraw_attendance_import")?.json(&json!({"p_change":change})).send().context("Withdrawal delivery is uncertain. Keep this exact draft and refresh history before retrying.")?)?;
         ensure!(receipt.get("id")==Some(&json!(change.id))&&receipt.get("item_id")==Some(&json!(change.item_id)),"Withdrawal receipt does not match the request.");
         self.attendance_import_history()
@@ -882,7 +882,7 @@ impl CloudClient {
     }
     pub fn leave_opening_import_preview(&mut self,records:&[crate::leave::dated::OpeningRecord])->Result<(Snapshot,crate::leave::opening_import::BatchPreview)> {
         let data=self.snapshot()?;
-        ensure!(data.access.role.manages_hr() && (1..=100).contains(&records.len()),"HR access and 1–100 opening rows are required.");
+        ensure!(data.access.allows(crate::staff_roles::Capability::Personnel) && (1..=100).contains(&records.len()),"HR access and 1–100 opening rows are required.");
         let preview:crate::leave::opening_import::BatchPreview=decode(self.request(Method::POST,"rpc/preview_leave_openings")?.json(&json!({"p_records":records})).send()?)?;
         if self.current_access()?!=data.access{return Err(AccessRevoked.into());}
         preview.validate(&data,records)?;Ok((data,preview))
@@ -908,7 +908,7 @@ impl CloudClient {
         let contacts = self.rows("employee_contacts", Some(company.id))?;
         let mut attendance: Vec<Attendance> = self.rows("attendance", Some(company.id))?;
         attendance.sort_by(|a, b| b.checked_in_at.cmp(&a.checked_in_at));
-        let corrections = if access.role.manages_hr() {
+        let corrections = if access.allows(crate::staff_roles::Capability::AttendanceAdministration) {
             self.rows("attendance_corrections", Some(company.id))?
         } else {
             Vec::new()
@@ -976,7 +976,7 @@ impl CloudClient {
         let shifts = crate::shifts::ShiftSetup {
             templates: shift_templates,
             assignments: self.rows("shift_assignments", Some(company.id))?,
-            versions: if access.role.manages_hr() {
+            versions: if access.allows(crate::staff_roles::Capability::AttendanceAdministration) {
                 self.rows("shift_template_versions", Some(company.id))?
             } else {
                 Vec::new()
@@ -984,7 +984,7 @@ impl CloudClient {
         };
         let breaks = crate::breaks::BreakSetup {
             records: self.rows("attendance_breaks", Some(company.id))?,
-            events: if access.role.manages_hr() {
+            events: if access.allows(crate::staff_roles::Capability::AttendanceAdministration) {
                 self.rows("attendance_break_events", Some(company.id))?
             } else {
                 Vec::new()
@@ -992,8 +992,8 @@ impl CloudClient {
         };
         let calculations=crate::calculations::CalculationSetup {
             policy:self.rows::<crate::calculations::CalculationPolicy>("attendance_calculation_policies",Some(company.id))?.into_iter().next().ok_or_else(||anyhow::anyhow!("Attendance calculation rules are not configured. Ask the deployment administrator to apply the required migration."))?,
-            policy_events:if access.role.manages_hr(){self.rows("attendance_calculation_policy_events",Some(company.id))?}else{Vec::new()},
-            attendance_events:if access.role.manages_hr(){self.rows("attendance_calculation_events",Some(company.id))?}else{Vec::new()},
+            policy_events:if access.allows(crate::staff_roles::Capability::AttendanceAdministration){self.rows("attendance_calculation_policy_events",Some(company.id))?}else{Vec::new()},
+            attendance_events:if access.allows(crate::staff_roles::Capability::AttendanceAdministration){self.rows("attendance_calculation_events",Some(company.id))?}else{Vec::new()},
         };
         let requests = crate::requests::Setup {
             records: self.rows("attendance_requests", Some(company.id))?,
@@ -1351,7 +1351,7 @@ impl CloudClient {
         if let Action::ImportEmployees(preview, reason) = &action {
             let fresh = self.snapshot()?;
             ensure!(
-                fresh.access.role.manages_hr() && fresh.company.id == preview.company_id,
+                fresh.access.allows(crate::staff_roles::Capability::Personnel) && fresh.company.id == preview.company_id,
                 "Your import access changed. Refresh or sign in again."
             );
             if !fresh.imports.batches.iter().any(|b| b.id == preview.id) {
@@ -2046,20 +2046,20 @@ pub fn worker(
                     changed.map(|(data,h)|{attendance_import_history_result=Some(h);message="Pending imported request withdrawn; its audit history remains.".into();data})
                 }
                 Command::LeaveImportErrors{source,preview,destination}=>(||{
-                    ensure!(source.scope==current.access&&current.access.role.manages_hr(),"Import access changed. Reopen the source before exporting private review rows.");
+                    ensure!(source.scope==current.access&&current.access.allows(crate::staff_roles::Capability::Personnel),"Import access changed. Reopen the source before exporting private review rows.");
                     let bytes=source.error_bytes(&destination,preview.as_ref())?;
                     if let Some(client)=cloud.as_mut(){if client.current_access()?!=current.access{return Err(AccessRevoked.into());}}
                     crate::reports::save_export(&destination,&bytes)?;message="Leave row review saved to a new file.".into();Ok(current.clone())
                 })(),
                 Command::AttendanceImportErrors{source,preview,destination}=>(||{
-                    ensure!(source.scope==current.access&&current.access.role.manages_hr(),"Import access changed. Reopen the source before exporting private review rows.");
+                    ensure!(source.scope==current.access&&current.access.allows(crate::staff_roles::Capability::Personnel),"Import access changed. Reopen the source before exporting private review rows.");
                     let bytes=source.error_bytes(&destination,preview.as_ref())?;
                     if let Some(client)=cloud.as_mut(){if client.current_access()?!=current.access{return Err(AccessRevoked.into());}}
                     crate::reports::save_export(&destination,&bytes)?;message="Attendance row review saved to a new file.".into();Ok(current.clone())
                 })(),
                 Command::OpeningImportErrors{report,destination}=>(||{
                     let bytes=if crate::tabular::is_xlsx(&destination){report.error_xlsx()?}else{report.error_csv()?};
-                    match cloud.as_mut(){Some(client)=>{let access=client.current_access()?;if access!=current.access{return Err(AccessRevoked.into());}ensure!(access.role.manages_hr(),"HR access is required to export opening review rows.");},None=>ensure!(demo.as_ref().is_some_and(|s|s.data.mode==Mode::Demo&&s.data.access.role.manages_hr()),"Sign in to HRIS with HR access before exporting opening reviews.")}
+                    match cloud.as_mut(){Some(client)=>{let access=client.current_access()?;if access!=current.access{return Err(AccessRevoked.into());}ensure!(access.allows(crate::staff_roles::Capability::Personnel),"HR access is required to export opening review rows.");},None=>ensure!(demo.as_ref().is_some_and(|s|s.data.mode==Mode::Demo&&s.data.access.allows(crate::staff_roles::Capability::Personnel)),"Sign in to HRIS with HR access before exporting opening reviews.")}
                     crate::reports::save_export(&destination,&bytes)?;message="Opening row review exported.".into();Ok(current.clone())
                 })(),
                 Command::PreviewLeaveOpeningImport(records)=>{
@@ -2175,14 +2175,14 @@ pub fn worker(
                     (|| -> Result<Snapshot> {
                         if let Some(client) = cloud.as_mut() {
                             let access = client.current_access()?;
-                            if !access.role.manages_hr() || access.company_id != preview.company_id
+                            if !access.allows(crate::staff_roles::Capability::Personnel) || access.company_id != preview.company_id
                             {
                                 return Err(AccessRevoked.into());
                             }
                         } else {
                             ensure!(
                                 demo.as_ref()
-                                    .is_some_and(|s| s.data.access.role.manages_hr()
+                                    .is_some_and(|s| s.data.access.allows(crate::staff_roles::Capability::Personnel)
                                         && s.data.company.id == preview.company_id),
                                 "Only HR or Administrators can export import errors."
                             );

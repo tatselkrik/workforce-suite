@@ -269,7 +269,7 @@ impl HrisApp {
             if matches!(c.status, CalculationStatus::BoundaryReview) {
                 ui.label("The saved schedule boundary needs HR review. No time penalty or overtime is inferred from an unresolved boundary.");
             }
-            if self.data.access.role.manages_hr() {
+            if self.data.access.allows(crate::staff_roles::Capability::AttendanceAdministration) {
                 let changed = a.calculation_snapshot.as_ref()
                     != Some(&CalculationSnapshot::capture(&self.data, &a));
                 if ui
@@ -325,7 +325,7 @@ impl HrisApp {
                 self.calculation_state.apply = Some(change);
             }
         }
-        if self.data.access.role.manages_hr() {
+        if self.data.access.allows(crate::staff_roles::Capability::AttendanceAdministration) {
             self.calculation_history(ui, Some(id));
         }
     }
@@ -354,7 +354,7 @@ impl HrisApp {
                         Some(PolicyDraft::new(&self.data.calculations.policy));
                 }
             });
-            if self.data.access.role.manages_hr() {
+            if self.data.access.allows(crate::staff_roles::Capability::AttendanceAdministration) {
                 self.calculation_history(ui, None);
             }
             return;

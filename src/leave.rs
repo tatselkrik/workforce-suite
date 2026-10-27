@@ -525,7 +525,7 @@ pub fn can_review(data: &Snapshot, row: &LeaveRequest) -> bool {
 pub fn can_review_access(access: &crate::access::Access, row: &LeaveRequest) -> bool {
     if row.status != LeaveStatus::Pending
         || access.employee_id == Some(row.employee_id)
-        || !access.role.uses_desktop()
+        || !access.uses_desktop()
     {
         return false;
     }
@@ -540,7 +540,7 @@ pub fn can_review_access(access: &crate::access::Access, row: &LeaveRequest) -> 
     match step.kind {
         ApproverKind::Reviewer => access.can_review(row.employee_id),
         ApproverKind::Manager | ApproverKind::Person => step.employee_id == access.employee_id,
-        ApproverKind::Hr => access.role.manages_hr(),
+        ApproverKind::Hr => access.allows(crate::staff_roles::Capability::LeaveAdministration),
         ApproverKind::Administrator => access.role == Role::Administrator,
     }
 }
@@ -794,7 +794,7 @@ pub fn apply_demo(data: &mut Snapshot, action: Action) -> Result<()> {
                 "Enter a cancellation reason up to 500 characters."
             );
             let today = data.company.today();
-            let hr = data.access.role.manages_hr();
+            let hr = data.access.allows(crate::staff_roles::Capability::LeaveAdministration);
             let own = data.access.employee_id;
             let row = data
                 .leave

@@ -28,7 +28,7 @@ pub const HEADERS: [&str; 6] = [
 pub const MAX_ROWS: usize = 100;
 fn staff(data: &Snapshot) -> Result<()> {
     ensure!(
-        data.access.role.manages_hr() && data.access.company_id == data.company.id,
+        data.access.allows(crate::staff_roles::Capability::AttendanceAdministration) && data.access.company_id == data.company.id,
         "Current HR or Administrator access is required for attendance imports."
     );
     Ok(())
@@ -530,7 +530,7 @@ pub struct Post {
 impl Post {
     pub fn identity(&self, access: &Access) -> Result<()> {
         ensure!(
-            access.role.manages_hr()
+            access.allows(crate::staff_roles::Capability::AttendanceAdministration)
                 && self.scope == *access
                 && self.preview.company_id == access.company_id
                 && self.preview.user_id == access.user_id
@@ -694,7 +694,6 @@ impl History {
                 !b.id.is_nil()
                     && ids.insert(b.id)
                     && b.company_id == self.company_id
-                    && b.actor_role.manages_hr()
                     && (1..=100).contains(&b.row_count)
                     && fingerprint(&b.source_fingerprint)
                     && fingerprint(&b.payload_sha256)
@@ -737,7 +736,6 @@ impl History {
                     && withdrawals.insert(w.id)
                     && withdrawn_items.insert(w.item_id)
                     && items.contains(&w.item_id)
-                    && w.actor_role.manages_hr()
                     && self.items.iter().any(|i| i.id == w.item_id
                         && i.status == Status::Cancelled
                         && self

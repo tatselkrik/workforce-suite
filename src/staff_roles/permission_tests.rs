@@ -250,3 +250,14 @@ fn directory_visibility_does_not_create_operational_attendance_or_contact_access
     target.status = crate::domain::EmployeeStatus::Archived;
     assert!(!data.access.can_read_operational_employee(target));
 }
+
+
+#[test]
+fn changed_staff_responsibilities_invalidate_report_scope_without_changing_base_role() {
+    let before=scoped(StaffRoles::new(vec![StaffRole::HrGeneralist]).unwrap());
+    let after=scoped(StaffRoles::new(vec![StaffRole::PayrollOfficer]).unwrap());
+    assert_eq!(before.access.role,after.access.role);
+    assert!(!crate::reports::same_scope(&before.access,&after.access));
+    assert!(before.access.can_manage_reports());
+    assert!(!after.access.can_manage_reports());
+}

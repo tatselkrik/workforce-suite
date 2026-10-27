@@ -233,7 +233,7 @@ impl From<&ShiftTemplate> for ShiftTemplateDraft {
 impl ShiftTemplateDraft {
     pub fn template(&self, data: &Snapshot) -> Result<ShiftTemplate> {
         ensure!(
-            data.access.role.manages_hr(),
+            data.access.allows(crate::staff_roles::Capability::AttendanceAdministration),
             "Only HR and Administrators can manage shifts."
         );
         let name = self.name.trim();
@@ -345,7 +345,7 @@ impl ShiftAssignmentDraft {
     }
     pub fn assignment(&self, data: &Snapshot) -> Result<ShiftAssignment> {
         ensure!(
-            data.access.role.manages_hr(),
+            data.access.allows(crate::staff_roles::Capability::AttendanceAdministration),
             "Only HR and Administrators can assign shifts."
         );
         let person = data

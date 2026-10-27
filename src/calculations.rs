@@ -167,7 +167,7 @@ pub struct ApplyPolicy {
 impl ApplyPolicy {
     pub fn payload(&self, data: &Snapshot) -> Result<serde_json::Value> {
         ensure!(
-            data.access.role.manages_hr(),
+            data.access.allows(crate::staff_roles::Capability::AttendanceAdministration),
             "Only HR and Administrators can apply calculation rules to a saved record."
         );
         let row = data

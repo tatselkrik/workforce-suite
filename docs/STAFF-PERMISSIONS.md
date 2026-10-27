@@ -27,12 +27,11 @@ The audited legacy four-specialty mapping retains existing broad HR rights.
   actual writes recheck the assigned person's current protected authority.
   Unknown, malformed, duplicate or foreign directory scope is rejected.
 
-Current local evidence: the full normal Rust run passed749checks with28intentional
-opt-ins ignored. After the final snapshot/label changes,55focused staff checks pass,
-including14shared role combinations and unchanged-base-role revocation. The final
-full release run remains required. Staged81SQL passes12,353workflow/preservation
-assertions; dedicated checks pass298capability,209payroll,562development,
-298Personnel and247Recruiting assertions. These checks use
+Current local evidence: the full normal Rust run passed751checks with28intentional
+opt-ins ignored, including14shared role combinations and unchanged-base-role
+revocation. Staged82SQL passes12,353workflow/preservation assertions; dedicated
+checks pass298capability,209payroll,562development,298Personnel,247Recruiting and
+168operational/context/principal/correction/import assertions. These checks use
 fictional records and managed Auth/Storage fixtures; they are not hosted or
 installed-screen verification. No financial calculation/rate was changed.
 
@@ -61,13 +60,24 @@ The version1 desktop snapshot rechecks the entire protected role set/revision af
 scoped reads; changed access clears cached forms even when its base code is unchanged.
 Long current-role labels are truncated in the sidebar with their full hover text.
 
+Attendance, shifts, breaks, corrections and attendance imports require the
+attendance capability; leave imports, policy administration and private balance
+audits require the leave capability. Reviewer selection evaluates the selected
+person's current protected roles rather than the caller's. Named staff approval
+remains request-specific, with self/submission and payroll exclusions retained.
+Protected operational context reads admit specialist desktop accounts; generic
+own/team scope is not widened by their read-only employment directory. Report
+exports invalidate when the protected role set/revision changes, including when
+the compatible four-code role is unchanged. Descriptive import/audit actor codes
+record the actual actor without granting authority.
+
 The repository formatting check currently reports90files, including untouched
 pre-resume source. Its required final release check remains unresolved; no CI
 success or delivery is claimed by these local checks.
 
 ## Remaining before activation and delivery
 
-Complete attendance/leave/approval, notifications/updater and legacy-write boundaries;
+Complete delegation, notifications/updater and legacy-write boundaries;
 review every direct RPC, RLS/storage path and native snapshot/action/menu. Add the
 remaining scoped roster and current-role labels, reconcile legacy account writes
 with protected assignment/history, and finish role/access audit/recovery usability.

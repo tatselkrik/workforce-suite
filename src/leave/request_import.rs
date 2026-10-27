@@ -28,7 +28,7 @@ pub const HEADERS: [&str; 7] = [
 pub const MAX_ROWS: usize = 100;
 fn staff(data: &Snapshot) -> Result<()> {
     ensure!(
-        data.access.role.manages_hr() && data.company.id == data.access.company_id,
+        data.access.allows(crate::staff_roles::Capability::LeaveAdministration) && data.company.id == data.access.company_id,
         "Current HR or Administrator access is required for leave imports."
     );
     Ok(())
@@ -509,7 +509,7 @@ impl Post {
     pub fn identity(&self, access: &Access) -> Result<()> {
         self.batch.shape()?;
         ensure!(
-            access.role.manages_hr()
+            access.allows(crate::staff_roles::Capability::LeaveAdministration)
                 && self.scope == *access
                 && self.preview.company_id == access.company_id
                 && self.preview.user_id == access.user_id
@@ -664,7 +664,6 @@ impl History {
                 !b.id.is_nil()
                     && batches.insert(b.id)
                     && b.company_id == self.company_id
-                    && b.actor_role.manages_hr()
                     && (1..=MAX_ROWS).contains(&b.row_count)
                     && fingerprint(&b.source_fingerprint)
                     && fingerprint(&b.payload_sha256)

@@ -69,7 +69,7 @@ impl Context {
                 && self.employee_id == access.employee_id
                 && self.role == access.role
                 && self.as_of == today
-                && access.role.uses_desktop(),
+                && access.uses_desktop(),
             "Leave credits do not match current staff access/date."
         );
         ensure!(
@@ -93,9 +93,9 @@ impl Context {
                 "Invalid dated leave credit."
             );
             ensure!(
-                access.role.manages_hr()
+                access.allows(crate::staff_roles::Capability::LeaveAdministration)
                     || access.employee_id == Some(e.employee_id)
-                    || access.direct_reports.contains(&e.employee_id),
+                    || (access.allows(crate::staff_roles::Capability::TeamReview) && access.direct_reports.contains(&e.employee_id)),
                 "Leave credit is outside current reporting scope."
             );
             if let Some(id) = e.reverses_id {
@@ -115,7 +115,7 @@ impl Context {
                 );
             }
         }
-        if access.role.manages_hr() {
+        if access.allows(crate::staff_roles::Capability::LeaveAdministration) {
             ensure!(
                 self.audit.len() == self.entries.len(),
                 "Credit audit history is incomplete."

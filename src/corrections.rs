@@ -165,7 +165,7 @@ pub(crate) fn local_time(day: NaiveDate, value: &str, tz: chrono_tz::Tz) -> Resu
 impl CorrectionChange {
     pub fn validate(&self, data: &Snapshot, now: DateTime<Utc>) -> Result<()> {
         ensure!(
-            data.access.role.manages_hr(),
+            data.access.allows(crate::staff_roles::Capability::AttendanceAdministration),
             "Only HR staff and administrators can correct attendance."
         );
         self.validate_record(data, now)

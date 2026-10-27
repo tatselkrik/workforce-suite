@@ -200,7 +200,7 @@ impl Context {
                 && self.employee_id == access.employee_id
                 && self.role == access.role
                 && self.as_of == today
-                && access.role.uses_desktop(),
+                && access.uses_desktop(),
             "Delegation context does not match current staff/date. Refresh."
         );
         ensure!(
@@ -233,7 +233,7 @@ impl Context {
                 "Invalid delegation history."
             );
             ensure!(
-                access.role.manages_hr()
+                access.allows(crate::staff_roles::Capability::LeaveAdministration)
                     || [g.principal_id, g.delegate_id].contains(&access.user_id),
                 "Delegation is outside current staff scope."
             );
@@ -270,7 +270,7 @@ impl Context {
                 "Invalid delegation revocation."
             );
         }
-        if access.role.manages_hr() {
+        if access.allows(crate::staff_roles::Capability::LeaveAdministration) {
             ensure!(
                 self.audit.len() == ids.len(),
                 "Delegation private history is incomplete."
@@ -337,7 +337,7 @@ impl Context {
                         && g.delegate_id == r.delegate_id
                         && g.principal_name == r.principal_name
                         && g.delegate_name == r.delegate_name)
-                    && (access.role.manages_hr()
+                    && (access.allows(crate::staff_roles::Capability::LeaveAdministration)
                         || [r.principal_id, r.delegate_id].contains(&access.user_id)),
                 "Invalid delegated decision receipt."
             );
@@ -392,7 +392,7 @@ impl Context {
             && self.employee_id == access.employee_id
             && self.role == access.role
             && self.as_of == today
-            && access.role.uses_desktop()
+            && access.uses_desktop()
             && self.permits.iter().any(|p| {
                 p.scope == scope
                     && p.request_id == id

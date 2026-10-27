@@ -135,7 +135,7 @@ impl HrisApp {
             return;
         };
         let context = context.clone();
-        let hr = self.data.access.role.manages_hr();
+        let hr = self.data.access.allows(crate::staff_roles::Capability::LeaveAdministration);
         let admin = self.data.access.role.manages_accounts();
         if state.posted {
             ui.colored_label(accent(ui),"Opening posted. Its original basis is retained; later corrections use Credit adjustments.");
