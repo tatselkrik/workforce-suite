@@ -1,15 +1,20 @@
 # Remaining HRIS roadmap — agreed order
 
 **Latest resumption27October2026:** Kirk requested remaining work without stopping;
-the same scheduler is ACTIVE again. Desktop0.1.61 source work adds separate local
-declared-compensation subtotal review using supported published relationships.
-Default657Rust checks pass; hosted/native/artifact/delivery verification is in
-progress. This is not an expected-tax calculation or agency acceptance; do not
-cross out the new increment until its release/installation checks complete.
-See [the arithmetic contract](BIR-DECLARATION-ARITHMETIC.md). Earlier paused notes
-below are historical and superseded by this resumption.
+the same scheduler was reactivated. Desktop0.1.61 is now installed/private-published:
+657defaultRust checks, explicit fixture/hosted/real-installer opt-ins,12independent
+workbook pairs/44rows and11native layouts pass. Exact installed hash/BUILD/Windows
+Apps/normal launch and private download/signature checks pass; keep060rollback.
+The supported local declared-sum increment is crossed out below. Full government
+acceptance remains partial; the next concrete input is the prepared two-case BIR
+check. No official reports have appeared, and native Windows control still fails.
+See [061delivery](BIR-0.1.61-DELIVERY.md) and the
+[remaining input boundaries](GOVERNMENT-REMAINING-INPUTS.md). The same scheduler
+is paused at the required-input boundary now that this independent increment is
+delivered. Kirk requested an updated cross-out of the original ten items; see
+[the current original-list status](ROADMAP.md). No new module was started.
 
-**27October2026 current boundary:** Portal0.1.7 is delivered and running locally
+**Earlier27October2026 boundary, superseded by061 above:** Portal0.1.7 is delivered and running locally
 at localhost:3032, including the mobile navigation/hover and payslip-print fixes.
 The scoped browser milestone below is crossed out.48Rust/15JS,22fictional browser
 groups,43final-binary hosted checks, independent CSV/PDF and exact package/delivery
@@ -148,6 +153,10 @@ unconfigured external connection to a completed integration.
    Expected declaration amounts, historical/agency identity/certificate checks
    and official acceptance remain pending; recorded withholding is not
    automatically a1604C field.
+   ~~Supported within-file declared compensation subtotal review~~ is delivered
+   and installed in061, with separate arithmetic counts and minimal CSV/Excel
+   findings. It preserves structure/control semantics and excludes ambiguous
+   combined/exempt and tax-adjustment relationships. [Delivery](BIR-0.1.61-DELIVERY.md).
 3. ~~**Payroll, appraisal and training notifications.** Payslip/payment notices,
    review deadlines, training reminders and certificate-expiry alerts.~~ Delivered
    in desktop0.1.46 and local portal0.1.6; in-app only. External delivery is deferred.

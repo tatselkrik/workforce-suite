@@ -1,43 +1,57 @@
 # HRIS development roadmap
 
-## Original roadmap status — updated through0.1.48
+## Original roadmap status — updated through0.1.61
 
 Strikethrough means implemented within the prototype's documented limits. It
 does not imply external filing, bank transfer, public portal hosting or verified
 physical-device support. Release/installation evidence is in VERIFICATION.md
 and the private versioned delivery records.
 
-1. ~~Multiple HR users, employee/manager roles, restricted permissions and
-   configurable leave approval chains.~~ The separate employee portal is partial
-   and local only; own requests, notifications, pictures and account controls
-   are implemented. Current visual/email-delivery verification remains pending.
+1. ~~Multiple HR users, employee/manager accounts, restricted permissions and
+   configurable leave approval chains.~~ Staff use the desktop; ordinary Employees
+   use the separate local portal. Portal0.1.7 browser verification is complete;
+   physical-phone and actual email-confirmation checks remain deferred.
 2. ~~Contact/emergency details, contracts, attachments, employment history and
    digital201 files.~~ Contracts are private documents/metadata; electronic signing
    and document approval are separate future features.
 3. ~~Reporting relationships, managers, organization charts, locations and
    employment types.~~
-4. ~~Shift schedules, breaks, lateness, undertime, overtime, attendance corrections
-   and the visible disabled biometric control.~~ Actual biometric integration
-   remains pending selected hardware/protocol and physical verification.
+4. ~~Shift schedules, breaks, lateness, undertime, overtime and attendance
+   corrections.~~ **Remaining: actual biometric integration.** Its visible,
+   disabled control is complete; no hardware is available. Keep connection disabled
+   until selected hardware/protocol and physical verification are available.
 5. ~~Holiday calendars, custom workweeks, half-days, accrual, carryover,
-   cancellation and configurable leave types.~~ Further effective-date policy
-   versions and opening balances remain. Audited credit adjustments are delivered
-   in0.1.47; operational approval delegation is delivered in0.1.48.
+   cancellation and configurable leave types.~~ Effective-date policies and
+   entered/imported opening balances are also delivered in0.1.49. Audited credit
+   adjustments/reversals are delivered in0.1.47 and approval delegation in0.1.48.
 6. ~~Salary calculations, deductions, allowances, payslips, core benefits and
    local payroll reports.~~ Includes Philippine premiums, cutoffs,13th-month pay,
-   annual tax, final pay, wage reviews and linked amendments. Government-specific
-   exports/reconciliation remain;2025 separation/2026 receipt is the reviewed
-   cross-year final-pay pack, not arbitrary historical/future-year coverage.
+   annual tax, final pay, wage reviews and linked amendments. **Remaining: exact
+   government-agency files, unresolved declaration mapping and official validator/
+   upload acceptance.** Internal remittance/reconciliation, CSV/Excel worksheets,
+   recorded sources and bounded BIR file checks are delivered through0.1.61.
+   The SSS draft stays internal review. The reviewed cross-year final-pay pack
+   covers2025 separation/2026 receipt, not arbitrary historical/future years.
 7. ~~Applicant tracking, résumé attachments, interviews/feedback, offers,
    onboarding checklists and exit/clearance workflows.~~
 8. ~~Goals, appraisals, feedback, training, certifications and career development.~~
-9. ~~Detailed attendance/leave reports, CSV exports, employee CSV imports,
-   custom report columns/saved views and workforce analysis.~~ Attendance/leave
-   imports and native XLSX workflows remain pending.
-10. ~~In-app approval/request notifications, attendance/leave reminders,
-    document-expiry/contract-end alerts and app-update notices.~~ Payroll,
-    appraisal and training reminders, external email/push delivery and
-    payroll/accounting/device connectors remain pending.
+9. ~~Detailed attendance/leave reports, spreadsheet imports/exports, custom
+   report columns/saved views and workforce analysis.~~ CSV/native XLSX and
+   attendance-correction/leave-request imports are delivered in0.1.50–0.1.52;
+   imported requests retain normal approval rather than changing clocks directly.
+10. ~~In-app notifications, reminders and document-expiry alerts.~~ Includes
+    payroll, appraisal and training notices, plus the own portal inbox. ~~Local
+    accounting/external-payroll file-exchange and reconciliation foundations~~
+    are delivered in0.1.53. **Remaining: actual payroll/accounting/device
+    connections.** Company software/hardware targets are unresolved. External
+    email/background push are deferred; no paid service or purchase is enabled.
+
+Desktop0.1.61 is installed and privately published; see
+[delivery and verification](BIR-0.1.61-DELIVERY.md). The local portal browser
+milestone is delivered in[portal0.1.7](PORTAL-0.1.7-DELIVERY.md). Current remaining
+agency inputs are in[GOVERNMENT-REMAINING-INPUTS.md](GOVERNMENT-REMAINING-INPUTS.md).
+The stage descriptions below retain historical increment details; use this
+current summary and the ordered checklist for completion status.
 
 Kirk resumed continuous work after0.1.41 and reactivated the existing usage-reset
 scheduler. The approved remaining order and completion checklist are in

@@ -1,4 +1,10 @@
-# Remaining government inputs after0.1.60
+# Remaining government inputs after0.1.61
+
+Local declared-compensation subtotal review is now delivered/installed in0.1.61;
+see [the delivery record](BIR-0.1.61-DELIVERY.md). This does not replace the
+official-runtime and current agency-contract inputs below. The fresh27October
+check still finds no official reports in either prepared BIR baseline folder;
+both source copies match their pristine fixtures. No government program ran.
 
 The installed/private0.1.60 release delivers the current issued-pay detail
 increment. It does not complete agency-file acceptance. The remaining input
@@ -44,8 +50,9 @@ retain their existing boundaries. No hardware exists; biometrics stay visible
 with connection disabled.
 
 The same continuation automation is paused again at this required-input boundary
-after the newly unblocked portal work was completed.
+after the newly unblocked portal work and desktop061arithmetic increment were
+completed. This is a required-input boundary, not a SQL approval request.
 When Kirk resumes or supplies actionable input, read the current checkpoint and
-instructions first. Preserve completed049–060 and migrations through72. Do not
+instructions first. Preserve completed049–061 and migrations through72. Do not
 repeat unchanged searches, failed tooling, installation or publication. Continue
 any newly unblocked authorized free work.

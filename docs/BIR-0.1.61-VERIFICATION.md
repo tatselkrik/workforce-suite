@@ -1,5 +1,11 @@
 # Desktop0.1.61 - compensation arithmetic verification
 
+**Installed and privately published.** Frozen source
+`3441ab74ffd0d03b6df7408e34d0004de2346354`; keep0.1.60rollback.
+Exact artifact, installer/recovery, installed version/hash/BUILD/Windows Apps,
+normal launch and private download/signature evidence are in the
+[delivery record](BIR-0.1.61-DELIVERY.md).
+
 The candidate implements a separate local compensation-subtotal review for
 published standalone Schedule1/2 files. This advances local government-file
 checking; the entire agency-export/acceptance milestone remains partial.

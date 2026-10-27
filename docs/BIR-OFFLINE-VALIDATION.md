@@ -1,7 +1,8 @@
 # BIR 7.4 offline test preparation — 27 October 2026
 
-**Prepared; official application NOT RUN.** Desktop 0.1.58 remains the installed,
-privately published release. This investigation adds no app release, SQL, rate
+**Prepared; official application NOT RUN.** This preparation first accompanied
+desktop0.1.58; the current installed/private release is0.1.61. Historical native
+probe results below remain tied to their stated frozen version. This preparation adds no SQL, rate
 pack, filing, company registration or declaration. The official module/downloads
 are already supplied; do not request them again.
 
