@@ -4,8 +4,9 @@
 published, including annual issued-pay details and separate CSV/Excel. The
 remaining independent government-format investigation reached the concrete
 [input/acceptance boundaries](GOVERNMENT-REMAINING-INPUTS.md). Manual BIR checks
-and the separate portal-browser reminder remain deferred. The same continuation
-automation is paused pending newly actionable input; no completed delivery or
+remain deferred. Kirk delegated the browser review27October; it ran and found
+two mobile UI issues, recorded below. The broader continuation automation stays
+paused; this browser-check request did not reactivate it. No completed delivery or
 unchanged failed check should repeat. This supersedes older active-queue notes.
 
 **27October2026 delivered:** Desktop0.1.59 is installed and privately published.
@@ -102,7 +103,8 @@ unconfigured external connection to a completed integration.
 1. **Finish the employee portal — local only.** Own attendance-correction and
    overtime requests; notifications; company/profile pictures; password/email
    controls. Existing own records, contacts, attendance, breaks, leave and monthly
-   payslips remain supported. Browser verification remains in progress; no public
+   payslips remain supported. Browser review ran27October with two mobile issues
+   still open; see [the findings](PORTAL-BROWSER-20261027-REVIEW.md). No public
    hosting/LAN/tunnel. Physical-phone/email-confirmation verification is separately
    deferred as above, not a prerequisite for browser-only completion.
 2. **Government payroll exports and reconciliation.** Prepare reviewed BIR, SSS,

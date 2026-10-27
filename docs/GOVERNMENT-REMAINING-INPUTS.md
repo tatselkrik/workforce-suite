@@ -35,10 +35,12 @@ method refers to controls for older schedule names; without executed-object or
 authoritative ordering evidence it cannot justify silently accepting mixed files.
 Checks preserve full-file refusal rather than a partial pass.
 
-The separate portal-browser reminder remains deferred, with its recorded tooling
-failure. Phone/email confirmation, external sending/providers, unresolved vendors
-and physical devices retain their existing boundaries. No hardware exists;
-biometrics stay visible with connection disabled.
+Kirk delegated the portal browser review27October and it ran through a working
+headless-browser fallback. [Two mobile UI findings remain](PORTAL-BROWSER-20261027-REVIEW.md);
+interactive-tool failure is not a blanket browser-testing blocker. Phone/email
+confirmation, external sending/providers, unresolved vendors and physical devices
+retain their existing boundaries. No hardware exists; biometrics stay visible
+with connection disabled.
 
 The same continuation automation is paused at this required-input boundary.
 When Kirk resumes or supplies actionable input, read the current checkpoint and

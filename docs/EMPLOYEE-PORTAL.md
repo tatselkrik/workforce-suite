@@ -1,5 +1,13 @@
 # Separate employee portal
 
+**27October2026 browser review:** actual Edge/Playwright checks now cover desktop,
+390px/320px widths, dark mode, normal synthetic sign-in, profile/contact/photo,
+session controls and sign-out. Two mobile issues remain:320px navigation clips
+My profile, and selected-tab hover loses contrast. The previous blanket visual
+deferral is superseded by [this bounded review](PORTAL-BROWSER-20261027-REVIEW.md),
+not a full passing portal claim. Physical-phone/email confirmation and populated
+slip/request/notification views retain their explicit unverified status.
+
 Current verification scope25October2026: browser verification first, using
 existing no-charge tools. Mobile-width browser layouts may be checked for free;
 physical-phone and actual email-confirmation verification can remain deferred
