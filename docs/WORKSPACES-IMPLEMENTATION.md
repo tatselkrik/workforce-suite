@@ -100,3 +100,22 @@ PostgreSQL suite passed10,251workflow/preservation assertions, fresh73migration
 replay and129role-foundation assertions. Shared capability cases match native/SQL.
 These are local checks; no hosted migration, role activation, release or installation
 has occurred. Role editing and complete module read/write boundaries remain next.
+
+## Local assignment transaction progress —27October2026
+
+The disabled rollout now has typed protected Account Manager views and an atomic
+role/access transaction. It binds the current Administrator, employee, full request,
+role revision, compatible base role and membership timestamp. Exact retries return
+an immutable receipt; source changes require a fresh review. Sign-in disable/restore
+preserves assignments, captures status history and retains owner/self/hierarchy
+protections. Uncertain delivery retains the same request identity and contents.
+The native adapter rechecks actor access before returning refreshed assignments.
+Older clients cannot overwrite specialist roles through their four-role selector.
+
+Local evidence: the full Rust run and database results are recorded in the private
+task checkpoint; the PostgreSQL workflow/preservation suite passed10,764assertions,
+fresh74migration replay,129foundation checks and76transaction checks. The runtime
+policy remains FALSE. Migrations73/74 are local only; no hosted role activation,
+new desktop release, installation or usable specialist role is claimed. Native
+Account Manager editing/provisioning and complete domain read/write boundaries
+remain required before rollout.

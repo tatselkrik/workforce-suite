@@ -4,6 +4,7 @@ mod learning_adapter;
 mod career_adapter;
 mod payroll_adapter;
 mod payroll_exchange_adapter;
+mod staff_roles_adapter;
 #[cfg(test)]
 mod government_export_tests;
 #[cfg(test)]

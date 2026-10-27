@@ -2109,6 +2109,7 @@ fn employee_desktop_sign_in_is_rejected_before_loading_hr_data_and_revokes_its_s
             .err()
             .unwrap()
             .to_string()
+            .to_lowercase()
             .contains("employee portal")
     );
     server.join().unwrap();

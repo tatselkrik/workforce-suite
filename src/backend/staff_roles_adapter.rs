@@ -1,0 +1,95 @@
+use super::*;
+use crate::staff_roles::{
+    Capability, RoleChange, SCHEMA_VERSION,
+    admin::{AdminContext, Receipt},
+};
+impl CloudClient {
+    fn staff_role_admin_for(
+        &mut self,
+        access: &Access,
+        include_disabled: bool,
+    ) -> Result<AdminContext> {
+        ensure!(
+            access.role == crate::access::Role::Administrator
+                && access.allows(Capability::AccountAdministration),
+            "Only a current Administrator reads staff-role assignments."
+        );
+        ensure!(
+            access.staff_contract_version == SCHEMA_VERSION && access.staff_context.is_some(),
+            "The protected staff-role contract is not available. Apply the verified role update first."
+        );
+        let response = self
+            .request(Method::POST, "rpc/staff_role_admin_context")?
+            .json(&json!({"p_include_disabled":include_disabled}))
+            .send()
+            .context("Could not refresh staff-role assignments. Your draft has been retained.")?;
+        if matches!(
+            response.status(),
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN
+        ) {
+            return Err(AccessRevoked.into());
+        }
+        let context: AdminContext =
+            decode(response).map_err(|_| anyhow::Error::new(AccessRevoked))?;
+        context
+            .validate(access)
+            .map_err(|_| anyhow::Error::new(AccessRevoked))?;
+        if access
+            .staff_context
+            .as_ref()
+            .is_none_or(|c| c.runtime_ready != context.runtime_ready)
+        {
+            return Err(AccessRevoked.into());
+        }
+        Ok(context)
+    }
+    pub fn staff_role_admin_context(
+        &mut self,
+        include_disabled: bool,
+    ) -> Result<(Access, AdminContext)> {
+        let access = self.current_access()?;
+        let context = self.staff_role_admin_for(&access, include_disabled)?;
+        if self.current_access()? != access {
+            return Err(AccessRevoked.into());
+        }
+        Ok((access, context))
+    }
+    pub fn set_staff_roles(
+        &mut self,
+        request: &RoleChange,
+    ) -> Result<(Access, Receipt, AdminContext)> {
+        let access = self.current_access()?;
+        let source = access
+            .staff_context
+            .as_ref()
+            .context("Refresh the protected staff-role context first.")?;
+        request.validate(source)?;
+        let before = self.staff_role_admin_for(&access, true)?;
+        let subject = before
+            .accounts
+            .iter()
+            .find(|a| a.user_id == request.user_id)
+            .context("Choose an employee account from the current company.")?;
+        // Do not reject an old expected revision here: an exact retry may already
+        // have committed. The server checks its actor/payload receipt first.
+        let response=self.request(Method::POST,"rpc/set_staff_roles")?
+            .json(&json!({"p_change":request})).send()
+            .context("Staff-role delivery is uncertain. Refresh history or retry this exact request; keep its original identity and contents.")?;
+        if matches!(
+            response.status(),
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN
+        ) {
+            return Err(AccessRevoked.into());
+        }
+        let receipt: Receipt = decode(response)?;
+        receipt
+            .validate(&access, request, subject)
+            .map_err(|_| anyhow::Error::new(AccessRevoked))?;
+        let after=self.staff_role_admin_for(&access,true)
+            .context("The role assignment was recorded, but refresh failed. Retain this exact request and reload assignments before retrying.")?;
+        if self.current_access()? != access {
+            return Err(AccessRevoked.into());
+        }
+        Ok((access, receipt, after))
+    }
+}

@@ -55,6 +55,8 @@ fn server(replies: Vec<(&str, u16, Value)>) -> (String, thread::JoinHandle<Vec<S
                     Err(e) => panic!("{e}"),
                 }
             };
+            // Windows can inherit the listener nonblocking mode on accept.
+            socket.set_nonblocking(false).unwrap();
             socket
                 .set_read_timeout(Some(Duration::from_secs(2)))
                 .unwrap();
@@ -224,4 +226,181 @@ fn unsupported_future_contract_is_refused_without_requesting_any_records() {
             .is::<AccessRevoked>()
     );
     assert_eq!(handle.join().unwrap().len(), 1);
+}
+
+fn admin_wire(d: &Snapshot) -> Value {
+    let stamp = "2026-10-27T09:00:00Z";
+    json!({"schema_version":1,"company_id":d.access.company_id,"user_id":d.access.user_id,"runtime_ready":true,"account_count":2,
+ "accounts":[{"user_id":d.access.user_id,"employee_id":d.access.employee_id.unwrap(),"employee_code":"EMP-000001","full_name":"Fictional Administrator","active":true,"base_role":"administrator","member_updated_at":stamp,"revision":1,"roles":["administrator"]},
+ {"user_id":Uuid::from_u128(201),"employee_id":d.employees[1].id,"employee_code":"000002","full_name":"Fictional Employee","active":true,"base_role":"employee","member_updated_at":stamp,"revision":1,"roles":["employee"]}]})
+}
+fn base_wire(d: &Snapshot) -> Value {
+    let mut value = access_json(&d.access);
+    value["staff_contract_version"] = json!(1);
+    value
+}
+fn request(d: &Snapshot) -> crate::staff_roles::RoleChange {
+    let mut actor = d.access.clone();
+    actor.staff_contract_version = 1;
+    actor
+        .bind_staff_context(
+            serde_json::from_value(wire(d, StaffRole::Administrator, true)).unwrap(),
+        )
+        .unwrap();
+    let context: crate::staff_roles::admin::AdminContext =
+        serde_json::from_value(admin_wire(d)).unwrap();
+    context
+        .prepare(
+            &actor,
+            Uuid::from_u128(201),
+            StaffRoles::new(vec![StaffRole::LearningPerformanceOfficer]).unwrap(),
+            true,
+            "Assign reviewed development responsibilities".into(),
+            Uuid::from_u128(202),
+        )
+        .unwrap()
+}
+#[test]
+fn protected_admin_view_is_bound_and_rechecked_before_return() {
+    let d = data(Role::Administrator);
+    let base = base_wire(&d);
+    let own = wire(&d, StaffRole::Administrator, true);
+    let (url, handle) = server(vec![
+        ("/rest/v1/rpc/my_hris_access", 200, base.clone()),
+        ("/rest/v1/rpc/staff_role_context", 200, own.clone()),
+        ("/rest/v1/rpc/staff_role_admin_context", 200, admin_wire(&d)),
+        ("/rest/v1/rpc/my_hris_access", 200, base),
+        ("/rest/v1/rpc/staff_role_context", 200, own),
+    ]);
+    let (_, view) = client(url, &d).staff_role_admin_context(false).unwrap();
+    assert_eq!(view.account_count, 2);
+    assert_eq!(view.accounts[1].employee_code, "000002");
+    assert_eq!(handle.join().unwrap().len(), 5);
+}
+#[test]
+fn malformed_admin_context_and_non_admin_actor_never_return_assignment_data() {
+    let d = data(Role::Administrator);
+    let mut values = Vec::new();
+    let mut v = admin_wire(&d);
+    v["company_id"] = json!(Uuid::from_u128(999));
+    values.push(v);
+    let mut v = admin_wire(&d);
+    v["account_count"] = json!(3);
+    values.push(v);
+    let mut v = admin_wire(&d);
+    v["accounts"][1]["employee_id"] = v["accounts"][0]["employee_id"].clone();
+    values.push(v);
+    let mut v = admin_wire(&d);
+    v["runtime_ready"] = json!(false);
+    values.push(v);
+    for value in values {
+        let (url, handle) = server(vec![
+            ("/rest/v1/rpc/my_hris_access", 200, base_wire(&d)),
+            (
+                "/rest/v1/rpc/staff_role_context",
+                200,
+                wire(&d, StaffRole::Administrator, true),
+            ),
+            ("/rest/v1/rpc/staff_role_admin_context", 200, value),
+        ]);
+        assert!(
+            client(url, &d)
+                .staff_role_admin_context(false)
+                .unwrap_err()
+                .is::<AccessRevoked>()
+        );
+        assert_eq!(handle.join().unwrap().len(), 3);
+    }
+    let d = data(Role::Employee);
+    let (url, handle) = server(vec![
+        ("/rest/v1/rpc/my_hris_access", 200, base_wire(&d)),
+        (
+            "/rest/v1/rpc/staff_role_context",
+            200,
+            wire(&d, StaffRole::Recruiter, true),
+        ),
+    ]);
+    assert!(client(url, &d).staff_role_admin_context(false).is_err());
+    assert_eq!(handle.join().unwrap().len(), 2);
+}
+fn transaction_replies(
+    d: &Snapshot,
+    bad_receipt: bool,
+    revoked_after: bool,
+) -> Vec<(&'static str, u16, Value)> {
+    let request = request(d);
+    let base = base_wire(d);
+    let own = wire(d, StaffRole::Administrator, true);
+    let before = admin_wire(d);
+    let mut after = before.clone();
+    after["accounts"][1]["roles"] = json!(["learning_performance_officer"]);
+    after["accounts"][1]["revision"] = json!(2);
+    after["accounts"][1]["member_updated_at"] = json!("2026-10-27T09:00:01Z");
+    let receipt = json!({"schema_version":1,"id":request.id,"company_id":d.access.company_id,
+ "actor_id":if bad_receipt{Uuid::from_u128(999)}else{d.access.user_id},"user_id":request.user_id,"employee_id":d.employees[1].id,"active":request.active,"roles":request.roles,"revision":2,"base_role":"employee","member_updated_at":"2026-10-27T09:00:01Z"});
+    let mut replies = vec![
+        ("/rest/v1/rpc/my_hris_access", 200, base.clone()),
+        ("/rest/v1/rpc/staff_role_context", 200, own.clone()),
+        ("/rest/v1/rpc/staff_role_admin_context", 200, before),
+        ("/rest/v1/rpc/set_staff_roles", 200, receipt),
+    ];
+    if bad_receipt {
+        return replies;
+    }
+    if revoked_after {
+        replies.push((
+            "/rest/v1/rpc/staff_role_admin_context",
+            403,
+            json!({"message":"revoked"}),
+        ));
+        return replies;
+    }
+    replies.extend([
+        ("/rest/v1/rpc/staff_role_admin_context", 200, after),
+        ("/rest/v1/rpc/my_hris_access", 200, base),
+        ("/rest/v1/rpc/staff_role_context", 200, own),
+    ]);
+    replies
+}
+#[test]
+fn role_transaction_verifies_receipt_and_refreshes_current_assignments() {
+    let d = data(Role::Administrator);
+    let req = request(&d);
+    let (url, handle) = server(transaction_replies(&d, false, false));
+    let (_, receipt, current) = client(url, &d).set_staff_roles(&req).unwrap();
+    assert_eq!(receipt.id, req.id);
+    assert_eq!(current.accounts[1].roles, req.roles);
+    assert_eq!(handle.join().unwrap().len(), 7);
+}
+#[test]
+fn wrong_receipt_or_revoked_after_write_keeps_the_original_request_identity() {
+    for (bad, revoked) in [(true, false), (false, true)] {
+        let d = data(Role::Administrator);
+        let req = request(&d);
+        let original = req.clone();
+        let (url, handle) = server(transaction_replies(&d, bad, revoked));
+        assert!(
+            client(url, &d)
+                .set_staff_roles(&req)
+                .unwrap_err()
+                .is::<AccessRevoked>()
+        );
+        assert_eq!(req, original);
+        assert_eq!(handle.join().unwrap().len(), if bad { 4 } else { 5 });
+    }
+}
+#[test]
+fn incomplete_rollout_cannot_send_an_assignment_transaction() {
+    let d = data(Role::Administrator);
+    let req = request(&d);
+    let (url, handle) = server(vec![
+        ("/rest/v1/rpc/my_hris_access", 200, base_wire(&d)),
+        (
+            "/rest/v1/rpc/staff_role_context",
+            200,
+            wire(&d, StaffRole::Administrator, false),
+        ),
+    ]);
+    assert!(client(url, &d).set_staff_roles(&req).is_err());
+    assert_eq!(handle.join().unwrap().len(), 2);
 }

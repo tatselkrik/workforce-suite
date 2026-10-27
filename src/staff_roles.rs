@@ -3,7 +3,9 @@
 //! This is deliberately separate from the installed four-role `access::Role`.
 //! A role set is not authority by itself: the server supplies it, and existing
 //! authorization remains in force until the matching runtime contract is ready.
+pub mod admin;
 use anyhow::{Result, ensure};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Deserializer, Serialize, de};
 use std::{collections::BTreeSet, fmt};
 use uuid::Uuid;
@@ -270,7 +272,10 @@ impl Context {
 pub struct RoleChange {
     pub id: Uuid,
     pub user_id: Uuid,
+    pub active: bool,
     pub expected_revision: i64,
+    pub expected_base_role: crate::access::Role,
+    pub expected_member_updated_at: DateTime<Utc>,
     pub roles: StaffRoles,
     pub reason: String,
 }
@@ -296,7 +301,10 @@ impl RoleChange {
             "Staff-role editing is not enabled until the protected workspace rollout is verified."
         );
         ensure!(
-            !self.id.is_nil() && !self.user_id.is_nil() && self.expected_revision > 0,
+            !self.id.is_nil()
+                && !self.user_id.is_nil()
+                && self.expected_revision > 0
+                && self.expected_revision < i64::MAX,
             "A request identity, target account and current revision are required."
         );
         ensure!(
@@ -498,7 +506,10 @@ mod tests {
         let request = RoleChange {
             id: Uuid::from_u128(4),
             user_id: Uuid::from_u128(5),
+            active: true,
             expected_revision: 1,
+            expected_base_role: Role::Employee,
+            expected_member_updated_at: Utc::now(),
             roles: roles(&[StaffRole::LearningPerformanceOfficer]),
             reason: "Assign development responsibilities".into(),
         };
