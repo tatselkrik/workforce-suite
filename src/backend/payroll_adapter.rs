@@ -150,6 +150,46 @@ impl CloudClient {
         if let (Some(path),Some(bytes))=(destination,bytes){crate::reports::save_export(path,&bytes)?;}
         Ok(ledger)
     }
+    pub fn government_bir_build(&mut self,current:&Snapshot,action:&crate::payroll_government::bir_file::builder::Action)
+        ->Result<Option<crate::payroll_government::bir_file::builder::Preview>> {
+        use crate::payroll_government::bir_file::{self as bir,builder};
+        crate::payroll_reporting::authorize(current)?;
+        if self.current_access()?!=current.access {return Err(AccessRevoked.into());}
+        match action {
+            builder::Action::Template{schedule,destination}=>{
+                let bytes=builder::template(*schedule,crate::tabular::is_xlsx(destination))?;
+                if self.current_access()?!=current.access {return Err(AccessRevoked.into());}
+                crate::reports::save_export(destination,&bytes)?;
+                Ok(None)
+            }
+            builder::Action::Prepare{selection,source,expected_basis,destination,reviewed}=>{
+                ensure!(destination.is_none() || (*reviewed && expected_basis.is_some()),
+                    "Preview and explicitly review the declarations before saving a BIR draft.");
+                let registration=self.government_registration(current,None,None)?;
+                let record=registration.record.as_ref().context("Complete company BIR registration before building a draft.")?;
+                let employer=bir::Employer {
+                    tin:record.details.get("bir_tin").cloned().unwrap_or_default(),
+                    branch:record.details.get("bir_branch").cloned().unwrap_or_default(),
+                };
+                let (bytes,excel)=builder::read_template(source)?;
+                let draft=builder::assemble(&bytes,excel,&builder::Basis {
+                    selection:*selection,today:current.company.today(),employer:&employer,
+                    company_id:current.company.id,user_id:current.access.user_id,
+                    registration_id:record.id,registration_revision:record.revision,
+                })?;
+                ensure!(expected_basis.as_ref().is_none_or(|hash|hash==&draft.preview.basis_sha256),
+                    "The source, selection or company registration changed. Preview and review the declarations again.");
+                let fresh=self.government_registration(current,None,None)?;
+                ensure!(fresh.record.as_ref().is_some_and(|r|r.id==record.id && r.revision==record.revision
+                    && r.details.get("bir_tin")==Some(&employer.tin)
+                    && r.details.get("bir_branch")==Some(&employer.branch)),
+                    "Company registration changed while preparing the draft. Preview again.");
+                if self.current_access()?!=current.access {return Err(AccessRevoked.into());}
+                if let Some(path)=destination {draft.save_new(path)?;}
+                Ok(Some(draft.preview))
+            }
+        }
+    }
     pub fn government_bir_check(&mut self,current:&Snapshot,source:&Path,expected_hash:Option<&str>,destination:Option<&Path>)
         ->Result<crate::payroll_government::bir_file::Report>{
         use crate::payroll_government::bir_file as bir;

@@ -9,6 +9,8 @@ mod government_export_tests;
 #[cfg(test)]
 mod bir_file_tests;
 #[cfg(test)]
+mod bir_builder_tests;
+#[cfg(test)]
 mod government_annual_tests;
 #[cfg(test)]
 mod bir_identity_tests;
@@ -1871,6 +1873,7 @@ pub enum Command {
     GovernmentAnnualPay {year:i32,destination:Option<std::path::PathBuf>},
     GovernmentSssPrepare {filter:crate::payroll_government::Filter},
     GovernmentBirCheck {source:std::path::PathBuf,expected_hash:Option<String>,destination:Option<std::path::PathBuf>},
+    GovernmentBirBuild(crate::payroll_government::bir_file::builder::Action),
     GovernmentSssExport {filter:crate::payroll_government::Filter,request:Box<crate::payroll_government::sss_collection::Request>,destination:std::path::PathBuf},
     GovernmentPreparation {filter:crate::payroll_government::Filter,destination:std::path::PathBuf},
     GovernmentRegistration {employee_id:Option<Uuid>,save:Option<crate::payroll_government::registration::Save>},
@@ -1918,6 +1921,7 @@ pub struct Update {
     pub government_annual_pay:Option<crate::payroll_government::annual_pay::Report>,
     pub government_sss:Option<crate::payroll_government::sss_collection::Basis>,
     pub government_bir:Option<crate::payroll_government::bir_file::Report>,
+    pub government_bir_build:Option<crate::payroll_government::bir_file::builder::Preview>,
     pub government_registration:Option<crate::payroll_government::registration::Snapshot>,
     pub government:Option<crate::payroll_government::Reconciliation>,
     pub payroll_report:Option<crate::payroll_reporting::Report>,
@@ -1975,6 +1979,7 @@ pub fn worker(
             let mut registration_result = None;
             let mut sss_result=None;
             let mut bir_result=None;
+            let mut bir_build_result=None;
             let mut update_state = None;
             let mut check_after_sign_in = false;
             let mut result: Result<Snapshot> = match command {
@@ -2192,6 +2197,18 @@ pub fn worker(
                         message="SSS draft sources checked against current registration and recorded remittance.".into();Ok(current.clone())
                     })()
                 }
+                Command::GovernmentBirBuild(action)=>{
+                    (||->Result<Snapshot>{
+                        let client=cloud.as_mut().context("Company sign-in is required for BIR declaration drafts.")?;
+                        bir_build_result=client.government_bir_build(&current,&action)?;
+                        message=match &action {
+                            crate::payroll_government::bir_file::builder::Action::Template{..}=>"Blank BIR declaration template saved. Enter reviewed values; no payroll or tax classifications were inferred.",
+                            crate::payroll_government::bir_file::builder::Action::Prepare{destination:Some(_),..}=>"New BIR plaintext draft saved. Official BIR validation and agency acceptance are still required; nothing was submitted.",
+                            _=>"Declaration draft previewed locally. Review the declared values before saving a new DAT file.",
+                        }.into();
+                        Ok(current.clone())
+                    })()
+                }
                 Command::GovernmentBirCheck{source,expected_hash,destination}=>{
                     (||->Result<Snapshot>{
                         let client=cloud.as_mut().context("Company sign-in is required for BIR file checks.")?;
@@ -2385,6 +2402,7 @@ pub fn worker(
                     government_annual_pay:annual_pay_result,
                     government_sss:sss_result,
                     government_bir:bir_result,
+                    government_bir_build:bir_build_result,
                     government_registration:registration_result,
                     government:government_result,
                     report: report_result,
@@ -2426,6 +2444,7 @@ pub fn worker(
                             government_annual_pay:None,
                             government_sss:None,
                             government_bir:None,
+                            government_bir_build:None,
                             government_registration:None,
                             government:None,
                             report: None,

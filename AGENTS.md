@@ -459,3 +459,13 @@ link scoped sources. Preserve signed/unknown amounts, original service and actua
 receipt states, fresh hash/access/new-file guards and the separate minimal
 diagnostic/identity export contracts. Its explicitly internal amount worksheet
 omits raw tax identifiers, file-declared names and HR evidence/references.
+
+## Latest resumption after desktop061 —27October2026
+
+Kirk explicitly resumed finishing the remaining free scope without subscriptions
+or hardware, through the actual usage limit and automatically after its reported
+five-hour reset. The required-input scheduling pause is superseded; keep the SAME
+heartbeat active and its context current. Continue independent supportable agency
+file preparation while recording official-acceptance/input limits. Preserve the
+separate deferred software-execution, filing, external-provider/vendor and device
+authority boundaries; generic resumption does not resolve those targets.

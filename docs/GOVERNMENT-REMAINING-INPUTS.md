@@ -49,10 +49,11 @@ confirmation, external sending/providers, unresolved vendors and physical device
 retain their existing boundaries. No hardware exists; biometrics stay visible
 with connection disabled.
 
-The same continuation automation is paused again at this required-input boundary
-after the newly unblocked portal work and desktop061arithmetic increment were
-completed. This is a required-input boundary, not a SQL approval request.
-When Kirk resumes or supplies actionable input, read the current checkpoint and
-instructions first. Preserve completed049–061 and migrations through72. Do not
+Kirk subsequently resumed the remaining free work after061and reactivated the
+SAME continuation automation. The local explicit-declaration file builder is now
+in progress; these inputs still limit official acceptance and automatic mappings,
+but do not block that independent assembly work. No government runtime execution
+or external connection is inferred from generic resumption. Read the current
+checkpoint/instructions first. Preserve completed049–061 and migrations through72. Do not
 repeat unchanged searches, failed tooling, installation or publication. Continue
 any newly unblocked authorized free work.

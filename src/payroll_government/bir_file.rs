@@ -10,6 +10,7 @@ use uuid::Uuid;
 pub const MAX_BYTES: usize = 2 * 1024 * 1024;
 pub const MAX_DETAILS: usize = 500;
 pub mod arithmetic;
+pub mod builder;
 const MAX_ISSUES: usize = 500;
 pub const MONEY_COLUMNS: [usize; 31] = [
     12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37,

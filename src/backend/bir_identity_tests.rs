@@ -255,11 +255,17 @@ fn hosted_native_annual_pay_for_authorized_installation() {
 fn hosted_native_compensation_arithmetic_for_authorized_installation() {
     hosted_native_bir_projection("arithmetic");
 }
+#[test]
+#[ignore = "Explicit synthetic session for fixed authorized installation and local builder evidence only."]
+fn hosted_native_bir_builder_for_authorized_installation() {
+    hosted_native_bir_projection("builder");
+}
 fn hosted_native_bir_projection(mode: &str) {
-    assert!(matches!(mode,"identities"|"declarations"|"paydetails"|"arithmetic"));
+    assert!(matches!(mode,"identities"|"declarations"|"paydetails"|"arithmetic"|"builder"));
     let declarations=mode=="declarations";
     let pay=mode=="paydetails";
     let arithmetic=mode=="arithmetic";
+    let building=mode=="builder";
     use sha2::Digest;
     let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .canonicalize()
@@ -289,7 +295,7 @@ fn hosted_native_bir_projection(mode: &str) {
         reference
     );
     let session: AuthSession = serde_json::from_str(
-        &std::env::var(if arithmetic {"HRIS_ARITHMETIC_AUTH_SESSION"}else if pay {"HRIS_PAYDETAIL_AUTH_SESSION"}else if declarations {"HRIS_DECLARATION_AUTH_SESSION"} else {"HRIS_IDENTITY_AUTH_SESSION"})
+        &std::env::var(if building {"HRIS_BUILDER_AUTH_SESSION"}else if arithmetic {"HRIS_ARITHMETIC_AUTH_SESSION"}else if pay {"HRIS_PAYDETAIL_AUTH_SESSION"}else if declarations {"HRIS_DECLARATION_AUTH_SESSION"} else {"HRIS_IDENTITY_AUTH_SESSION"})
             .expect("Explicit short-lived synthetic session"),
     )
     .unwrap();
@@ -318,8 +324,55 @@ fn hosted_native_bir_projection(mode: &str) {
     } else {
         "hr_generalist"
     };
-    let folder = work.join(format!("{}-live-{role}", if arithmetic {"arithmetic061-native"}else if pay {"paydetails060-verified"}else if declarations {"declarations059"} else {"identities058"}));
+    let folder = work.join(format!("{}-live-{role}", if building {"builder062-native"}else if arithmetic {"arithmetic061-native"}else if pay {"paydetails060-verified"}else if declarations {"declarations059"} else {"identities058"}));
     std::fs::create_dir(&folder).unwrap();
+    if building {
+        use crate::payroll_government::bir_file::{self as bir,builder};
+        let registration=cloud.government_registration(&data,None,None).unwrap();
+        let ready=registration.record.as_ref().is_some_and(|r|
+            bir::matchable_identity(r.details.get("bir_tin").map_or("",String::as_str),
+                r.details.get("bir_branch").map_or("",String::as_str)));
+        let mut cases=vec![];
+        for (number,schedule) in [(1,bir::Schedule::One),(2,bir::Schedule::Two)] {
+            for excel in [false,true] {
+                let kind=if excel{"xlsx"}else{"csv"};
+                let case=folder.join(format!("s{number}-{kind}"));std::fs::create_dir(&case).unwrap();
+                let blank=case.join(format!("blank-template.{kind}"));
+                assert!(cloud.government_bir_build(&data,&builder::Action::Template{schedule,destination:blank.clone()}).unwrap().is_none());
+                let actual=std::fs::read(blank).unwrap();
+                if excel {
+                    // Workbook creation timestamps are not template declarations.
+                    let rows=crate::tabular::read_xlsx(&actual,bir::MAX_DETAILS,builder::headers(schedule).len()).unwrap();
+                    assert_eq!(rows.len(),1);
+                    assert!(rows[0].cells.iter().map(String::as_str).eq(builder::headers(schedule).iter().copied()));
+                }else{assert_eq!(actual,builder::template(schedule,false).unwrap());}
+                let source=root.join(format!("work/bir062-vectors/schedule{number}-{kind}/declarations.{kind}"));
+                let before=std::fs::read(&source).unwrap();
+                let checked=cloud.government_bir_build(&data,&builder::Action::Prepare {
+                    selection:builder::Selection{schedule,year:2026},source:source.clone(),
+                    expected_basis:None,destination:None,reviewed:false,
+                });
+                if ready {
+                    let preview=checked.unwrap().unwrap();
+                    assert_eq!((preview.company_id,preview.user_id),(data.company.id,data.access.user_id));
+                    assert_eq!(preview.source_sha256,format!("{:x}",sha2::Sha256::digest(&before)));
+                    assert_eq!(preview.details,2);
+                }else{
+                    let error=checked.err().expect("Incomplete employer must not build a draft").to_string();
+                    assert!(error.contains("BIR registration")||error.contains("protected BIR registration"));
+                }
+                assert_eq!(before,std::fs::read(source).unwrap());
+                cases.push(json!({"schedule":number,"format":kind,"blank_template_matches":true,
+                    "preview_built":ready,"incomplete_registration_blocked":!ready,"source_unchanged":true}));
+            }
+        }
+        std::fs::write(folder.join("proof.json"),serde_json::to_vec_pretty(&json!({
+            "all_passed":true,"cases":cases,"configured_employer_complete":ready,
+            "full_positive_builder_hosted":ready,"fixed_authorized_project_and_local_evidence":true,
+            "hosted_identity_data_persisted":false,"official_validation":false,"source_files_uploaded":false,
+        })).unwrap()).unwrap();
+        return;
+    }
     if arithmetic {
         use crate::payroll_government::bir_file as bir;
         let mut cases=vec![];

@@ -1,6 +1,16 @@
 # Remaining HRIS roadmap — agreed order
 
-**Latest resumption27October2026:** Kirk requested remaining work without stopping;
+**Latest human resumption27October2026, after061:** Kirk requested finishing the
+remaining work without subscriptions/hardware, continuing to the actual usage
+limit and again after the reported five-hour reset. The SAME scheduler is ACTIVE
+again; the required-input scheduling pause below is superseded. The next free
+increment is local BIR declaration file assembly from explicit reviewed CSV/Excel
+rows, with current employer/source binding and published control totals. It is
+in progress, not delivered or crossed out; installed061/portal017stay unchanged.
+See [the builder contract](BIR-DECLARATION-BUILDER.md). Official acceptance,
+government-software execution and paid/external/hardware boundaries remain.
+
+**Delivered061, before the latest resumption:** Kirk requested remaining work without stopping;
 the same scheduler was reactivated. Desktop0.1.61 is now installed/private-published:
 657defaultRust checks, explicit fixture/hosted/real-installer opt-ins,12independent
 workbook pairs/44rows and11native layouts pass. Exact installed hash/BUILD/Windows
