@@ -23,6 +23,7 @@ const BG: Color32 = Color32::from_rgb(245, 247, 250);
 const LINE: Color32 = Color32::from_rgb(226, 232, 238);
 
 mod staff_roles_view;
+mod staff_provision_view;
 mod breaks_view;
 mod calculations_view;
 mod hiring_view;
@@ -222,6 +223,7 @@ pub struct HrisApp {
     account_form: Option<AccountDraft>,
     show_disabled_staff: bool,
     staff_roles_state: crate::staff_roles::editor::State,
+    staff_provision_state: crate::staff_roles::provision_editor::State,
     profile_contacts_draft: Option<EmployeeContacts>,
     update_state: UpdateState,
     update_confirmation: bool,
@@ -452,6 +454,7 @@ impl HrisApp {
             account_form: None,
             show_disabled_staff: false,
             staff_roles_state: Default::default(),
+            staff_provision_state: Default::default(),
             profile_contacts_draft: None,
             update_state: UpdateState::Idle,
             update_confirmation: false,
@@ -1116,6 +1119,7 @@ impl HrisApp {
                     }
                     if self.data.access != data.access {
                         self.staff_roles_state=Default::default();
+                        self.staff_provision_state=Default::default();
                         self.organization = organization_view::State::default();
                         self.leave_state = leave_view::State::default();
                         self.shift_state = shifts_view::State::default();
@@ -1268,10 +1272,12 @@ impl HrisApp {
                     let career_saved = self.career_state.accept(&data);
                     let hiring_saved = hiring_record_saved && recruiting_saved && onboarding_saved && exit_saved && performance_saved && learning_saved && career_saved && payroll_saved;
                     self.data = data;
+                    let mut staff_update_error=None;
                     if let Some(roles)=update.staff_roles {
-                        if let Err(error)=self.staff_roles_state.accept(&self.data.access,roles) {
-                            self.notice=Some((error.to_string(),true));
-                        }
+                        if let Err(error)=self.staff_roles_state.accept(&self.data.access,roles) {staff_update_error=Some(error.to_string());}
+                    }
+                    if let Some(provision)=update.staff_provision {
+                        if let Err(error)=self.accept_staff_provision(provision) {staff_update_error=Some(error.to_string());}
                     }
                     self.leave_request_import_state.sync(&self.data);
                     if let Some(p)=update.leave_import_preview{self.leave_request_import_state.accept_preview(p,&self.data);}
@@ -1334,7 +1340,8 @@ impl HrisApp {
                     if self.close_document_on_success {
                         self.document_form = None;
                     }
-                    if !hiring_saved {
+                    if let Some(error)=staff_update_error {self.notice=Some((error,true));}
+                    else if !hiring_saved {
                         self.notice = Some(("The saved record has changed. Your draft is preserved; reload the saved record before continuing.".into(), true));
                     } else if !update.message.is_empty() {
                         self.notice = Some((update.message, false));
@@ -1342,6 +1349,7 @@ impl HrisApp {
                 }
                 Err(error) => {
                     if update.staff_role_rejected {self.staff_roles_state.reject();}
+                    if let Some(rejection)=update.staff_provision_rejection {let _=self.staff_provision_state.reject(&rejection);}
                     if !update.background{self.attendance_import_state.failed(&error);self.leave_request_import_state.failed(&error);}
                     self.hiring_state.pending = None;
                     self.onboarding_state.pending = None;
@@ -1490,6 +1498,9 @@ impl HrisApp {
             EmployeeContacts::empty(self.data.company.id, draft.id.unwrap_or_default())
         });
         let mut access = self.account_form.take();
+        let versioned_staff=self.data.access.staff_context.as_ref().is_some_and(|c|c.runtime_ready);
+        if versioned_staff{access=None;}
+        let mut transferred=false;
         let editable = self.data.access.role.manages_hr();
         let private_visible = editable
             || draft
@@ -1589,6 +1600,9 @@ impl HrisApp {
                     ContactSection::Documents if editable=>{
                         if let Some(id)=draft.id { self.employee_documents(ui,id); }
                     }
+                    ContactSection::Access if versioned_staff&&self.data.access.role.manages_accounts()=>{
+                        transferred=self.staff_employee_access(ui,&draft,&contacts);
+                    }
                     ContactSection::Access if self.data.access.role.manages_accounts()=>{
                         if access.is_none() {
                             if let Some(existing)=self.data.accounts.iter().find(|a|a.employee_id==draft.id && draft.id.is_some()) {
@@ -1675,7 +1689,7 @@ impl HrisApp {
                 Err(error) => self.notice = Some((error.to_string(), true)),
             }
         }
-        if !close || self.busy {
+        if (!close || self.busy) && !transferred {
             self.employee_form = Some(draft);
             self.contacts_form = Some(contacts);
             self.account_form = access;
@@ -2006,6 +2020,7 @@ impl HrisApp {
             || self.report_state.view_draft.is_some()
             || self.account_form.is_some()
             || self.staff_roles_state.has_draft()
+            || self.staff_provision_state.has_draft()
             || !company_fields_equal(&self.company_draft, &self.data.company)
             || self.profile_contacts_draft.as_ref().is_some_and(|draft| {
                 self.data.access.employee_id.is_some_and(|id| {
@@ -4089,6 +4104,7 @@ impl eframe::App for HrisApp {
                         !self.busy
                             && !form_open
                             && self.employee_form.is_none()
+                            && !self.staff_provision_state.has_draft()
                             && !self.hiring_state.editing()
                             && !self.recruiting_state.editing()
                             && !self.onboarding_state.editing()
@@ -4101,6 +4117,11 @@ impl eframe::App for HrisApp {
             egui::CentralPanel::default()
                 .frame(Frame::new().fill(ui.visuals().panel_fill).inner_margin(28))
                 .show(ui, |ui| {
+                    if self.staff_provision_state.form.is_some(){
+                        self.header(ui);
+                        egui::ScrollArea::vertical().id_salt("staff_provision_form").show(ui,|ui|self.staff_provision_form(ui));
+                        return;
+                    }
                     if matches!(self.page, Page::Employees | Page::Accounts)
                         && self.employee_form.is_some()
                     {

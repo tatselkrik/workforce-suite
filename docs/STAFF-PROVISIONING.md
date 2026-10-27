@@ -66,3 +66,27 @@ Native provisioning/editor integration and complete specialist read/write bounda
 must still pass before hosted deployment, activation or a new installed release.
 Kirk's current instruction is to finish Account Manager provisioning and permissions,
 deliver it, then pause work and the same scheduler before later roadmap milestones.
+## Native integration and existing sign-in identities
+
+The gated native form now supports new employees and adding access to an existing
+employee while preserving employment/contact edits. Four internal sections reuse
+the existing employment/contact controls. Saved-source changes require explicit
+review. Pending setup can be resumed or checked; cancellation has a frozen reason.
+Credentials stay in the form/worker only and are cleared after submission. The
+normal unsaved-work guard includes account setup. Existing account access uses the
+same protected multi-role editor instead of the old four-role selector.
+
+Reservation may adopt an unassigned Auth identity by the reviewed email. It never
+relinks an established membership, changes its password/confirmation/metadata, or
+recreates a deleted pre-existing identity. This also recovers an unconfirmed identity
+after a cancelled attempt without adding a separate employee-linking setup step.
+The operator sees that an existing sign-in identity keeps its original password.
+
+Latest local evidence:744normal Rust checks passed,28explicit opt-ins ignored;
+11,282PostgreSQL workflow/preservation assertions plus fresh75migration replay,
+129role-foundation,76role-transaction and88provisioning assertions pass. Edge67tests
+pass. Headless form checks cover four sections, three widths, light/dark and locked/
+editable states. None of these establishes hosted or installed-screen verification.
+The rollout gate remains FALSE; no staged migration/Edge function/new app release
+has been delivered to the live prototype yet. Complete the specialist native/server/
+storage/portal/updater permission pass before activation and final delivery.

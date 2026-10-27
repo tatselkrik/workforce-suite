@@ -9,7 +9,7 @@ use std::{
     io::{BufRead, BufReader, Write},
     net::TcpListener,
 };
-fn data(role: Role) -> Snapshot {
+pub(super) fn data(role: Role) -> Snapshot {
     let mut d = DemoStore::new().data;
     d.access.role = role;
     d.access.user_id = Uuid::from_u128(200);
@@ -17,7 +17,7 @@ fn data(role: Role) -> Snapshot {
     d.access.employee_id = Some(d.employees[0].id);
     d
 }
-fn wire(d: &Snapshot, role: StaffRole, ready: bool) -> Value {
+pub(super) fn wire(d: &Snapshot, role: StaffRole, ready: bool) -> Value {
     serde_json::to_value(StaffContext {
         schema_version: 1,
         company_id: d.access.company_id,
@@ -30,7 +30,9 @@ fn wire(d: &Snapshot, role: StaffRole, ready: bool) -> Value {
     })
     .unwrap()
 }
-fn server(replies: Vec<(&str, u16, Value)>) -> (String, thread::JoinHandle<Vec<(String, Value)>>) {
+pub(super) fn server(
+    replies: Vec<(&str, u16, Value)>,
+) -> (String, thread::JoinHandle<Vec<(String, Value)>>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     listener.set_nonblocking(true).unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
@@ -241,7 +243,7 @@ fn admin_wire(d: &Snapshot) -> Value {
  "accounts":[{"user_id":d.access.user_id,"employee_id":d.access.employee_id.unwrap(),"employee_code":"EMP-000001","full_name":"Fictional Administrator","active":true,"base_role":"administrator","member_updated_at":stamp,"revision":1,"roles":["administrator"]},
  {"user_id":Uuid::from_u128(201),"employee_id":d.employees[1].id,"employee_code":"000002","full_name":"Fictional Employee","active":true,"base_role":"employee","member_updated_at":stamp,"revision":1,"roles":["employee"]}]})
 }
-fn base_wire(d: &Snapshot) -> Value {
+pub(super) fn base_wire(d: &Snapshot) -> Value {
     let mut value = access_json(&d.access);
     value["staff_contract_version"] = json!(1);
     value

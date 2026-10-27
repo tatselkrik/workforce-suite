@@ -5,7 +5,22 @@ use crate::staff_roles::{
 };
 impl HrisApp {
     pub(super) fn staff_roles_panel(&mut self, ui: &mut Ui) {
+        if self.staff_provision_state.form.is_some() {
+            self.staff_provision_form(ui);
+            return;
+        }
         ui.horizontal_wrapped(|ui| {
+            if ui
+                .add_enabled(
+                    !self.busy && !self.staff_roles_state.has_draft(),
+                    egui::Button::new("+ Add staff employee"),
+                )
+                .clicked()
+            {
+                if let Err(error) = self.staff_provision_state.start_new(&self.data) {
+                    self.notice = Some((error.to_string(), true));
+                }
+            }
             ui.label("Staff responsibilities and sign-in access");
             if ui
                 .add_enabled(!self.busy, egui::Button::new("Refresh assignments"))
@@ -61,6 +76,7 @@ impl HrisApp {
             }
         });
         self.staff_role_draft(ui);
+        self.staff_provision_history(ui);
     }
     fn staff_role_account(&mut self, ui: &mut Ui, account: &Account) {
         card(ui, |ui| {
@@ -114,7 +130,7 @@ impl HrisApp {
         });
         ui.add_space(8.0);
     }
-    fn staff_role_draft(&mut self, ui: &mut Ui) {
+    pub(super) fn staff_role_draft(&mut self, ui: &mut Ui) {
         let focus = std::mem::take(&mut self.staff_roles_state.scroll_to_editor);
         let Some(draft) = self.staff_roles_state.draft.as_mut() else {
             return;

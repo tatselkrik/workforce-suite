@@ -5,6 +5,8 @@
 //! authorization remains in force until the matching runtime contract is ready.
 pub mod admin;
 pub mod editor;
+pub mod provision;
+pub mod provision_editor;
 use anyhow::{Result, ensure};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Deserializer, Serialize, de};

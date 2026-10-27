@@ -9,7 +9,7 @@ const request={id:attempt,email:'person@example.invalid',roles:['recruiter','lea
  contacts:{company_id:company,employee_id:'00000000-0000-0000-0000-000000000000',phone:'000 123 4567',personal_email:'',address:'',emergency_name:'Fictional Contact',emergency_relationship:'Sibling',emergency_phone:'000 123 4568',emergency_alternate_phone:'',updated_at:null},expected_source:null,supersedes:null};
 const body={operation:'create_staff_v2',request,password:'fictional initial password'};
 const receipt={schema_version:1,id:attempt,company_id:company,actor_id:owner,user_id:user,employee_id:person,active:true,roles:request.roles,revision:1,base_role:'employee',member_updated_at:'2026-10-27T12:00:00Z'};
-const intent={schema_version:1,id:attempt,company_id:company,actor_id:owner,user_id:user,email:request.email,state:'reserved',receipt:null};
+const intent={schema_version:1,id:attempt,company_id:company,actor_id:owner,user_id:user,auth_preexisting:false,email:request.email,state:'reserved',receipt:null};
 const authUser={id:user,email:request.email,email_confirmed_at:null,user_metadata:{role:'administrator'}};
 const authenticated=(...tail)=>[{body:{id:owner}},{body:access},...tail];
 const req=b=>new Request(config.url+'/functions/v1/account-admin',{method:'POST',headers:{Authorization:'Bearer fictional-actor-token','Content-Type':'application/json'},body:JSON.stringify(b)});
@@ -69,4 +69,29 @@ test('missing password is allowed for recovery but cannot create a missing Auth 
 test('unverified contract and server-side reservation denial stop before privileged calls',async()=>{
  for(const version of[0,2]){const{handler,requests}=fixture([{body:{id:owner}},{body:{...access,staff_contract_version:version}}]);assert.equal((await handler(req(body))).status,409);assert.equal(requests.length,2);}
  const{handler,requests}=fixture(authenticated({status:403}));assert.equal((await handler(req(body))).status,403);assert.equal(requests.length,3);assert(requests.every(r=>r.headers.apikey!==config.serviceKey));
+});
+for(const state of[null,'reserved','cancelled','superseded'])test('confirmed prepare rejection resolves prior status before releasing a retry: '+state,async()=>{
+ const status=state?{...intent,state}:null;const{handler,requests}=fixture(authenticated({status:400,body:{code:'23514'}},{body:status}));
+ // The generic fixture's nullish body defaults to {}; preserve an explicit JSON null here.
+ const actual=state?handler:createAccountHandler(config,async(url,options)=>{
+  requests.push({url,...options,json:options.body?JSON.parse(options.body):null});
+  if(url.endsWith('/auth/v1/user'))return Response.json({id:owner});if(url.endsWith('/my_hris_access'))return Response.json(access);
+  if(url.endsWith('/begin_staff_provision'))return Response.json({code:'23514'},{status:400});return Response.json(null);
+ });
+ const response=await actual(req(body));assert.equal(response.status,409);assert.equal((await response.json()).provision_state,state==='superseded'?'closed':state?'needs_review':'not_started');assert.equal(requests.length,4);assert(requests.every(r=>r.headers.apikey!==config.serviceKey));
+});
+test('temporary reservation error keeps uncertain identity without claiming a rejection',async()=>{
+ const{handler,requests}=fixture(authenticated({status:503}));const response=await handler(req(body));assert.equal(response.status,502);assert.equal((await response.json()).provision_state,undefined);assert.equal(requests.length,3);
+});
+
+test('malformed reservation status is uncertain rather than a confirmed missing reservation',async()=>{
+ const requests=[];const handler=createAccountHandler(config,async(url,options)=>{
+  requests.push({url,...options,json:options.body?JSON.parse(options.body):null});
+  if(url.endsWith('/auth/v1/user'))return Response.json({id:owner});if(url.endsWith('/my_hris_access'))return Response.json(access);
+  if(url.endsWith('/begin_staff_provision'))return Response.json({code:'23514'},{status:400});return new Response('invalid JSON',{status:200});
+ });
+ const response=await handler(req(body));assert.equal(response.status,502);assert.equal((await response.json()).provision_state,undefined);assert.equal(requests.length,4);assert(requests.every(r=>r.headers.apikey!==config.serviceKey));
+});
+test('an adopted existing sign-in identity is never recreated after deletion',async()=>{
+ const{handler,requests}=fixture(authenticated({body:{...intent,auth_preexisting:true}},{status:404}));const response=await handler(req(body));assert.equal(response.status,409);assert.equal((await response.json()).provision_state,'needs_review');assert.equal(requests.length,4);assert(requests.every(r=>!r.url.endsWith('/admin/users')));protectedCalls(requests);
 });

@@ -10,6 +10,7 @@ create table hris_private.staff_provision_intents(
  company_id uuid not null references public.companies(id)on delete restrict,
  actor_id uuid not null references auth.users(id)on delete restrict,
  user_id uuid not null,
+ auth_preexisting boolean not null default false,
  email text not null check(email=lower(btrim(email))and length(email)between 3 and 254),
  payload jsonb not null check(jsonb_typeof(payload)='object'and pg_column_size(payload)<=24576),
  supersedes uuid unique references hris_private.staff_provision_intents(id)on delete restrict,
@@ -44,8 +45,8 @@ create function hris_private.keep_staff_provision_source()returns trigger
 language plpgsql security invoker set search_path=''as $$
 begin
  if tg_op='DELETE'then raise exception 'Provisioning history is retained.'using errcode='23514';end if;
- if(row(new.id,new.company_id,new.actor_id,new.user_id,new.email,new.payload,new.supersedes,new.created_at)
-  is distinct from row(old.id,old.company_id,old.actor_id,old.user_id,old.email,old.payload,old.supersedes,old.created_at))
+ if(row(new.id,new.company_id,new.actor_id,new.user_id,new.auth_preexisting,new.email,new.payload,new.supersedes,new.created_at)
+  is distinct from row(old.id,old.company_id,old.actor_id,old.user_id,old.auth_preexisting,old.email,old.payload,old.supersedes,old.created_at))
   or old.state<>'reserved'or new.state not in('committed','superseded','cancelled')then
   raise exception 'Provisioning sources and closed decisions are immutable.'using errcode='23514';end if;
  return new;
@@ -102,7 +103,7 @@ begin
  mail:=lower(btrim(p_payload->>'email'));reason:=p_payload->>'reason';
  if length(mail)not between 3 and 254 or mail!~'^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$'
   or reason<>btrim(reason)or length(reason)not between 1 and 500 or reason~'[[:cntrl:]]'then
-  raise exception 'Enter a valid email and a reason of1–500characters.'using errcode='23514';end if;
+  raise exception 'Enter a valid email and a reason of 1–500 characters.'using errcode='23514';end if;
  if jsonb_typeof(p_payload->'roles')is distinct from'array'then raise exception 'Choose staff responsibilities.'using errcode='23514';end if;
  if jsonb_array_length(p_payload->'roles')not between 1 and 6 or exists(select 1 from jsonb_array_elements(p_payload->'roles')v where jsonb_typeof(v)<>'string')then
   raise exception 'Choose supported staff responsibilities.'using errcode='23514';end if;
@@ -150,12 +151,12 @@ end;$$;
 create function hris_private.staff_provision_reply(p_intent hris_private.staff_provision_intents)returns jsonb
 language sql immutable security invoker set search_path=''as $$
  select jsonb_build_object('schema_version',1,'id',p_intent.id,'company_id',p_intent.company_id,'actor_id',p_intent.actor_id,
-  'user_id',p_intent.user_id,'email',p_intent.email,'state',p_intent.state,'receipt',p_intent.receipt)
+  'user_id',p_intent.user_id,'auth_preexisting',p_intent.auth_preexisting,'email',p_intent.email,'state',p_intent.state,'receipt',p_intent.receipt)
 $$;
 create function hris_private.begin_staff_provision(p_request jsonb)returns jsonb
 language plpgsql security definer set search_path=''as $$
 declare m public.company_members;saved hris_private.staff_provision_intents;prior hris_private.staff_provision_intents;
- request_id uuid;parent uuid;target uuid;mail text;r text[];n integer;
+ request_id uuid;parent uuid;target uuid;mail text;r text[];n integer;preexisting boolean:=false;
 begin
  m:=hris_private.staff_provision_admin(true);
  if p_request is null or jsonb_typeof(p_request)<>'object'or pg_column_size(p_request)>24576 then
@@ -178,21 +179,23 @@ begin
   if prior.state not in('reserved','cancelled')or prior.email<>mail
    or prior.payload->'employee'->>'id'is distinct from(p_request->'employee'->>'id')then
    raise exception 'Keep the same provisional account and employee when reviewing a replacement attempt.'using errcode='23514';end if;
-  target:=prior.user_id;
+  target:=prior.user_id;preexisting:=prior.auth_preexisting;
   if prior.state='reserved'then
    update hris_private.staff_provision_intents set state='superseded',closed_at=clock_timestamp()where id=parent;
    insert into hris_private.staff_provision_events(intent_id,company_id,actor_id,kind,reason)
     values(parent,m.company_id,m.user_id,'superseded',p_request->>'reason');
   end if;
  else
-  if exists(select 1 from auth.users where lower(email)=mail)then
-   raise exception 'This email already has an account. Recover its pending attempt or edit its existing employee.'using errcode='23505';end if;
-  target:=gen_random_uuid();
+  select id into target from auth.users where lower(email)=mail;
+  preexisting:=target is not null;
+  if target is null then target:=gen_random_uuid();end if;
  end if;
+ if exists(select 1 from public.company_members where user_id=target)then
+  raise exception 'This sign-in identity already has an employee. Edit its existing access.'using errcode='23505';end if;
  select count(*)into n from hris_private.staff_provision_intents where company_id=m.company_id and actor_id=m.user_id and state='reserved';
  if n>=30 then raise exception 'Review or close earlier pending account attempts before creating another.'using errcode='54000';end if;
- insert into hris_private.staff_provision_intents(id,company_id,actor_id,user_id,email,payload,supersedes)
-  values(request_id,m.company_id,m.user_id,target,mail,p_request,parent)returning *into saved;
+ insert into hris_private.staff_provision_intents(id,company_id,actor_id,user_id,auth_preexisting,email,payload,supersedes)
+  values(request_id,m.company_id,m.user_id,target,preexisting,mail,p_request,parent)returning *into saved;
  insert into hris_private.staff_provision_events(intent_id,company_id,actor_id,kind,reason)
   values(request_id,m.company_id,m.user_id,'reserved',p_request->>'reason');
  return hris_private.staff_provision_reply(saved);
@@ -238,13 +241,22 @@ begin
   into entries from hris_private.staff_provision_intents i where company_id=m.company_id and actor_id=m.user_id and state='reserved';
  return jsonb_build_object('schema_version',1,'company_id',m.company_id,'actor_id',m.user_id,'entry_count',n,'entries',entries);
 end;$$;
+create function hris_private.staff_provision_status(p_id uuid)returns jsonb
+language plpgsql security definer set search_path=''as $$
+declare m public.company_members;saved hris_private.staff_provision_intents;
+begin
+ m:=hris_private.staff_provision_admin(false);
+ select *into saved from hris_private.staff_provision_intents where id=p_id and company_id=m.company_id and actor_id=m.user_id;
+ if saved.id is null then return null;end if;
+ return hris_private.staff_provision_reply(saved);
+end;$$;
 create function hris_private.cancel_staff_provision(p_id uuid,p_reason text)returns jsonb
 language plpgsql security definer set search_path=''as $$
 declare m public.company_members;saved hris_private.staff_provision_intents;
 begin
  m:=hris_private.staff_provision_admin(false);
  if p_reason is null or p_reason<>btrim(p_reason)or length(p_reason)not between 1 and 500 or p_reason~'[[:cntrl:]]'then
-  raise exception 'Enter a cancellation reason of1–500characters.'using errcode='23514';end if;
+  raise exception 'Enter a cancellation reason of 1–500 characters.'using errcode='23514';end if;
  select *into saved from hris_private.staff_provision_intents where id=p_id for update;
  if saved.id is null or saved.company_id<>m.company_id or saved.actor_id<>m.user_id then raise exception 'Choose your own pending account attempt.'using errcode='42501';end if;
  if saved.state='cancelled'and exists(select 1 from hris_private.staff_provision_events where intent_id=p_id and kind='cancelled'and reason=p_reason)then
@@ -259,12 +271,13 @@ create function public.staff_employee_source(p_employee uuid)returns jsonb langu
 create function public.begin_staff_provision(p_request jsonb)returns jsonb language sql security invoker set search_path=''as $$select hris_private.begin_staff_provision(p_request)$$;
 create function public.commit_staff_provision(p_request jsonb)returns jsonb language sql security invoker set search_path=''as $$select hris_private.commit_staff_provision(p_request)$$;
 create function public.pending_staff_provisions()returns jsonb language sql security invoker set search_path=''as $$select hris_private.pending_staff_provisions()$$;
+create function public.staff_provision_status(p_id uuid)returns jsonb language sql security invoker set search_path=''as $$select hris_private.staff_provision_status(p_id)$$;
 create function public.cancel_staff_provision(p_id uuid,p_reason text)returns jsonb language sql security invoker set search_path=''as $$select hris_private.cancel_staff_provision(p_id,p_reason)$$;
 revoke all on function hris_private.keep_staff_provision_source(),hris_private.staff_provision_admin(boolean),hris_private.staff_person_envelope(uuid,uuid),
  hris_private.check_staff_provision_payload(uuid,jsonb,boolean),hris_private.staff_provision_reply(hris_private.staff_provision_intents)from public,anon,authenticated,service_role;
-revoke all on function hris_private.staff_employee_source(uuid),hris_private.begin_staff_provision(jsonb),hris_private.commit_staff_provision(jsonb),hris_private.pending_staff_provisions(),hris_private.cancel_staff_provision(uuid,text),
- public.staff_employee_source(uuid),public.begin_staff_provision(jsonb),public.commit_staff_provision(jsonb),public.pending_staff_provisions(),public.cancel_staff_provision(uuid,text)from public,anon,authenticated,service_role;
-grant execute on function hris_private.staff_employee_source(uuid),hris_private.begin_staff_provision(jsonb),hris_private.commit_staff_provision(jsonb),hris_private.pending_staff_provisions(),hris_private.cancel_staff_provision(uuid,text),
- public.staff_employee_source(uuid),public.begin_staff_provision(jsonb),public.commit_staff_provision(jsonb),public.pending_staff_provisions(),public.cancel_staff_provision(uuid,text)to authenticated;
+revoke all on function hris_private.staff_employee_source(uuid),hris_private.begin_staff_provision(jsonb),hris_private.commit_staff_provision(jsonb),hris_private.pending_staff_provisions(),hris_private.cancel_staff_provision(uuid,text),hris_private.staff_provision_status(uuid),
+ public.staff_employee_source(uuid),public.begin_staff_provision(jsonb),public.commit_staff_provision(jsonb),public.pending_staff_provisions(),public.cancel_staff_provision(uuid,text),public.staff_provision_status(uuid)from public,anon,authenticated,service_role;
+grant execute on function hris_private.staff_employee_source(uuid),hris_private.begin_staff_provision(jsonb),hris_private.commit_staff_provision(jsonb),hris_private.pending_staff_provisions(),hris_private.cancel_staff_provision(uuid,text),hris_private.staff_provision_status(uuid),
+ public.staff_employee_source(uuid),public.begin_staff_provision(jsonb),public.commit_staff_provision(jsonb),public.pending_staff_provisions(),public.cancel_staff_provision(uuid,text),public.staff_provision_status(uuid)to authenticated;
 comment on table hris_private.staff_provision_intents is 'Credential-free actor-bound Auth reservations. An unconfirmed Auth identity has no employee access until atomic commit; uncertain delivery never authorizes deleting it.';
 commit;

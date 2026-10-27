@@ -15,8 +15,8 @@ const validReceipt=(r,request,intent,access)=>{
  uuid(r.employee_id)&&(request.employee.id==null||r.employee_id===request.employee.id)&&r.active===request.active&&r.revision===1&&
  JSON.stringify(r.roles)===JSON.stringify(expected)&&r.base_role===compatibleBase(expected)&&typeof r.member_updated_at==='string'&&Number.isFinite(Date.parse(r.member_updated_at));
 };
-const validIntent=(i,request,access)=>only(i,['schema_version','id','company_id','actor_id','user_id','email','state','receipt'])&&i.schema_version===1&&
- i.id===request.id&&i.company_id===access.company_id&&i.actor_id===access.user_id&&uuid(i.user_id)&&i.email===request.email.trim().toLowerCase()&&
+const validIntent=(i,request,access)=>only(i,['schema_version','id','company_id','actor_id','user_id','auth_preexisting','email','state','receipt'])&&i.schema_version===1&&
+ i.id===request.id&&i.company_id===access.company_id&&i.actor_id===access.user_id&&uuid(i.user_id)&&i.user_id!==access.user_id&&typeof i.auth_preexisting==='boolean'&&i.email===request.email.trim().toLowerCase()&&
  ['reserved','committed'].includes(i.state)&&(i.state!=='committed'||validReceipt(i.receipt,request,i,access));
 const validUser=(user,intent)=>user&&user.id===intent.user_id&&typeof user.email==='string'&&user.email.toLowerCase()===intent.email;
 const json=async response=>response.json().catch(()=>null);
@@ -29,13 +29,27 @@ export async function provisionStaff({body,access,call,answer}){
  !request.employee||typeof request.employee!=='object'||Array.isArray(request.employee)||request.employee.company_id!==access.company_id||
  typeof request.employee.full_name!=='string'||!request.contacts||request.contacts.company_id!==access.company_id||
  (body.password!==undefined&&(typeof body.password!=='string'||[...body.password].length<12||[...body.password].length>128))){
-  return answer(400,'Enter valid reviewed staff, employment and contact details. Use a12–128character initial password when one is needed.');
+  return answer(400,'Enter valid reviewed staff, employment and contact details. Use a 12–128 character initial password when one is needed.');
  }
  if(access.staff_contract_version!==1||!uuid(access.company_id))return answer(409,'Install the verified Account Manager contract before creating staff.');
  try{
   // The caller, never the service key, reserves and commits this immutable request.
   const reserved=await call('/rest/v1/rpc/begin_staff_provision','POST',{p_request:request});
-  if(!reserved.ok)return answer([401,403].includes(reserved.status)?403:409,'The account attempt could not be reserved. Refresh and review the original request.');
+  if(!reserved.ok){
+   if([401,403].includes(reserved.status))return answer(403,'Your Administrator access could not reserve this account.');
+   const failure=await json(reserved);
+   if(['23514','23505','54000'].includes(failure?.code)){
+    const checked=await call('/rest/v1/rpc/staff_provision_status','POST',{p_id:request.id});
+    if(!checked.ok)return answer(502,'The reservation outcome could not be checked. Keep the exact retry.');
+    let status;try{status=await checked.json();}catch{return answer(502,'The reservation response could not be verified. Keep the exact retry.');}
+    if(status===null)return answer(409,'No reservation was saved for this attempt. Refresh and review the employee details.',{provision_state:'not_started',intent_id:request.id});
+    if(status?.state==='committed'&&validIntent(status,request,access))return answer(200,'Employee and staff access were already saved.',{receipt:status.receipt,confirmation_sent:false,replayed:true});
+    const identity={...status,state:'reserved',receipt:null};
+    if(!validIntent(identity,request,access)||!['reserved','cancelled','superseded'].includes(status?.state))return answer(502,'The prior reservation could not be verified. Keep the exact retry.');
+    return answer(409,'Review the saved attempt and current employee details before another submission.',{provision_state:status.state==='superseded'?'closed':'needs_review',intent_id:request.id});
+   }
+   return answer(502,'Reservation delivery is uncertain. Retry this exact attempt to recover its result.');
+  }
   const intent=await json(reserved);
   if(!validIntent(intent,request,access))return answer(502,'The reserved account response could not be verified. Retain this exact request.');
   if(intent.state==='committed')return answer(200,'Employee and staff access were already saved.',{receipt:intent.receipt,confirmation_sent:false,replayed:true});
@@ -45,6 +59,7 @@ export async function provisionStaff({body,access,call,answer}){
   if(lookup.ok){user=await json(lookup);if(!validUser(user,intent))return answer(502,'The reserved Auth identity does not match. Retain this request for review.');}
   else if(lookup.status!==404)return answer(503,'The reserved Auth identity could not be checked. Retry the same request later.');
   else{
+   if(intent.auth_preexisting)return answer(409,'The existing sign-in identity is no longer available. Review or close this attempt; its old identity will not be recreated.',{provision_state:'needs_review',intent_id:request.id});
    if(body.password===undefined)return answer(400,'An initial password is needed because the reserved Auth identity has not been created.');
    const created=await call('/auth/v1/admin/users','POST',{id:intent.user_id,email:intent.email,password:body.password,email_confirm:false,
     user_metadata:{hris_profile:{full_name:request.employee.full_name}}},true);
