@@ -1,5 +1,11 @@
 # Employee portal browser review —27October2026
 
+## Follow-up status
+
+The later authorized [portal0.1.7 delivery](PORTAL-0.1.7-DELIVERY.md) fixes both
+mobile findings below and completes populated browser/CSV/PDF coverage. The
+original0.1.6 review and its non-passing result remain historical evidence.
+
 Reviewed the verified private **portal0.1.6** package using bundled Playwright and
 the already installed Microsoft Edge156.0.4314.42 in a separate ephemeral
 headless browser. These are actual browser renders/interactions, unlike the

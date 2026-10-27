@@ -1,13 +1,17 @@
 # Remaining HRIS roadmap — agreed order
 
-**27October2026 current boundary:** Desktop0.1.60 is installed and privately
-published, including annual issued-pay details and separate CSV/Excel. The
-remaining independent government-format investigation reached the concrete
-[input/acceptance boundaries](GOVERNMENT-REMAINING-INPUTS.md). Manual BIR checks
-remain deferred. Kirk delegated the browser review27October; it ran and found
-two mobile UI issues, recorded below. The broader continuation automation stays
-paused; this browser-check request did not reactivate it. No completed delivery or
-unchanged failed check should repeat. This supersedes older active-queue notes.
+**27October2026 current boundary:** Portal0.1.7 is delivered and running locally
+at localhost:3032, including the mobile navigation/hover and payslip-print fixes.
+The scoped browser milestone below is crossed out.48Rust/15JS,22fictional browser
+groups,43final-binary hosted checks, independent CSV/PDF and exact package/delivery
+hashes pass. The old3031portal retains its drafts/sessions. See
+[the delivery/testing record](PORTAL-0.1.7-DELIVERY.md).
+Kirk's latest continuation resumed the remaining free work and the same scheduler;
+that unblocked portal work is now complete. The remaining government work reached
+the concrete [input/acceptance boundaries](GOVERNMENT-REMAINING-INPUTS.md), while
+external targets/devices/paid scope remain deferred. Automatic continuation is
+paused at that required-input boundary. Desktop0.1.60 stays installed/private;
+do not repeat completed releases, SQL, searches or failed unchanged tooling.
 
 **27October2026 delivered:** Desktop0.1.59 is installed and privately published.
 Its literal BIR declaration/source review is crossed out below; the government
@@ -100,11 +104,11 @@ release/delivery requirements. Record partial progress below its item; retain
 completed wording and evidence links. Do not silently promote a placeholder or
 unconfigured external connection to a completed integration.
 
-1. **Finish the employee portal — local only.** Own attendance-correction and
+1. ~~**Finish the employee portal — local only.** Own attendance-correction and
    overtime requests; notifications; company/profile pictures; password/email
    controls. Existing own records, contacts, attendance, breaks, leave and monthly
-   payslips remain supported. Browser review ran27October with two mobile issues
-   still open; see [the findings](PORTAL-BROWSER-20261027-REVIEW.md). No public
+   payslips remain supported.~~ Browser verification/fixes are delivered in local
+   portal0.1.7; see [verification and delivery](PORTAL-0.1.7-DELIVERY.md). No public
    hosting/LAN/tunnel. Physical-phone/email-confirmation verification is separately
    deferred as above, not a prerequisite for browser-only completion.
 2. **Government payroll exports and reconciliation.** Prepare reviewed BIR, SSS,

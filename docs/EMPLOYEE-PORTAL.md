@@ -1,5 +1,16 @@
 # Separate employee portal
 
+**Current 27October2026: local portal0.1.7 is verified and running at
+http://localhost:3032.** The five mobile tabs fit320px and selected hover stays
+readable. Printed payslips retain their pay month and a white page in both themes.
+48Rust/15JS,22fictional browser groups,43final-binary hosted checks and independent
+CSV/PDF checks pass. The older0.1.6server on127.0.0.1:3031 retains its possible
+drafts/sessions. Save there before switching. The browser-only milestone is
+complete; physical-phone/email confirmation/OS printer-dialog checks remain
+separate. See [0.1.7 delivery and testing](PORTAL-0.1.7-DELIVERY.md).
+The dated review/development evidence below is historical and does not override
+this current result. No public/LAN/tunnel exposure or paid service is enabled.
+
 **27October2026 browser review:** actual Edge/Playwright checks now cover desktop,
 390px/320px widths, dark mode, normal synthetic sign-in, profile/contact/photo,
 session controls and sign-out. Two mobile issues remain:320px navigation clips
