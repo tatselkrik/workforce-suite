@@ -1,5 +1,15 @@
 # Remaining HRIS roadmap — agreed order
 
+**27October2026 input boundary, after062delivery:** the local BIR builder is
+installed/private-published and delivered. The next bounded official-source review
+confirmed the current EPRS4.9employer-access route but found no upload schema;
+the paper RF1does not replace it. Current blank SSS AMS-CCL, EPRS and Pag-IBIG
+MCRF templates were requested. Remaining agency adapters depend on those inputs;
+the SAME scheduler is paused under the existing required-handoff rule. The
+authorized free scope remains queued, not cancelled. No official BIR program
+was run, no source/agency acceptance invented, and deferred external/device
+boundaries remain. See[remaining inputs](GOVERNMENT-REMAINING-INPUTS.md).
+
 **Latest human resumption27October2026, after061:** Kirk requested finishing the
 remaining work without subscriptions/hardware, continuing to the actual usage
 limit and again after the reported five-hour reset. The SAME scheduler is ACTIVE

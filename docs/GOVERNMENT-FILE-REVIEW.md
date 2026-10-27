@@ -101,6 +101,30 @@ again returned a browser challenge on26October. Do not guess column order or
 bypass the challenge. Native XLSX is delivered in050; that does not establish
 MCRF template compatibility.
 
+## Current EPRS route review —27October2026
+
+The official[2026-0050 advisory](https://www.philhealth.gov.ph/advisories/2026/PA2026-0050_v1.pdf),
+signed17September2026, makes EPRS4.9.0 additional-payment features available from
+1October2026. Employer access needs an approved request through the servicing
+PhilHealth office. Covered additional-employee and salary-differential payments
+use EPRS online channels with an SPA; the advisory excludes over-the-counter
+payments for those categories. Do not extend that statement to unrelated
+historical payments or infer that this company already has module approval.
+
+The current employer procedures still require EPRS reporting. The2014RF1paper
+form remains linked from Downloads, but does not define the current CSV schema.
+The new advisory is route/access evidence, not an electronic file contract.
+Neither proves accepted upload columns/encoding. No obsolete paper adapter was
+added as a substitute. Ordinary searches for official AMS-CCL text contracts and
+MCRF workbooks still yielded instructions, not the actual current templates.
+
+Read-only reference/hash evidence is in ignored
+`work/government-reference-20261027/philhealth-eprs49-source.json`.
+The prepared BIR baseline folders still contain no reports, and no government
+application is running. A separate read-only UI inventory entry point was tried;
+it fails the same kernel-assets OS3initialization. Do not keep retrying it or run
+government software under generic continuation. All completed062delivery stands.
+
 ## Next inputs and completion boundary
 
 27October ordinary public retrieval: the official

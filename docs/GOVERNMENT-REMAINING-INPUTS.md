@@ -1,5 +1,12 @@
 # Remaining government inputs after0.1.62
 
+**Required input boundary after the27October review:**062delivery is complete.
+Current blank agency templates/specifications were requested; the ignored local
+folder`work/agency-reference-inputs/` is prepared. The SAME scheduler is paused
+while those inputs block the remaining adapters. This is not a subscription or
+hardware requirement, and no SQL confirmation is pending. Continue any newly
+unblocked authorized free work when actionable inputs arrive.
+
 The local explicit-declaration BIR file builder is installed/private-published
 in062; see [delivery](BIR-0.1.62-DELIVERY.md). Its configured-employer completeness
 guard works; current company BIR facts remain incomplete and were not invented.
@@ -35,6 +42,10 @@ credentials in chat, uploading employee data or filing a return.
    identify the service, but do not establish exact columns/encoding. Current
    template or sanitized agency-accepted example evidence is needed; old
    salary-bracket screens are not current contribution rules.
+   The[2026EPRS4.9.0 advisory](https://www.philhealth.gov.ph/advisories/2026/PA2026-0050_v1.pdf)
+   confirms additional-payment access requires approved employer requests, but
+   supplies no upload-column contract. Its current online route must not be
+   replaced with the old paper form or assumed enabled for this company.
 4. **Pag-IBIG actual MCRF workbook.** Indexed text of the official
    [encoding instructions](https://www.pagibigfund.gov.ph/document/pdf/dlforms/providentrelated/Instructions%20in%20Encoding%20of%20MCRF.pdf)
    describes member/program/period/share fields and an`.xls` naming convention.
