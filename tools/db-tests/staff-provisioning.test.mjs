@@ -28,10 +28,10 @@ try{
  create schema storage;create table storage.buckets(id text primary key,name text,public boolean default false,file_size_limit bigint,allowed_mime_types text[]);
  create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text references storage.buckets(id),name text,owner_id text,metadata jsonb,unique(bucket_id,name));
  alter table storage.objects enable row level security;grant usage on schema storage to authenticated,anon;grant select,insert,update,delete on storage.objects to authenticated,anon;`);
- const folder=new URL('../../supabase/migrations/',import.meta.url);
+ const folder=new URL('../../supabase/migrations/',import.meta.url);let migrationCount=0;
  for(const f of(await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()){
   try{await db.exec(await readFile(new URL(f,folder),'utf8'));}catch(e){throw Error('Migration '+f+': '+e.message,{cause:e});}
-  await db.query('insert into supabase_migrations.schema_migrations values($1)',[f.split('_')[0]]);
+  await db.query('insert into supabase_migrations.schema_migrations values($1)',[f.split('_')[0]]);migrationCount++;
  }
  for(const u of[owner,otherAdmin,hr,manager,employee])await db.query('insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data)values($1,$2,now(),$3)',[u,'fixture-'+u.slice(-3)+'@example.invalid',JSON.stringify({full_name:'Fictional '+u.slice(-3)})]);
  company=(await db.query("insert into public.companies(name,owner_id)values('Fictional provisioning company',$1)returning id",[owner])).rows[0].id;
@@ -93,5 +93,5 @@ try{
  for(const table of['staff_provision_intents','staff_provision_events']){await deny('update hris_private.'+table+" set created_at=now()");await deny('delete from hris_private.'+table);}
  await session(owner);const publicBeforeCap=await facts();for(let i=(await pending()).entry_count;i<30;i++)await begin(make());
  await deny('select public.begin_staff_provision($1::jsonb)',[JSON.stringify(make())],['54000']);eq((await pending()).entry_count,30,'Pending quota is explicit without history truncation');eq(await facts(),publicBeforeCap,'Reservation quota rehearsals preserve all business data');
- console.log('Passed '+checks+' staff provisioning assertions against75actual migrations. Auth creation is fictional; specialist runtime enabled only inside this fixture.');
+ console.log('Passed '+checks+' staff provisioning assertions against'+migrationCount+'actual migrations. Auth creation is fictional; specialist runtime enabled only inside this fixture.');
 }catch(error){console.error(JSON.stringify({checks,message:error.message,code:error.code,where:error.where,frame:error.stack?.split('\n').filter(s=>s.includes('staff-provisioning.test.mjs')).slice(-3)}));process.exitCode=1;}finally{await db.close();}

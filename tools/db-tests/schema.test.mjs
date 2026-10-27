@@ -90,6 +90,7 @@ try {
   const staffRoleMigrations=[];
   const staffTransactionMigrations=[];
   const staffProvisionMigrations=[];
+  const staffCapabilityMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -103,6 +104,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_staff_permission_capabilities.sql')){staffCapabilityMigrations.push(filename);continue;}
     if(filename.endsWith('_staff_account_provisioning.sql')){staffProvisionMigrations.push(filename);continue;}
     if(filename.endsWith('_staff_role_transactions.sql')){staffTransactionMigrations.push(filename);continue;}
     if(filename.endsWith('_staff_role_foundation.sql')){staffRoleMigrations.push(filename);continue;}
@@ -593,6 +595,15 @@ try {
   for(const f of provisionFunctions)eq((await db.query('select md5(pg_get_functiondef($1::regprocedure))digest',[f.identity])).rows[0].digest,f.digest,'Provisioning migration preserves prior function '+f.identity);
   await session(uidA);eq((await db.query('select public.pending_staff_provisions()p')).rows[0].p.entry_count,0,'Additive provisioning has no synthetic hosted-style intents');
   eq((await db.query('select public.staff_role_context()c')).rows[0].c.runtime_ready,false,'Provisioning migration keeps specialist rollout disabled');
+  await db.exec('reset role');
+  const capTables=(await db.query("select tablename from pg_tables where schemaname='public'order by tablename")).rows.map(r=>r.tablename);
+  const capBefore={};for(const t of capTables)capBefore[t]=(await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows;
+  const capFunctions=(await db.query("select p.oid::regprocedure::text identity,md5(pg_get_functiondef(p.oid))digest from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in('public','hris_private')and p.prokind='f'order by 1")).rows;
+  for(const filename of staffCapabilityMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
+  for(const t of capTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,capBefore[t],'Capability kernel preserves '+t);
+  for(const f of capFunctions)eq((await db.query('select md5(pg_get_functiondef($1::regprocedure))digest',[f.identity])).rows[0].digest,f.digest,'Capability kernel preserves existing function '+f.identity);
+  await session(uidA);eq((await db.query("select hris_private.has_staff_capability($1,'account_administration')c",[companyA.id])).rows[0].c,true,'Existing owner retains capability');
+  eq((await db.query('select public.staff_role_context()c')).rows[0].c.runtime_ready,false,'Capability kernel does not activate incomplete permission paths');
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();
