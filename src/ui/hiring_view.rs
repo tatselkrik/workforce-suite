@@ -281,7 +281,7 @@ impl HrisApp {
                 if ui.button("Onboarding").clicked() {
                     self.onboarding_state.active = true;
                 }
-                ui.label(RichText::new("Private to HR and Administrators").color(muted(ui)));
+                ui.label(RichText::new("Private to authorized recruiting staff").color(muted(ui)));
             });
             let old = (
                 self.hiring_state.search.clone(),
@@ -322,7 +322,7 @@ impl HrisApp {
             {
                 self.hiring_state.page = 0;
             }
-            ui.label(RichText::new("Applicants become employees only through a future hiring workflow. Recording an application creates no employee record or sign-in account.").small().color(muted(ui)));
+            ui.label(RichText::new("Recording an application creates no employee or sign-in account. Convert an accepted offer to hire through Onboarding.").small().color(muted(ui)));
         });
         ui.add_space(12.0);
         let needle = self.hiring_state.search.trim().to_lowercase();

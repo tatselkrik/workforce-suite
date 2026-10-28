@@ -724,6 +724,8 @@ fn report_export_reloads_scoped_data_and_rechecks_access_before_creating_csv() {
                 || r.line.starts_with("POST /rest/v1/rpc/leave_dated_context ")
                 || r.line
                     .starts_with("POST /rest/v1/rpc/approval_delegation_context ")
+                || r.line
+                    .starts_with("POST /rest/v1/rpc/desktop_workspace_context ")
                 || r.line.starts_with("POST /rest/v1/rpc/exit_readiness_list "))
     );
 }
@@ -1171,6 +1173,11 @@ fn baseline(company: &Company) -> Vec<Reply> {
             "POST /rest/v1/rpc/approval_delegation_context ",
             200,
             json!({"fixture_empty":true,"as_of":company.today()}),
+        ),
+        reply(
+            "POST /rest/v1/rpc/desktop_workspace_context ",
+            200,
+            json!({"schema_version":1,"company_id":company.id,"user_id":company.owner_id,"revision":0,"enabled":["organization","development","hiring","exit_clearance","payroll","reports"],"updated_at":null}),
         ),
         reply("GET /auth/v1/user ", 200, user(company)),
         reply(
@@ -2055,6 +2062,15 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
             .find(|r| {
                 r.prefix
                     .starts_with("POST /rest/v1/rpc/approval_delegation_context ")
+            })
+            .unwrap(),
+    );
+    replies.push(
+        baseline(&revised)
+            .into_iter()
+            .find(|r| {
+                r.prefix
+                    .starts_with("POST /rest/v1/rpc/desktop_workspace_context ")
             })
             .unwrap(),
     );

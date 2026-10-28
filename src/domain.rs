@@ -322,6 +322,7 @@ pub enum Mode {
 
 #[derive(Clone, Debug)]
 pub struct Snapshot {
+    pub workspaces: crate::workspaces::Context,
     pub approvals: Option<crate::approvals::Context>,
     pub payroll: crate::payroll::Setup,
     pub learning: crate::learning::Setup,
@@ -362,6 +363,7 @@ pub struct Snapshot {
 impl Snapshot {
     pub fn signed_out() -> Self {
         Self {
+            workspaces: Default::default(),
             approvals: None,
             recruiting: Default::default(),
             onboarding: Default::default(),
@@ -619,6 +621,11 @@ impl DemoStore {
         .collect();
         let mut store = Self {
             data: Snapshot {
+                workspaces: crate::workspaces::Context {
+                    schema_version: 1,
+                    company_id: company.id,
+                    ..Default::default()
+                },
                 approvals: None,
                 recruiting: Default::default(),
                 onboarding: Default::default(),

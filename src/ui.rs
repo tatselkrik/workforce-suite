@@ -1,3 +1,4 @@
+mod workspace_view;
 use crate::{
     access::{AccountDraft, AdminAction, Role},
     account::{self, AccountAction, AccountProfile, DisplayPreferences, PersonalDetails},
@@ -68,60 +69,9 @@ mod thirteenth_view;
 mod wage_view;
 mod workforce_view;
 
-#[derive(Clone, Copy, Default, PartialEq, Eq)]
-enum EmployeeView {
-    #[default]
-    Directory,
-    Organization,
-    Development,
-}
+use crate::workspaces::Section as EmployeeView;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum Page {
-    Payroll,
-    Overview,
-    Employees,
-    Attendance,
-    Leave,
-    Reports,
-    Hiring,
-    Exits,
-    Accounts,
-    Settings,
-    Profile,
-    Notifications,
-}
-
-impl Page {
-    const ALL: [Self; 10] = [
-        Self::Overview,
-        Self::Employees,
-        Self::Attendance,
-        Self::Leave,
-        Self::Payroll,
-        Self::Reports,
-        Self::Hiring,
-        Self::Exits,
-        Self::Accounts,
-        Self::Settings,
-    ];
-    fn title(self) -> &'static str {
-        match self {
-            Self::Overview => "Overview",
-            Self::Employees => "Employees",
-            Self::Attendance => "Attendance",
-            Self::Leave => "Leave",
-            Self::Payroll => "Payroll",
-            Self::Reports => "Reports",
-            Self::Hiring => "Hiring",
-            Self::Exits => "Exit & clearance",
-            Self::Accounts => "Account Manager",
-            Self::Settings => "Settings",
-            Self::Profile => "Profile",
-            Self::Notifications => "Notifications",
-        }
-    }
-}
+use crate::workspaces::{self, Module, Page};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ProfileSection {
@@ -200,6 +150,9 @@ pub struct HrisApp {
     correction_history: Option<Uuid>,
     close_on_success: bool,
     company_draft: Company,
+    workspace_draft: Option<crate::workspaces::Draft>,
+    sidebar_last_page: Option<Page>,
+    sidebar_last_height: i32,
     connection: Option<ConnectionConfig>,
     deployment_error: Option<String>,
     login_email: String,
@@ -383,6 +336,9 @@ impl HrisApp {
             attendance_date: data.company.today(),
             calendar_month: month_start(data.company.today()),
             company_draft: data.company.clone(),
+            workspace_draft: None,
+            sidebar_last_page: None,
+            sidebar_last_height: -1,
             data,
             page: Page::Overview,
             commands,
@@ -1076,6 +1032,8 @@ impl HrisApp {
                 app.deployment_error = None;
             }
         }
+        #[cfg(feature = "qa-screenshot")]
+        app.prepare_workspace_preview();
         // Keep the same constructor in production and screenshot builds.
         app.check_in_employee = app
             .data
@@ -1122,6 +1080,8 @@ impl HrisApp {
             self.busy = false;
             match update.result {
                 Ok(data) => {
+                    let newly_signed_in =
+                        self.data.mode == Mode::SignedOut && data.mode != Mode::SignedOut;
                     if self
                         .leave_state
                         .saving_revision
@@ -1131,6 +1091,8 @@ impl HrisApp {
                         self.leave_state.saving_revision = None;
                     }
                     if self.data.access != data.access {
+                        self.workspace_draft = None;
+                        self.sidebar_last_page = None;
                         self.staff_roles_state = Default::default();
                         self.staff_provision_state = Default::default();
                         self.organization = organization_view::State::default();
@@ -1329,7 +1291,27 @@ impl HrisApp {
                         && learning_saved
                         && career_saved
                         && payroll_saved;
+                    if self.data.workspaces.enabled != data.workspaces.enabled {
+                        self.sidebar_last_page = None;
+                    }
                     self.data = data;
+                    if newly_signed_in {
+                        self.page = workspaces::landing(&self.data);
+                        if workspaces::prefers_development(&self.data) {
+                            self.employee_view = EmployeeView::Development;
+                        }
+                    }
+                    if let Some(receipt) = update.workspace_receipt {
+                        if let Some(draft) = self.workspace_draft.as_ref() {
+                            match draft.accept(&receipt) {
+                                Ok(()) => self.workspace_draft = None,
+                                Err(error) => self.notice = Some((error.to_string(), true)),
+                            }
+                        }
+                    } else if self.workspace_draft.as_ref().is_some_and(|d| !d.changed()) {
+                        self.workspace_draft = None;
+                    }
+
                     let mut staff_update_error = None;
                     if let Some(roles) = update.staff_roles {
                         if let Err(error) = self.staff_roles_state.accept(&self.data.access, roles)
@@ -1423,6 +1405,11 @@ impl HrisApp {
                         self.document_form = None;
                     }
                     if let Some(error) = staff_update_error {
+                        if update.workspace_rejected {
+                            if let Some(draft) = self.workspace_draft.as_mut() {
+                                draft.pending = None;
+                            }
+                        }
                         self.notice = Some((error, true));
                     } else if !hiring_saved {
                         self.notice = Some(("The saved record has changed. Your draft is preserved; reload the saved record before continuing.".into(), true));
@@ -1522,6 +1509,26 @@ impl HrisApp {
     }
 
     fn navigate(&mut self, page: Page, ctx: &egui::Context) {
+        if self.data.mode != Mode::SignedOut
+            && !(page == Page::Employees && self.employee_form.is_some())
+            && !workspaces::visible(page, &self.data)
+        {
+            self.notice = Some((
+                "This section is hidden or outside your current workspace.".into(),
+                false,
+            ));
+            return;
+        }
+        if page == Page::Employees
+            && self.employee_form.is_none()
+            && workspaces::prefers_development(&self.data)
+        {
+            self.employee_view = EmployeeView::Development;
+        }
+        if page == Page::Employees && self.employee_form.is_none() {
+            self.employee_view =
+                workspaces::reconcile(page, self.employee_view, &self.data, false).1;
+        }
         if self.page != page {
             self.clear_profile_secrets(ctx);
             self.session_confirmation = None;
@@ -1848,51 +1855,93 @@ impl HrisApp {
         });
         ui.add_space(if compact { 14.0 } else { 28.0 });
         let nav_height = (ui.available_height() - 112.0).max(70.0);
-        let page_count = Page::ALL
-            .iter()
-            .filter(|p| **p != Page::Accounts || self.data.access.role.manages_accounts())
+        let entries = workspaces::entries(&self.data);
+        let follow_selection = self.sidebar_last_page != Some(self.page)
+            || self.sidebar_last_height != nav_height.round() as i32;
+        self.sidebar_last_height = nav_height.round() as i32;
+        self.sidebar_last_page = Some(self.page);
+        let group_count = entries
+            .windows(2)
+            .filter(|w| w[0].group != w[1].group)
             .count() as f32;
-        let nav_gap = if compact {
-            4.0
-        } else {
-            ui.spacing().item_spacing.y
-        };
+        let rows = entries.len().max(1) as f32;
         let button_height =
-            ((nav_height - nav_gap * (page_count - 1.0)) / page_count).clamp(28.0, 42.0);
-        egui::ScrollArea::vertical()
+            ((nav_height - group_count * 25.0 - (rows - 1.0) * if compact { 3.0 } else { 5.0 })
+                / rows)
+                .clamp(26.0, 38.0);
+        let selected_index = entries
+            .iter()
+            .position(|e| e.page == self.page)
+            .unwrap_or(0);
+        let preceding_groups = entries
+            .iter()
+            .take(selected_index + 1)
+            .filter_map(|e| e.group)
+            .collect::<Vec<_>>()
+            .windows(2)
+            .filter(|w| w[0] != w[1])
+            .count()
+            + usize::from(
+                entries
+                    .iter()
+                    .take(selected_index + 1)
+                    .any(|e| e.group.is_some()),
+            );
+        let selected_offset = (selected_index as f32
+            * (button_height + if compact { 3.0 } else { 5.0 })
+            + preceding_groups as f32 * 30.0
+            - nav_height * 0.4)
+            .max(0.0);
+        let navigation_scroll = egui::ScrollArea::vertical()
             .id_salt("sidebar_navigation")
-            .max_height(nav_height)
-            .show(ui, |ui| {
-                if compact {
-                    ui.spacing_mut().item_spacing.y = 4.0;
-                    ui.spacing_mut().button_padding.y = 3.0;
-                    ui.spacing_mut().interact_size.y = 28.0;
+            .max_height(nav_height);
+        let navigation_scroll = if follow_selection {
+            navigation_scroll.vertical_scroll_offset(selected_offset)
+        } else {
+            navigation_scroll
+        };
+        navigation_scroll.show(ui, |ui| {
+            ui.spacing_mut().item_spacing.y = if compact { 3.0 } else { 5.0 };
+            let mut group = None;
+            for entry in entries {
+                if entry.group != group {
+                    group = entry.group;
+                    if let Some(group) = group {
+                        ui.add_space(if compact { 6.0 } else { 10.0 });
+                        ui.label(
+                            RichText::new(
+                                if group == workspaces::Group::Administration
+                                    && !self.data.access.allows(
+                                        crate::staff_roles::Capability::AccountAdministration,
+                                    )
+                                {
+                                    "PREFERENCES"
+                                } else {
+                                    group.label()
+                                },
+                            )
+                            .size(10.0)
+                            .color(Color32::from_rgb(140, 160, 179))
+                            .strong(),
+                        );
+                    }
                 }
-                for page in Page::ALL {
-                    if page == Page::Accounts && !self.data.access.role.manages_accounts() {
-                        continue;
-                    }
-                    if page == Page::Hiring && !self.data.access.uses_desktop() {
-                        continue;
-                    }
-                    let selected = self.page == page;
-                    let label = RichText::new(page.title()).size(15.0).color(if selected {
-                        Color32::WHITE
-                    } else {
-                        Color32::from_rgb(175, 193, 207)
-                    });
-                    let button = egui::Button::new(label)
-                        .fill(if selected { TEAL } else { Color32::TRANSPARENT })
-                        .stroke(Stroke::NONE)
-                        .corner_radius(8);
-                    if ui
-                        .add_sized([ui.available_width(), button_height], button)
-                        .clicked()
-                    {
-                        self.navigate(page, ui.ctx());
-                    }
+                let selected = self.page == entry.page;
+                let label = RichText::new(entry.label).size(14.0).color(if selected {
+                    Color32::WHITE
+                } else {
+                    Color32::from_rgb(175, 193, 207)
+                });
+                let button = egui::Button::new(label)
+                    .fill(if selected { TEAL } else { Color32::TRANSPARENT })
+                    .stroke(Stroke::NONE)
+                    .corner_radius(8);
+                let response = ui.add_sized([ui.available_width(), button_height], button);
+                if response.clicked() {
+                    self.navigate(entry.page, ui.ctx());
                 }
-            });
+            }
+        });
         ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
             ui.add_space(4.0);
             ui.label(
@@ -1932,9 +1981,13 @@ impl HrisApp {
     }
 
     fn header(&mut self, ui: &mut Ui) {
+        if self.current_workspace_hidden() && self.has_unsaved_edits() {
+            ui.label(RichText::new("An Administrator hid this section. Finish or cancel your current changes; existing records are retained.").color(ui.visuals().warn_fg_color));
+            ui.add_space(8.0);
+        }
         ui.horizontal(|ui| {
             ui.label(
-                RichText::new(self.page.title().to_uppercase())
+                RichText::new(workspaces::label(self.page, &self.data).to_uppercase())
                     .color(muted(ui))
                     .size(11.0)
                     .strong(),
@@ -2035,6 +2088,17 @@ impl HrisApp {
                 "Exit & clearance",
                 "Manage employee handover, clearance and protected exit finalization.",
             ),
+            Page::Payroll
+                if !self
+                    .data
+                    .access
+                    .allows(crate::staff_roles::Capability::PayrollPreparation) =>
+            {
+                (
+                    "Your payslips",
+                    "View your own published payslips and payment statements.",
+                )
+            }
             Page::Payroll => (
                 "Payroll & benefits",
                 "Reviewed Philippine pay, private salary records and approved payslips.",
@@ -2113,7 +2177,8 @@ impl HrisApp {
     }
 
     fn has_unsaved_edits(&self) -> bool {
-        self.employee_form.is_some()
+        self.workspace_draft.as_ref().is_some_and(|d| d.changed())
+            || self.employee_form.is_some()
             || self.document_form.is_some()
             || self.employment_option_form.is_some()
             || self.correction_form.is_some()
@@ -2404,24 +2469,35 @@ impl HrisApp {
             self.performance(ui);
             return;
         }
-        ui.horizontal_wrapped(|ui| {
-            ui.selectable_value(
-                &mut self.employee_view,
-                EmployeeView::Directory,
-                "Directory",
-            );
-            ui.selectable_value(
-                &mut self.employee_view,
-                EmployeeView::Organization,
-                "Organization chart",
-            );
-            ui.selectable_value(
-                &mut self.employee_view,
-                EmployeeView::Development,
-                "Development",
-            );
-        });
-        ui.add_space(10.0);
+        let section_count = usize::from(workspaces::people_directory(&self.data.access))
+            + usize::from(workspaces::organization(&self.data))
+            + usize::from(workspaces::development(&self.data));
+        if section_count > 1 {
+            ui.horizontal_wrapped(|ui| {
+                if workspaces::people_directory(&self.data.access) {
+                    ui.selectable_value(
+                        &mut self.employee_view,
+                        EmployeeView::Directory,
+                        "Directory",
+                    );
+                }
+                if workspaces::organization(&self.data) {
+                    ui.selectable_value(
+                        &mut self.employee_view,
+                        EmployeeView::Organization,
+                        "Organization chart",
+                    );
+                }
+                if workspaces::development(&self.data) {
+                    ui.selectable_value(
+                        &mut self.employee_view,
+                        EmployeeView::Development,
+                        "Development",
+                    );
+                }
+            });
+            ui.add_space(10.0);
+        }
         if self.employee_view == EmployeeView::Development {
             self.performance(ui);
             return;
@@ -3110,6 +3186,7 @@ impl HrisApp {
     }
 
     fn settings(&mut self, ui: &mut Ui) {
+        self.workspace_settings(ui);
         if self.data.access.role.manages_accounts() {
             card(ui, |ui| {
                 ui.set_max_width(ui.available_width().min(840.0));
@@ -4253,11 +4330,7 @@ impl eframe::App for HrisApp {
                 .unwrap_or_default()
         };
         ctx.set_theme(theme.preference());
-        if (self.page == Page::Accounts && !self.data.access.role.manages_accounts())
-            || (matches!(self.page, Page::Hiring | Page::Exits) && !self.data.access.uses_desktop())
-        {
-            self.navigate(Page::Overview, &ctx);
-        }
+        self.reconcile_workspaces(&ctx);
         if self.data.mode == Mode::SignedOut {
             egui::CentralPanel::default()
                 .frame(Frame::new().fill(ui.visuals().panel_fill).inner_margin(28))

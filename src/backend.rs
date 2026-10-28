@@ -20,6 +20,9 @@ mod staff_provision_tests;
 mod staff_roles_adapter;
 #[cfg(test)]
 mod staff_roles_tests;
+mod workspace_adapter;
+#[cfg(test)]
+mod workspace_tests;
 use crate::access::{Access, AccessEvent, AdminAction, ManagedAccount};
 use crate::account::{self, AccountAction, AccountProfile, DisplayPreferences, PersonalDetails};
 use crate::documents::{self, DocumentAction, DocumentState, EmployeeDocument};
@@ -1259,7 +1262,9 @@ impl CloudClient {
             return Err(AccessRevoked.into());
         }
         approvals.validate_access(&access, company.today())?;
+        let workspaces = self.workspace_context(&access)?;
         let snapshot = Snapshot {
+            workspaces,
             approvals: Some(approvals),
             lifecycle_notifications: Some(lifecycle_notifications),
             payroll,
@@ -2236,6 +2241,7 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
 }
 
 pub enum Command {
+    SaveWorkspaces(crate::workspaces::Save),
     LeaveImportHistory,
     PreviewLeaveImport(crate::leave::request_import::Batch),
     PostLeaveImport(Box<crate::leave::request_import::Post>),
@@ -2345,6 +2351,8 @@ pub enum Command {
 }
 
 pub struct Update {
+    pub workspace_receipt: Option<crate::workspaces::Receipt>,
+    pub workspace_rejected: bool,
     pub staff_provision: Option<crate::staff_roles::provision::Update>,
     pub staff_provision_rejection: Option<crate::staff_roles::provision::Rejection>,
     pub staff_role_rejected: bool,
@@ -2385,6 +2393,10 @@ pub fn worker(
     thread::spawn(move || {
         let mut demo = initial;
         let mut demo_documents = std::collections::HashMap::new();
+        let mut demo_workspace_receipts = std::collections::HashMap::<
+            Uuid,
+            (crate::workspaces::Save, crate::workspaces::Receipt),
+        >::new();
         let mut demo_resumes = std::collections::HashMap::new();
         let mut demo_leave_imports = crate::leave::request_import::Demo::default();
         let mut demo_attendance_imports = crate::attendance_imports::Demo::default();
@@ -2411,6 +2423,7 @@ pub fn worker(
             let mut attendance_import_receipt_result = None;
             let mut opening_import_preview_result = None;
             let mut staff_roles_result = None;
+            let mut workspace_receipt_result = None;
             let mut staff_provision_result = None;
             let mut report_result = None;
             let mut payroll_report_result = None;
@@ -3282,6 +3295,55 @@ pub fn worker(
                         crate::staff_roles::provision::Update::Status{..}=>"Account status checked. Review before replacing an attempt.",
                     }.into();staff_provision_result=Some(update);data})
                 }
+                Command::SaveWorkspaces(request) => (|| {
+                    if let Some(client) = cloud.as_mut() {
+                        let data = client.snapshot()?;
+                        if data.access != current.access {
+                            return Err(AccessRevoked.into());
+                        }
+                        let receipt = client.save_workspaces(&request, &data)?;
+                        workspace_receipt_result = Some(receipt);
+                        message="Optional desktop sections saved. Records and permissions are unchanged.".into();
+                        client.snapshot()
+                    } else {
+                        let store = demo
+                            .as_mut()
+                            .context("Sign in to configure desktop sections.")?;
+                        request.validate(&store.data.workspaces, &store.data.access)?;
+                        let receipt = if let Some((old, receipt)) =
+                            demo_workspace_receipts.get(&request.id)
+                        {
+                            ensure!(
+                                old == &request,
+                                "This request identity already has another payload."
+                            );
+                            receipt.clone()
+                        } else {
+                            ensure!(
+                                store.data.workspaces.revision == request.expected_revision,
+                                "Desktop sections changed. Review the current settings."
+                            );
+                            let receipt = crate::workspaces::Receipt {
+                                schema_version: 1,
+                                id: request.id,
+                                company_id: request.company_id,
+                                actor_id: request.actor_id,
+                                revision: request.expected_revision + 1,
+                                enabled: request.enabled.clone(),
+                                applied_at: Utc::now(),
+                            };
+                            store.data.workspaces.revision = receipt.revision;
+                            store.data.workspaces.enabled = receipt.enabled.clone();
+                            store.data.workspaces.updated_at = Some(receipt.applied_at);
+                            demo_workspace_receipts
+                                .insert(request.id, (request.clone(), receipt.clone()));
+                            receipt
+                        };
+                        workspace_receipt_result = Some(receipt);
+                        message = "Demo desktop sections changed; not saved to a company.".into();
+                        Ok(store.data.clone())
+                    }
+                })(),
                 Command::StaffRoles(operation) => {
                     let changed = cloud
                         .as_mut()
@@ -3315,6 +3377,10 @@ pub fn worker(
                     })
                 }
             };
+            let workspace_rejected = result
+                .as_ref()
+                .err()
+                .is_some_and(|e| e.is::<crate::workspaces::Rejected>());
             let access_error = result
                 .as_ref()
                 .err()
@@ -3344,6 +3410,8 @@ pub fn worker(
                         .err()
                         .is_some_and(|e| e.is::<staff_roles_adapter::Rejected>()),
                     staff_roles: staff_roles_result,
+                    workspace_receipt: workspace_receipt_result,
+                    workspace_rejected,
                     leave_import_history: leave_import_history_result,
                     attendance_import_history: attendance_import_history_result,
                     leave_import_preview: leave_import_preview_result,
@@ -3390,6 +3458,8 @@ pub fn worker(
                             staff_provision_rejection: None,
                             staff_role_rejected: false,
                             staff_roles: None,
+                            workspace_receipt: None,
+                            workspace_rejected: false,
                             leave_opening_import_preview: None,
                             leave_import_history: None,
                             attendance_import_history: None,

@@ -88,6 +88,8 @@ fn auth_fixture(
                 ("200 OK",json!({"version":"leave-dated-v1","company_id":company_id,"user_id":user_id,"employee_id":null,"role":"administrator","as_of":today,"revision":0,"enabled":false,"timeline":{"baseline":hris_desktop::leave::LeavePolicy{company_id,..Default::default()},"versions":[]},"anchors":[],"openings":[],"withdrawals":[],"audit":[]}).to_string())
             } else if first.starts_with("POST /rest/v1/rpc/lifecycle_notifications ") {
                 ("200 OK",json!({"version":"lifecycle-notifications-v1","company_id":company_id,"user_id":user_id,"employee_id":null,"role":"administrator","surface":"desktop","as_of":today,"generated_at":"2026-10-25T00:00:00Z","read_keys":[],"total_items":0,"truncated":false,"items":[]}).to_string())
+            } else if first.starts_with("POST /rest/v1/rpc/desktop_workspace_context ") {
+                ("200 OK",json!({"schema_version":1,"company_id":company_id,"user_id":user_id,"revision":0,"enabled":["organization","development","hiring","exit_clearance","payroll","reports"],"updated_at":null}).to_string())
             } else if first.starts_with("GET /auth/v1/user ") {
                 ("200 OK", user.to_string())
             } else if first.starts_with("GET /storage/v1/object/authenticated/") {

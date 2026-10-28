@@ -709,7 +709,7 @@ impl HrisApp {
                 reason: String::new(),
             });
         }
-        ui.label("Prepare worksheets, submit for another Administrator's approval, then record payment. Approved payslips stay fixed when salary or attendance changes.");
+        ui.label("Prepare worksheets for independent Administrator approval. An Administrator records payment. Approved payslips retain their issued values.");
         let mut rs = self.data.payroll.runs.clone();
         rs.sort_by_key(|r| std::cmp::Reverse(r.month));
         for r in rs {
@@ -1384,7 +1384,7 @@ impl HrisApp {
             }
             self.payroll_state.slip = None;
         }
-        ui.label(if self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation){"Approved payslips. HR/Admin can open any approved employee payslip; Managers see only their own."}else{"Your approved payslips. Salary profiles, draft payroll and team pay remain private to HR/Admin."});
+        ui.label(if self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation){"Approved payslips within your authorized payroll access. Other staff see their own statements."}else{"Your approved payslips. Payroll preparation and pay for other employees stay restricted to authorized payroll staff."});
         let mut rows = visible.clone();
         rows.sort_by_key(|s| std::cmp::Reverse(s.month));
         for s in rows {

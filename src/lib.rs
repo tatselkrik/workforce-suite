@@ -55,3 +55,5 @@ pub mod payroll_government;
 pub mod payroll_reporting;
 
 pub mod staff_roles;
+
+pub mod workspaces;

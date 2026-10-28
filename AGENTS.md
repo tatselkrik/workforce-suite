@@ -601,3 +601,19 @@ as requested. Do not start wider workspaces, separate Payroll or later HR-functi
 work until Kirk resumes. Do not repeat migrations, activation, packages, publication
 or installation already evidenced. Portal remains separate/local; actual email,
 paid services, agency handoffs, external vendors and hardware retain their deferrals.
+
+
+## Current one-milestone authorization —focused workspaces,28October2026
+
+Kirk authorized ONLY focused native HRIS workspaces and optional-module visibility.
+Finish role-focused navigation, company Administrator controls for optional desktop
+sections, meaningful checks, guarded deployment/private release and actual latest
+installation. Then stop and pause the SAME scheduler. Account Manager0.1.63 is
+delivered; do not repeat it. Payroll separation/later HR-function work stay queued.
+
+Optional desktop visibility is presentation configuration, not a new authorization
+source. Preserve protected role/own/team/assigned permissions, underlying records,
+portal access and unsaved drafts. Keep Learning & Performance combined in the
+existing Employees > Development area; do not split it into another application.
+Keep settings industry-neutral and preserve existing module visibility by default.
+Use current checkpoint/reset protocol and the existing exact-target/free-only rules.
