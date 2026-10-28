@@ -1,10 +1,10 @@
 # Account Manager0.1.63 testing checklist
 
-Candidate only: packaging, private publication, activation and actual installation
-still require their separate delivery evidence. Installed0.1.62 does not expose
-the complete specialist contract.
+Delivered and enabled in0.1.63. See [delivery evidence](ACCOUNT-MANAGER-0.1.63-DELIVERY.md).
+The checklist frozen inside the signed package retains its earlier candidate wording;
+this delivery record supplies the completed installation/publication evidence.
 
-After verified delivery, use fictional employees/accounts for these checks:
+Use fictional employees/accounts for these checks:
 
 - Account Manager appears only for an Administrator.
 - Create a new employee and staff sign-in together. Employment, contact and emergency

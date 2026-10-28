@@ -1,7 +1,8 @@
-# Protected staff provisioning — staged Account Manager contract
+# Protected staff provisioning â€” staged Account Manager contract
 
-This implementation belongs to the approved Account Manager milestone. Runtime
-activation remains disabled until every specialist data/action path is verified.
+Delivered and enabled in0.1.63on28October2026. See
+[delivery evidence](ACCOUNT-MANAGER-0.1.63-DELIVERY.md). Earlier staged evidence
+below is historical; hosted provisioning and exact retry/no-mail checks passed.
 All migrations are additive; the installed desktop and existing Auth route stay
 compatible. No role comes from user-editable metadata.
 
@@ -52,7 +53,7 @@ entry points are granted to authenticated; internal helpers remain ungranted. Th
 functions require fresh protected Administrator membership, not a decoded role claim.
 The separate ordinary Employee portal keeps its existing own-record scope.
 
-## Verification and rollout boundary
+## Historical verification and rollout boundary
 
 The local PostgreSQL fixture applies the actual migration chain with fictional
 Auth/Storage. It verifies complete business-record preservation, disabled-gate and

@@ -1,8 +1,10 @@
 # Protected staff permission rollout
 
-Status28October2026: LOCAL implementation in progress. Runtime gate remains FALSE.
-Hosted migrations through72 and installed desktop0.1.62 remain unchanged. This is
-not yet a usable or delivered specialist-role release.
+Status28October2026: delivered, installed and enabled in0.1.63.
+Migrations73–87and account-admin are deployed. Fourteen native-role and fourteen
+direct portal/Storage/updater combinations pass. The current runtime gate is TRUE.
+See [delivery evidence](ACCOUNT-MANAGER-0.1.63-DELIVERY.md). Work and scheduler paused.
+Earlier local progress entries below are historical, superseded by this delivery.
 
 The seven-role/multiple-responsibility contract is in WORKSPACES-IMPLEMENTATION.md.
 Account provisioning/recovery is in STAFF-PROVISIONING.md. Only a current protected
@@ -168,7 +170,7 @@ pending draft preservation and narrow320/480/760light/dark header geometry. A na
 heading overflow was found and fixed. Headless geometry is not installed-screen
 verification. Hosted activation and installation remain unchanged.
 
-## Remaining before activation and delivery
+## Historical rollout requirements — completed in0.1.63
 
 Review every direct RPC, RLS/storage path and native snapshot/action/menu. Add the
 remaining scoped roster and current-role labels, reconcile legacy account writes
@@ -178,7 +180,7 @@ access before enabling roles. Then apply guarded migrations, verify hosted
 behavior, package/publish/install the exact verified release and PAUSE work plus
 the same scheduler. Wider workspace changes and Payroll extraction stay queued.
 
-## Current one-task stop boundary
+## Historical one-task stop boundary — superseded
 
 Kirk narrowed this run to the notification/updater increment. Its local
 verification and saved source are complete; work and the same scheduler are paused. Do not continue

@@ -1,11 +1,13 @@
-# Remaining HRIS roadmap — agreed order
+# Remaining HRIS roadmap â€” agreed order
 
-**Current boundary —27October2026:** finish Account Manager provisioning and complete permissions, verify and deliver it, then **pause work and the SAME scheduler**. Later workspace/Payroll/HR-function milestones remain queued. Continue this milestone across resets if needed.
+**Current delivery —28October2026:** Account Manager provisioning and complete
+specialist permission safeguards are delivered, privately published, installed and
+enabled in0.1.63. **Work and the SAME scheduler are PAUSED**, as Kirk requested after
+this milestone. Older active/disabled-gate progress entries below are historical.
+See [delivery evidence](ACCOUNT-MANAGER-0.1.63-DELIVERY.md).
+The wider workspace/Payroll/HR-function queue requires Kirk's explicit resumption.
 
-
-**Latest instruction —27October2026:** Kirk explicitly resumed the approved workspaces queue. Work and the SAME scheduler are **ACTIVE**. The local editor is verified; provisioning and complete specialist permissions remain next. Older agency/external/device deferrals remain.
-
-**Latest human approval —27October2026:** Kirk approved the workspaces preview,
+**Latest human approval â€”27October2026:** Kirk approved the workspaces preview,
 authorized implementation and reactivated continuous work across actual usage resets.
 The active ordered extension is [Workspaces and Payroll implementation](WORKSPACES-IMPLEMENTATION.md).
 Its role/workspace/Payroll and later HR-function checklist supersedes the prior
@@ -99,7 +101,7 @@ reminder. Kirk has supplied the BIR7.4 module/archive and reference downloads in
 the private reference folder; inspect before execution. The earlier input pause
 below is superseded. Government preparation/reconciliation native Excel exports
 are delivered in054. BIR published-structure preflight055 is also installed/private-published;
-official module acceptance remains unverified. Delivered049–058 must not be
+official module acceptance remains unverified. Delivered049â€“058 must not be
 repeated. Continue the next verified government-format increment from the checkpoint.
 
 **Latest immediate queue25October2026:** Kirk authorized starting item4 now,
@@ -110,10 +112,10 @@ Item4 is delivered in installed/private desktop0.1.49, including protected dated
 policies, captured entitlements, entered openings and atomic CSV openings.
 [Verification](LEAVE-OPENINGS-0.1.49-VERIFICATION.md) records the local, hosted,
 visual, installer and private-channel evidence and remaining verification limits.
-Items4–7 are delivered in049–053. Remaining portal-browser and government-file
+Items4â€“7 are delivered in049â€“053. Remaining portal-browser and government-file
 verification/investigation retain the26October required-input boundary below.
 
-**26October2026 verification boundary:**049–053 complete the immediate queue.
+**26October2026 verification boundary:**049â€“053 complete the immediate queue.
 The remaining government source review has inspected both2025 BIR annexes, all
 five SSS document images and the currently linked PhilHealth RF1. Current agency
 validator/template evidence remains unavailable; BIR ordinary retrieval returned
@@ -160,7 +162,7 @@ release/delivery requirements. Record partial progress below its item; retain
 completed wording and evidence links. Do not silently promote a placeholder or
 unconfigured external connection to a completed integration.
 
-1. ~~**Finish the employee portal — local only.** Own attendance-correction and
+1. ~~**Finish the employee portal â€” local only.** Own attendance-correction and
    overtime requests; notifications; company/profile pictures; password/email
    controls. Existing own records, contacts, attendance, breaks, leave and monthly
    payslips remain supported.~~ Browser verification/fixes are delivered in local
@@ -217,7 +219,7 @@ unconfigured external connection to a completed integration.
    Salary/account/personnel authority remains outside delegation.
 6. ~~**Attendance/leave imports and Excel support.** Validated pending request
    imports, protected previews, row-error reports, exact retries/history and native
-   XLSX import/export.~~ Delivered/installed in050–052. Leave052uses running
+   XLSX import/export.~~ Delivered/installed in050â€“052. Leave052uses running
    reservations, captured openings and dated policy/approval snapshots through the
    normal engines. See [leave evidence](LEAVE-IMPORTS-0.1.52-VERIFICATION.md),
    [attendance evidence](ATTENDANCE-IMPORTS-0.1.51-VERIFICATION.md) and
@@ -231,7 +233,7 @@ unconfigured external connection to a completed integration.
 8. ~~**Portal-only notification display for now.**~~ The own inbox, unread counts
    and read history are delivered in portal0.1.6, as part of item3. External company
    email and background browser/OS push are **deferred**, not implemented.
-9. **Biometric/device integration — deferred; no hardware available.** The
+9. **Biometric/device integration â€” deferred; no hardware available.** The
    ~~visible disabled biometric control~~ is complete. Keep Connect device
    disabled. Actual integration/purchases wait for supplied hardware and Kirk's
    resumption; do not treat the placeholder as a working connection.
@@ -347,7 +349,7 @@ unconfigured external connection to a completed integration.
 
 - Desktop0.1.45 is installed and verified; retain0.1.44 as rollback. Kirk authorized
   0.1.42 and future verified releases to the same private channel on25October2026.
-  Releases0.1.42–0.1.45 are published, authenticated downloads/signatures
+  Releases0.1.42â€“0.1.45 are published, authenticated downloads/signatures
   verified and0.1.45 serves as latest. Do not repeat completed installations.
 - Portal milestone1: ~~own correction/overtime requests, cancellation and decision
   history~~ are implemented in the0.1.2 increment, with25 Rust tests,3,275 database

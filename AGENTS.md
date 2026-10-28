@@ -147,7 +147,7 @@ handoff. This installation preference does not authorize another module, a publi
 release, a new deployment target or bypassing platform permissions.
 
 
-## Authorized continuation — 24 October 2026
+## Authorized continuation â€” 24 October 2026
 
 Proceed sequentially with payroll amendments/cross-year final pay, then the resumed
 local-only employee portal, government-specific payroll exports/reconciliation,
@@ -160,7 +160,7 @@ is authorized. Keep actual biometric support disabled pending a selected protoco
 device and physical verification. Use the existing usage-reset follow-up/checkpoint
 to continue this queue; install each verified authorized desktop release.
 
-## Current continuation — 24 October 2026
+## Current continuation â€” 24 October 2026
 
 Kirk explicitly resumed continuous work after0.1.41 and reactivated the existing
 usage-reset scheduler. The earlier stop-after0.1.41 boundary is superseded.
@@ -172,7 +172,7 @@ financial, privacy and unresolved external-target boundaries above. Continue
 through usage resets using this task's checkpoint and the same follow-up, until
 Kirk stops the work, the scope is complete or a genuine handoff blocks progress.
 
-## Latest stop boundary — 25 October 2026
+## Latest stop boundary â€” 25 October 2026
 
 Kirk said "stop after this" during the portal0.1.3 personal-notification increment.
 Finish and verify only that current increment, deliver its local package, then
@@ -180,7 +180,7 @@ stop. The existing usage-reset scheduler is paused. Pictures/account-security
 controls and the rest of the roadmap stay queued until Kirk resumes them.
 This supersedes the continuous-work instruction above.
 
-## Storage cleanup — 25 October 2026
+## Storage cleanup â€” 25 October 2026
 
 Kirk explicitly authorized the queued cleanup. It is complete: the project went
 from219.1GiB to about1.82GiB by removing generated Cargo caches, obsolete test
@@ -191,7 +191,7 @@ Cargo output must be rebuilt when development resumes; do not rebuild merely to
 verify cleanup. The running portal was preserved. Cleanup authorization did not
 resume feature work or scheduling: both remain paused until Kirk resumes them.
 
-## Latest resumption — 25 October 2026
+## Latest resumption â€” 25 October 2026
 
 Kirk explicitly said to continue the roadmap, activate scheduling again and not
 stop. This supersedes the stop-after-portal0.1.3 and cleanup-only pause above.
@@ -237,7 +237,7 @@ current agency acceptance is unverified. Preserve namesakes, exact cents and
 explicit declarations. Never infer current rates or
 agency acceptance from a legacy generator's output alone.
 
-## Latest stop boundary — current SSS increment
+## Latest stop boundary â€” current SSS increment
 
 Kirk instructed on 25 October 2026 to finish only the current SSS reference-draft
 increment, then stop and provide a testing checklist for work since 9:31 p.m.
@@ -248,7 +248,7 @@ remain in effect; this stop changes work scheduling, not those target guards.
 This boundary is now satisfied:0.1.45 is installed and privately published.
 Keep work and the same scheduler paused pending Kirk's explicit resumption.
 
-## Latest resumption and free-only constraint — 25 October 2026
+## Latest resumption and free-only constraint â€” 25 October 2026
 
 Audited base-credit adjustments follow docs/LEAVE-CREDITS.md. Keep Administrator
 posting, minimal own/current-team projections, HR-private reasons/references,
@@ -272,7 +272,7 @@ Record cost dependencies and unresolved targets explicitly instead of silently
 calling an unconfigured integration complete. Actual email/push delivery and
 physical device connections retain their separate target/authority requirements.
 
-## Latest verification, delivery and hardware scope — 25 October 2026
+## Latest verification, delivery and hardware scope â€” 25 October 2026
 
 Kirk prioritizes portal browser verification for now. Mobile-width layout checks
 may use existing no-charge browser tools; physical-phone verification and actual
@@ -291,7 +291,7 @@ device disabled. Actual device/driver/protocol work and hardware purchases are
 deferred until Kirk supplies hardware and resumes that scope. The rest of the
 authorized free roadmap and the same scheduler remain active.
 
-## Usage-reset continuation and context freshness — 25 October 2026
+## Usage-reset continuation and context freshness â€” 25 October 2026
 
 Kirk requires automatic continuation to use current context, including changes
 made after a scheduler prompt was saved. Reuse the existing chat's heartbeat;
@@ -404,7 +404,7 @@ offsets, contained pay and tax advice distinct. Fail explicitly on history/budge
 limits; never remove history or start a paid upgrade. Actual vendor connections
 require a selected company target and separate authority.
 
-## Current resumption —26October2026
+## Current resumption â€”26October2026
 
 Annual recorded pay components follow docs/GOVERNMENT-PAY-DETAILS.md. Keep their
 read-only same-statement source binding and current HR/Admin scope. Project only
@@ -422,9 +422,9 @@ Kirk has supplied the official BIR module/reference downloads in the prepared
 private folder; inspect them before running any installer or validator. Continue
 the current government review/export increment, then the unblocked BIR format
 investigation. Preserve explicit internal-review versus agency-acceptance status.
-Do not repeat delivered049–053 or expand the paid/external/device boundaries.
+Do not repeat delivered049â€“053 or expand the paid/external/device boundaries.
 
-## Latest resumption —27October2026
+## Latest resumption â€”27October2026
 
 Kirk deferred the manual BIR module check until later and instructed continuation
 with remaining independent free work. Do not make those two baseline reports a
@@ -460,7 +460,7 @@ receipt states, fresh hash/access/new-file guards and the separate minimal
 diagnostic/identity export contracts. Its explicitly internal amount worksheet
 omits raw tax identifiers, file-declared names and HR evidence/references.
 
-## Latest resumption after desktop061 —27October2026
+## Latest resumption after desktop061 â€”27October2026
 
 Kirk explicitly resumed finishing the remaining free scope without subscriptions
 or hardware, through the actual usage limit and automatically after its reported
@@ -470,7 +470,7 @@ file preparation while recording official-acceptance/input limits. Preserve the
 separate deferred software-execution, filing, external-provider/vendor and device
 authority boundaries; generic resumption does not resolve those targets.
 
-## Agency-template deferral —27October2026
+## Agency-template deferral â€”27October2026
 
 Kirk answered that no current blank agency templates are available and explicitly
 said to defer this work. Hold the template-dependent SSS AMS-CCL, PhilHealth EPRS
@@ -481,7 +481,7 @@ internal worksheets/remittance workflows retain their completed status; official
 acceptance and the previously deferred external/device work remain separate.
 
 
-## Combined Learning and Performance — 27 October 2026
+## Combined Learning and Performance â€” 27 October 2026
 
 Kirk explicitly chose one Development workspace inside HRIS for Learning and
 Performance, with Goals, Appraisals, Training, Certifications and Career plans
@@ -497,7 +497,7 @@ permissions update; retain current assignment/own-team scopes, private notes and
 certificate evidence restrictions, independent review and immutable history.
 See docs/ACCOUNT-MANAGER.md for the approved design and implementation boundary.
 
-## Approved implementation and continuous resumption — 27 October 2026
+## Approved implementation and continuous resumption â€” 27 October 2026
 
 Kirk approved the reviewed workspaces proposal and explicitly instructed updating
 context, implementing it and continuing across actual usage resets. The earlier
@@ -522,7 +522,7 @@ continues; separate Payroll release identities/destinations need their own resol
 setup and authority. Install each verified authorized desktop release and preserve
 unsaved work. No new role, migration or release is complete merely because designed.
 
-## Latest pause — current Account Manager editor,27October2026
+## Latest pause â€” current Account Manager editor,27October2026
 
 Kirk instructed: finish the current native Account Manager editor increment, then
 pause until he says to continue. This supersedes continuous work/reset continuation
@@ -533,7 +533,7 @@ remaining domain-permission rollout, hosted activation, Payroll extraction or th
 later HR-function milestones. They remain queued. Existing exact-target standing
 SQL/private-publication authority and privacy/free-only boundaries are unchanged;
 this pause grants no new release or activation scope.
-## Latest resumption —27October2026, after the editor pause
+## Latest resumption â€”27October2026, after the editor pause
 
 Kirk explicitly said "resume". The pause after the locally verified Account
 Manager editor is superseded. Resume the approved workspaces queue from its
@@ -543,7 +543,7 @@ activation, followed by the remaining ordered milestones. The SAME usage-reset
 scheduler is ACTIVE again. Preserve all existing free-only, privacy, immutable
 financial/history, exact-target and deferred agency/external/device boundaries.
 Do not repeat completed editor checks/deliveries without a new change or concern.
-## Current finish-and-pause boundary —27October2026
+## Current finish-and-pause boundary â€”27October2026
 
 Kirk instructed pausing after Account Manager provisioning AND permission work.
 Finish that complete milestone, including atomic provisioning, employee-editor
@@ -559,7 +559,7 @@ current membership/source guards and atomic employee/contact/role commit. Auth i
 a separate service: never claim cross-service SQL atomicity or delete/reset an Auth
 identity after uncertain delivery. Recovery must reuse the reserved identity and
 frozen receipt. Passwords/tokens stay in memory; confirmation is an explicit action.
-## Latest one-task boundary —28October2026
+## Latest one-task boundary â€”28October2026
 
 Kirk instructed "continue with just one task." Finish only the current local
 notification/updater permission increment (migration84 and native guards), including
@@ -572,7 +572,7 @@ gate FALSE until the complete permission milestone is verified. Existing exact-t
 standing authorizations are unchanged; do not infer a new deployment from this local
 increment. Resume further work only on a newer human instruction.
 
-## Current resumption —remaining Account Manager safeguards,28October2026
+## Current resumption â€”remaining Account Manager safeguards,28October2026
 
 Kirk explicitly instructed doing the remaining Account Manager safeguards. This
 supersedes the completed notification/updater-only stop. Finish legacy-write role
@@ -584,3 +584,20 @@ after the Account Manager milestone. Broader workspaces/Payroll extraction remai
 queued. Keep activation FALSE until the complete boundaries pass verification. Reuse
 the existing reset/checkpoint protocol and exact-target authorizations; preserve
 unsaved work, immutable history/pay, own/team scopes and free/local-only constraints.
+
+
+## Account Manager completed; work paused —28October2026
+
+Kirk's remaining Account Manager safeguards milestone is complete in0.1.63:
+migrations73–87/account-admin are deployed, canonical protected roles enabled,
+signed private publication and actual installation verified. Native/DB/Edge and
+fourteen-role hosted snapshot plus portal/Storage/updater checks pass. Preserve the
+new role/capability contract, reserved Auth identity recovery, private access history,
+legacy compatibility bundle and independent financial approval/payment boundaries.
+See docs/ACCOUNT-MANAGER-0.1.63-DELIVERY.md for exact evidence and limitations.
+
+Work and SAME usage-reset scheduler are PAUSED after this delivered milestone,
+as requested. Do not start wider workspaces, separate Payroll or later HR-function
+work until Kirk resumes. Do not repeat migrations, activation, packages, publication
+or installation already evidenced. Portal remains separate/local; actual email,
+paid services, agency handoffs, external vendors and hardware retain their deferrals.

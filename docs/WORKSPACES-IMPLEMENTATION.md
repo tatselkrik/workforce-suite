@@ -1,9 +1,11 @@
-# HRIS workspaces and Payroll implementation — approved27October2026
+# HRIS workspaces and Payroll implementation â€” approved27October2026
 
-**Current boundary —27October2026:** finish Account Manager provisioning and complete permissions, verify and deliver it, then **pause work and the SAME scheduler**. Later workspace/Payroll/HR-function milestones remain queued. Continue this milestone across resets if needed.
-
-
-**Latest instruction —27October2026:** Kirk explicitly resumed. Work and the SAME usage-reset scheduler are **ACTIVE**. Continue from the verified local editor into atomic provisioning and remaining permission boundaries. No incomplete specialist role is enabled.
+**Current delivery —28October2026:** Account Manager provisioning and complete
+specialist permission safeguards are delivered, privately published, installed and
+enabled in0.1.63. **Work and the SAME scheduler are PAUSED**, as Kirk requested after
+this milestone. Older active/disabled-gate progress entries below are historical.
+See [delivery evidence](ACCOUNT-MANAGER-0.1.63-DELIVERY.md).
+The wider workspace/Payroll/HR-function queue requires Kirk's explicit resumption.
 
 Kirk approved the reviewed proposal and authorized implementation plus automatic
 continuation across actual usage resets. This supersedes the preview-only hold
@@ -14,7 +16,8 @@ prototype for small companies and larger employers, including BPOs.
 
 ## Ordered delivery checklist
 
-- [ ] Staff roles, protected permissions and multi-role Account Manager.
+- [x] ~~Staff roles, protected permissions and multi-role Account Manager.~~
+  Delivered and enabled in0.1.63; evidence linked above.
   Keep Administrator, HR Generalist, Manager and Employee; add Recruiter,
   Learning & Performance Officer and Payroll Officer. A single employee/account
   can hold several staff responsibilities. Employee alone remains portal-only.
@@ -62,8 +65,8 @@ separate actors without creating a separate Payroll Approver role.
 
 ## Compatibility and implementation gate
 
-The current installed application/database still have four roles. The interactive
-preview establishes intended navigation only, not working authorization. Inspect
+The installed0.1.63and protected database now support seven combinable roles.
+The separate interactive preview illustrates proposed navigation only. Inspect
 all affected RPCs, RLS/storage policies, source snapshots, Account Manager provisioning,
 portal admission and native gates. Never grant a specialist the broad HR role merely
 to make one screen load. Keep current membership checks independent of user metadata.
@@ -90,7 +93,7 @@ checkpoint at meaningful milestones/around80% usage, and retime before exhaustio
 The computer and desktop app must be available for local continuation. Do not repeat
 completed desktop0.1.62, portal0.1.7 or migrations through72.
 
-## Local role foundation progress —27October2026
+## Local role foundation progress â€”27October2026
 
 The seven-role capability model, bounded/canonical role sets, protected actor-bound
 contexts, legacy-compatible base-role projection and version-negotiated native
@@ -106,7 +109,7 @@ replay and129role-foundation assertions. Shared capability cases match native/SQ
 These are local checks; no hosted migration, role activation, release or installation
 has occurred. Role editing and complete module read/write boundaries remain next.
 
-## Local assignment transaction progress —27October2026
+## Local assignment transaction progress â€”27October2026
 
 The disabled rollout now has typed protected Account Manager views and an atomic
 role/access transaction. It binds the current Administrator, employee, full request,
@@ -124,7 +127,7 @@ policy remains FALSE. Migrations73/74 are local only; no hosted role activation,
 new desktop release, installation or usable specialist role is claimed. Native
 Account Manager editing/provisioning and complete domain read/write boundaries
 remain required before rollout.
-## Local Account Manager editor finished; work paused —27October2026
+## Local Account Manager editor finished; work paused â€”27October2026
 
 The existing-account editor and native worker routing are implemented locally.
 Administrators can prepare multiple responsibilities, sign-in access and a reason
@@ -150,7 +153,7 @@ queued before activation, followed by the remaining approved order above.
 
 Kirk requested pausing after this editor increment. The same scheduler is PAUSED;
 resume only after a newer explicit human instruction and the current checkpoint.
-## Current local permissions progress —28October2026
+## Current local permissions progress â€”28October2026
 
 See STAFF-PERMISSIONS.md for the verified local payroll/development/directory scopes
 and remaining activation requirements. Specialist activation remains FALSE. Continue

@@ -1,63 +1,90 @@
-# Accounts and permissions
+# Account Manager and protected staff duties
 
-Account Manager appears above Settings for Administrators. Protected Supabase memberships enforce the same permissions for direct API requests. User-editable account metadata never grants access.
+Delivered, privately published, installed and enabled in0.1.63on28October2026.
+See [delivery evidence](ACCOUNT-MANAGER-0.1.63-DELIVERY.md) and the
+[testing checklist](ACCOUNT-MANAGER-0.1.63-CHECKLIST.md). Work and the same
+usage-reset scheduler are paused after this milestone.
 
-| Role | Desktop access | Records and actions | Administration |
-| --- | --- | --- | --- |
-| Administrator | Yes | All HR records; record attendance/requests; review other employees' leave | Account Manager, access history and company settings |
-| HR Generalist | Yes | All HR records; record attendance/requests; review other employees' leave | Personal Profile and display settings |
-| Manager | Yes | Own record and direct reports; record own attendance/requests; review direct reports' leave | Personal Profile and display settings |
-| Employee | No; future mobile-friendly portal | Database scopes are prepared for own record, attendance and leave | Portal UI is not built yet |
+Account Manager appears above Settings only for Administrators. Current protected
+database memberships and role assignments enforce permissions on direct API,
+Storage and native operations. User-editable Auth metadata never grants access.
+Every account belongs to one employee; staff duties can be combined on that account.
 
-Nobody can review their own leave. Ordinary employees use the future mobile-friendly portal, not this desktop app. Managers and other assigned staff roles use the desktop. These are fixed prototype roles; a Payroll Officer or custom permissions should be introduced with the corresponding module rather than receiving speculative access now.
+| Role | Scope |
+| --- | --- |
+| Administrator | Account Manager, company administration, authorized oversight and independent financial approval/payment |
+| HR Generalist | Employee records, private contacts/documents, attendance, leave and general HR reports |
+| Recruiter | Applicants, interviews, offers and recruiting/onboarding administration |
+| Learning & Performance Officer | Combined Development administration; separate HR notes and private certificate/document evidence stay protected |
+| Payroll Officer | Salary/payroll/government preparation and reporting; independent Administrator approval/payment remains required |
+| Manager | Own/current direct reports and specifically assigned reviews/tasks |
+| Employee alone | Own records in the separate local employee portal; desktop admission is rejected |
 
-Personal addresses and emergency contacts have a narrower scope than the employee directory: Administrators and HR Generalists manage all contact records; other active members can read and edit only their own contacts through Profile. Managers cannot read direct reports' private contacts. See [Employee contacts](EMPLOYEE-CONTACTS.md).
+A new HR Generalist does not automatically receive Recruiting, Development or
+Payroll. Existing legacy HR assignments retain their former rights through an
+explicit four-specialty compatibility bundle. Administrator is application
+authority; the application contains no developer backdoor.
 
 ## Administrator workflow
 
-Account Manager lists employees with desktop staff roles. It shows their employee name/code first and sign-in email beneath. Disabled staff are hidden by default; **Show disabled** reveals them, including clearly labeled synthetic prototype accounts.
+Account Manager lists staff with their employee name/code and assigned duties.
+Use **Show disabled** for suspended staff. **Edit employee** opens employment and
+contact details. **Manage access** edits staff responsibilities, enabled sign-in
+and a required reason against the exact saved revision. Personal/company edits
+and unresolved account requests participate in the unsaved-work guard.
 
-Use **Add staff employee** to open one employee form with Employment, Contact details, Emergency contact and Staff role & sign-in tabs. Enter the employment fields and contact details, then the sign-in email, role, initial password and confirmation. **Save employee & role** creates an unconfirmed Auth identity and saves the employee, contacts and protected role together. Unknown employment details may remain unset. Staff confirm email ownership before signing in and can change their initial password in Profile. Share passwords privately.
+**Add staff employee** opens one form with Employment, Contact details, Emergency
+contact and staff access sections. **Save employee and access** saves the employee,
+contacts and duties in one protected database transaction. For an existing person,
+use **Staff role & sign-in** in their employee record. Established identities cannot
+be reassigned. An unassigned existing Auth identity can be reused without changing
+its password, confirmation or metadata.
 
-For someone already in Employees, open that person and use **Staff role & sign-in**; saving adds access to the same employee without creating another person. Clicking an Account Manager employee or its Edit action opens this same complete editor for later changes. There is no separate link/employee selector or Existing account setup step. Established identities cannot be reassigned. Pending active staff provide **Send confirmation** for delivery retries. Selecting **No staff role (employee portal)** removes desktop admission; the portal remains planned and that person no longer belongs in the staff-only list.
+Auth is a separate service. A credential-free reserved attempt fixes its Auth UUID;
+SQL and Auth are not one cross-service transaction. Exact retries recover the same
+receipt. Uncertain delivery retains the identity and pending request. Linked
+replacement or reasoned cancellation retains history. No compensating Auth deletion
+or password reset occurs. Passwords and tokens remain in memory.
 
-To suspend someone's access, open their employee → **Staff role & sign-in**, clear **Sign-in access enabled**, then **Save employee & role**. Their employee record and role are retained. Use **Show disabled** to find suspended staff and enable them again. Choosing **No staff role (employee portal)** removes desktop admission while retaining the employee; the portal remains planned. Your own/original Administrator access is protected.
+Email confirmation is an explicit **Send confirmation** action, with current Auth
+confirmation rules preserved. No automatic retry email is sent. Actual mail delivery
+remains deferred; the prototype does not configure a provider or bypass confirmation.
 
-The original installation administrator remains enabled with the Administrator role and receives an employee record during migration. Users cannot disable or demote themselves. Reporting links cannot form cycles. Each employee has at most one account, including disabled accounts. Deactivate an account before archiving its employee record. Assigning a reporting relationship does not itself grant desktop access or an account role.
+## Suspending access and retaining history
 
-Disabling membership immediately removes future server access to HR data, including requests made with an already-issued access token. The desktop rechecks access on Refresh and after idle periods; previously downloaded records are in memory and cannot be remotely recalled. A revoked access check clears the local company snapshot. Account Profile/Auth ownership is distinct from permission to access company records.
+Clear enabled sign-in in **Manage access**, enter a reason and save. Employee,
+roles and historical records remain. Employee alone removes desktop duties while
+retaining portal eligibility. Disable sign-in before archiving an employee.
+Owner/self/last-Administrator safeguards and employee identity locks remain enforced.
+A reporting relationship does not grant a Manager role and cannot form a cycle.
 
-## Deployment
+Changed or disabled membership affects subsequent server requests even with an
+existing access token. The desktop rechecks authorization and clears its company
+snapshot on revocation; previously downloaded memory cannot be remotely recalled.
+Private contacts are HR/Admin or own-only, never ordinary Manager team data.
 
-Apply all checked-in migrations in order. The Account Manager migration preserves existing owner access and seeds the owner for future trusted company bootstrap. It adds `company_members`, `account_access_events`, private role helpers and invoker-only public RPCs. Authenticated clients cannot directly insert, update or delete membership/audit rows. Access changes are serialized and audited. Scope checks use the current database membership rather than stale role claims.
+## Access history and financial boundaries
 
-Deploy `supabase/functions/account-admin/index.ts` and its `handler.mjs` module to the same dedicated project. Gateway JWT verification is disabled for this function; its handler validates every bearer with Auth and checks the protected current membership. The hosted `SUPABASE_SERVICE_ROLE_KEY` remains in the function environment and is never packaged with the desktop. Database assignments use the caller's JWT and recheck administrator access; failed assignments attempt to remove only the exact newly created Auth identity. A mail failure after a committed assignment keeps the pending account for retry.
+**Access history** opens immutable responsibility and original access events:
+source/revision, roles, status, reason and current actor labels. Earlier unknown
+facts remain unknown. Actor names are current names, not reconstructed old names.
+Refresh preserves an unsaved role draft and rejects a substituted/stale source.
 
-Configure a usable email-confirmation destination and a company mail provider before rollout. The prototype project's default confirmation redirect was previously observed to point to localhost. Default Supabase mail delivery also has recipient/rate restrictions; successful account creation does not guarantee delivery. Do not bypass email verification to hide delivery failures.
+Specialty/Manager duties do not grant payroll approval, payment/remittance recording
+or account administration. Current protected authority, independent actors, creator/
+submitter exclusions and immutable original payslips/receipts remain required.
+Delegation does not extend account/personnel/payroll permissions. Older delegation
+clients explicitly require upgrade for records their DTO cannot represent.
 
-Role changes are managed through Account Manager. There is no employee portal UI, account self-registration, company selection, hard-delete operation, device inventory or multi-stage approval chain in this module. Employee-role desktop authentication is rejected before HR records load, and its new desktop Auth session is revoked on a best-effort basis. In-memory demo account changes never create real users or send email. Normal builds exclude QA preview controls.
+## Deployment and verification
 
-## Verification
+Checked-in migrations73–87and the updated account-admin function are deployed.
+Its gateway JWT setting remains disabled; the handler independently verifies Auth
+and current protected Administrator membership. No service/signing secret is packaged.
+The operator-only tools/staff-role-activation.sql checks the owner, complete canonical
+assignments, schema and enabled release before setting the private company gate.
 
-Run `cargo test --locked`, `npm test` in `tools/db-tests`, and `node --test tests/account_admin_edge.test.mjs`. Database tests exercise all four roles, direct reports, denied operations, metadata tampering, disabled access, owner protection, cycles and private photos. Node tests cover the privileged provisioning boundary, failure cleanup, delivery retries and credential redaction. Native QA previews support `HRIS_PREVIEW_ROLE` and the `accounts` page for administrator/nonadministrator layout checks.
-
-
-## Approved combined Development design — 27 October 2026
-
-Kirk chose one **Development** workspace containing Goals, Appraisals, Training,
-Certifications and Career plans. These functions are already grouped under
-**Employees > Development** in the current desktop; Review cycles remain an
-internal administrative section. Learning and Performance stay inside HRIS.
-
-Use one **Learning & Performance Officer** specialist role in the planned
-permissions extension. This supersedes the proposal for separate Learning Officer
-and Performance Officer roles. A company can assign the combined responsibility
-to one person; Managers continue their assigned team reviews and progress work.
-
-**Implementation status:** the combined workspace exists. The specialist role
-is approved design only; the installed application/database still use the four
-roles documented above. Its protected permissions, Account Manager controls and
-verification must be implemented together before the new role can be assigned.
-Grouping the workspace must preserve current reporting/assignment boundaries,
-private HR notes and certificate evidence, self-review exclusions and immutable
-published review/history records.
+Native, database, Edge, hosted Auth/Storage/portal/updater checks and actual installer
+evidence are detailed in the delivery record. Headless layout geometry passed;
+the installed Account Manager appearance and actual confirmation-email delivery
+remain unverified. The portal remains separate and loopback-only.
