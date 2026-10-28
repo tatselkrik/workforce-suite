@@ -29,7 +29,7 @@ pub fn export_csv(data: &Snapshot, kind: &str, id: Option<Uuid>) -> Result<Vec<u
         data.mode != Mode::SignedOut && data.access.company_id == data.company.id,
         "Sign in to export benefit pay."
     );
-    let hr = data.access.role.manages_hr();
+    let hr = data.access.allows(crate::staff_roles::Capability::PayrollPreparation);
     let mut rows = vec![vec![
         "Year".into(),
         "Earned through".into(),

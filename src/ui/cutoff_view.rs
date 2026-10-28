@@ -190,7 +190,7 @@ impl HrisApp {
         }
     }
     pub(super) fn payroll_cutoffs(&mut self, ui: &mut Ui) {
-        let hr = self.data.access.role.manages_hr();
+        let hr = self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation);
         if !hr {
             self.payroll_state.cutoffs.show_slips = true;
         }
@@ -528,7 +528,7 @@ impl HrisApp {
         }
     }
     fn cutoff_slips(&mut self, ui: &mut Ui) {
-        let visible:Vec<_>=self.data.payroll.cutoffs.slips.iter().filter(|s|s.base.company_id==self.data.company.id && (self.data.access.role.manages_hr() || self.data.access.employee_id==Some(s.base.employee_id))).cloned().collect();
+        let visible:Vec<_>=self.data.payroll.cutoffs.slips.iter().filter(|s|s.base.company_id==self.data.company.id && (self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation) || self.data.access.employee_id==Some(s.base.employee_id))).cloned().collect();
         if let Some(id) = self.payroll_state.cutoffs.slip {
             if let Some(s) = visible
                 .iter()

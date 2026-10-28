@@ -1907,7 +1907,7 @@ impl HrisApp {
                 "Time away, organized",
                 "Manage requests, leave policies and ordered approvals.",
             ),
-            Page::Hiring if self.data.access.role == Role::Manager => (
+            Page::Hiring if !self.data.access.allows(crate::staff_roles::Capability::Recruiting) => (
                 "Your hiring tasks",
                 "Review assigned interviews, record assessments and complete assigned onboarding tasks.",
             ),

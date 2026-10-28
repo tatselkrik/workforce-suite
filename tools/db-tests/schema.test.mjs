@@ -109,6 +109,7 @@ try {
     if(filename.endsWith('_staff_workflow_people.sql')){staffWorkflowMigrations.push(filename);continue;}
     if(filename.endsWith('_staff_account_safeguards.sql')){staffPermissionMigrations.push(filename);continue;}
     if(filename.endsWith('_staff_account_history.sql')){staffPermissionMigrations.push(filename);continue;}
+    if(filename.endsWith('_staff_legacy_delegation_guard.sql')){staffPermissionMigrations.push(filename);continue;}
     if(/_staff_.*_permissions\.sql$/.test(filename)){staffPermissionMigrations.push(filename);continue;}
     if(filename.endsWith('_staff_permission_capabilities.sql')){staffCapabilityMigrations.push(filename);continue;}
     if(filename.endsWith('_staff_account_provisioning.sql')){staffProvisionMigrations.push(filename);continue;}

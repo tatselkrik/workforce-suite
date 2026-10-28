@@ -5,7 +5,7 @@ pub fn export_csv(data: &Snapshot, kind: &str, id: Option<Uuid>) -> Result<Vec<u
         data.mode != Mode::SignedOut && data.access.company_id == data.company.id,
         "Sign in to export cutoff payroll."
     );
-    let hr = data.access.role.manages_hr();
+    let hr = data.access.allows(crate::staff_roles::Capability::PayrollPreparation);
     let mut rows = vec![];
     let mut header = vec![
         "Month".to_string(),
@@ -77,7 +77,7 @@ pub fn export_csv(data: &Snapshot, kind: &str, id: Option<Uuid>) -> Result<Vec<u
             )?);
         }
         "cutoff_register" | "cutoff_monthly" => {
-            ensure!(hr, "Only HR and Administrators export cutoff registers.");
+            ensure!(hr, "Only Payroll Officers and Administrators export cutoff registers.");
             let run = data
                 .payroll
                 .cutoffs

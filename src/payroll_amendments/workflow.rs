@@ -20,10 +20,10 @@ pub struct Target {
 }
 pub fn targets(data: &Snapshot) -> Result<Vec<Target>> {
     ensure!(
-        data.access.role.manages_hr()
+        data.access.allows(crate::staff_roles::Capability::PayrollPreparation)
             && data.access.company_id == data.company.id
             && data.mode != Mode::SignedOut,
-        "Only current HR and Administrators select original payroll sources."
+        "Only current Payroll Officers and Administrators select original payroll sources."
     );
     let mut rows = vec![];
     for p in payroll_payments::candidates(data)?

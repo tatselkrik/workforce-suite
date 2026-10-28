@@ -184,3 +184,19 @@ Kirk narrowed this run to the notification/updater increment. Its local
 verification and saved source are complete; work and the same scheduler are paused. Do not continue
 the remaining Account Manager tasks or ship the incomplete role rollout. The wider
 scope above remains a queue, rather than instructions to resume automatically.
+
+
+## Completed local native guard audit
+
+The remaining cutoff/benefit/tax/final/amendment workflow and export paths now use
+Payroll Preparation rather than the old HR code. A fourteen-role native matrix
+exercises actual create payloads and paid-source selection, plus another person's
+final-statement export and retained own advice. Recruiting-plus-Manager keeps the
+Recruiting workspace; other staff keep assigned hiring tasks. Report preferences,
+organization directory/history filters and document-alert categories use their
+protected scope. No financial calculation or rate changed.
+
+The v1 delegation DTO cannot represent Employee-base specialist principals/delegates.
+Migration87explicitly requires an app upgrade for those records instead of returning
+invalid or silently omitted history. The separate version2 projection stays complete.
+Existing three-base-role delegation records retain their legacy contract.

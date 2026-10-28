@@ -45,6 +45,7 @@ try{
  await deny('select public.save_approval_delegation($1::jsonb)',[JSON.stringify({...grant,reason:'Changed intent'})],['PT409']);
  const saved=(await rpc('approval_delegation_staff_context')).grants[0];
  eq([saved.principal_staff_roles,saved.delegate_staff_roles,saved.current],[['payroll_officer'],['recruiter'],true],'Immutable actual roles are saved with compatible Employee base');
+ await deny('select public.approval_delegation_context()',[],['PT426']);
  await deny('select public.save_approval_delegation($1::jsonb)',[JSON.stringify({...grant,id:id(),scope:'attendance',expected_revision:1})]);
  await deny('select public.save_approval_delegation($1::jsonb)',[JSON.stringify({...grant,id:id(),scope:'payroll',expected_revision:1})]);
  let policy=(await db.query('select *from public.leave_policies where company_id=$1',[company.id])).rows[0];

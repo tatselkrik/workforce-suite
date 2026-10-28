@@ -120,8 +120,8 @@ pub fn payload(a: &PayrollAction, data: &Snapshot) -> Result<Value> {
     ensure!(
         data.mode != Mode::SignedOut
             && data.access.company_id == data.company.id
-            && data.access.role.manages_hr(),
-        "Only HR and Administrators manage final pay."
+            && data.access.allows(crate::staff_roles::Capability::PayrollPreparation),
+        "Only Payroll Officers and Administrators manage final pay."
     );
     let op = a
         .operation

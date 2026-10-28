@@ -37,7 +37,7 @@ impl State {
 }
 impl HrisApp {
     pub(super) fn payroll_payments(&mut self, ui: &mut Ui) {
-        if !self.data.access.role.manages_hr() {
+        if !self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation) {
             return;
         }
         ui.heading("Employee payment records");

@@ -69,7 +69,7 @@ impl View {
         self.validate()?;
         ensure!(
             data.mode != Mode::SignedOut
-                && data.access.role.uses_desktop()
+                && data.access.uses_desktop()
                 && data.company.id == self.company_id
                 && data.access.company_id == self.company_id,
             "This saved view is unavailable in your current company/access."

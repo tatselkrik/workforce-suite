@@ -76,9 +76,9 @@ fn field(v: &Value, k: &str, max: usize) -> Result<()> {
 pub fn payload(a: &PayrollAction, data: &Snapshot) -> Result<Value> {
     ensure!(
         data.mode != Mode::SignedOut
-            && data.access.role.manages_hr()
+            && data.access.allows(crate::staff_roles::Capability::PayrollPreparation)
             && data.access.company_id == data.company.id,
-        "Only HR and Administrators manage annual benefit pay."
+        "Only Payroll Officers and Administrators manage annual benefit pay."
     );
     let op = a
         .operation

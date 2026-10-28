@@ -289,7 +289,7 @@ impl HrisApp {
         }
     }
     pub(super) fn payroll_thirteenth(&mut self, ui: &mut Ui) {
-        let hr = self.data.access.role.manages_hr();
+        let hr = self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation);
         if !hr {
             self.payroll_state.thirteenth.slips = true;
             self.payroll_state.thirteenth.form = None;
@@ -531,7 +531,7 @@ impl HrisApp {
         self.payroll_history(ui, r.id);
     }
     pub(super) fn payroll_thirteenth_forms(&mut self, ui: &mut Ui) {
-        if !self.data.access.role.manages_hr() {
+        if !self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation) {
             self.payroll_state.thirteenth.form = None;
             return;
         }
@@ -900,7 +900,7 @@ impl HrisApp {
         true
     }
     fn thirteenth_slips(&mut self, ui: &mut Ui) {
-        let hr = self.data.access.role.manages_hr();
+        let hr = self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation);
         let slips: Vec<_> = self
             .data
             .payroll

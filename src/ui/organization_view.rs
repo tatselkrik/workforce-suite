@@ -96,7 +96,7 @@ impl HrisApp {
         });
         drop(readable);
         ui.horizontal_wrapped(|ui| {
-            if self.data.access.role.manages_hr() {
+            if self.data.access.has_full_employee_directory() {
                 ui.checkbox(
                     &mut self.organization.filters.include_archived,
                     "Include archived",
@@ -131,7 +131,7 @@ impl HrisApp {
         );
         ui.add_space(6.0);
         ui.label(
-            RichText::new(if self.data.access.role == Role::Manager {
+            RichText::new(if !self.data.access.has_full_employee_directory() {
                 "Your team: your record and active direct reports only."
             } else {
                 "Managers above matching employees stay visible as reporting context."

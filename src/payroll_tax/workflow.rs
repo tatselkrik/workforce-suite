@@ -85,9 +85,9 @@ pub fn dates(year: i32, kind: &str, end: NaiveDate, asof: NaiveDate) -> Result<(
 pub fn payload(a: &PayrollAction, data: &Snapshot) -> Result<Value> {
     ensure!(
         data.mode != Mode::SignedOut
-            && data.access.role.manages_hr()
+            && data.access.allows(crate::staff_roles::Capability::PayrollPreparation)
             && data.company.id == data.access.company_id,
-        "Only HR and Administrators manage annual tax reconciliation."
+        "Only Payroll Officers and Administrators manage annual tax reconciliation."
     );
     let op = a
         .operation

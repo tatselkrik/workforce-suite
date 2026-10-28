@@ -65,7 +65,7 @@ impl HrisApp {
             ui.horizontal_wrapped(|ui| {
                 ui.checkbox(&mut self.notification_state.unread_only,"Unread only");
                 ui.selectable_value(&mut self.notification_state.category,None,"All");
-                for c in Category::ALL { if c != Category::Documents || self.data.access.role.manages_hr() { ui.selectable_value(&mut self.notification_state.category,Some(c),c.label()); } }
+                for c in Category::ALL { if c != Category::Documents || self.data.access.allows(crate::staff_roles::Capability::PersonnelDocuments) { ui.selectable_value(&mut self.notification_state.category,Some(c),c.label()); } }
             });
             if before != (self.notification_state.unread_only,self.notification_state.category) {self.notification_state.page=0;}
         });
