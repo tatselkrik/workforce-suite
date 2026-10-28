@@ -493,3 +493,24 @@ fn invalid_actor_or_changed_historical_requester_is_rejected_before_projection()
     bad.events[1].actor_id = Uuid::nil();
     assert!(OwnView::from_context(&bad, &hr.access).is_err());
 }
+
+#[test]
+fn worker_demo_interface_returns_scoped_context_and_exact_save_receipts() {
+    let hr = data(Role::Administrator, 901, 0);
+    let mut repo = Demo::default();
+    let initial = repo.execute(&hr, Operation::Refresh).unwrap();
+    assert!(initial.receipt.is_none());
+    let r = submit(&hr.access, &initial.context, hr.employees[1].id);
+    let saved = repo
+        .execute(&hr, Operation::Save(Box::new(r.clone())))
+        .unwrap();
+    saved.receipt.as_ref().unwrap().validate(&r).unwrap();
+    let refreshed = repo.execute(&hr, Operation::Refresh).unwrap();
+    assert_eq!(saved.context, refreshed.context);
+    assert!(refreshed.receipt.is_none());
+    let employee = data(Role::Employee, 902, 1);
+    assert!(repo.execute(&employee, Operation::Refresh).is_err());
+    let mut configured = hr.clone();
+    configured.mode = hris_desktop::domain::Mode::Supabase;
+    assert!(repo.execute(&configured, Operation::Refresh).is_err());
+}

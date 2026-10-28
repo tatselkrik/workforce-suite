@@ -764,3 +764,16 @@ impl std::fmt::Display for Rejected {
     }
 }
 impl std::error::Error for Rejected {}
+
+impl Demo {
+    /// The native worker has one operation interface in cloud and fictional mode.
+    pub fn execute(&mut self, data: &crate::domain::Snapshot, op: Operation) -> Result<Response> {
+        match op {
+            Operation::Refresh => Ok(Response {
+                context: self.context(data, Audience::Staff)?,
+                receipt: None,
+            }),
+            Operation::Save(request) => self.save(data, Audience::Staff, &request),
+        }
+    }
+}

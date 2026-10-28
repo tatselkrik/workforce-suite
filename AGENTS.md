@@ -719,7 +719,7 @@ canonical personnel/pay automatically. The browser field allowlist excludes priv
 Auth/employee/assignee identifiers, routing directories and full history snapshots.
 
 The typed models, fictional repository/own projection and native HTTP adapter are
-local only:12model and8loopback-HTTP checks pass. Services SQL90/endpoints, native
+local only:13model and8loopback-HTTP checks pass. Services SQL90/endpoints, native
 worker/UI and separate portal integration are not implemented/deployed/delivered.
 Do not cross out this milestone or replace frozen0.1.66 with a development build.
 Current installed066 and its publication/migration89 remain complete. Continue this
