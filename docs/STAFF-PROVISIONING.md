@@ -90,3 +90,11 @@ editable states. None of these establishes hosted or installed-screen verificati
 The rollout gate remains FALSE; no staged migration/Edge function/new app release
 has been delivered to the live prototype yet. Complete the specialist native/server/
 storage/portal/updater permission pass before activation and final delivery.
+## Legacy creation and uncertain delivery safeguards
+
+Local migration85and the handler update require a protected rollout preflight
+before an old create operation can contact privileged Auth. Ready installations
+require the new credential-free-intent contract. Failed or uncertain old saves
+retain the Auth identity for reviewed recovery; no compensating Auth deletion is
+performed. Original business ownership/employee identity guards remain. These
+changes are locally verified and remain staged pending the full role rollout.

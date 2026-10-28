@@ -91,11 +91,11 @@ test('mismatched access subject fails closed',async()=>{
   const {handler}=fixture([{body:identity},{body:{...access,user_id:user}}]);
   assert.equal((await handler(req())).status,403);
 });
-test('failed assignment cleans up only the new Auth identity',async()=>{
-  const {handler,requests}=fixture(authenticated({body:{id:user}},{status:403},{body:{}}));
+test('failed assignment retains the Auth identity for safe recovery',async()=>{
+  const {handler,requests}=fixture(authenticated({body:{id:user}},{status:403}));
   assert.equal((await handler(req())).status,409);
-  assert.equal(requests.at(-1).url,config.url+'/auth/v1/admin/users/'+user);
-  assert.equal(requests.at(-1).method,'DELETE');
+  assert.equal(requests.length,4);
+  assert.ok(!requests.some(r=>r.method==='DELETE'));
 });
 test('an existing Auth identity is not deleted or implicitly granted',async()=>{
   const {handler,requests}=fixture(authenticated({status:422,body:{error_code:'email_exists'}}));
@@ -140,4 +140,30 @@ test('missing credentials and browser origins cannot reach provisioning',async()
   assert.equal((await handler(req(create,{Authorization:''}))).status,401);
   assert.equal((await handler(req(create,{Origin:'https://untrusted.example.invalid'}))).status,403);
   assert.equal(requests.length,0);
+});
+
+const versionedAccess={...access,company_id:person,staff_contract_version:1};
+const gate={schema_version:1,company_id:person,user_id:owner,base_role:'administrator',runtime_ready:true};
+test('ready role rollout rejects legacy creation before Auth, email or deletion',async()=>{
+ const{handler,requests}=fixture([{body:identity},{body:versionedAccess},{body:gate}]);
+ assert.equal((await handler(req())).status,409);assert.equal(requests.length,3);
+ assert.equal(requests[2].url,config.url+'/rest/v1/rpc/staff_role_context');
+ assert.ok(requests.every(r=>r.headers.apikey!==config.serviceKey&&r.method!=='DELETE'));
+});
+test('disabled rollout retains the checked legacy create contract',async()=>{
+ const{handler,requests}=fixture([{body:identity},{body:versionedAccess},{body:{...gate,runtime_ready:false}},{body:{id:user}},{body:user},{body:{}}]);
+ assert.equal((await handler(req())).status,201);assert.equal(requests.length,6);
+ assert.equal(requests[3].url,config.url+'/auth/v1/admin/users');
+});
+for(const patch of[{schema_version:2},{company_id:user},{user_id:user},{base_role:'hr_generalist'},{runtime_ready:null}])test('legacy gate response fails closed '+Object.keys(patch)[0],async()=>{
+ const{handler,requests}=fixture([{body:identity},{body:versionedAccess},{body:{...gate,...patch}}]);
+ assert.equal((await handler(req())).status,502);assert.equal(requests.length,3);assert.ok(requests.every(r=>r.headers.apikey!==config.serviceKey));
+});
+for(const status of[403,503])test('legacy gate failure has no Auth side effects '+status,async()=>{
+ const{handler,requests}=fixture([{body:identity},{body:versionedAccess},{status}]);
+ assert.equal((await handler(req())).status,status===503?502:403);assert.equal(requests.length,3);assert.ok(requests.every(r=>r.headers.apikey!==config.serviceKey));
+});
+test('uncertain legacy assignment never deletes an identity that may already have employee access',async()=>{
+ const{handler,requests}=fixture(authenticated({body:{id:user}},new Error('Fictional commit response lost')));
+ assert.equal((await handler(req())).status,502);assert.ok(!requests.some(r=>r.method==='DELETE'));assert.equal(requests.length,4);
 });

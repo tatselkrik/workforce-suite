@@ -47,7 +47,6 @@ export function createAccountHandler({ url, serviceKey, anonKey }, fetcher = fet
         Authorization: admin ? 'Bearer ' + serviceKey : authorization, 'Content-Type': 'application/json' },
       body: payload === undefined ? undefined : JSON.stringify(payload),
     });
-    let createdUser;
     let assigned = false;
     try {
       // Validate the bearer on the Auth server; never trust unverified decoded claims.
@@ -73,6 +72,19 @@ export function createAccountHandler({ url, serviceKey, anonKey }, fetcher = fet
         return answer(200, 'Confirmation email sent.', { confirmation_sent: true });
       }
       if (body.operation !== 'create') return answer(400, 'Choose a supported account operation.');
+      // A current server contract must approve the legacy route BEFORE Auth side
+      // effects. Metadata or an old client's role selector never enables it.
+      if (access.staff_contract_version !== undefined) {
+        if (access.staff_contract_version !== 1) return answer(409, 'Update HRIS before creating accounts.');
+        const gateResponse = await call('/rest/v1/rpc/staff_role_context', 'POST', {});
+        if (!gateResponse.ok) return answer(gateResponse.status >= 500 ? 502 : 403, 'Refresh current Administrator access before creating accounts.');
+        const gate = await gateResponse.json();
+        if (gate.schema_version !== 1 || gate.company_id !== access.company_id || gate.user_id !== identity.id ||
+            gate.base_role !== 'administrator' || typeof gate.runtime_ready !== 'boolean') {
+          return answer(502, 'Current account permissions could not be verified. Refresh before retrying.');
+        }
+        if (gate.runtime_ready) return answer(409, 'Use the updated Account Manager to create employee accounts and assign responsibilities.');
+      }
       const targetEmail = typeof body.email === 'string' ? body.email.trim() : '';
       const employeeName = typeof body.employee_name === 'string' ? body.employee_name.trim() : '';
       const combined = body.employee !== undefined;
@@ -98,13 +110,12 @@ export function createAccountHandler({ url, serviceKey, anonKey }, fetcher = fet
       if (!created.ok) {
         const failure = await created.json().catch(() => ({}));
         if (['email_exists', 'user_already_exists'].includes(failure.error_code) || created.status === 409) {
-          return answer(409, 'This email already has sign-in access. Open that employee to manage their staff role.');
+          return answer(409, 'This email already has an account. Use the updated Account Manager to finish or review its employee access.');
         }
         return answer(400, 'The account could not be created. Check the email and password policy.');
       }
       const user = await created.json();
       if (!uuid(user.id)) return answer(502, 'The account service returned an unexpected response.');
-      createdUser = user.id;
       // The caller's JWT, not the server key, authorizes the assignment. The RPC rechecks access under its lock.
       const saved = combined ? await call('/rest/v1/rpc/save_staff_account','POST',{
         p_user_id:user.id,p_email:targetEmail,p_role:body.role,p_active:body.active!==false,
@@ -122,11 +133,7 @@ export function createAccountHandler({ url, serviceKey, anonKey }, fetcher = fet
       // A delivery failure after the membership was committed must not delete the new account.
       if (assigned) return answer(201, 'Account created. Use Send confirmation to retry email delivery.', { confirmation_sent: false });
       return answer(502, 'Account provisioning could not finish. Refresh before trying again.');
-    } finally {
-      // Roll back only the exact new Auth user when assignment did not commit. Never delete an existing account.
-      if (createdUser && !assigned) {
-        try { await call('/auth/v1/admin/users/' + createdUser, 'DELETE', undefined, true); } catch { /* Orphan has no HRIS access. */ }
-      }
+
     }
   };
 }

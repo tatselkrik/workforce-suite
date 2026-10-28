@@ -571,3 +571,16 @@ and release/install of the incomplete role rollout remain queued. Keep the runti
 gate FALSE until the complete permission milestone is verified. Existing exact-target
 standing authorizations are unchanged; do not infer a new deployment from this local
 increment. Resume further work only on a newer human instruction.
+
+## Current resumption —remaining Account Manager safeguards,28October2026
+
+Kirk explicitly instructed doing the remaining Account Manager safeguards. This
+supersedes the completed notification/updater-only stop. Finish legacy-write role
+registry/history reconciliation, established employee identity and supervisor guards,
+protected access history/recovery usability, and remaining full permission/snapshot/
+old-client/portal checks. Then complete the authorized guarded deployment, verified
+private release and actual latest desktop installation; pause work and SAME scheduler
+after the Account Manager milestone. Broader workspaces/Payroll extraction remain
+queued. Keep activation FALSE until the complete boundaries pass verification. Reuse
+the existing reset/checkpoint protocol and exact-target authorizations; preserve
+unsaved work, immutable history/pay, own/team scopes and free/local-only constraints.

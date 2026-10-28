@@ -123,10 +123,31 @@ The repository formatting check currently reports90files, including untouched
 pre-resume source. Its required final release check remains unresolved; no CI
 success or delivery is claimed by these local checks.
 
+## Account-write safeguards, local85increment
+
+Legacy role/status saves now synchronize the protected assignment/revision/history
+in the same business transaction as the original membership/access event. Existing
+records/receipts remain immutable; deployment reconciliation captures current
+membership and preserves unknown earlier status. Safe legacy disabling retains
+specialties; only the new contract restores or replaces them. After activation,
+new account creation requires the updated provisioning contract. The hosted
+handler checks that gate using the caller's protected context before Auth creation.
+Neither legacy nor new handlers delete an identity after an uncertain business save.
+
+The private scoped saver accepts validated prospective roles only from reviewed
+v2 entry points; it is not granted to authenticated or service-role callers. It
+preserves owner/self/last-Administrator, established employee identity and archive
+locks. Specialist desktop staff may retain reports while true Employee-only access
+requires reassignment. Reporting metadata does not confer Manager review authority;
+explicit Manager duty works even with the legacy HR compatibility code.
+
+Local85evidence:30dedicated reconciliation/identity/supervisor/audit rollback checks,
+76existing role-transaction checks,77Edge regressions and12,353staged preservation
+assertions pass. The chronological85chain replays. No hosted change occurred.
+
 ## Remaining before activation and delivery
 
-Complete legacy-write boundaries;
-review every direct RPC, RLS/storage path and native snapshot/action/menu. Add the
+Review every direct RPC, RLS/storage path and native snapshot/action/menu. Add the
 remaining scoped roster and current-role labels, reconcile legacy account writes
 with protected assignment/history, and finish role/access audit/recovery usability.
 Verify own/team/assigned scopes, revocation, older clients, portal and updater

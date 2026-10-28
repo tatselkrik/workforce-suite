@@ -80,7 +80,7 @@ try{
  await db.exec('reset role');let target=await account(person);const subordinate=await account(manager);
  await db.query('update public.employees set reports_to=$1 where id=$2',[target.employee_id,subordinate.employee_id]);
  await session(owner);const before=(await context()).accounts.find(a=>a.user_id===person);
- const noManager=await change(person,['learning_performance_officer']);await deny('select public.set_staff_roles($1::jsonb)',[JSON.stringify(noManager)],['23514']);
+ const noManager=await change(person,['employee']);await deny('select public.set_staff_roles($1::jsonb)',[JSON.stringify(noManager)],['23514']);
  eq((await context()).accounts.find(a=>a.user_id===person),before,'Failed hierarchy change leaves revision and identity intact');
  const staleTime=await change(hr,['recruiter']);await db.exec('reset role');await db.query("update public.company_members set updated_at=updated_at+interval'1second'where user_id=$1",[hr]);
  await session(owner);await deny('select public.set_staff_roles($1::jsonb)',[JSON.stringify(staleTime)],['23514']);
