@@ -361,7 +361,7 @@ impl State {
                     if ui
                         .add_enabled(
                             !busy,
-                            egui::Button::new("Use current saved sources for this review"),
+                            egui::Button::new("Review latest saved details"),
                         )
                         .clicked()
                     {
@@ -587,7 +587,7 @@ impl State {
             }
         } else {
             ui.label(
-                "Load the current protected benefits context to view or save company reviews.",
+                "Load benefits to view company plans and enrollment records.",
             );
             if let Some(f) = &self.form {
                 if let Some(pending) = &f.pending {
@@ -921,7 +921,7 @@ fn fields(ui: &mut Ui, f: &mut Form, c: &Context) {
                     f.reviewed = false;
                 }
                 if ui
-                    .button("Review current plan and employment sources")
+                    .button("Refresh plan and employment details")
                     .clicked()
                 {
                     if let (Ok(p), Some(person)) = (
