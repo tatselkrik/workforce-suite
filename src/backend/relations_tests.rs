@@ -186,10 +186,27 @@ fn hosted_native_relations_context_and_save() {
                 Change::Create { employee_id, .. } => *employee_id,
                 _ => ctx.case(r.case_id).unwrap().employee_id,
             };
-            let roster: Vec<crate::domain::Employee> = c
-                .scoped_rows("employees", Some(d.access.company_id), Some(subject))
+            let response = c
+                .request(Method::GET, "employees")
+                .unwrap()
+                .query(&[
+                    ("select", "id,company_id,employee_code".to_owned()),
+                    ("company_id", format!("eq.{}", d.access.company_id)),
+                    ("id", format!("eq.{subject}")),
+                    ("limit", "2".to_owned()),
+                ])
+                .send()
                 .unwrap();
-            assert!(roster.len() == 1 && roster[0].employee_code.starts_with("QA-ER066-"));
+            let roster: Vec<Value> = decode(response).unwrap();
+            assert!(
+                roster.len() == 1
+                    && roster[0]["id"].as_str() == Some(subject.to_string().as_str())
+                    && roster[0]["company_id"].as_str()
+                        == Some(d.access.company_id.to_string().as_str())
+                    && roster[0]["employee_code"]
+                        .as_str()
+                        .is_some_and(|code| code.starts_with("QA-ER066-"))
+            );
             let first = c.execute_relation(&d, Operation::Save(Box::new(r.clone())));
             assert!(first.is_ok(), "Native synthetic case write failed");
             let first = first.unwrap();
