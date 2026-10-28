@@ -1,5 +1,19 @@
 # HRIS workspaces and Payroll implementation â€” approved27October2026
 
+**Latest continuation —29October2026:** Kirk authorized finishing Payroll and
+then employee relations, employee services, expanded benefits administration and
+HR leadership reporting, in that order. Continue across actual five-hour resets
+with the SAME scheduler and fresh checkpoints. The prior stop-after-Payroll/later-HR
+hold is superseded. Cross out only verified/delivered milestones; preserve all
+privacy, financial, free/local-only and deferred external-target boundaries.
+
+**Current bounded work —29October2026:** the scheduled reset has passed and
+Payroll separation is active. The native workspace candidate shares the full
+financial implementation; parity, hosted scope and installation remain the delivery
+gates. Only this milestone is resumed; later HR-function work stays queued. See
+[Payroll application contract](PAYROLL-DESKTOP.md). Older scheduled/paused entries
+below are historical. The SAME scheduler is armed as a recovery fallback.
+
 **Next scheduled milestone —28October2026:** Kirk authorized ONLY Separate
 Payroll Desktop using the same Supabase and preserving all payroll features/history,
 starting AFTER the usage reset. The SAME scheduler is active for29October2026

@@ -204,6 +204,11 @@ struct Decision {
     payment_reference: String,
 }
 impl State {
+    pub(super) fn select_tab(&mut self, tab: usize) {
+        self.tab = tab;
+        self.selected = None;
+        self.slip = None;
+    }
     pub(super) fn open_notice(&mut self, page: &str, id: Uuid) {
         self.selected = None;
         self.employee = None;
@@ -521,48 +526,28 @@ impl HrisApp {
             self.payroll_forms(ui);
             return;
         }
-        let hr = self
-            .data
-            .access
-            .allows(crate::staff_roles::Capability::PayrollPreparation);
+        let hr = self.payroll_administration();
         if !hr && ![3, 6, 7, 8, 10, 12].contains(&self.payroll_state.tab) {
             self.payroll_state.tab = 3;
         }
-        ui.horizontal_wrapped(|ui| {
-            for (i, label) in [
-                "Monthly registers",
-                "Salaries & benefits",
-                "Payroll holidays",
-                "My payslips",
-                "Reports",
-                "Statutory rules",
-                "Cutoffs",
-                "13th-month pay",
-                "Annual tax",
-                "Payments",
-                "Final pay",
-                "Wage compliance",
-                "Amendments",
-                "Government",
-                "Data exchange",
-            ]
-            .iter()
-            .enumerate()
-            {
-                if (hr || i == 3 || i == 6 || i == 7 || i == 8 || i == 10 || i == 12)
-                    && ui
-                        .selectable_label(
-                            self.payroll_state.tab == i,
-                            if i == 3 && hr { "Payslips" } else { *label },
-                        )
-                        .clicked()
-                {
-                    self.payroll_state.tab = i;
-                    self.payroll_state.selected = None;
-                    self.payroll_state.slip = None;
+        if self.desktop.product == crate::desktop::Product::Hris {
+            ui.horizontal_wrapped(|ui| {
+                for (i, label) in crate::desktop::PAYROLL_TABS.iter().enumerate() {
+                    if (hr || i == 3 || i == 6 || i == 7 || i == 8 || i == 10 || i == 12)
+                        && ui
+                            .selectable_label(
+                                self.payroll_state.tab == i,
+                                if i == 3 && hr { "Payslips" } else { *label },
+                            )
+                            .clicked()
+                    {
+                        self.payroll_state.tab = i;
+                        self.payroll_state.selected = None;
+                        self.payroll_state.slip = None;
+                    }
                 }
-            }
-        });
+            });
+        }
         ui.add_space(12.0);
         match self.payroll_state.tab {
             0 => self.payroll_runs(ui),
@@ -1313,10 +1298,7 @@ impl HrisApp {
             .iter()
             .filter(|s| {
                 s.company_id == self.data.company.id
-                    && (self
-                        .data
-                        .access
-                        .allows(crate::staff_roles::Capability::PayrollPreparation)
+                    && (self.payroll_administration()
                         || self.data.access.employee_id == Some(s.employee_id))
             })
             .cloned()
@@ -1384,7 +1366,7 @@ impl HrisApp {
             }
             self.payroll_state.slip = None;
         }
-        ui.label(if self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation){"Approved payslips within your authorized payroll access. Other staff see their own statements."}else{"Your approved payslips. Payroll preparation and pay for other employees stay restricted to authorized payroll staff."});
+        ui.label(if self.payroll_administration(){"Approved payslips within your authorized payroll access. Other staff see their own statements."}else{"Your approved payslips. Payroll preparation and pay for other employees stay restricted to authorized payroll staff."});
         let mut rows = visible.clone();
         rows.sort_by_key(|s| std::cmp::Reverse(s.month));
         for s in rows {

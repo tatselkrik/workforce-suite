@@ -11,6 +11,7 @@ pub(super) fn access_json(a: &Access) -> Value {
 
 pub(super) fn client(url: String, data: &Snapshot) -> CloudClient {
     CloudClient {
+        product: None,
         config: ConnectionConfig {
             url,
             publishable_key: "sb_publishable_fictional_http_fixture".into(),

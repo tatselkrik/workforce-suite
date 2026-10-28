@@ -9,16 +9,27 @@ pub(super) struct State {
     scope: Option<crate::access::Access>,
     items: std::sync::Arc<Vec<notifications::Alert>>,
     pub unread: usize,
+    payroll_only: bool,
 }
 impl State {
     pub fn invalidate(&mut self) {
         self.refreshed = None;
     }
-    pub fn current(&mut self, data: &Snapshot) -> std::sync::Arc<Vec<notifications::Alert>> {
-        if self.scope.as_ref() != Some(&data.access)
+    pub fn for_product(
+        &mut self,
+        data: &Snapshot,
+        product: crate::desktop::Product,
+    ) -> std::sync::Arc<Vec<notifications::Alert>> {
+        let payroll_only = product == crate::desktop::Product::Payroll;
+        if self.payroll_only != payroll_only
+            || self.scope.as_ref() != Some(&data.access)
             || self.refreshed.is_none_or(|at| at.elapsed().as_secs() >= 60)
         {
-            let items = notifications::alerts(data, chrono::Utc::now());
+            let mut items = notifications::alerts(data, chrono::Utc::now());
+            if payroll_only {
+                items.retain(|a| a.category == Category::Payroll);
+            }
+            self.payroll_only = payroll_only;
             self.unread = items
                 .iter()
                 .filter(|a| !notifications::is_read(data, &a.key))
@@ -148,7 +159,9 @@ impl HrisApp {
         self.page = Page::Notifications;
     }
     pub(super) fn notifications_page(&mut self, ui: &mut Ui) {
-        let all = self.notification_state.current(&self.data);
+        let all = self
+            .notification_state
+            .for_product(&self.data, self.desktop.product);
         let unread = all
             .iter()
             .filter(|a| !notifications::is_read(&self.data, &a.key))
@@ -174,11 +187,13 @@ impl HrisApp {
                 ui.checkbox(&mut self.notification_state.unread_only, "Unread only");
                 ui.selectable_value(&mut self.notification_state.category, None, "All");
                 for c in Category::ALL {
-                    if c != Category::Documents
-                        || self
-                            .data
-                            .access
-                            .allows(crate::staff_roles::Capability::PersonnelDocuments)
+                    if (self.desktop.product != crate::desktop::Product::Payroll
+                        || c == Category::Payroll)
+                        && (c != Category::Documents
+                            || self
+                                .data
+                                .access
+                                .allows(crate::staff_roles::Capability::PersonnelDocuments))
                     {
                         ui.selectable_value(
                             &mut self.notification_state.category,
@@ -303,11 +318,17 @@ impl HrisApp {
                 });
             });
         }
-        ui.collapsing("Read history",|ui| {
+        if self.desktop.product == crate::desktop::Product::Hris {
+            ui.collapsing("Read history",|ui| {
             ui.label(RichText::new(format!("{} read items saved privately to your account. Reset marks current items unread; source records and approvals are unchanged.",notifications::read_count(&self.data))).small().color(muted(ui)));
             if ui.add_enabled(notifications::read_count(&self.data)>0,egui::Button::new("Reset read history")).clicked(){self.send(Command::Change(Action::NotificationReads(ReadAction::Reset)));}
         });
-        ui.label(RichText::new("Document reminders cover active employees' filed, unarchived documents: expiry or contract end within 30 days, today, or past date. Your upcoming approved leave covers seven days. Own request updates cover the last 30 days. Unfinished check-outs require at least 24 hours elapsed. Read is not an approval. Email delivery and device connections are separate setup work.").small().color(muted(ui)));
+        } else {
+            ui.label(RichText::new("Read markers follow your own account across HRIS and Payroll. Mark individual items or the current page; unrelated HR read history is preserved.").small().color(muted(ui)));
+        }
+        if self.desktop.product == crate::desktop::Product::Hris {
+            ui.label(RichText::new("Document reminders cover active employees' filed, unarchived documents: expiry or contract end within 30 days, today, or past date. Your upcoming approved leave covers seven days. Own request updates cover the last 30 days. Unfinished check-outs require at least 24 hours elapsed. Read is not an approval. Email delivery and device connections are separate setup work.").small().color(muted(ui)));
+        }
         ui.add(egui::Label::new(RichText::new("Payroll notices separate issued advice from recorded individual payments. Appraisal and training deadlines cover the next seven days and overdue open tasks; recorded certificates cover 30 days and past expiry. Read status does not approve or change a record.").small().color(muted(ui))).wrap());
     }
     fn open_notification(&mut self, target: &Target, ctx: &egui::Context) {
@@ -365,5 +386,25 @@ impl HrisApp {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod product_filter_tests {
+    use super::*;
+    #[test]
+    fn product_changes_invalidate_shared_notice_cache_and_keep_only_financial_alerts_in_payroll() {
+        let mut d = DemoStore::new().data;
+        let payroll = Uuid::new_v4();
+        let training = Uuid::new_v4();
+        d.lifecycle_notifications=Some(serde_json::from_value(serde_json::json!({"version":"lifecycle-notifications-v1","company_id":d.company.id,"user_id":d.access.user_id,"employee_id":d.access.employee_id,"role":d.access.role,"surface":"desktop","as_of":d.company.today(),"generated_at":chrono::Utc::now(),"read_keys":[],"total_items":2,"truncated":false,"items":[{"key":format!("payroll-monthly-issued:{payroll}:0"),"kind":"payroll-monthly-issued","title":"Own fictional payslip","detail":"Issued advice","date":d.company.today(),"urgent":false,"target_id":payroll,"target_page":"payroll_monthly","employee_id":d.access.employee_id},{"key":format!("training-due:{training}:0:today"),"kind":"training-due","title":"Own fictional training","detail":"Training task","date":d.company.today(),"urgent":true,"target_id":training,"target_page":"training","employee_id":d.access.employee_id}]})).unwrap());
+        let mut state = State::default();
+        let all = state.for_product(&d, crate::desktop::Product::Hris);
+        let payroll = state.for_product(&d, crate::desktop::Product::Payroll);
+        assert!(!payroll.is_empty());
+        assert!(payroll.iter().all(|n| n.category == Category::Payroll));
+        assert!(all.len() > payroll.len());
+        let restored = state.for_product(&d, crate::desktop::Product::Hris);
+        assert_eq!(all.len(), restored.len());
     }
 }

@@ -295,10 +295,7 @@ fn original_export(app: &mut HrisApp, ui: &mut Ui, kind: &str, id: Uuid) {
 }
 impl HrisApp {
     pub(super) fn payroll_amendments(&mut self, ui: &mut Ui) {
-        let hr = self
-            .data
-            .access
-            .allows(crate::staff_roles::Capability::PayrollPreparation);
+        let hr = self.payroll_administration();
         if !hr {
             self.payroll_state.amendments.issued = true;
             self.payroll_state.amendments.form = None;
@@ -481,10 +478,7 @@ impl HrisApp {
         }
     }
     fn amendment_slips(&mut self, ui: &mut Ui) {
-        let hr = self
-            .data
-            .access
-            .allows(crate::staff_roles::Capability::PayrollPreparation);
+        let hr = self.payroll_administration();
         let rows = self
             .data
             .payroll
@@ -590,11 +584,7 @@ impl HrisApp {
         }
     }
     pub(super) fn payroll_amendment_forms(&mut self, ui: &mut Ui) {
-        if !self
-            .data
-            .access
-            .allows(crate::staff_roles::Capability::PayrollPreparation)
-        {
+        if !self.payroll_administration() {
             self.payroll_state.amendments.form = None;
             return;
         }

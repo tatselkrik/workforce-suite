@@ -31,7 +31,7 @@ impl Module {
             Self::Development => "Development",
             Self::Hiring => "Hiring",
             Self::ExitClearance => "Exit & clearance",
-            Self::Payroll => "Payroll & payslips",
+            Self::Payroll => "My payslips",
             Self::Reports => "Reports",
         }
     }
@@ -41,7 +41,9 @@ impl Module {
             Self::Development => "Goals, appraisals, training, certifications and career plans.",
             Self::Hiring => "Applicants, interviews, offers and onboarding tasks.",
             Self::ExitClearance => "Separation and assigned clearance tasks.",
-            Self::Payroll => "Payroll preparation and personal published statements.",
+            Self::Payroll => {
+                "Personal published advice in HRIS. Payroll Desktop is a separate application."
+            }
             Self::Reports => "Attendance, leave and workforce reports.",
         }
     }

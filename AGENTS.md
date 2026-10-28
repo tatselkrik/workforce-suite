@@ -650,3 +650,46 @@ Payroll Officer scope and independent Administrator approvals. Existing HRIS
 publication authority does not authorize an unresolved new Payroll update channel.
 After this milestone is delivered, pause work and SAME scheduler. No implementation
 was started while queuing it; current0.1.64 delivery remains complete.
+
+
+## Current bounded Payroll separation —29October2026
+
+The after-reset authorization has begun. Finish ONLY the separate native Payroll
+Desktop milestone, verify parity and local delivery, then pause work/SAME scheduler.
+Later HR-function modules stay queued. Follow docs/PAYROLL-DESKTOP.md and the current
+task checkpoint for actual progress; completed0.1.64 must not be repeated.
+
+Payroll is a separate workspace package with identifier
+`io.github.tatselkrik.payrolldesktop`, own version/folder/marker/Windows Apps entries,
+and the same company profile/Supabase. Share the existing Rust financial engine,
+adapters and screen implementations; never fork rates or migrate immutable pay.
+Protected Payroll Officer/Administrator admission and independent approval remain.
+Keep HRIS personal published advice separate from Payroll financial administration,
+and preserve own profiles/security/display and financial notice identities. Payroll
+loads only the needed financial roster, own profile and protected payroll context.
+
+The first Payroll release is local. Do not consume HRIS updater manifests/keys in
+Payroll or invent authority for a new Payroll publication channel. Existing HRIS
+private-channel authority stays exact-target and separate. Verify/install Payroll
+before delivering HRIS's administrative-screen removal; preserve company files,
+unsaved work, original history, and the unchanged separate loopback-only portal.
+
+
+## Latest continuous HR queue —29October2026
+
+Kirk instructed continuing after Payroll with, in order: employee relations
+(confidential cases/follow-ups), employee services (requests/routing/tracking),
+expanded benefits administration (eligibility/enrollment/dependents), then HR
+leadership reporting. Continue useful authorized work until the actual five-hour
+limit and resume automatically after its reported reset, using the SAME scheduler
+and fresh checkpoint protocol. This supersedes the former stop-after-Payroll
+boundary. Deliver/verify/install one milestone at a time; do not leave current
+Payroll parity/installation unfinished to start these modules prematurely.
+
+Keep assigned confidential access/audit, own/assigned service scopes, explicit
+review of monetary benefits effects without automatic pay changes, and leadership
+metrics grounded in supportable historical facts with unknown dates explicit.
+Existing no-charge, exact-target, independent financial approval, immutable history,
+local-portal, deferred agency/vendor/device and private-publication boundaries remain.
+Pause after the authorized queue completes, a newer human pause, or a genuine
+handoff blocks all independent authorized work. No unrelated module is authorized.

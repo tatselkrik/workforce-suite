@@ -72,14 +72,27 @@ impl ConnectionConfig {
     }
 
     pub fn load() -> Result<Self> {
+        Self::load_for(crate::desktop::Product::Hris)
+    }
+
+    pub fn load_for(product: crate::desktop::Product) -> Result<Self> {
         let exe = std::env::current_exe().context("Could not locate the HRIS installation.")?;
         let folder = exe
             .parent()
             .context("Could not locate the HRIS installation folder.")?;
-        Self::load_profile(
-            &folder.join("hris-connection.json"),
-            folder.join(".hris-installation").exists(),
-        )
+        Self::load_folder(folder, product)
+    }
+    fn load_folder(folder: &Path, product: crate::desktop::Product) -> Result<Self> {
+        let marker = folder.join(product.marker());
+        let installed = marker.exists();
+        if installed {
+            ensure!(
+                marker.metadata()?.len() <= 128
+                    && std::fs::read(&marker)? == product.id().as_bytes(),
+                "This installation belongs to a different application. Reinstall the correct company package."
+            );
+        }
+        Self::load_profile(&folder.join("hris-connection.json"), installed)
     }
 
     fn load_profile(path: &Path, installed: bool) -> Result<Self> {
@@ -211,6 +224,7 @@ mod connection_file_tests {
 }
 
 pub struct CloudClient {
+    product: Option<crate::desktop::Product>,
     config: ConnectionConfig,
     http: Client,
     session: AuthSession,
@@ -378,6 +392,22 @@ impl CloudClient {
         email: String,
         password: String,
     ) -> Result<(Self, Snapshot)> {
+        Self::connect_in(None, config, email, password)
+    }
+    pub fn connect_for(
+        product: crate::desktop::Product,
+        config: ConnectionConfig,
+        email: String,
+        password: String,
+    ) -> Result<(Self, Snapshot)> {
+        Self::connect_in(Some(product), config, email, password)
+    }
+    fn connect_in(
+        product: Option<crate::desktop::Product>,
+        config: ConnectionConfig,
+        email: String,
+        password: String,
+    ) -> Result<(Self, Snapshot)> {
         config.validate()?;
         ensure!(
             !email.trim().is_empty() && !password.is_empty(),
@@ -406,6 +436,7 @@ impl CloudClient {
             session.expires_at = Utc::now().timestamp() + session.expires_in;
         }
         let mut client = Self {
+            product,
             config,
             http,
             account: session.user.profile(),
@@ -740,6 +771,14 @@ impl CloudClient {
     }
 
     fn rows<T: DeserializeOwned>(&mut self, table: &str, company: Option<Uuid>) -> Result<Vec<T>> {
+        self.scoped_rows(table, company, None)
+    }
+    fn scoped_rows<T: DeserializeOwned>(
+        &mut self,
+        table: &str,
+        company: Option<Uuid>,
+        employee: Option<Uuid>,
+    ) -> Result<Vec<T>> {
         let mut all = Vec::new();
         for page in 0..200 {
             let mut request = self.request(Method::GET, table)?.query(&[
@@ -757,6 +796,9 @@ impl CloudClient {
             ]);
             if let Some(company_id) = company {
                 request = request.query(&[("company_id", format!("eq.{company_id}"))]);
+            }
+            if let Some(employee_id) = employee {
+                request = request.query(&[("employee_id", format!("eq.{employee_id}"))]);
             }
             let response = request
                 .header("Range-Unit", "items")
@@ -817,6 +859,12 @@ impl CloudClient {
         if !access.uses_desktop() {
             let _ = self.sign_out_scope("local");
             return Err(PortalAccount.into());
+        }
+        if self.product == Some(crate::desktop::Product::Payroll)
+            && !crate::desktop::Product::Payroll.admits(&access)
+        {
+            let _ = self.sign_out_scope("local");
+            return Err(anyhow::Error::new(AccessRevoked).context("Payroll Desktop requires Payroll Officer or Administrator responsibility. Your other HRIS access is unchanged."));
         }
         Ok(access)
     }
@@ -1032,6 +1080,9 @@ impl CloudClient {
         Ok((data, preview))
     }
     pub fn snapshot(&mut self) -> Result<Snapshot> {
+        if self.product == Some(crate::desktop::Product::Payroll) {
+            return self.payroll_desktop_snapshot();
+        }
         let access = self.current_access()?;
         let mut companies: Vec<Company> = self.rows("companies", None)?;
         ensure!(
@@ -2388,6 +2439,20 @@ pub fn worker(
     initial: Option<DemoStore>,
     repaint: eframe::egui::Context,
 ) -> (mpsc::Sender<Command>, mpsc::Receiver<Update>) {
+    worker_in(None, initial, repaint)
+}
+pub fn worker_for(
+    product: crate::desktop::Product,
+    initial: Option<DemoStore>,
+    repaint: eframe::egui::Context,
+) -> (mpsc::Sender<Command>, mpsc::Receiver<Update>) {
+    worker_in(Some(product), initial, repaint)
+}
+fn worker_in(
+    product: Option<crate::desktop::Product>,
+    initial: Option<DemoStore>,
+    repaint: eframe::egui::Context,
+) -> (mpsc::Sender<Command>, mpsc::Receiver<Update>) {
     let (commands, receiver) = mpsc::channel();
     let (events, updates) = mpsc::channel();
     thread::spawn(move || {
@@ -2440,6 +2505,11 @@ pub fn worker(
             let mut update_state = None;
             let mut check_after_sign_in = false;
             let mut result: Result<Snapshot> = match command {
+                ref command if product.is_some_and(|p| !p.command_allowed(command)) => {
+                    Err(anyhow::anyhow!(
+                        "This action belongs to the other desktop application. No records were changed."
+                    ))
+                }
                 Command::PayrollExchange(operation) => {
                     let changed = (|| {
                         let client = cloud.as_mut().context(
@@ -2733,10 +2803,10 @@ pub fn worker(
                     config,
                     email,
                     password,
-                } => match CloudClient::connect(config, email, password) {
+                } => match CloudClient::connect_in(product, config, email, password) {
                     Ok((client, data)) => {
                         cloud = Some(client);
-                        check_after_sign_in = true;
+                        check_after_sign_in = product != Some(crate::desktop::Product::Payroll);
                         update_state = Some(UpdateState::Idle);
                         message = "Signed in to your company workspace.".into();
                         Ok(data)
@@ -3377,6 +3447,9 @@ pub fn worker(
                     })
                 }
             };
+            if let (Some(product), Ok(data)) = (product, &mut result) {
+                product.project(data);
+            }
             let workspace_rejected = result
                 .as_ref()
                 .err()
@@ -3710,3 +3783,8 @@ fn execute_demo_account(profile: &mut AccountProfile, action: AccountAction) -> 
     }
     Ok("Updated for this demo session. Changes are not saved.".into())
 }
+
+mod payroll_desktop_adapter;
+
+#[cfg(test)]
+mod payroll_desktop_tests;

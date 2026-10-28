@@ -3,38 +3,54 @@ use chrono::Datelike;
 impl CloudClient {
     pub(super) fn payroll_snapshot(&mut self, a: &Access) -> Result<crate::payroll::Setup> {
         let company = Some(a.company_id);
+        let own_only = self.product == Some(crate::desktop::Product::Hris);
+        let employee = if own_only {
+            Some(
+                a.employee_id
+                    .context("An employee record is required for own payslips.")?,
+            )
+        } else {
+            None
+        };
+        let preparing = a.allows(crate::staff_roles::Capability::PayrollPreparation) && !own_only;
         let mut setup = crate::payroll::Setup {
-            slips: self.rows("payroll_slips", company)?,
+            slips: self.scoped_rows("payroll_slips", company, employee)?,
             ..Default::default()
         };
-        setup.cutoffs.slips = self.rows("payroll_cutoff_slips", company)?;
-        setup.thirteenth.slips = self.rows("payroll_thirteenth_slips", company)?;
-        setup.finals.slips = self.rows("payroll_final_slips", company)?;
-        setup.finals.statuses = self.rows("payroll_final_status", company)?;
-        setup.amendments.slips = self.rows("payroll_amendment_slips", company)?;
-        setup.amendments.statuses = self.rows("payroll_amendment_status", company)?;
-        setup.tax.slips = self.rows("payroll_tax_slips", company)?;
-        if a.allows(crate::staff_roles::Capability::PayrollPreparation) {
-            setup.amendments.records = self.rows("payroll_amendment_cases", company)?;
-            setup.wages.classifications = self.rows("payroll_wage_classifications", company)?;
-            setup.wages.settings = self.rows("payroll_wage_settings", company)?;
-            setup.wages.checks = self.rows("payroll_wage_check_index", company)?;
-            setup.profiles = self.rows("payroll_profiles", company)?;
-            setup.holidays = self.rows("payroll_holidays", company)?;
-            setup.runs = self.rows("payroll_runs", company)?;
-            setup.items = self.rows("payroll_items", company)?;
-            setup.events = self.rows("payroll_events", company)?;
-            setup.cutoffs.runs = self.rows("payroll_cutoff_runs", company)?;
-            setup.cutoffs.items = self.rows("payroll_cutoff_items", company)?;
-            setup.thirteenth.runs = self.rows("payroll_thirteenth_runs", company)?;
-            setup.thirteenth.items = self.rows("payroll_thirteenth_items", company)?;
-            setup.finals.records = self.rows("payroll_final_cases", company)?;
+        setup.cutoffs.slips = self.scoped_rows("payroll_cutoff_slips", company, employee)?;
+        setup.thirteenth.slips = self.scoped_rows("payroll_thirteenth_slips", company, employee)?;
+        setup.finals.slips = self.scoped_rows("payroll_final_slips", company, employee)?;
+        setup.finals.statuses = self.scoped_rows("payroll_final_status", company, employee)?;
+        setup.amendments.slips = self.scoped_rows("payroll_amendment_slips", company, employee)?;
+        setup.amendments.statuses =
+            self.scoped_rows("payroll_amendment_status", company, employee)?;
+        setup.tax.slips = self.scoped_rows("payroll_tax_slips", company, employee)?;
+        if preparing {
+            setup.amendments.records =
+                self.scoped_rows("payroll_amendment_cases", company, employee)?;
+            setup.wages.classifications =
+                self.scoped_rows("payroll_wage_classifications", company, employee)?;
+            setup.wages.settings = self.scoped_rows("payroll_wage_settings", company, employee)?;
+            setup.wages.checks = self.scoped_rows("payroll_wage_check_index", company, employee)?;
+            setup.profiles = self.scoped_rows("payroll_profiles", company, employee)?;
+            setup.holidays = self.scoped_rows("payroll_holidays", company, employee)?;
+            setup.runs = self.scoped_rows("payroll_runs", company, employee)?;
+            setup.items = self.scoped_rows("payroll_items", company, employee)?;
+            setup.events = self.scoped_rows("payroll_events", company, employee)?;
+            setup.cutoffs.runs = self.scoped_rows("payroll_cutoff_runs", company, employee)?;
+            setup.cutoffs.items = self.scoped_rows("payroll_cutoff_items", company, employee)?;
+            setup.thirteenth.runs =
+                self.scoped_rows("payroll_thirteenth_runs", company, employee)?;
+            setup.thirteenth.items =
+                self.scoped_rows("payroll_thirteenth_items", company, employee)?;
+            setup.finals.records = self.scoped_rows("payroll_final_cases", company, employee)?;
             for r in &mut setup.finals.records {
                 r.worksheet.cash_year_reviewed = r.cash_year_reviewed;
                 r.worksheet.cash_year_note = r.cash_year_note.clone();
             }
-            setup.tax.records = self.rows("payroll_tax_reconciliations", company)?;
-            setup.receipts = self.rows("payroll_payment_receipts", company)?;
+            setup.tax.records =
+                self.scoped_rows("payroll_tax_reconciliations", company, employee)?;
+            setup.receipts = self.scoped_rows("payroll_payment_receipts", company, employee)?;
         }
         // Approved slips deliberately omit the private attendance/leave source bundle.
         for s in &setup.slips {
@@ -44,8 +60,7 @@ impl CloudClient {
                     && s.item.employee_id == s.employee_id
                     && s.item.run_id == s.run_id
                     && s.item.id == s.id
-                    && (a.allows(crate::staff_roles::Capability::PayrollPreparation)
-                        || Some(s.employee_id) == a.employee_id),
+                    && (preparing || Some(s.employee_id) == a.employee_id),
                 "Payslip is outside your current access."
             );
         }
@@ -57,8 +72,7 @@ impl CloudClient {
                     && p.item.employee_id == p.employee_id
                     && p.item.run_id == p.run_id
                     && p.item.id == p.id
-                    && (a.allows(crate::staff_roles::Capability::PayrollPreparation)
-                        || Some(p.employee_id) == a.employee_id),
+                    && (preparing || Some(p.employee_id) == a.employee_id),
                 "Cutoff payslip is outside your current access."
             );
             ensure!(
@@ -76,8 +90,7 @@ impl CloudClient {
                     && s.item.id == s.id
                     && s.item.employee_id == s.employee_id
                     && s.item.run_id == s.run_id
-                    && (a.allows(crate::staff_roles::Capability::PayrollPreparation)
-                        || Some(s.employee_id) == a.employee_id)
+                    && (preparing || Some(s.employee_id) == a.employee_id)
                     && s.year == s.as_of.year(),
                 "Annual benefit slip is outside your current access."
             );
@@ -86,8 +99,7 @@ impl CloudClient {
             ensure!(
                 s.company_id == a.company_id
                     && s.year == s.as_of.year()
-                    && (a.allows(crate::staff_roles::Capability::PayrollPreparation)
-                        || Some(s.employee_id) == a.employee_id),
+                    && (preparing || Some(s.employee_id) == a.employee_id),
                 "Annual tax advice is outside your current access."
             );
         }
@@ -97,15 +109,13 @@ impl CloudClient {
                 .slips
                 .iter()
                 .all(|s| s.company_id == a.company_id
-                    && (a.allows(crate::staff_roles::Capability::PayrollPreparation)
-                        || a.employee_id == Some(s.employee_id)))
+                    && (preparing || a.employee_id == Some(s.employee_id)))
                 && setup
                     .finals
                     .statuses
                     .iter()
                     .all(|s| s.company_id == a.company_id
-                        && (a.allows(crate::staff_roles::Capability::PayrollPreparation)
-                            || a.employee_id == Some(s.employee_id))),
+                        && (preparing || a.employee_id == Some(s.employee_id))),
             "Final pay is outside your current access."
         );
         ensure!(
@@ -127,8 +137,10 @@ impl CloudClient {
             "Wage reviews are outside this company."
         );
         ensure!(
-            setup.receipts.iter().all(|r| r.company_id == a.company_id
-                && a.allows(crate::staff_roles::Capability::PayrollPreparation)),
+            setup
+                .receipts
+                .iter()
+                .all(|r| r.company_id == a.company_id && preparing),
             "Payment receipt is outside your current access."
         );
         ensure!(
@@ -137,21 +149,18 @@ impl CloudClient {
                 .slips
                 .iter()
                 .all(|s| s.company_id == a.company_id
-                    && (a.allows(crate::staff_roles::Capability::PayrollPreparation)
-                        || a.employee_id == Some(s.employee_id)))
+                    && (preparing || a.employee_id == Some(s.employee_id)))
                 && setup
                     .amendments
                     .statuses
                     .iter()
                     .all(|s| s.company_id == a.company_id
-                        && (a.allows(crate::staff_roles::Capability::PayrollPreparation)
-                            || a.employee_id == Some(s.employee_id)))
+                        && (preparing || a.employee_id == Some(s.employee_id)))
                 && setup
                     .amendments
                     .records
                     .iter()
-                    .all(|r| r.company_id == a.company_id
-                        && a.allows(crate::staff_roles::Capability::PayrollPreparation)),
+                    .all(|r| r.company_id == a.company_id && preparing),
             "Payroll amendments are outside your current access."
         );
         Ok(setup)

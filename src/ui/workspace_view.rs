@@ -1,11 +1,18 @@
 use super::*;
 impl HrisApp {
     pub(super) fn current_workspace_hidden(&self) -> bool {
-        self.employee_form.is_none()
+        self.desktop.product == crate::desktop::Product::Hris
+            && self.employee_form.is_none()
             && workspaces::hidden(self.page, self.employee_view, &self.data)
     }
     pub(super) fn reconcile_workspaces(&mut self, ctx: &egui::Context) {
         if self.data.mode == Mode::SignedOut {
+            return;
+        }
+        if self.desktop.product == crate::desktop::Product::Payroll {
+            if !self.desktop.product.visible(self.page, &self.data) && !self.has_unsaved_edits() {
+                self.navigate(Page::Payroll, ctx);
+            }
             return;
         }
         let (page, section) = workspaces::reconcile(

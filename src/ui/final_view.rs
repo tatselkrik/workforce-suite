@@ -196,10 +196,7 @@ fn units(ui: &mut Ui, label: &str, n: &mut u32) {
 }
 impl HrisApp {
     pub(super) fn payroll_final(&mut self, ui: &mut Ui) {
-        let hr = self
-            .data
-            .access
-            .allows(crate::staff_roles::Capability::PayrollPreparation);
+        let hr = self.payroll_administration();
         if !hr {
             self.payroll_state.finals.slips = true;
             self.payroll_state.finals.form = None;
@@ -387,11 +384,7 @@ impl HrisApp {
         }));
     }
     pub(super) fn payroll_final_forms(&mut self, ui: &mut Ui) {
-        if !self
-            .data
-            .access
-            .allows(crate::staff_roles::Capability::PayrollPreparation)
-        {
+        if !self.payroll_administration() {
             self.payroll_state.finals.form = None;
             return;
         }
@@ -685,10 +678,7 @@ impl HrisApp {
         }
     }
     fn final_slips(&mut self, ui: &mut Ui) {
-        let hr = self
-            .data
-            .access
-            .allows(crate::staff_roles::Capability::PayrollPreparation);
+        let hr = self.payroll_administration();
         let slips = self
             .data
             .payroll

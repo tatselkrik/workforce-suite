@@ -98,7 +98,10 @@ enum SessionChoice {
     Everywhere,
 }
 
+mod payroll_navigation;
+
 pub struct HrisApp {
+    desktop: crate::desktop::Application,
     data: Snapshot,
     page: Page,
     commands: mpsc::Sender<Command>,
@@ -151,6 +154,7 @@ pub struct HrisApp {
     close_on_success: bool,
     company_draft: Company,
     workspace_draft: Option<crate::workspaces::Draft>,
+    payroll_sidebar_last_tab: Option<usize>,
     sidebar_last_page: Option<Page>,
     sidebar_last_height: i32,
     connection: Option<ConnectionConfig>,
@@ -287,8 +291,11 @@ fn adaptive(ui: &Ui, light: Color32, dark: Color32) -> Color32 {
 
 impl HrisApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        Self::new_for(cc, crate::desktop::Application::hris())
+    }
+    pub fn new_for(cc: &eframe::CreationContext<'_>, desktop: crate::desktop::Application) -> Self {
         configure_theme(&cc.egui_ctx);
-        let (connection, deployment_error) = match ConnectionConfig::load() {
+        let (connection, deployment_error) = match ConnectionConfig::load_for(desktop.product) {
             Ok(config) if config.url.is_empty() => (None, None),
             Ok(config) => (Some(config), None),
             Err(error) => (None, Some(error.to_string())),
@@ -298,7 +305,7 @@ impl HrisApp {
             .as_ref()
             .map(|store| store.data.clone())
             .unwrap_or_else(Snapshot::signed_out);
-        let (commands, updates) = backend::worker(demo, cc.egui_ctx.clone());
+        let (commands, updates) = backend::worker_for(desktop.product, demo, cc.egui_ctx.clone());
         let company_logo = std::env::current_exe()
             .ok()
             .and_then(|exe| exe.parent().map(|folder| folder.join("company-logo.png")))
@@ -333,18 +340,28 @@ impl HrisApp {
             .unwrap_or_default();
         let report_state = reports_view::State::new(data.company.today());
         let mut app = Self {
+            desktop,
             attendance_date: data.company.today(),
             calendar_month: month_start(data.company.today()),
             company_draft: data.company.clone(),
             workspace_draft: None,
+            payroll_sidebar_last_tab: None,
             sidebar_last_page: None,
             sidebar_last_height: -1,
             data,
-            page: Page::Overview,
+            page: if desktop.product == crate::desktop::Product::Payroll {
+                Page::Payroll
+            } else {
+                Page::Overview
+            },
             commands,
             updates,
             busy: false,
-            notice: updater::previous_result(),
+            notice: if desktop.product == crate::desktop::Product::Hris {
+                updater::previous_result()
+            } else {
+                None
+            },
             search: String::new(),
             employee_status: Some(EmployeeStatus::Active),
             employee_view: EmployeeView::Directory,
@@ -424,6 +441,7 @@ impl HrisApp {
             if app.data.mode == Mode::Demo {
                 if let Ok(name) = std::env::var("HRIS_PREVIEW_COMPANY_NAME") {
                     app.data.company.name = name;
+                    app.company_draft = app.data.company.clone();
                 }
             }
             match std::env::var("HRIS_PREVIEW_PAGE").as_deref() {
@@ -1034,6 +1052,21 @@ impl HrisApp {
         }
         #[cfg(feature = "qa-screenshot")]
         app.prepare_workspace_preview();
+        if app.data.mode != Mode::SignedOut {
+            desktop.product.project(&mut app.data);
+            if desktop.product == crate::desktop::Product::Payroll {
+                if !desktop.product.admits(&app.data.access) {
+                    app.data = Snapshot::signed_out();
+                    app.account = None;
+                    app.notice = Some((
+                        "Payroll Officer or Administrator access is required.".into(),
+                        true,
+                    ));
+                } else if !desktop.product.visible(app.page, &app.data) {
+                    app.page = Page::Payroll;
+                }
+            }
+        }
         // Keep the same constructor in production and screenshot builds.
         app.check_in_employee = app
             .data
@@ -1045,6 +1078,13 @@ impl HrisApp {
 
     fn send(&mut self, command: Command) {
         if self.busy {
+            return;
+        }
+        if !self.desktop.product.command_allowed(&command) {
+            self.notice = Some((
+                "Open the appropriate desktop application for this action.".into(),
+                true,
+            ));
             return;
         }
         match self.commands.send(command) {
@@ -1296,7 +1336,7 @@ impl HrisApp {
                     }
                     self.data = data;
                     if newly_signed_in {
-                        self.page = workspaces::landing(&self.data);
+                        self.page = self.desktop.product.landing(&self.data);
                         if workspaces::prefers_development(&self.data) {
                             self.employee_view = EmployeeView::Development;
                         }
@@ -1510,8 +1550,10 @@ impl HrisApp {
 
     fn navigate(&mut self, page: Page, ctx: &egui::Context) {
         if self.data.mode != Mode::SignedOut
-            && !(page == Page::Employees && self.employee_form.is_some())
-            && !workspaces::visible(page, &self.data)
+            && !(self.desktop.product == crate::desktop::Product::Hris
+                && page == Page::Employees
+                && self.employee_form.is_some())
+            && !self.desktop.product.visible(page, &self.data)
         {
             self.notice = Some((
                 "This section is hidden or outside your current workspace.".into(),
@@ -1853,95 +1895,130 @@ impl HrisApp {
                 .wrap(),
             );
         });
+        ui.vertical_centered(|ui| {
+            ui.label(
+                RichText::new(self.desktop.product.name())
+                    .color(Color32::from_rgb(175, 193, 207))
+                    .size(12.0),
+            );
+        });
         ui.add_space(if compact { 14.0 } else { 28.0 });
         let nav_height = (ui.available_height() - 112.0).max(70.0);
-        let entries = workspaces::entries(&self.data);
-        let follow_selection = self.sidebar_last_page != Some(self.page)
-            || self.sidebar_last_height != nav_height.round() as i32;
-        self.sidebar_last_height = nav_height.round() as i32;
-        self.sidebar_last_page = Some(self.page);
-        let group_count = entries
-            .windows(2)
-            .filter(|w| w[0].group != w[1].group)
-            .count() as f32;
-        let rows = entries.len().max(1) as f32;
-        let button_height =
-            ((nav_height - group_count * 25.0 - (rows - 1.0) * if compact { 3.0 } else { 5.0 })
-                / rows)
-                .clamp(26.0, 38.0);
-        let selected_index = entries
-            .iter()
-            .position(|e| e.page == self.page)
-            .unwrap_or(0);
-        let preceding_groups = entries
-            .iter()
-            .take(selected_index + 1)
-            .filter_map(|e| e.group)
-            .collect::<Vec<_>>()
-            .windows(2)
-            .filter(|w| w[0] != w[1])
-            .count()
-            + usize::from(
-                entries
-                    .iter()
-                    .take(selected_index + 1)
-                    .any(|e| e.group.is_some()),
-            );
-        let selected_offset = (selected_index as f32
-            * (button_height + if compact { 3.0 } else { 5.0 })
-            + preceding_groups as f32 * 30.0
-            - nav_height * 0.4)
-            .max(0.0);
-        let navigation_scroll = egui::ScrollArea::vertical()
-            .id_salt("sidebar_navigation")
-            .max_height(nav_height);
-        let navigation_scroll = if follow_selection {
-            navigation_scroll.vertical_scroll_offset(selected_offset)
-        } else {
-            navigation_scroll
-        };
-        navigation_scroll.show(ui, |ui| {
-            ui.spacing_mut().item_spacing.y = if compact { 3.0 } else { 5.0 };
-            let mut group = None;
-            for entry in entries {
-                if entry.group != group {
-                    group = entry.group;
-                    if let Some(group) = group {
-                        ui.add_space(if compact { 6.0 } else { 10.0 });
-                        ui.label(
-                            RichText::new(
-                                if group == workspaces::Group::Administration
-                                    && !self.data.access.allows(
-                                        crate::staff_roles::Capability::AccountAdministration,
-                                    )
-                                {
-                                    "PREFERENCES"
-                                } else {
-                                    group.label()
-                                },
-                            )
-                            .size(10.0)
-                            .color(Color32::from_rgb(140, 160, 179))
-                            .strong(),
-                        );
+        if self.desktop.product == crate::desktop::Product::Payroll {
+            let follow = self.sidebar_last_page != Some(self.page)
+                || self.payroll_sidebar_last_tab != Some(self.payroll_state.tab)
+                || self.sidebar_last_height != nav_height.round() as i32;
+            self.sidebar_last_page = Some(self.page);
+            self.payroll_sidebar_last_tab = Some(self.payroll_state.tab);
+            self.sidebar_last_height = nav_height.round() as i32;
+            if let Some(choice) = payroll_navigation::show(
+                ui,
+                self.page,
+                self.payroll_state.tab,
+                nav_height,
+                compact,
+                follow,
+            )
+            .0
+            {
+                match choice {
+                    payroll_navigation::Choice::Section(tab) => {
+                        self.payroll_state.select_tab(tab);
+                        self.navigate(Page::Payroll, ui.ctx());
                     }
-                }
-                let selected = self.page == entry.page;
-                let label = RichText::new(entry.label).size(14.0).color(if selected {
-                    Color32::WHITE
-                } else {
-                    Color32::from_rgb(175, 193, 207)
-                });
-                let button = egui::Button::new(label)
-                    .fill(if selected { TEAL } else { Color32::TRANSPARENT })
-                    .stroke(Stroke::NONE)
-                    .corner_radius(8);
-                let response = ui.add_sized([ui.available_width(), button_height], button);
-                if response.clicked() {
-                    self.navigate(entry.page, ui.ctx());
+                    payroll_navigation::Choice::Settings => self.navigate(Page::Settings, ui.ctx()),
                 }
             }
-        });
+        } else {
+            let entries = self.desktop.product.entries(&self.data);
+            let follow_selection = self.sidebar_last_page != Some(self.page)
+                || self.sidebar_last_height != nav_height.round() as i32;
+            self.sidebar_last_height = nav_height.round() as i32;
+            self.sidebar_last_page = Some(self.page);
+            let group_count = entries
+                .windows(2)
+                .filter(|w| w[0].group != w[1].group)
+                .count() as f32;
+            let rows = entries.len().max(1) as f32;
+            let button_height = ((nav_height
+                - group_count * 25.0
+                - (rows - 1.0) * if compact { 3.0 } else { 5.0 })
+                / rows)
+                .clamp(26.0, 38.0);
+            let selected_index = entries
+                .iter()
+                .position(|e| e.page == self.page)
+                .unwrap_or(0);
+            let preceding_groups = entries
+                .iter()
+                .take(selected_index + 1)
+                .filter_map(|e| e.group)
+                .collect::<Vec<_>>()
+                .windows(2)
+                .filter(|w| w[0] != w[1])
+                .count()
+                + usize::from(
+                    entries
+                        .iter()
+                        .take(selected_index + 1)
+                        .any(|e| e.group.is_some()),
+                );
+            let selected_offset = (selected_index as f32
+                * (button_height + if compact { 3.0 } else { 5.0 })
+                + preceding_groups as f32 * 30.0
+                - nav_height * 0.4)
+                .max(0.0);
+            let navigation_scroll = egui::ScrollArea::vertical()
+                .id_salt("sidebar_navigation")
+                .max_height(nav_height);
+            let navigation_scroll = if follow_selection {
+                navigation_scroll.vertical_scroll_offset(selected_offset)
+            } else {
+                navigation_scroll
+            };
+            navigation_scroll.show(ui, |ui| {
+                ui.spacing_mut().item_spacing.y = if compact { 3.0 } else { 5.0 };
+                let mut group = None;
+                for entry in entries {
+                    if entry.group != group {
+                        group = entry.group;
+                        if let Some(group) = group {
+                            ui.add_space(if compact { 6.0 } else { 10.0 });
+                            ui.label(
+                                RichText::new(
+                                    if group == workspaces::Group::Administration
+                                        && !self.data.access.allows(
+                                            crate::staff_roles::Capability::AccountAdministration,
+                                        )
+                                    {
+                                        "PREFERENCES"
+                                    } else {
+                                        group.label()
+                                    },
+                                )
+                                .size(10.0)
+                                .color(Color32::from_rgb(140, 160, 179))
+                                .strong(),
+                            );
+                        }
+                    }
+                    let selected = self.page == entry.page;
+                    let label = RichText::new(entry.label).size(14.0).color(if selected {
+                        Color32::WHITE
+                    } else {
+                        Color32::from_rgb(175, 193, 207)
+                    });
+                    let button = egui::Button::new(label)
+                        .fill(if selected { TEAL } else { Color32::TRANSPARENT })
+                        .stroke(Stroke::NONE)
+                        .corner_radius(8);
+                    let response = ui.add_sized([ui.available_width(), button_height], button);
+                    if response.clicked() {
+                        self.navigate(entry.page, ui.ctx());
+                    }
+                }
+            });
+        }
         ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
             ui.add_space(4.0);
             ui.label(
@@ -1987,14 +2064,19 @@ impl HrisApp {
         }
         ui.horizontal(|ui| {
             ui.label(
-                RichText::new(workspaces::label(self.page, &self.data).to_uppercase())
-                    .color(muted(ui))
-                    .size(11.0)
-                    .strong(),
+                RichText::new(
+                    self.desktop
+                        .product
+                        .label(self.page, &self.data)
+                        .to_uppercase(),
+                )
+                .color(muted(ui))
+                .size(11.0)
+                .strong(),
             );
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 ui.label(
-                    RichText::new(format!("v{}", updater::VERSION))
+                    RichText::new(format!("v{}", self.desktop.version))
                         .small()
                         .color(muted(ui)),
                 );
@@ -2004,7 +2086,8 @@ impl HrisApp {
                 } else if ui.button("Refresh").clicked() {
                     self.send(Command::Refresh);
                 }
-                self.notification_state.current(&self.data);
+                self.notification_state
+                    .for_product(&self.data, self.desktop.product);
                 let unread = self.notification_state.unread;
                 if ui
                     .add_enabled(
@@ -2024,6 +2107,25 @@ impl HrisApp {
         });
         ui.add_space(14.0);
         self.update_banner(ui);
+        if self.desktop.product == crate::desktop::Product::Hris
+            && self
+                .data
+                .access
+                .allows(crate::staff_roles::Capability::PayrollPreparation)
+        {
+            if ui
+                .add_enabled(
+                    !self.busy && !self.has_unsaved_edits(),
+                    egui::Button::new("Open Payroll Desktop"),
+                )
+                .clicked()
+            {
+                if let Err(error) = crate::desktop::open_payroll() {
+                    self.notice = Some((error.to_string(), true));
+                }
+            }
+            ui.add_space(8.0);
+        }
         let (title, subtitle) = match self.page {
             Page::Overview => (
                 "Your people, at a glance",
@@ -2088,19 +2190,19 @@ impl HrisApp {
                 "Exit & clearance",
                 "Manage employee handover, clearance and protected exit finalization.",
             ),
-            Page::Payroll
-                if !self
-                    .data
-                    .access
-                    .allows(crate::staff_roles::Capability::PayrollPreparation) =>
-            {
-                (
-                    "Your payslips",
-                    "View your own published payslips and payment statements.",
-                )
-            }
+            Page::Payroll if !self.payroll_administration() => (
+                "Your payslips",
+                "View your own published payslips and payment statements.",
+            ),
             Page::Payroll => (
-                "Payroll & benefits",
+                if self.payroll_state.tab == 3 {
+                    "Payslips"
+                } else {
+                    crate::desktop::PAYROLL_TABS
+                        .get(self.payroll_state.tab)
+                        .copied()
+                        .unwrap_or("Payroll")
+                },
                 "Reviewed Philippine pay, private salary records and approved payslips.",
             ),
             Page::Reports => (
@@ -2111,7 +2213,10 @@ impl HrisApp {
                 "Account Manager",
                 "Manage employee sign-in, roles and account access.",
             ),
-            Page::Settings if !self.data.access.role.manages_accounts() => {
+            Page::Settings
+                if self.desktop.product == crate::desktop::Product::Payroll
+                    || !self.data.access.role.manages_accounts() =>
+            {
                 ("Settings", "Manage your display preferences.")
             }
             Page::Settings => (
@@ -3186,6 +3291,10 @@ impl HrisApp {
     }
 
     fn settings(&mut self, ui: &mut Ui) {
+        if self.desktop.product == crate::desktop::Product::Payroll {
+            self.payroll_desktop_settings(ui);
+            return;
+        }
         self.workspace_settings(ui);
         if self.data.access.role.manages_accounts() {
             card(ui, |ui| {
@@ -3241,6 +3350,49 @@ impl HrisApp {
             });
             ui.add_space(12.0);
         }
+        self.display_preferences(ui);
+        ui.add_space(12.0);
+        card(ui, |ui| {
+            ui.label(RichText::new("App updates").size(18.0).strong());
+            ui.label(format!("HRIS Desktop {}", updater::VERSION));
+            ui.label("Updates are checked automatically after a successful sign-in. An available update stays visible until you update or sign out.");
+            match &self.update_state {
+                UpdateState::UpToDate => {
+                    ui.label("You have the latest compatible version.");
+                }
+                UpdateState::Failed(message) => {
+                    ui.colored_label(ui.visuals().error_fg_color, message);
+                }
+                UpdateState::Available(update) => {
+                    ui.label(format!("Version {} is available.", update.release.version));
+                }
+                UpdateState::Restarting => {
+                    ui.label("Restarting to finish the update…");
+                }
+                UpdateState::Idle => {
+                    ui.label("Sign in to check this company's update channel.");
+                }
+            }
+            if ui
+                .add_enabled(
+                    self.data.mode == Mode::Supabase,
+                    egui::Button::new("Check for updates"),
+                )
+                .clicked()
+            {
+                self.send(Command::CheckUpdates);
+            }
+        });
+    }
+
+    fn payroll_administration(&self) -> bool {
+        self.desktop.product == crate::desktop::Product::Payroll
+            && self
+                .data
+                .access
+                .allows(crate::staff_roles::Capability::PayrollPreparation)
+    }
+    fn display_preferences(&mut self, ui: &mut Ui) {
         card(ui, |ui| {
             ui.label(RichText::new("Display preferences").size(18.0).strong());
             ui.label(
@@ -3286,40 +3438,16 @@ impl HrisApp {
                 )));
             }
         });
+    }
+    fn payroll_desktop_settings(&mut self, ui: &mut Ui) {
+        self.display_preferences(ui);
         ui.add_space(12.0);
         card(ui, |ui| {
-            ui.label(RichText::new("App updates").size(18.0).strong());
-            ui.label(format!("HRIS Desktop {}", updater::VERSION));
-            ui.label("Updates are checked automatically after a successful sign-in. An available update stays visible until you update or sign out.");
-            match &self.update_state {
-                UpdateState::UpToDate => {
-                    ui.label("You have the latest compatible version.");
-                }
-                UpdateState::Failed(message) => {
-                    ui.colored_label(ui.visuals().error_fg_color, message);
-                }
-                UpdateState::Available(update) => {
-                    ui.label(format!("Version {} is available.", update.release.version));
-                }
-                UpdateState::Restarting => {
-                    ui.label("Restarting to finish the update…");
-                }
-                UpdateState::Idle => {
-                    ui.label("Sign in to check this company's update channel.");
-                }
-            }
-            if ui
-                .add_enabled(
-                    self.data.mode == Mode::Supabase,
-                    egui::Button::new("Check for updates"),
-                )
-                .clicked()
-            {
-                self.send(Command::CheckUpdates);
-            }
+            ui.heading(format!("Payroll Desktop {}", self.desktop.version));
+            ui.label("Company settings and staff responsibilities are managed in HRIS Desktop.");
+            ui.label("Payroll uses the same company records. Its updates are installed locally for this prototype.");
         });
     }
-
     fn profile(&mut self, ui: &mut Ui) {
         let Some(profile) = self.account.clone() else {
             empty(ui, "Refresh to load your account.");
@@ -3599,7 +3727,7 @@ impl HrisApp {
     fn sign_in(&mut self, ui: &mut Ui) {
         let logo = self.login_logo.clone();
         let company_name = self.login_branding.company_name.clone();
-        sign_in_layout(ui, logo.as_ref(), &company_name, |ui| {
+        sign_in_layout_for(ui, logo.as_ref(), &company_name, self.desktop, |ui| {
             if let Some(error) = &self.deployment_error {
                 ui.heading("Company connection unavailable");
                 ui.label(error);
@@ -3607,9 +3735,7 @@ impl HrisApp {
                 return;
             }
             ui.heading("Sign in");
-            ui.label(
-                RichText::new("Use your HRIS account to access company records.").color(muted(ui)),
-            );
+            ui.label(RichText::new(self.desktop.product.sign_in_message()).color(muted(ui)));
             if let Some((message, error)) = &self.notice {
                 ui.colored_label(
                     if *error {
@@ -4910,16 +5036,20 @@ fn public_access_draft(draft: &AccountDraft) -> AccountDraft {
     }
 }
 
-fn sign_in_layout(
+fn sign_in_layout_for(
     ui: &mut Ui,
     logo: Option<&egui::TextureHandle>,
     company_name: &str,
+    app: crate::desktop::Application,
     contents: impl FnOnce(&mut Ui),
 ) -> egui::Rect {
     ui.horizontal(|ui| {
+        if !company_name.is_empty() {
+            ui.label(RichText::new(app.product.name()).color(muted(ui)).small());
+        }
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             ui.label(
-                RichText::new(format!("v{}", updater::VERSION))
+                RichText::new(format!("v{}", app.version))
                     .small()
                     .color(muted(ui)),
             );
@@ -4933,7 +5063,7 @@ fn sign_in_layout(
         }
         ui.heading(
             RichText::new(if company_name.is_empty() {
-                "HRIS Desktop"
+                app.product.name()
             } else {
                 company_name
             })
@@ -5535,54 +5665,58 @@ mod identity_ui_tests {
 
     #[test]
     fn sign_in_form_stays_near_the_top_and_fits_the_minimum_and_enlarged_viewports() {
-        for size in [Vec2::new(1000.0, 720.0), Vec2::new(800.0, 576.0)] {
-            let ctx = egui::Context::default();
-            configure_theme(&ctx);
-            let mut email = String::new();
-            let mut password = String::new();
-            for _ in 0..2 {
-                let mut output = ctx.run_ui(
-                    egui::RawInput {
-                        screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, size)),
-                        ..Default::default()
-                    },
-                    |ui| {
-                        egui::CentralPanel::default()
-                            .frame(Frame::new().inner_margin(28))
-                            .show(ui, |ui| {
-                                let output = egui::ScrollArea::vertical().show(ui, |ui| {
-                                    sign_in_layout(
-                                        ui,
-                                        None,
-                                        "Synthetic Company With A Saved Sign-in Logo",
-                                        |ui| {
-                                            ui.heading("Sign in");
-                                            ui.label(
-                                                "Use your HRIS account to access company records.",
-                                            );
-                                            login_controls(ui, &mut email, &mut password, true);
-                                        },
-                                    )
+        for app in [
+            crate::desktop::Application::hris(),
+            crate::desktop::Application::payroll("0.1.0"),
+        ] {
+            for size in [Vec2::new(1000.0, 720.0), Vec2::new(800.0, 576.0)] {
+                let ctx = egui::Context::default();
+                configure_theme(&ctx);
+                let mut email = String::new();
+                let mut password = String::new();
+                for _ in 0..2 {
+                    let mut output = ctx.run_ui(
+                        egui::RawInput {
+                            screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, size)),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            egui::CentralPanel::default()
+                                .frame(Frame::new().inner_margin(28))
+                                .show(ui, |ui| {
+                                    let output = egui::ScrollArea::vertical().show(ui, |ui| {
+                                        sign_in_layout_for(
+                                            ui,
+                                            None,
+                                            "Synthetic Company With A Saved Sign-in Logo",
+                                            app,
+                                            |ui| {
+                                                ui.heading("Sign in");
+                                                ui.label(app.product.sign_in_message());
+                                                login_controls(ui, &mut email, &mut password, true);
+                                            },
+                                        )
+                                    });
+                                    assert!(
+                                        output.inner.top() < size.y * 0.4,
+                                        "Form moved to the bottom: {:?}",
+                                        output.inner
+                                    );
+                                    assert!(
+                                        output.inner.bottom() < size.y - 28.0,
+                                        "Form exceeds viewport: {:?}",
+                                        output.inner
+                                    );
+                                    assert!(
+                                        output.content_size.y <= output.inner_rect.height() + 1.0,
+                                        "Unexpected sign-in scrollbar: {:?}",
+                                        output.content_size
+                                    );
                                 });
-                                assert!(
-                                    output.inner.top() < size.y * 0.4,
-                                    "Form moved to the bottom: {:?}",
-                                    output.inner
-                                );
-                                assert!(
-                                    output.inner.bottom() < size.y - 28.0,
-                                    "Form exceeds viewport: {:?}",
-                                    output.inner
-                                );
-                                assert!(
-                                    output.content_size.y <= output.inner_rect.height() + 1.0,
-                                    "Unexpected sign-in scrollbar: {:?}",
-                                    output.content_size
-                                );
-                            });
-                    },
-                );
-                output.textures_delta.clear();
+                        },
+                    );
+                    output.textures_delta.clear();
+                }
             }
         }
     }
