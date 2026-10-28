@@ -737,3 +737,8 @@ and exact pending saves in page memory. Preserve all running portal sessions.
 The old ignored work/services-migration-draft.sql is superseded; never execute it.
 Use this chat checkpoint for current checks/deployment/build/install status, rather
 than treating earlier local-only notes or the queued checklist as delivery evidence.
+
+
+## Employee services delivered —29October2026
+
+HRIS0.1.67 is installed/private-published from frozenf4183822a3b2eee1e1ecc374214c8b2a0e5db94a; additive90 is deployed. Local portal0.1.8 is separately packaged/verified; preserve older running portal drafts/sessions. See docs/EMPLOYEE-SERVICES-0.1.67-DELIVERY.md. Earlier local-only/candidate entries are superseded. Do not repeat these completed operations. Continue benefits administration, then leadership reporting under the SAME active scheduler. Shared service history is requester-visible; confidential cases stay separate.

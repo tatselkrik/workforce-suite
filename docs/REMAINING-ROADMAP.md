@@ -1,5 +1,10 @@
 # Remaining HRIS roadmap â€” agreed order
 
+**Latest delivery —29October2026:** employee services is delivered in installed/private-published
+HRIS0.1.67 and separately packaged local portal0.1.8. [Evidence](EMPLOYEE-SERVICES-0.1.67-DELIVERY.md).
+Next: expanded benefits administration, then HR leadership reporting. SAME scheduler ACTIVE.
+Older milestones/pauses below are historical.
+
 **Latest delivery —29October2026, after Payroll:** confidential employee relations
 is installed/private-published in0.1.66. See [delivery](EMPLOYEE-RELATIONS-0.1.66-DELIVERY.md).
 Continue employee services, benefits administration and leadership reporting; the

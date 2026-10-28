@@ -1,5 +1,9 @@
 # HRIS workspaces and Payroll implementation â€” approved27October2026
 
+**Latest delivery —29October2026:** employee services0.1.67 is installed/private-published;
+local portal0.1.8 is delivered separately. See [evidence](EMPLOYEE-SERVICES-0.1.67-DELIVERY.md).
+Continue benefits administration and HR leadership reporting with the SAME scheduler.
+
 **Latest delivery —29October2026, after Payroll:** confidential employee relations
 is installed/private-published in0.1.66. See [delivery](EMPLOYEE-RELATIONS-0.1.66-DELIVERY.md).
 Continue employee services, benefits administration and leadership reporting; the
@@ -71,7 +75,9 @@ prototype for small companies and larger employers, including BPOs.
 - [x] ~~Employee-relations case workflow with confidential, assigned access and immutable history.~~
   Delivered/installed/private-published0.1.66; see [evidence](EMPLOYEE-RELATIONS-0.1.66-DELIVERY.md).
   Existing personnel/exit/payroll facts are preserved.
-- [ ] Employee-service requests with ownership, routing, status and retained history.
+- [x] ~~Employee-service requests with ownership, routing, status and retained history.~~
+  Delivered/installed/private-published0.1.67, separate local portal0.1.8 packaged;
+  see [evidence](EMPLOYEE-SERVICES-0.1.67-DELIVERY.md).
 - [ ] Expanded benefits administration for eligibility, enrollment and dependents;
   approved monetary effects remain explicit payroll inputs, never automatic pay
   or deduction changes from an unreviewed benefits edit.
