@@ -1,3 +1,4 @@
+mod relations_adapter;
 #[cfg(test)]
 mod bir_builder_tests;
 #[cfg(test)]
@@ -2292,6 +2293,7 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
 }
 
 pub enum Command {
+    Relations(crate::relations::Operation),
     SaveWorkspaces(crate::workspaces::Save),
     LeaveImportHistory,
     PreviewLeaveImport(crate::leave::request_import::Batch),
@@ -2402,6 +2404,9 @@ pub enum Command {
 }
 
 pub struct Update {
+    pub relations: Option<crate::relations::Response>,
+    pub relations_clear: bool,
+    pub relations_rejected: bool,
     pub workspace_receipt: Option<crate::workspaces::Receipt>,
     pub workspace_rejected: bool,
     pub staff_provision: Option<crate::staff_roles::provision::Update>,
@@ -2463,6 +2468,8 @@ fn worker_in(
             (crate::workspaces::Save, crate::workspaces::Receipt),
         >::new();
         let mut demo_resumes = std::collections::HashMap::new();
+        let mut demo_relations = crate::relations::Demo::default();
+        let mut relations_loaded = false;
         let mut demo_leave_imports = crate::leave::request_import::Demo::default();
         let mut demo_attendance_imports = crate::attendance_imports::Demo::default();
         let mut demo_account = demo.as_ref().map(|_| AccountProfile::demo());
@@ -2478,6 +2485,9 @@ fn worker_in(
                 Err(mpsc::RecvTimeoutError::Timeout) => continue,
                 Err(mpsc::RecvTimeoutError::Disconnected) => break,
             };
+            let refresh_relations = relations_loaded && matches!(&command, Command::Refresh);
+            let relations_requested = matches!(&command,Command::Relations(_));
+            let mut relations_result = None;
             let mut message = String::new();
             let mut opening_preview_result = None;
             let mut leave_import_history_result = None;
@@ -3365,6 +3375,17 @@ fn worker_in(
                         crate::staff_roles::provision::Update::Status{..}=>"Account status checked. Review before replacing an attempt.",
                     }.into();staff_provision_result=Some(update);data})
                 }
+                Command::Relations(operation) => (|| {
+                    relations_loaded = true;
+                    let response = if let Some(client) = cloud.as_mut() {
+                        client.execute_relation(&current, operation)?
+                    } else {
+                        demo_relations.execute(operation, &current)?
+                    };
+                    message = if response.receipt.is_some() { "Confidential case change saved with retained history." } else { "Assigned confidential cases refreshed." }.into();
+                    relations_result = Some(response);
+                    Ok(current.clone())
+                })(),
                 Command::SaveWorkspaces(request) => (|| {
                     if let Some(client) = cloud.as_mut() {
                         let data = client.snapshot()?;
@@ -3447,9 +3468,23 @@ fn worker_in(
                     })
                 }
             };
+            if result.as_ref().is_ok_and(|data|data.access!=current.access) {
+                relations_loaded=false;
+                relations_result=None;
+            }
             if let (Some(product), Ok(data)) = (product, &mut result) {
                 product.project(data);
             }
+            if refresh_relations && relations_loaded && result.is_ok() {
+                if let Some(client) = cloud.as_mut() {
+                    match client.relation_context(result.as_ref().unwrap()) {
+                        Ok(context) => relations_result = Some(crate::relations::Response { context, receipt: None }),
+                        Err(error) => result = Err(error),
+                    }
+                }
+            }
+            let relations_clear = (refresh_relations || relations_requested) && result.is_err();
+            let relations_rejected = result.as_ref().err().is_some_and(|e|e.is::<crate::relations::Rejected>());
             let workspace_rejected = result
                 .as_ref()
                 .err()
@@ -3464,6 +3499,8 @@ fn worker_in(
                 .map(|error| error.to_string());
             if let Some(error) = access_error {
                 cloud = None;
+                relations_loaded = false;
+                relations_result = None;
                 message = error;
                 result = Ok(Snapshot::signed_out());
             }
@@ -3472,6 +3509,9 @@ fn worker_in(
             }
             if events
                 .send(Update {
+                    relations: relations_result,
+                    relations_clear,
+                    relations_rejected,
                     staff_provision: staff_provision_result,
                     staff_provision_rejection: result
                         .as_ref()
@@ -3528,6 +3568,9 @@ fn worker_in(
                     if events
                         .send(Update {
                             staff_provision: None,
+                            relations: None,
+                            relations_clear: false,
+                            relations_rejected: false,
                             staff_provision_rejection: None,
                             staff_role_rejected: false,
                             staff_roles: None,
@@ -3788,3 +3831,6 @@ mod payroll_desktop_adapter;
 
 #[cfg(test)]
 mod payroll_desktop_tests;
+
+#[cfg(test)]
+mod relations_tests;

@@ -59,3 +59,5 @@ pub mod staff_roles;
 pub mod workspaces;
 
 pub mod desktop;
+
+pub mod relations;

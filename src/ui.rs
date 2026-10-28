@@ -1,3 +1,4 @@
+mod relations_view;
 mod workspace_view;
 use crate::{
     access::{AccountDraft, AdminAction, Role},
@@ -101,6 +102,7 @@ enum SessionChoice {
 mod payroll_navigation;
 
 pub struct HrisApp {
+    relations_state: relations_view::State,
     desktop: crate::desktop::Application,
     data: Snapshot,
     page: Page,
@@ -365,6 +367,7 @@ impl HrisApp {
             search: String::new(),
             employee_status: Some(EmployeeStatus::Active),
             employee_view: EmployeeView::Directory,
+            relations_state: Default::default(),
             organization: organization_view::State::default(),
             leave_state: leave_view::State::default(),
             shift_state: shifts_view::State::default(),
@@ -1052,6 +1055,8 @@ impl HrisApp {
         }
         #[cfg(feature = "qa-screenshot")]
         app.prepare_workspace_preview();
+        #[cfg(feature = "qa-screenshot")]
+        app.prepare_relations_preview();
         if app.data.mode != Mode::SignedOut {
             desktop.product.project(&mut app.data);
             if desktop.product == crate::desktop::Product::Payroll {
@@ -1118,6 +1123,8 @@ impl HrisApp {
                 continue;
             }
             self.busy = false;
+            if update.relations_clear { self.relations_state.clear_context(); }
+            if update.relations_rejected { self.relations_state.reject(); }
             match update.result {
                 Ok(data) => {
                     let newly_signed_in =
@@ -1135,6 +1142,8 @@ impl HrisApp {
                         self.sidebar_last_page = None;
                         self.staff_roles_state = Default::default();
                         self.staff_provision_state = Default::default();
+                        self.relations_state = Default::default();
+                        clear_edit_history(ctx, &["relations-title", "relations-body"]);
                         self.organization = organization_view::State::default();
                         self.leave_state = leave_view::State::default();
                         self.shift_state = shifts_view::State::default();
@@ -1171,6 +1180,8 @@ impl HrisApp {
                         );
                     }
                     if self.data.mode != data.mode {
+                        self.relations_state = Default::default();
+                        clear_edit_history(ctx, &["relations-title", "relations-body"]);
                         self.organization = organization_view::State::default();
                         self.leave_state = leave_view::State::default();
                         self.shift_state = shifts_view::State::default();
@@ -1252,6 +1263,13 @@ impl HrisApp {
                         self.payroll_state
                             .government
                             .accept_bir_build(report, &data);
+                    }
+                    if let Some(response) = update.relations {
+                        match self.relations_state.accept(response, &data) {
+                            Ok(true) => clear_edit_history(ctx, &["relations-title", "relations-body"]),
+                            Ok(false) => {},
+                            Err(e) => { self.relations_state = Default::default(); self.notice = Some((e.to_string(),true)); },
+                        }
                     }
                     if let Some(record) = update.government_registration {
                         self.payroll_state
@@ -2138,6 +2156,8 @@ impl HrisApp {
                     "Organization chart"
                 } else if self.employee_view == EmployeeView::Development {
                     "Development"
+                } else if self.employee_view == EmployeeView::Relations {
+                    "Employee relations"
                 } else {
                     "Employee directory"
                 },
@@ -2147,6 +2167,8 @@ impl HrisApp {
                     "Explore reporting relationships and open employee records."
                 } else if self.employee_view == EmployeeView::Development {
                     "Goals, appraisals, learning and career development."
+                } else if self.employee_view == EmployeeView::Relations {
+                    "Manage confidential cases and follow-ups."
                 } else {
                     "Click an employee to open their record."
                 },
@@ -2303,6 +2325,7 @@ impl HrisApp {
             || self.import_state.editing()
             || self.attendance_import_state.has_draft()
             || self.leave_request_import_state.has_draft()
+            || self.relations_state.editing()
             || self.hiring_state.editing()
             || self.onboarding_state.editing()
             || self.exit_state.editing()
@@ -2576,7 +2599,8 @@ impl HrisApp {
         }
         let section_count = usize::from(workspaces::people_directory(&self.data.access))
             + usize::from(workspaces::organization(&self.data))
-            + usize::from(workspaces::development(&self.data));
+            + usize::from(workspaces::development(&self.data))
+            + usize::from(crate::relations::eligible(&self.data.access));
         if section_count > 1 {
             ui.horizontal_wrapped(|ui| {
                 if workspaces::people_directory(&self.data.access) {
@@ -2600,8 +2624,15 @@ impl HrisApp {
                         "Development",
                     );
                 }
+                if crate::relations::eligible(&self.data.access) {
+                    ui.selectable_value(&mut self.employee_view,EmployeeView::Relations,"Employee relations");
+                }
             });
             ui.add_space(10.0);
+        }
+        if self.employee_view == EmployeeView::Relations {
+            self.relations(ui);
+            return;
         }
         if self.employee_view == EmployeeView::Development {
             self.performance(ui);

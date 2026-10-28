@@ -6,7 +6,7 @@ resolver = "3"
 
 [package]
 name = "hris-desktop"
-version = "0.1.65"
+version = "0.1.66"
 edition = "2024"
 rust-version = "1.95"
 description = "Native Rust HRIS prototype with a Supabase data adapter"

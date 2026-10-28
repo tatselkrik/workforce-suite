@@ -698,3 +698,7 @@ handoff blocks all independent authorized work. No unrelated module is authorize
 
 Payroll Desktop0.1.0 and HRIS0.1.65 are installed/verified from frozen7b983b0b0ec59a7ca7eaa39e1702d5c525fb1043; HRIS existing private channel is verified.
 No new schema/rate/key/channel or payroll migration occurred. See docs/PAYROLL-DESKTOP-DELIVERY.md. Preserve the separate Payroll identity and shared financial implementation. Do not repeat completed packages/installations/publication. Continue employee relations, employee services, benefits administration, leadership reporting in order; SAME scheduler remains ACTIVE under the latest human instruction.
+
+## Employee-relations confidentiality
+
+Case rules are in docs/EMPLOYEE-RELATIONS.md. Keep current Administrator oversight and assigned-only HR access, Admin reassignment, immutable notes/events, dated retained follow-ups, explicit reasoned statuses, actor/full-payload retry receipts and current scope/revision guards. Load its bounded context separately from Snapshot; never expose cases through Payroll, portal, general reports, notifications, metadata or local files. Clear revoked assignments/access and affected drafts/undo history. Case tracking never changes canonical personnel, pay, attendance, leave or exit facts automatically.
