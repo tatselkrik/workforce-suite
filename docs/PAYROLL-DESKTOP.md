@@ -72,3 +72,9 @@ password/security/session and display preference changes apply to the same perso
 across the two apps. Each app signs in independently and keeps its tokens in memory.
 The local Payroll installer is required on each PC that uses the separate app; the
 HRIS private update package does not silently create a new Payroll installation.
+
+## Delivered companion
+
+Payroll0.1.0/HRIS0.1.65 passed parity, scoped hosted/native/UI/exact installer checks
+and actual installation. HRIS private publication also passes. See
+[delivery evidence](PAYROLL-DESKTOP-DELIVERY.md). Continue the authorized HR queue.

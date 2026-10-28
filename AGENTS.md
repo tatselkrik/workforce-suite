@@ -693,3 +693,8 @@ Existing no-charge, exact-target, independent financial approval, immutable hist
 local-portal, deferred agency/vendor/device and private-publication boundaries remain.
 Pause after the authorized queue completes, a newer human pause, or a genuine
 handoff blocks all independent authorized work. No unrelated module is authorized.
+
+## Payroll companion delivered; continuing HR queue —29October2026
+
+Payroll Desktop0.1.0 and HRIS0.1.65 are installed/verified from frozen7b983b0b0ec59a7ca7eaa39e1702d5c525fb1043; HRIS existing private channel is verified.
+No new schema/rate/key/channel or payroll migration occurred. See docs/PAYROLL-DESKTOP-DELIVERY.md. Preserve the separate Payroll identity and shared financial implementation. Do not repeat completed packages/installations/publication. Continue employee relations, employee services, benefits administration, leadership reporting in order; SAME scheduler remains ACTIVE under the latest human instruction.

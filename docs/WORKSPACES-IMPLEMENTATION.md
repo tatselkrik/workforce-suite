@@ -1,5 +1,11 @@
 # HRIS workspaces and Payroll implementation â€” approved27October2026
 
+**Latest delivery —29October2026:** Payroll Desktop0.1.0 and HRIS0.1.65 are
+installed and verified; HRIS is privately published. The separate Payroll companion
+preserves all existing financial sources/history. See [delivery](PAYROLL-DESKTOP-DELIVERY.md).
+Continue with employee relations, employee services, benefits and leadership reporting;
+the SAME scheduler remains ACTIVE. Older bounded/paused entries below are historical.
+
 **Latest continuation —29October2026:** Kirk authorized finishing Payroll and
 then employee relations, employee services, expanded benefits administration and
 HR leadership reporting, in that order. Continue across actual five-hour resets
@@ -7,7 +13,7 @@ with the SAME scheduler and fresh checkpoints. The prior stop-after-Payroll/late
 hold is superseded. Cross out only verified/delivered milestones; preserve all
 privacy, financial, free/local-only and deferred external-target boundaries.
 
-**Current bounded work —29October2026:** the scheduled reset has passed and
+**Historical initial Payroll boundary —29October2026:** the scheduled reset has passed and
 Payroll separation is active. The native workspace candidate shares the full
 financial implementation; parity, hosted scope and installation remain the delivery
 gates. Only this milestone is resumed; later HR-function work stays queued. See
@@ -51,7 +57,7 @@ prototype for small companies and larger employers, including BPOs.
   Learning & Performance Officer role. Preserve manager assignments and private
   HR notes/evidence boundaries. Company configuration must suit general employers
   without requiring BPO-specific client/campaign terminology.
-- [ ] Separate native Payroll Desktop using shared Rust code and the same company
+- [x] ~~Separate native Payroll Desktop using shared Rust code and the same company~~
   Supabase. Keep one repository and existing financial sources/history. Payroll
   Officer is a distinct permission regardless of company size; one person may
   also hold HR Generalist. Preserve independent Administrator financial approval,
