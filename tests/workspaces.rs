@@ -68,6 +68,7 @@ fn role_focused_navigation_obeys_all_module_combinations_without_changing_author
             assert!(groups.windows(2).all(|w| w[0] <= w[1]));
             if roles.uses_desktop() {
                 for page in [
+                    Page::Services,
                     Page::Overview,
                     Page::Attendance,
                     Page::Leave,

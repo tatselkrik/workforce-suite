@@ -21,6 +21,13 @@ pub enum Status {
     Cancelled,
 }
 impl Status {
+    pub const ALL: [Self; 5] = [
+        Self::Submitted,
+        Self::InProgress,
+        Self::WaitingOnEmployee,
+        Self::Completed,
+        Self::Cancelled,
+    ];
     pub fn label(self) -> &'static str {
         match self {
             Self::Submitted => "Submitted",
@@ -130,6 +137,14 @@ pub struct Context {
     pub requests: Vec<Ticket>,
     pub events: Vec<Event>,
     pub handlers: Vec<Handler>,
+}
+impl Priority {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Normal => "Normal",
+            Self::High => "High",
+        }
+    }
 }
 fn text(v: &str, min: usize, max: usize) -> bool {
     let n = v.chars().count();
@@ -379,9 +394,38 @@ impl Request {
         );
         Ok(())
     }
-    pub fn validate(&self, c: &Context, a: &Access) -> Result<()> {
+    /// Exact retries retain identity, but never retain a revoked staff responsibility.
+    pub fn current_scope(&self, c: &Context, a: &Access) -> Result<()> {
         self.binding(a)?;
         c.validate(a)?;
+        match &self.change {
+            Change::Submit { employee_id, .. } => ensure!(
+                c.hr(a) || *employee_id == c.employee_id,
+                "Current HR responsibility is required for an assisted request."
+            ),
+            Change::Route { .. } => ensure!(
+                c.can_route,
+                "Current HR routing responsibility is required."
+            ),
+            Change::Progress { .. } => ensure!(
+                c.handles(c.ticket(self.request_id)?, a),
+                "Current handling responsibility is required."
+            ),
+            Change::Cancel { .. } => {
+                let t = c.ticket(self.request_id)?;
+                ensure!(
+                    c.owns(t) || c.hr(a),
+                    "Only the requester or current HR may cancel."
+                );
+            }
+            Change::Reply { .. } => {
+                c.ticket(self.request_id)?;
+            }
+        }
+        Ok(())
+    }
+    pub fn validate(&self, c: &Context, a: &Access) -> Result<()> {
+        self.current_scope(c, a)?;
         if let Change::Submit {
             employee_id, title, ..
         } = &self.change
@@ -547,7 +591,7 @@ impl Demo {
     ) -> Result<Response> {
         let a = &data.access;
         let c = self.context(data, audience)?;
-        r.binding(a)?;
+        r.current_scope(&c, a)?;
         if let Some((old, receipt)) = self.receipts.get(&r.id) {
             ensure!(
                 old == r,

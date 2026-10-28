@@ -69,3 +69,25 @@ accounts cannot reach these context reads through the native adapter. These loca
 HTTP fixtures do not prove that the pending database endpoints exist or authorize
 a hosted deployment. Own portal wrappers must infer identity independently and
 must never accept an arbitrary staff/own audience parameter from the browser.
+
+The additive migration is `20261029022501_employee_services.sql`: it was created
+with the linked CLI and its generated UTC timestamp was advanced to one second
+after the existing migration89 predecessor to retain chronological replay order.
+No previously deployed migration was renamed or rewritten. Private tables deny
+direct client access; public invoker wrappers use fresh protected private guards.
+Exact retry receipts recheck current ownership/handling/routing responsibility;
+removing HR responsibility cannot preserve a former routing action via an old ID.
+The separate own wrappers infer identity and return only shared thread fields.
+
+Current local coverage includes a fresh90migration replay with133previous record
+sets and445function definitions/grants preserved,134service assertions,14role
+configurations,14native model cases,8native HTTP cases,5portal HTTP/model cases
+and8browser logic cases. Native visual/complete-regression/hosted/release delivery
+remain gates; this paragraph is evidence of a local increment, not completion.
+
+Reference review29October2026: current Supabase function privileges/search-path
+and the September PostgreSQL minor-release/April DataAPI grant changes were read.
+This migration uses ordinary UUID/date/text/JSONB/B-tree constructs, explicit
+function grants and private tables. It changes no extension, Auth setting or
+financial rule. See https://supabase.com/docs/guides/database/functions and
+https://supabase.com/changelog/postgres-15-19-17-11-breaking-changes .

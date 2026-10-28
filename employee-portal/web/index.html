@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>HRIS · Employee portal</title><link rel="stylesheet" href="/app.css"><script src="/self-service.js" defer></script><script src="/time-requests.js" defer></script><script src="/notifications.js" defer></script><script src="/pictures.js" defer></script><script src="/account.js" defer></script><script src="/app.js" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>HRIS · Employee portal</title><link rel="stylesheet" href="/app.css"><script src="/self-service.js" defer></script><script src="/time-requests.js" defer></script><script src="/notifications.js" defer></script><script src="/services.js" defer></script><script src="/pictures.js" defer></script><script src="/account.js" defer></script><script src="/app.js" defer></script></head>
 <body>
 <main id="sign-in-page" class="sign-in-page">
   <section class="sign-in-card" aria-labelledby="welcome">
@@ -17,7 +17,7 @@
 <div id="workspace" class="workspace" hidden>
  <aside class="sidebar">
   <div class="company-brand"><div class="brand-mark" aria-hidden="true"><img id="company-logo" alt="" hidden><span id="company-initials">HR</span></div><strong id="company-name">Employee portal</strong><span>EMPLOYEE SELF-SERVICE</span></div>
-  <nav id="navigation" aria-label="Main navigation"><button data-page="home" aria-current="page">Home</button><button data-page="attendance">Attendance</button><button data-page="leave">Leave</button><button data-page="pay">Payslips</button><button data-page="profile" class="profile-link"><span class="nav-avatar" aria-hidden="true"><img id="sidebar-photo" alt="" hidden><span id="sidebar-initials">HR</span></span><span>My profile</span></button></nav>
+  <nav id="navigation" aria-label="Main navigation"><button data-page="home" aria-current="page">Home</button><button data-page="attendance">Attendance</button><button data-page="leave">Leave</button><button data-page="pay">Payslips</button><button data-page="services">Services</button><button data-page="profile" class="profile-link"><span class="nav-avatar" aria-hidden="true"><img id="sidebar-photo" alt="" hidden><span id="sidebar-initials">HR</span></span><span>My profile</span></button></nav>
   <div class="session"><span class="status-dot"></span>Private company connection<button id="sign-out" class="quiet">Sign out</button></div>
  </aside>
  <main class="content">
@@ -52,6 +52,20 @@
     <div class="form-footer"><button id="leave-submit" class="primary" type="submit">Submit leave request</button><span class="fine">Submission reserves the filed days while your approvers review it.</span></div>
    </form>
    <h2>My requests</h2><div id="leave-list" data-private></div><p class="fine">Recent 200 requests. Filed charges and approval receipts retain their saved facts. Cancelled requests stay in history.</p>
+  </section>
+  <section id="page-services" class="page" aria-labelledby="services-heading" hidden>
+   <p class="eyebrow">MY REQUESTS</p><h1 id="services-heading">Employee services</h1><p class="intro">Ask HR for help and follow your request’s progress.</p>
+   <p class="fine">All messages here are shared with you and current handling staff. Confidential employee-relations cases are handled separately by HR. Requests do not automatically change employment, contact details or payroll.</p>
+   <div class="actions"><button id="services-new" class="primary" type="button">New service request</button><button id="services-refresh" class="secondary" type="button">Refresh requests</button></div>
+   <form id="services-form" class="card" hidden>
+    <h2 id="services-form-heading">New service request</h2><p id="services-form-context" class="fine"></p>
+    <fieldset id="services-fields"><div id="services-new-fields">
+     <label for="services-title">Request title</label><input id="services-title" maxlength="160" minlength="3" required>
+     <div class="grid two"><div><label for="services-category">Category</label><select id="services-category"><option value="employment_document">Employment document</option><option value="information_update">Employee information update</option><option value="benefits_question">Benefits question</option><option value="general_support">General HR support</option></select></div><div><label for="services-priority">Priority</label><select id="services-priority"><option value="normal">Normal</option><option value="high">High</option></select></div></div>
+    </div><label for="services-body">Shared message or reason</label><textarea id="services-body" rows="5" minlength="3" maxlength="12000" required></textarea></fieldset>
+    <p id="services-save-status" class="fine" role="status"></p><div class="actions"><button id="services-submit" class="primary" type="submit">Save request</button><button id="services-review" class="secondary" type="button" hidden>Review current version</button><button id="services-discard" class="secondary" type="button">Discard draft</button></div>
+   </form>
+   <p id="services-summary" class="fine" data-private></p><div id="services-list" data-private></div><article id="services-detail" class="card" data-private hidden></article>
   </section>
   <section id="page-pay" class="page" aria-labelledby="pay-heading" hidden>
    <p class="eyebrow">MY PAY</p><h1 id="pay-heading">Payslips</h1><p class="intro">Approved calculations, kept for your records.</p>

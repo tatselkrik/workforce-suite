@@ -724,3 +724,16 @@ worker/UI and separate portal integration are not implemented/deployed/delivered
 Do not cross out this milestone or replace frozen0.1.66 with a development build.
 Current installed066 and its publication/migration89 remain complete. Continue this
 unfinished milestone, then benefits and leadership, using the SAME active scheduler.
+
+
+## Employee services candidate —29October2026
+
+HRIS0.1.67/local portal0.1.8 are candidates, not delivered releases. Follow
+EMPLOYEE-SERVICES.md: private additive90 current-role/own/assigned guards, shared
+history and actor/payload retry authority, no automatic HR/pay change. Native queue
+is a core Employee services page; retain the existing optional-module-v1 format.
+Portal uses only dedicated own wrappers and a strict browser allowlist, with drafts
+and exact pending saves in page memory. Preserve all running portal sessions.
+The old ignored work/services-migration-draft.sql is superseded; never execute it.
+Use this chat checkpoint for current checks/deployment/build/install status, rather
+than treating earlier local-only notes or the queued checklist as delivery evidence.

@@ -1,4 +1,5 @@
 //! Own-record portal. No service key, token-bearing browser storage or arbitrary proxy.
+mod services;
 mod account_security;
 mod notifications;
 mod pictures;
@@ -355,9 +356,11 @@ impl Portal {
             .route("/api/payslips/{id}", get(payslip))
             .merge(self_service::routes())
             .merge(requests::routes())
+            .merge(services::routes())
             .merge(notifications::routes())
             .merge(pictures::routes())
             .merge(account_security::routes())
+            .route("/services.js", get(services_script))
             .route("/notifications.js", get(notification_script))
             .route("/time-requests.js", get(time_requests_script))
             .layer(DefaultBodyLimit::max(8192))
@@ -625,6 +628,9 @@ async fn time_requests_script() -> impl IntoResponse {
         [(header::CONTENT_TYPE, "text/javascript; charset=utf-8")],
         include_str!("../web/time-requests.js"),
     )
+}
+async fn services_script() -> impl IntoResponse {
+    ([(header::CONTENT_TYPE, "text/javascript; charset=utf-8")], include_str!("../web/services.js"))
 }
 async fn notification_script() -> impl IntoResponse {
     (

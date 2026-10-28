@@ -25,5 +25,5 @@ function initNotifications(){
  $('inbox-next').onclick=()=>busy(()=>refreshInbox(inboxState.offset+25));
  $('inbox-mark-shown').onclick=()=>busy(()=>markNotifications(inboxState.data.items.filter(r=>!r.read).map(r=>r.key),true));
  $('inbox-reset').onclick=()=>busy(async()=>{await api('/api/notifications/read',{keys:[],read:false,reset:true});await refreshInbox(0);notify('Your read history was reset. Requests and decisions stay saved.');});
- setInterval(async()=>{if(!state.me||state.busy||state.dirty||state.pictureDirty||state.securityDirty||timeState.dirtyKind||document.visibilityState!=='visible')return;await busy(async()=>{acceptNotifications(await loadNotifications());notificationBadge();if(state.page==='notifications')renderNotifications();});},60000);
+ setInterval(async()=>{if(!state.me||state.busy||state.dirty||state.pictureDirty||state.securityDirty||timeState.dirtyKind||(typeof serviceState!=='undefined'&&serviceState.dirty)||document.visibilityState!=='visible')return;await busy(async()=>{acceptNotifications(await loadNotifications());notificationBadge();if(state.page==='notifications')renderNotifications();});},60000);
 }

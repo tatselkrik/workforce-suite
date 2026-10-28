@@ -514,3 +514,29 @@ fn worker_demo_interface_returns_scoped_context_and_exact_save_receipts() {
     configured.mode = hris_desktop::domain::Mode::Supabase;
     assert!(repo.execute(&configured, Operation::Refresh).is_err());
 }
+
+#[test]
+fn old_route_receipt_cannot_retain_revoked_hr_responsibility_for_own_ticket() {
+    let hr = data(Role::HrGeneralist, 901, 0);
+    let mut repo = Demo::default();
+    let c = repo.context(&hr, Audience::Staff).unwrap();
+    let r = submit(&hr.access, &c, hr.access.employee_id.unwrap());
+    let c = repo.save(&hr, Audience::Staff, &r).unwrap().context;
+    let route = Request::new(
+        &hr.access,
+        &c,
+        r.request_id,
+        Change::Route {
+            assignee_user_id: Some(Uuid::from_u128(12)),
+            due_on: None,
+            body: "Fictional routing before the HR responsibility is removed".into(),
+        },
+    )
+    .unwrap();
+    repo.save(&hr, Audience::Staff, &route).unwrap();
+    let downgraded = data(Role::Manager, 901, 0);
+    let c = repo.context(&downgraded, Audience::Staff).unwrap();
+    assert_eq!(c.requests.len(), 1);
+    assert!(!c.can_route);
+    assert!(repo.save(&downgraded, Audience::Staff, &route).is_err());
+}

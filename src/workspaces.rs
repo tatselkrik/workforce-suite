@@ -236,6 +236,7 @@ impl From<&Context> for Draft {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Page {
+    Services,
     Payroll,
     Overview,
     Employees,
@@ -250,8 +251,9 @@ pub enum Page {
     Notifications,
 }
 impl Page {
-    pub const ALL: [Self; 10] = [
+    pub const ALL: [Self; 11] = [
         Self::Overview,
+        Self::Services,
         Self::Employees,
         Self::Attendance,
         Self::Leave,
@@ -265,6 +267,7 @@ impl Page {
     pub fn title(self) -> &'static str {
         match self {
             Self::Overview => "Overview",
+            Self::Services => "Employee services",
             Self::Employees => "Employees",
             Self::Attendance => "Attendance",
             Self::Leave => "Leave",
@@ -324,7 +327,8 @@ pub fn visible(page: Page, data: &Snapshot) -> bool {
         return false;
     }
     match page {
-        Page::Overview
+        Page::Services
+        | Page::Overview
         | Page::Attendance
         | Page::Leave
         | Page::Settings
@@ -385,6 +389,15 @@ pub fn entries(data: &Snapshot) -> Vec<Entry> {
         add(Page::Attendance, "Attendance", Group::Work);
         add(Page::Leave, "Leave", Group::Work)
     }
+    add(
+        Page::Services,
+        "Employee services",
+        if a.allows(Capability::Personnel) {
+            Group::Work
+        } else {
+            Group::Personal
+        },
+    );
     add(Page::Reports, "Reports", Group::Work);
     if a.allows(Capability::Personnel) {
         add(Page::Exits, "Exit & clearance", Group::Work)

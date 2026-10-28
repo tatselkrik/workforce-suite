@@ -184,3 +184,110 @@ fn wrong_receipt_never_acknowledges_or_replaces_an_uncertain_request() {
     assert_eq!(sent.len(), 2);
     assert_eq!(sent[1].1, json!({"p_change": r}));
 }
+
+#[test]
+#[ignore = "synthetic managed Auth on the exact installed prototype only"]
+fn hosted_native_services_context_and_save() {
+    let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let target = std::fs::read_to_string(root.join("supabase/.temp/project-ref")).unwrap();
+    let target = target.trim();
+    let guard =
+        std::fs::read_to_string(root.join("deployment-private/SQL-AUTHORIZATION.md")).unwrap();
+    assert!(guard.contains(&format!("{}{}{}", char::from(96), target, char::from(96))));
+    let installed = std::path::PathBuf::from(std::env::var("LOCALAPPDATA").unwrap())
+        .join("Programs/HRIS Desktop/hris-connection.json");
+    let config = ConnectionConfig::load_profile(&installed, true).unwrap();
+    assert_eq!(
+        config.url.trim_end_matches('/'),
+        format!("https://{target}.supabase.co")
+    );
+    let session: AuthSession =
+        serde_json::from_str(&std::env::var("HRIS_SERVICES_SESSION").unwrap()).unwrap();
+    assert!(
+        session.user.email.starts_with("qa-gov042-services067-")
+            && session.user.email.ends_with("@example.invalid")
+    );
+    let roles: crate::staff_roles::StaffRoles =
+        serde_json::from_str(&std::env::var("HRIS_SERVICES_ROLES").unwrap()).unwrap();
+    let name = std::env::var("HRIS_SERVICES_CASE").unwrap();
+    assert!(name.len() < 40 && name.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-'));
+    let expected: Vec<Uuid> =
+        serde_json::from_str(&std::env::var("HRIS_SERVICES_EXPECT_IDS").unwrap()).unwrap();
+    let active = std::env::var("HRIS_SERVICES_ACTIVE").as_deref() != Ok("false");
+    let allowed = roles.uses_desktop() && active;
+    let mut client = client(config.url.clone(), &data(Role::Administrator));
+    client.config = config;
+    client.session = session;
+    client.product = Some(crate::desktop::Product::Hris);
+    client.http = Client::builder()
+        .timeout(Duration::from_secs(30))
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .unwrap();
+    let mut replay = false;
+    let mut visible = 0;
+    let mut event_count = 0;
+    let mut can_route = false;
+    match client.current_access() {
+        Ok(access) => {
+            assert!(allowed);
+            assert!(access.staff_roles().is_ok_and(|r| r == roles));
+            let employee = access.employee_id.unwrap();
+            let response=client.request(Method::GET,&format!("employees?id=eq.{employee}&company_id=eq.{}&select=id,company_id,employee_code",access.company_id)).unwrap().send().unwrap();
+            let rows: Vec<Value> = decode(response).unwrap();
+            assert_eq!(rows.len(), 1);
+            assert_eq!(rows[0]["id"], json!(employee));
+            assert!(
+                rows[0]["employee_code"]
+                    .as_str()
+                    .unwrap()
+                    .starts_with("QA-SR067-")
+            );
+            let mut d = Snapshot::signed_out();
+            d.company.id = access.company_id;
+            d.access = access;
+            d.mode = Mode::Supabase;
+            let mut c = client.service_context(&d).unwrap();
+            if let Ok(raw) = std::env::var("HRIS_SERVICES_REQUEST") {
+                let r: Request = serde_json::from_str(&raw).unwrap();
+                r.binding(&d.access).unwrap();
+                if let Change::Submit { employee_id, .. } = &r.change {
+                    let response=client.request(Method::GET,&format!("employees?id=eq.{employee_id}&company_id=eq.{}&select=id,company_id,employee_code",d.company.id)).unwrap().send().unwrap();
+                    let rows: Vec<Value> = decode(response).unwrap();
+                    assert_eq!(rows.len(), 1);
+                    assert!(
+                        rows[0]["employee_code"]
+                            .as_str()
+                            .unwrap()
+                            .starts_with("QA-SR067-")
+                    );
+                }
+                let first = client
+                    .execute_service(&d, Operation::Save(Box::new(r.clone())))
+                    .unwrap();
+                let second = client
+                    .execute_service(&d, Operation::Save(Box::new(r)))
+                    .unwrap();
+                assert_eq!(first.receipt, second.receipt);
+                assert_eq!(first.context, second.context);
+                replay = true;
+                c = second.context;
+            }
+            let got: std::collections::BTreeSet<_> = c.requests.iter().map(|t| t.id).collect();
+            assert_eq!(got, expected.into_iter().collect());
+            assert!(c.handlers.is_empty() || c.can_route);
+            can_route = c.can_route;
+            visible = c.requests.len();
+            event_count = c.events.len();
+        }
+        Err(_) => {
+            assert!(!allowed);
+        }
+    }
+    let proof = json!({"allowed":allowed,"exact_request_replay":replay,"visible_requests":visible,"events":event_count,"can_route":can_route,"current_role_verified":true});
+    std::fs::write(
+        root.join(format!("work/services-native-{name}.json")),
+        serde_json::to_vec_pretty(&proof).unwrap(),
+    )
+    .unwrap();
+}

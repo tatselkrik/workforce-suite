@@ -2296,6 +2296,7 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
 }
 
 pub enum Command {
+    Services(crate::services::Operation),
     Relations(crate::relations::Operation),
     SaveWorkspaces(crate::workspaces::Save),
     LeaveImportHistory,
@@ -2407,6 +2408,9 @@ pub enum Command {
 }
 
 pub struct Update {
+    pub services: Option<crate::services::Response>,
+    pub services_clear: bool,
+    pub services_rejected: bool,
     pub relations: Option<crate::relations::Response>,
     pub relations_clear: bool,
     pub relations_rejected: bool,
@@ -2471,6 +2475,8 @@ fn worker_in(
             (crate::workspaces::Save, crate::workspaces::Receipt),
         >::new();
         let mut demo_resumes = std::collections::HashMap::new();
+        let mut demo_services = crate::services::Demo::default();
+        let mut services_loaded = false;
         let mut demo_relations = crate::relations::Demo::default();
         let mut relations_loaded = false;
         let mut demo_leave_imports = crate::leave::request_import::Demo::default();
@@ -2488,6 +2494,9 @@ fn worker_in(
                 Err(mpsc::RecvTimeoutError::Timeout) => continue,
                 Err(mpsc::RecvTimeoutError::Disconnected) => break,
             };
+            let refresh_services = services_loaded && matches!(&command, Command::Refresh);
+            let services_requested = matches!(&command,Command::Services(_));
+            let mut services_result = None;
             let refresh_relations = relations_loaded && matches!(&command, Command::Refresh);
             let relations_requested = matches!(&command,Command::Relations(_));
             let mut relations_result = None;
@@ -3378,6 +3387,23 @@ fn worker_in(
                         crate::staff_roles::provision::Update::Status{..}=>"Account status checked. Review before replacing an attempt.",
                     }.into();staff_provision_result=Some(update);data})
                 }
+                Command::Services(operation) => (|| {
+                    services_loaded = true;
+                    // An explicit fictional identity is established only by the source-build Demo.
+                    // The configured/cloud path must always retain its real protected identity.
+                    if cloud.is_none() && current.mode == Mode::Demo && current.access.user_id.is_nil() {
+                        let actor = Uuid::from_u128(10);
+                        current.access.user_id = actor;
+                        if let Some(member) = current.accounts.iter_mut().find(|m|m.employee_id == current.access.employee_id) { member.user_id = actor; }
+                        if let Some(store) = demo.as_mut() { store.data = current.clone(); }
+                    }
+                    let response = if let Some(client) = cloud.as_mut() {
+                        client.execute_service(&current, operation)?
+                    } else { demo_services.execute(&current, operation)? };
+                    message = if response.receipt.is_some() { "Service request saved with retained shared history." } else { "Current service requests refreshed." }.into();
+                    services_result = Some(response);
+                    Ok(current.clone())
+                })(),
                 Command::Relations(operation) => (|| {
                     relations_loaded = true;
                     let response = if let Some(client) = cloud.as_mut() {
@@ -3472,6 +3498,8 @@ fn worker_in(
                 }
             };
             if result.as_ref().is_ok_and(|data|data.access!=current.access) {
+                services_loaded=false;
+                services_result=None;
                 relations_loaded=false;
                 relations_result=None;
             }
@@ -3486,6 +3514,16 @@ fn worker_in(
                     }
                 }
             }
+            if refresh_services && services_loaded && result.is_ok() {
+                if let Some(client) = cloud.as_mut() {
+                    match client.service_context(result.as_ref().unwrap()) {
+                        Ok(context) => services_result = Some(crate::services::Response { context, receipt: None }),
+                        Err(error) => result = Err(error),
+                    }
+                }
+            }
+            let services_clear = (refresh_services || services_requested) && result.is_err();
+            let services_rejected = result.as_ref().err().is_some_and(|e|e.is::<crate::services::Rejected>());
             let relations_clear = (refresh_relations || relations_requested) && result.is_err();
             let relations_rejected = result.as_ref().err().is_some_and(|e|e.is::<crate::relations::Rejected>());
             let workspace_rejected = result
@@ -3502,6 +3540,8 @@ fn worker_in(
                 .map(|error| error.to_string());
             if let Some(error) = access_error {
                 cloud = None;
+                services_loaded = false;
+                services_result = None;
                 relations_loaded = false;
                 relations_result = None;
                 message = error;
@@ -3512,6 +3552,9 @@ fn worker_in(
             }
             if events
                 .send(Update {
+                    services: services_result,
+                    services_clear,
+                    services_rejected,
                     relations: relations_result,
                     relations_clear,
                     relations_rejected,
@@ -3571,6 +3614,9 @@ fn worker_in(
                     if events
                         .send(Update {
                             staff_provision: None,
+                            services: None,
+                            services_clear: false,
+                            services_rejected: false,
                             relations: None,
                             relations_clear: false,
                             relations_rejected: false,

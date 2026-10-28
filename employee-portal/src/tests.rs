@@ -176,6 +176,9 @@ async fn there_is_no_arbitrary_proxy_or_administrator_route() {
 
 #[derive(Clone, Default)]
 struct Mock {
+    service_foreign: Arc<std::sync::atomic::AtomicBool>,
+    service_receipt_foreign: Arc<std::sync::atomic::AtomicBool>,
+    service_bad_history: Arc<std::sync::atomic::AtomicBool>,
     requests: Arc<Mutex<Vec<(String, String, Value)>>>,
     disabled: Arc<std::sync::atomic::AtomicBool>,
     foreign: Arc<std::sync::atomic::AtomicBool>,
@@ -278,6 +281,18 @@ async fn fake(State(m): State<Mock>, request: Request) -> Response {
     row["revision"] = json!(0);
     row["planned_shift"] = json!({"break_rules":[{"id":rule_id(),"name":"Standard break","minutes":15,"paid":false,"required":false,"private":"PRIVATE_SENTINEL"}]});
     let data = match path.as_str() {
+        "/rest/v1/rpc/portal_service_context" => {
+            let service = Uuid::from_u128(170);
+            json!({"schema_version":1,"company_id":cid(),"user_id":uid(),"employee_id":if m.service_foreign.load(Ordering::SeqCst){Uuid::from_u128(999)}else{eid()},"private_cases":"PRIVATE_SENTINEL",
+                "requests":[{"id":service,"code":format!("SR-{}",service.simple().to_string().to_uppercase()),"title":"Fictional service request","category":"employment_document","priority":"normal","status":"submitted","handler_name":"Fictional HR handler","due_on":null,"revision":if m.service_bad_history.load(Ordering::SeqCst){2}else{1},"created_at":"2026-10-29T00:00:00Z","updated_at":"2026-10-29T00:00:00Z","can_reply":true,"can_cancel":true,"created_by":"PRIVATE_SENTINEL","assignee_user_id":"PRIVATE_SENTINEL","messages":[{"id":Uuid::from_u128(171),"revision":1,"kind":"submit","actor_name":"Fictional employee","body":"A literal <script> message is shared text, not HTML.","status":"submitted","created_at":"2026-10-29T00:00:00Z","actor_id":"PRIVATE_SENTINEL","current_state":"PRIVATE_SENTINEL"}]}]})
+        }
+        "/rest/v1/rpc/portal_save_service" => {
+            let r = &b["p_request"];
+            json!({"schema_version":1,"company_id":cid(),"user_id":uid(),"employee_id":eid(),
+                "id":if m.service_receipt_foreign.load(Ordering::SeqCst){json!(Uuid::from_u128(999))}else{r["id"].clone()},
+                "request_id":r["request_id"],"revision":r["expected_revision"].as_i64().unwrap()+1,"applied_at":"2026-10-29T00:00:00Z","private_receipt":"PRIVATE_SENTINEL"})
+        }
+
         "/auth/v1/token" => {
             if uri.contains("grant_type=password") {
                 let password = m
@@ -320,14 +335,39 @@ async fn fake(State(m): State<Mock>, request: Request) -> Response {
         "/auth/v1/logout" => json!({}),
         "/rest/v1/rpc/portal_notifications_v2" => {
             let read = m.notification_read.load(Ordering::SeqCst);
-            let mode=m.lifecycle_kind.load(Ordering::SeqCst);let source=Uuid::from_u128(110);
-            let(kind,page,key)=match mode{
-                1=>("payroll-monthly-issued","payroll_monthly",format!("payroll-monthly-issued:{source}:0")),
-                2=>("training-due","training",format!("training-due:{source}:1:soon")),
-                3=>("payroll-receipt","payroll_monthly",format!("payroll-receipt:{}:0",Uuid::from_u128(111))),
-                4=>("appraisal-review","appraisal",format!("appraisal-review:{source}:1:soon")),
-                5=>("payroll-monthly-issued","private_files",format!("payroll-monthly-issued:{source}:0")),
-                _=>("correction-status","attendance",format!("correction-status:{source}:1")),
+            let mode = m.lifecycle_kind.load(Ordering::SeqCst);
+            let source = Uuid::from_u128(110);
+            let (kind, page, key) = match mode {
+                1 => (
+                    "payroll-monthly-issued",
+                    "payroll_monthly",
+                    format!("payroll-monthly-issued:{source}:0"),
+                ),
+                2 => (
+                    "training-due",
+                    "training",
+                    format!("training-due:{source}:1:soon"),
+                ),
+                3 => (
+                    "payroll-receipt",
+                    "payroll_monthly",
+                    format!("payroll-receipt:{}:0", Uuid::from_u128(111)),
+                ),
+                4 => (
+                    "appraisal-review",
+                    "appraisal",
+                    format!("appraisal-review:{source}:1:soon"),
+                ),
+                5 => (
+                    "payroll-monthly-issued",
+                    "private_files",
+                    format!("payroll-monthly-issued:{source}:0"),
+                ),
+                _ => (
+                    "correction-status",
+                    "attendance",
+                    format!("correction-status:{source}:1"),
+                ),
             };
             json!({"version":"portal-notifications-v2","company_id":cid(),"employee_id":person,"user_id":uid(),"asof":"2026-10-25","generated_at":"2026-10-25T00:00:00Z","offset":b["p_offset"],"limit":25,"unread_only":b["p_unread_only"],"total_items":if b["p_unread_only"]==true&&read{0}else{1},"unread_count":if read{0}else{1},"items":if (b["p_unread_only"]==true&&read)||b["p_offset"].as_u64().unwrap_or(0)>0{json!([])}else{json!([{"key":key,"kind":kind,"title":"Your current personal update","detail":"A fictional scoped update","date":"2026-10-25","urgent":false,"read":read,"target_id":source,"target_page":page,"private":"PRIVATE_SENTINEL"}])},"private":"PRIVATE_SENTINEL"})
         }
@@ -1564,16 +1604,24 @@ async fn personal_inbox_projects_metadata_and_uses_saved_page_filter() {
     assert!(b.get("p_employee_id").is_none());
 }
 #[tokio::test]
-async fn lifecycle_notices_keep_pay_links_valid_and_unimplemented_records_informational(){
+async fn lifecycle_notices_keep_pay_links_valid_and_unimplemented_records_informational() {
     use std::sync::atomic::Ordering;
-    let f=fixture().await;let(cookie,_)=login(&f).await;
-    for(mode,page)in[(1,"pay"),(2,"notifications"),(3,"pay")]{
-        f.mock.lifecycle_kind.store(mode,Ordering::SeqCst);
-        let(status,_,value)=request(&f.portal,"/api/notifications",None,Some(&cookie),None).await;
-        assert_eq!(status,StatusCode::OK,"{value}");assert_eq!(value["items"][0]["target_page"],page);
+    let f = fixture().await;
+    let (cookie, _) = login(&f).await;
+    for (mode, page) in [(1, "pay"), (2, "notifications"), (3, "pay")] {
+        f.mock.lifecycle_kind.store(mode, Ordering::SeqCst);
+        let (status, _, value) =
+            request(&f.portal, "/api/notifications", None, Some(&cookie), None).await;
+        assert_eq!(status, StatusCode::OK, "{value}");
+        assert_eq!(value["items"][0]["target_page"], page);
         assert!(!value.to_string().contains("PRIVATE_SENTINEL"));
     }
-    for mode in[4,5]{f.mock.lifecycle_kind.store(mode,Ordering::SeqCst);let(status,_,_)=request(&f.portal,"/api/notifications",None,Some(&cookie),None).await;assert_eq!(status,StatusCode::BAD_GATEWAY);}
+    for mode in [4, 5] {
+        f.mock.lifecycle_kind.store(mode, Ordering::SeqCst);
+        let (status, _, _) =
+            request(&f.portal, "/api/notifications", None, Some(&cookie), None).await;
+        assert_eq!(status, StatusCode::BAD_GATEWAY);
+    }
 }
 #[tokio::test]
 async fn own_read_unread_reset_persist_without_browser_identity_fields() {
@@ -2048,5 +2096,195 @@ async fn company_logo_revision_refresh_replaces_cached_image_and_removal_clears_
             .await
             .0,
         StatusCode::NOT_FOUND
+    );
+}
+
+#[tokio::test]
+async fn service_portal_projects_own_shared_thread_and_uses_only_dedicated_rpc() {
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    let (status, headers, v) = request(&f.portal, "/api/services", None, Some(&cookie), None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(headers["cache-control"], "no-store, private");
+    assert_eq!(v["requests"][0]["title"], "Fictional service request");
+    assert!(!v.to_string().contains("PRIVATE_SENTINEL"));
+    for key in ["company_id", "user_id", "employee_id"] {
+        assert!(v.get(key).is_none());
+    }
+    for key in [
+        "created_by",
+        "assignee_user_id",
+        "current_state",
+        "previous_state",
+        "payload",
+        "receipt",
+    ] {
+        assert!(v["requests"][0].get(key).is_none());
+        assert!(v["requests"][0]["messages"][0].get(key).is_none());
+    }
+    assert!(
+        v["requests"][0]["messages"][0]["body"]
+            .as_str()
+            .unwrap()
+            .contains("<script>")
+    );
+    let raw = json!({"id":Uuid::new_v4(),"request_id":Uuid::new_v4(),"expected_revision":0,"change":{"kind":"submit","title":"Fictional own question","category":"general_support","priority":"normal","body":"Fictional own shared request"}});
+    let (status, _, v) = request(
+        &f.portal,
+        "/api/services/save",
+        Some(raw.clone()),
+        Some(&cookie),
+        Some(&csrf),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(v["id"], raw["id"]);
+    assert_eq!(v["revision"], 1);
+    assert!(!v.to_string().contains("PRIVATE_SENTINEL"));
+    assert!(v.get("employee_id").is_none());
+    let sent = f.mock.requests.lock().await;
+    let call = sent
+        .iter()
+        .find(|(_, p, _)| p == "/rest/v1/rpc/portal_save_service")
+        .unwrap();
+    assert_eq!(call.2, json!({"p_request":raw}));
+    assert!(
+        sent.iter()
+            .all(|(_, p, _)| !p.contains("employee_service_context")
+                && !p.contains("save_employee_service")
+                && !p.contains("hris_private"))
+    );
+}
+#[tokio::test]
+async fn service_portal_rejects_foreign_identity_truncated_history_and_wrong_receipt() {
+    use std::sync::atomic::Ordering;
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    f.mock.service_foreign.store(true, Ordering::SeqCst);
+    assert_eq!(
+        request(&f.portal, "/api/services", None, Some(&cookie), None)
+            .await
+            .0,
+        StatusCode::BAD_GATEWAY
+    );
+    f.mock.service_foreign.store(false, Ordering::SeqCst);
+    f.mock.service_bad_history.store(true, Ordering::SeqCst);
+    assert_eq!(
+        request(&f.portal, "/api/services", None, Some(&cookie), None)
+            .await
+            .0,
+        StatusCode::BAD_GATEWAY
+    );
+    f.mock.service_receipt_foreign.store(true, Ordering::SeqCst);
+    let raw = json!({"id":Uuid::new_v4(),"request_id":Uuid::new_v4(),"expected_revision":1,"change":{"kind":"reply","body":"Fictional shared response"}});
+    let (status, _, v) = request(
+        &f.portal,
+        "/api/services/save",
+        Some(raw),
+        Some(&cookie),
+        Some(&csrf),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_GATEWAY);
+    assert!(v.get("id").is_none());
+}
+#[tokio::test]
+async fn service_portal_rejects_staff_fields_csrf_and_disabled_sessions_before_any_save() {
+    use std::sync::atomic::Ordering;
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    let raw = json!({"id":Uuid::new_v4(),"request_id":Uuid::new_v4(),"expected_revision":1,"change":{"kind":"reply","body":"Fictional shared response"}});
+    for key in ["company_id", "employee_id", "actor_id", "audience"] {
+        let mut bad = raw.clone();
+        bad[key] = json!(uid());
+        assert_eq!(
+            request(
+                &f.portal,
+                "/api/services/save",
+                Some(bad),
+                Some(&cookie),
+                Some(&csrf)
+            )
+            .await
+            .0,
+            StatusCode::UNPROCESSABLE_ENTITY
+        );
+    }
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/services/save",
+            Some(raw.clone()),
+            Some(&cookie),
+            None
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    f.mock.disabled.store(true, Ordering::SeqCst);
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/services/save",
+            Some(raw),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::UNAUTHORIZED
+    );
+    assert!(
+        f.mock
+            .requests
+            .lock()
+            .await
+            .iter()
+            .all(|(_, p, _)| p != "/rest/v1/rpc/portal_save_service")
+    );
+}
+#[tokio::test]
+async fn service_body_limit_is_bounded_without_expanding_existing_contact_routes() {
+    let f = fixture().await;
+    let (cookie, csrf) = login(&f).await;
+    let raw = json!({"id":Uuid::new_v4(),"request_id":Uuid::new_v4(),"expected_revision":1,"change":{"kind":"reply","body":"x".repeat(9000)}});
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/services/save",
+            Some(raw.clone()),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let mut too_long = raw;
+    too_long["change"]["body"] = json!("x".repeat(26000));
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/services/save",
+            Some(too_long),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::PAYLOAD_TOO_LARGE
+    );
+    assert_eq!(
+        request(
+            &f.portal,
+            "/api/contacts",
+            Some(json!({"address":"x".repeat(9000)})),
+            Some(&cookie),
+            Some(&csrf)
+        )
+        .await
+        .0,
+        StatusCode::PAYLOAD_TOO_LARGE
     );
 }

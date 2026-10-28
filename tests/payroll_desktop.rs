@@ -196,6 +196,7 @@ fn worker_product_gate_keeps_all_financial_families_and_own_advice_but_denies_hr
             expected_revision: 0,
             enabled: vec![],
         }),
+        Command::Services(hris_desktop::services::Operation::Refresh),
         Command::CheckUpdates,
     ] {
         assert!(!Product::Payroll.command_allowed(&c));

@@ -1,3 +1,4 @@
+mod services_view;
 mod relations_view;
 mod workspace_view;
 use crate::{
@@ -102,6 +103,7 @@ enum SessionChoice {
 mod payroll_navigation;
 
 pub struct HrisApp {
+    services_state: services_view::State,
     relations_state: relations_view::State,
     desktop: crate::desktop::Application,
     data: Snapshot,
@@ -367,6 +369,7 @@ impl HrisApp {
             search: String::new(),
             employee_status: Some(EmployeeStatus::Active),
             employee_view: EmployeeView::Directory,
+            services_state: Default::default(),
             relations_state: Default::default(),
             organization: organization_view::State::default(),
             leave_state: leave_view::State::default(),
@@ -448,6 +451,7 @@ impl HrisApp {
                 }
             }
             match std::env::var("HRIS_PREVIEW_PAGE").as_deref() {
+                Ok("services") => app.page = Page::Services,
                 Ok("employees") => app.page = Page::Employees,
                 Ok("attendance") => app.page = Page::Attendance,
                 Ok("leave") => app.page = Page::Leave,
@@ -1057,6 +1061,8 @@ impl HrisApp {
         app.prepare_workspace_preview();
         #[cfg(feature = "qa-screenshot")]
         app.prepare_relations_preview();
+        #[cfg(feature="qa-screenshot")]
+        app.prepare_services_preview();
         if app.data.mode != Mode::SignedOut {
             desktop.product.project(&mut app.data);
             if desktop.product == crate::desktop::Product::Payroll {
@@ -1123,6 +1129,8 @@ impl HrisApp {
                 continue;
             }
             self.busy = false;
+            if update.services_clear { self.services_state.clear_context(); }
+            if update.services_rejected { self.services_state.reject(); }
             if update.relations_clear { self.relations_state.clear_context(); }
             if update.relations_rejected { self.relations_state.reject(); }
             match update.result {
@@ -1142,6 +1150,8 @@ impl HrisApp {
                         self.sidebar_last_page = None;
                         self.staff_roles_state = Default::default();
                         self.staff_provision_state = Default::default();
+                        self.services_state = Default::default();
+                        clear_edit_history(ctx, &["services-title", "services-body", "services-due"]);
                         self.relations_state = Default::default();
                         clear_edit_history(ctx, &["relations-title", "relations-body"]);
                         self.organization = organization_view::State::default();
@@ -1180,6 +1190,8 @@ impl HrisApp {
                         );
                     }
                     if self.data.mode != data.mode {
+                        self.services_state = Default::default();
+                        clear_edit_history(ctx, &["services-title", "services-body", "services-due"]);
                         self.relations_state = Default::default();
                         clear_edit_history(ctx, &["relations-title", "relations-body"]);
                         self.organization = organization_view::State::default();
@@ -1263,6 +1275,13 @@ impl HrisApp {
                         self.payroll_state
                             .government
                             .accept_bir_build(report, &data);
+                    }
+                    if let Some(response) = update.services {
+                        match self.services_state.accept(response, &data) {
+                            Ok(true) => clear_edit_history(ctx, &["services-title", "services-body", "services-due"]),
+                            Ok(false) => {},
+                            Err(e) => { self.services_state = Default::default(); clear_edit_history(ctx, &["services-title", "services-body", "services-due"]); self.notice = Some((e.to_string(),true)); },
+                        }
                     }
                     if let Some(response) = update.relations {
                         match self.relations_state.accept(response, &data) {
@@ -2249,6 +2268,7 @@ impl HrisApp {
                 "Your profile",
                 "Manage your personal details, account security and sessions.",
             ),
+            Page::Services => ("Employee services", "Track requests, shared replies and the staff handling your work."),
             Page::Notifications => (
                 "Notifications",
                 "Approval tasks, personal updates and reminders within your current access.",
@@ -2325,6 +2345,7 @@ impl HrisApp {
             || self.import_state.editing()
             || self.attendance_import_state.has_draft()
             || self.leave_request_import_state.has_draft()
+            || self.services_state.editing()
             || self.relations_state.editing()
             || self.hiring_state.editing()
             || self.onboarding_state.editing()
@@ -4577,6 +4598,7 @@ impl eframe::App for HrisApp {
                                 }
                                 Page::Settings => self.settings(ui),
                                 Page::Profile => self.profile(ui),
+                                Page::Services => self.services(ui),
                                 Page::Notifications => self.notifications_page(ui),
                             });
                         });
