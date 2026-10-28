@@ -108,6 +108,7 @@ try {
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
     if(filename.endsWith('_staff_workflow_people.sql')){staffWorkflowMigrations.push(filename);continue;}
     if(filename.endsWith('_staff_account_safeguards.sql')){staffPermissionMigrations.push(filename);continue;}
+    if(filename.endsWith('_staff_account_history.sql')){staffPermissionMigrations.push(filename);continue;}
     if(/_staff_.*_permissions\.sql$/.test(filename)){staffPermissionMigrations.push(filename);continue;}
     if(filename.endsWith('_staff_permission_capabilities.sql')){staffCapabilityMigrations.push(filename);continue;}
     if(filename.endsWith('_staff_account_provisioning.sql')){staffProvisionMigrations.push(filename);continue;}

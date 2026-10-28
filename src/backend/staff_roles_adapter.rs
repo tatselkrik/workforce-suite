@@ -19,23 +19,36 @@ impl CloudClient {
         current: &Snapshot,
     ) -> Result<(Snapshot, crate::staff_roles::admin::Update)> {
         use crate::staff_roles::admin::{Operation, Update};
-        let (access, context, receipt) = match operation {
+        let (access, context, receipt, history) = match operation {
             Operation::Refresh => {
                 let (a, c) = self.staff_role_admin_context(true)?;
-                (a, c, None)
+                (a, c, None, None)
             }
             Operation::Save(request) => {
                 if self.current_access()? != current.access {
                     return Err(AccessRevoked.into());
                 }
                 let (a, r, c) = self.set_staff_roles(&request)?;
-                (a, c, Some(r))
+                (a, c, Some(r), None)
+            }
+            Operation::History { user_id } => {
+                let (a,c)=self.staff_role_admin_context(true)?;
+                let source=c.accounts.iter().find(|v|v.user_id==user_id)
+                    .context("Choose an account from current assignments.")?;
+                let response=self.request(Method::POST,"rpc/staff_account_history")?
+                    .json(&json!({"p_user_id":user_id})).send()
+                    .context("Could not load account history. Your drafts are unchanged.")?;
+                if matches!(response.status(),StatusCode::UNAUTHORIZED|StatusCode::FORBIDDEN) {return Err(AccessRevoked.into());}
+                let history:crate::staff_roles::history::History=decode(response)?;
+                history.validate(&a,source).map_err(|_|anyhow::Error::new(AccessRevoked))?;
+                if self.current_access()? != a {return Err(AccessRevoked.into());}
+                (a,c,None,Some(history))
             }
         };
         if access != current.access {
             return Err(AccessRevoked.into());
         }
-        Ok((current.clone(), Update { context, receipt }))
+        Ok((current.clone(), Update { context, receipt, history }))
     }
 
     fn staff_role_admin_for(

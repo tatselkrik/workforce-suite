@@ -76,6 +76,7 @@ impl HrisApp {
             }
         });
         self.staff_role_draft(ui);
+        self.staff_account_history(ui);
         self.staff_provision_history(ui);
     }
     fn staff_role_account(&mut self, ui: &mut Ui, account: &Account) {
@@ -105,6 +106,13 @@ impl HrisApp {
                 {
                     self.open_employee(account.employee_id);
                 }
+                if ui.add_enabled(!self.busy,egui::Button::new("Access history")).clicked() {
+                    self.send(Command::StaffRoles(Operation::History {user_id:account.user_id}));
+                }
+                if self.data.accounts.iter().any(|a|a.user_id==account.user_id&&a.active&&!a.email_confirmed)
+                    && ui.add_enabled(!self.busy,egui::Button::new("Send confirmation")).clicked() {
+                    self.send(Command::Admin(AdminAction::ResendConfirmation(account.user_id)));
+                }
                 let allowed = !self.busy
                     && !self.staff_roles_state.has_draft()
                     && account.user_id != self.data.access.user_id;
@@ -130,6 +138,16 @@ impl HrisApp {
         });
         ui.add_space(8.0);
     }
+    fn staff_account_history(&mut self,ui:&mut Ui) {
+        let Some(history)=self.staff_roles_state.history.clone()else{return;};
+        let valid=self.staff_roles_state.context.as_ref().and_then(|c|c.accounts.iter().find(|a|a.user_id==history.user_id))
+            .is_some_and(|a|history.validate(&self.data.access,a).is_ok());
+        if !valid {self.staff_roles_state.history=None;return;}
+        let (refresh,close)=history_fields(ui,&history,self.data.company.tz(),self.busy);
+        if refresh {self.send(Command::StaffRoles(Operation::History {user_id:history.user_id}));}
+        if close {self.staff_roles_state.history=None;}
+    }
+
     pub(super) fn staff_role_draft(&mut self, ui: &mut Ui) {
         let focus = std::mem::take(&mut self.staff_roles_state.scroll_to_editor);
         let Some(draft) = self.staff_roles_state.draft.as_mut() else {
@@ -247,6 +265,42 @@ fn editor_fields(
     (save, cancel)
 }
 
+fn history_fields(ui:&mut Ui,history:&crate::staff_roles::history::History,zone:chrono_tz::Tz,busy:bool)->(bool,bool){
+    use crate::staff_roles::history::{roles_label,access_label};
+    let(mut refresh,mut close)=(false,false);
+        card(ui,|ui|{
+            ui.horizontal_wrapped(|ui|{
+                ui.add(egui::Label::new(RichText::new(format!("Access history · {} · {}",history.employee_code,history.full_name)).strong()).wrap());
+                if ui.add_enabled(!busy,egui::Button::new("Refresh history")).clicked() {
+                    refresh=true;
+                }
+                if ui.button("Close history").clicked(){close=true;}
+            });
+            ui.label("Immutable responsibilities and sign-in history. Earlier values that were not recorded stay unknown. Actor names below are current employee names, not saved historical names.");
+            ui.collapsing(format!("Role history ({})",history.role_event_count),|ui|{
+                if history.role_events.is_empty(){ui.label("No responsibility history has been captured for this account.");}
+                for event in history.role_events.iter().rev(){
+                    ui.separator();
+                    ui.strong(format!("{} · revision {}",event.kind.label(),event.revision));
+                    ui.label(format!("{} · {}",event.created_at.with_timezone(&zone).format("%d %b %Y %H:%M"),event.actor_name.as_deref().unwrap_or(if event.actor_id.is_none(){"Deployment baseline"}else{"Actor name unavailable"})));
+                    ui.label(format!("{} → {}",event.previous_roles.as_ref().map(roles_label).unwrap_or_else(||"Not recorded".into()),roles_label(&event.roles)));
+                    ui.label(format!("Sign-in access: {} → {}",access_label(event.previous_active),access_label(event.active)));
+                    ui.label(&event.reason);
+                }
+            });
+            ui.collapsing(format!("Original access events ({})",history.access_event_count),|ui|{
+                if history.access_events.is_empty(){ui.label("No original account events were recorded.");}
+                for event in history.access_events.iter().rev(){
+                    ui.separator();ui.strong(event.action.label());
+                    ui.label(format!("{} · {}",event.created_at.with_timezone(&zone).format("%d %b %Y %H:%M"),event.actor_name.as_deref().unwrap_or("Actor name unavailable")));
+                    ui.label(format!("Compatibility role: {} → {}",event.previous_role.map(|r|r.label()).unwrap_or("Not recorded"),event.role.map(|r|r.label()).unwrap_or("Not recorded")));
+                    ui.label(format!("Sign-in access: {} → {}",access_label(event.previous_active),access_label(event.active)));
+                }
+            });
+        });
+    (refresh,close)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -332,4 +386,20 @@ mod tests {
             }
         }
     }
+    #[test]
+    fn readonly_history_header_fits_narrow_and_wide_themes(){
+        let(_,_,mut history)=crate::staff_roles::history::tests::fixture();
+        history.full_name="Fictional staff name that needs to wrap in a narrow Account Manager history view".into();
+        for width in [320.0,480.0,760.0] {for dark in [false,true] {
+            let ctx=egui::Context::default();configure_theme(&ctx);ctx.set_visuals(if dark{egui::Visuals::dark()}else{egui::Visuals::light()});
+            let mut output=ctx.run_ui(egui::RawInput {screen_rect:Some(egui::Rect::from_min_size(egui::Pos2::ZERO,Vec2::new(width,1000.0))),..Default::default()},|ui|{
+                egui::CentralPanel::default().show(ui,|ui|{
+                    let width=ui.available_width();let scroll=egui::ScrollArea::vertical().show(ui,|ui|{
+                        assert_eq!(history_fields(ui,&history,chrono_tz::Asia::Manila,false),(false,false));
+                    });assert!(scroll.content_size.x<=width+1.0,"History overflow: {:?}",scroll.content_size);
+                });
+            });output.textures_delta.clear();
+        }}
+    }
+
 }

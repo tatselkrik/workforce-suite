@@ -527,7 +527,25 @@ fn snapshot_end_rechecks_role_sets_even_when_the_legacy_membership_role_is_uncha
             ("/rest/v1/rpc/staff_role_context",200,roles),
         ]);
         let result=client(url,&d).verify_snapshot_staff_scope(&d.access);
-        if changed{assert!(result.unwrap_err().is::<AccessRevoked>());}else{result.unwrap();}
+        if changed{assert!(result.err().unwrap().is::<AccessRevoked>());}else{result.unwrap();}
         assert_eq!(handle.join().unwrap().len(),2);
     }
+}
+
+#[test]
+fn account_history_http_is_bound_to_selected_source_and_rechecks_actor(){
+ use crate::staff_roles::admin::Operation;
+ let mut d=data(Role::Administrator);d.access.staff_contract_version=1;
+ d.access.bind_staff_context(serde_json::from_value(wire(&d,StaffRole::Administrator,true)).unwrap()).unwrap();
+ let c=admin_wire(&d);let target=&c["accounts"][1];let user:Uuid=serde_json::from_value(target["user_id"].clone()).unwrap();
+ let history=json!({"schema_version":1,"company_id":d.company.id,"actor_id":d.access.user_id,"user_id":target["user_id"],"employee_id":target["employee_id"],"employee_code":target["employee_code"],"full_name":target["full_name"],"revision":target["revision"],"current_roles":target["roles"],"active":target["active"],"member_updated_at":target["member_updated_at"],"role_event_count":0,"access_event_count":0,"role_events":[],"access_events":[]});
+ for case in 0..3 {
+  let mut h=history.clone();if case==1{h["user_id"]=json!(Uuid::from_u128(999));}
+  let mut replies=vec![("/rest/v1/rpc/my_hris_access",200,base_wire(&d)),("/rest/v1/rpc/staff_role_context",200,wire(&d,StaffRole::Administrator,true)),("/rest/v1/rpc/staff_role_admin_context",200,c.clone()),("/rest/v1/rpc/my_hris_access",200,base_wire(&d)),("/rest/v1/rpc/staff_role_context",200,wire(&d,StaffRole::Administrator,true)),("/rest/v1/rpc/staff_account_history",200,h)];
+  if case==0 {replies.extend([("/rest/v1/rpc/my_hris_access",200,base_wire(&d)),("/rest/v1/rpc/staff_role_context",200,wire(&d,StaffRole::Administrator,true))]);}
+  if case==2 {replies.push(("/rest/v1/rpc/my_hris_access",403,json!({"message":"revoked"})));}
+  let(url,handle)=server(replies);let result=client(url,&d).execute_staff_roles(Operation::History {user_id:user},&d);
+  if case==0 {let(_,update)=result.unwrap();assert_eq!(update.history.unwrap().user_id,user);assert!(update.receipt.is_none());}else{assert!(result.err().unwrap().is::<AccessRevoked>());}
+  let calls=handle.join().unwrap();assert_eq!(calls[5].1,json!({"p_user_id":user}));
+ }
 }

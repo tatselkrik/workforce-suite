@@ -145,11 +145,34 @@ Local85evidence:30dedicated reconciliation/identity/supervisor/audit rollback ch
 76existing role-transaction checks,77Edge regressions and12,353staged preservation
 assertions pass. The chronological85chain replays. No hosted change occurred.
 
+## Protected account history, local86increment
+
+Access history is available per account in Account Manager. Its read-only projection
+binds the current Administrator, company, selected employee, role revision and member
+source time. It includes complete role and original account-access events with a
+1,000-record limit for each stream; excess history is rejected without omission.
+No Auth/email/credential fields or raw legacy JSON enter this projection. Missing
+earlier roles/access states remain Not recorded. Actor names are explicitly current
+employee names rather than reconstructed historical identities.
+
+Native validation rejects foreign/stale/incomplete history and rechecks the actor
+after HTTP reads. History refresh retains pending role drafts and clears a stale
+history view after source changes. Existing provisioning recovery keeps exact retries,
+checked outcomes and reasoned cancellation; staff rows now expose the existing
+explicit Send confirmation control when appropriate. No automatic mail was added.
+
+Local86evidence:77database history assertions across14roles,86chronological replay,
+12,353preservation assertions and74focused native staff/provisioning/history tests
+pass. This includes real loopback binding/revocation, immutable history/unknowns,
+pending draft preservation and narrow320/480/760light/dark header geometry. A narrow
+heading overflow was found and fixed. Headless geometry is not installed-screen
+verification. Hosted activation and installation remain unchanged.
+
 ## Remaining before activation and delivery
 
 Review every direct RPC, RLS/storage path and native snapshot/action/menu. Add the
 remaining scoped roster and current-role labels, reconcile legacy account writes
-with protected assignment/history, and finish role/access audit/recovery usability.
+with protected assignment/history, and complete the remaining native specialist workflow/export/navigation boundaries.
 Verify own/team/assigned scopes, revocation, older clients, portal and updater
 access before enabling roles. Then apply guarded migrations, verify hosted
 behavior, package/publish/install the exact verified release and PAUSE work plus

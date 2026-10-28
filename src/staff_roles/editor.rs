@@ -20,6 +20,7 @@ pub struct State {
     pub scroll_to_editor: bool,
     pub rejected: bool,
     pub context: Option<AdminContext>,
+    pub history: Option<super::history::History>,
     pub draft: Option<Draft>,
     pub pending: Option<RoleChange>,
 }
@@ -126,6 +127,12 @@ impl State {
     }
     pub fn accept(&mut self, actor: &Access, update: Update) -> Result<()> {
         update.context.validate(actor)?;
+        if let Some(history) = &update.history {
+            ensure!(update.receipt.is_none(),"History cannot replace a role-save receipt.");
+            let source=update.context.accounts.iter().find(|a|a.user_id==history.user_id)
+                .ok_or_else(||anyhow::anyhow!("The history account is no longer in the current view."))?;
+            history.validate(actor,source)?;
+        }
         if let Some(receipt) = update.receipt {
             let pending = self.pending.as_ref().ok_or_else(|| {
                 anyhow::anyhow!("A staff receipt arrived without its reviewed request.")
@@ -138,6 +145,9 @@ impl State {
             self.pending = None;
             self.draft = None;
         }
+        if let Some(history)=update.history {self.history=Some(history);}
+        if self.history.as_ref().is_some_and(|h|update.context.accounts.iter().find(|a|a.user_id==h.user_id)
+            .is_none_or(|a|h.validate(actor,a).is_err())) {self.history=None;}
         self.context = Some(update.context);
         Ok(())
     }
@@ -225,7 +235,8 @@ mod tests {
         s.accept(
             &a,
             Update {
-                context: c,
+                history: None,
+                    context: c,
                 receipt: None,
             },
         )
@@ -263,6 +274,7 @@ mod tests {
             s.accept(
                 &a,
                 Update {
+                    history: None,
                     context: s.context.clone().unwrap(),
                     receipt: Some(wrong)
                 }
@@ -275,7 +287,8 @@ mod tests {
         s.accept(
             &a,
             Update {
-                context: current,
+                history: None,
+                    context: current,
                 receipt: Some(receipt),
             },
         )

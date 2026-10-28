@@ -10,11 +10,13 @@ use uuid::Uuid;
 pub enum Operation {
     Refresh,
     Save(RoleChange),
+    History { user_id: Uuid },
 }
 
 pub struct Update {
     pub context: AdminContext,
     pub receipt: Option<Receipt>,
+    pub history: Option<super::history::History>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
