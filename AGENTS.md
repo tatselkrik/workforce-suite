@@ -747,3 +747,8 @@ HRIS0.1.67 is installed/private-published from frozenf4183822a3b2eee1e1ecc374214
 ## Benefits administration contract
 
 Follow docs/BENEFITS-ADMINISTRATION.md. Benefits administration requires current protected Personnel capability and stays outside Snapshot, Payroll, portal, general reports and notifications. Record explicit HR eligibility reviews and captured plan/employment sources; preserve plan revisions, enrollment/dependent history, coverage overlap guards and terminal ended records. Current-role, actor/full-payload retry and source/revision checks remain server-authoritative. No benefits edit automatically changes pay, deductions, tax, receipts or provider enrollment.
+
+
+## Windows source text encoding
+
+When editing UTF-8 source or docs with Python, specify encoding="utf-8" for every read and write. The Windows default code page can corrupt Unicode UI strings while leaving most code compilable. Preserve the original source encoding and compare unrelated text when a scripted edit changes a large file.

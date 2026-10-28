@@ -1073,7 +1073,7 @@ impl CloudClient {
             data.access
                 .allows(crate::staff_roles::Capability::Personnel)
                 && (1..=100).contains(&records.len()),
-            "HR access and 1â€“100 opening rows are required."
+            "HR access and 1–100 opening rows are required."
         );
         let preview: crate::leave::opening_import::BatchPreview = decode(
             self.request(Method::POST, "rpc/preview_leave_openings")?
@@ -2301,6 +2301,7 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
 pub enum Command {
     Services(crate::services::Operation),
     Relations(crate::relations::Operation),
+    Benefits(crate::benefits::Operation),
     SaveWorkspaces(crate::workspaces::Save),
     LeaveImportHistory,
     PreviewLeaveImport(crate::leave::request_import::Batch),
@@ -2411,6 +2412,9 @@ pub enum Command {
 }
 
 pub struct Update {
+    pub benefits: Option<crate::benefits::Response>,
+    pub benefits_clear: bool,
+    pub benefits_rejected: bool,
     pub services: Option<crate::services::Response>,
     pub services_clear: bool,
     pub services_rejected: bool,
@@ -2480,6 +2484,8 @@ fn worker_in(
         let mut demo_resumes = std::collections::HashMap::new();
         let mut demo_services = crate::services::Demo::default();
         let mut services_loaded = false;
+        let mut demo_benefits = crate::benefits::Demo::default();
+        let mut benefits_loaded = false;
         let mut demo_relations = crate::relations::Demo::default();
         let mut relations_loaded = false;
         let mut demo_leave_imports = crate::leave::request_import::Demo::default();
@@ -2500,6 +2506,9 @@ fn worker_in(
             let refresh_services = services_loaded && matches!(&command, Command::Refresh);
             let services_requested = matches!(&command,Command::Services(_));
             let mut services_result = None;
+            let refresh_benefits = benefits_loaded && matches!(&command, Command::Refresh);
+            let benefits_requested = matches!(&command,Command::Benefits(_));
+            let mut benefits_result = None;
             let refresh_relations = relations_loaded && matches!(&command, Command::Refresh);
             let relations_requested = matches!(&command,Command::Relations(_));
             let mut relations_result = None;
@@ -3418,6 +3427,23 @@ fn worker_in(
                     relations_result = Some(response);
                     Ok(current.clone())
                 })(),
+                Command::Benefits(operation) => (|| {
+                    benefits_loaded = true;
+                    if cloud.is_none() && current.mode == Mode::Demo && current.access.user_id.is_nil() {
+                        let actor=Uuid::from_u128(10);current.access.user_id=actor;
+                        if let Some(member)=current.accounts.iter_mut().find(|m|m.employee_id==current.access.employee_id){member.user_id=actor;}
+                        if let Some(store)=demo.as_mut(){store.data=current.clone();}
+                    }
+
+                    let response = if let Some(client) = cloud.as_mut() {
+                        client.execute_benefit(&current, operation)?
+                    } else {
+                        demo_benefits.execute(operation, &current)?
+                    };
+                    message = if response.receipt.is_some() { "Benefits review saved with retained history." } else { "Current benefits administration refreshed." }.into();
+                    benefits_result = Some(response);
+                    Ok(current.clone())
+                })(),
                 Command::SaveWorkspaces(request) => (|| {
                     if let Some(client) = cloud.as_mut() {
                         let data = client.snapshot()?;
@@ -3503,11 +3529,20 @@ fn worker_in(
             if result.as_ref().is_ok_and(|data|data.access!=current.access) {
                 services_loaded=false;
                 services_result=None;
+                benefits_loaded=false;benefits_result=None;
                 relations_loaded=false;
                 relations_result=None;
             }
             if let (Some(product), Ok(data)) = (product, &mut result) {
                 product.project(data);
+            }
+            if refresh_benefits && benefits_loaded && result.is_ok() {
+                if let Some(client) = cloud.as_mut() {
+                    match client.benefit_context(result.as_ref().unwrap()) {
+                        Ok(context) => benefits_result = Some(crate::benefits::Response { context, receipt: None }),
+                        Err(error) => result = Err(error),
+                    }
+                }
             }
             if refresh_relations && relations_loaded && result.is_ok() {
                 if let Some(client) = cloud.as_mut() {
@@ -3527,6 +3562,8 @@ fn worker_in(
             }
             let services_clear = (refresh_services || services_requested) && result.is_err();
             let services_rejected = result.as_ref().err().is_some_and(|e|e.is::<crate::services::Rejected>());
+            let benefits_clear=(refresh_benefits||benefits_requested)&&result.is_err();
+            let benefits_rejected=result.as_ref().err().is_some_and(|e|e.is::<crate::benefits::Rejected>());
             let relations_clear = (refresh_relations || relations_requested) && result.is_err();
             let relations_rejected = result.as_ref().err().is_some_and(|e|e.is::<crate::relations::Rejected>());
             let workspace_rejected = result
@@ -3545,6 +3582,7 @@ fn worker_in(
                 cloud = None;
                 services_loaded = false;
                 services_result = None;
+                benefits_loaded=false;benefits_result=None;
                 relations_loaded = false;
                 relations_result = None;
                 message = error;
@@ -3558,6 +3596,9 @@ fn worker_in(
                     services: services_result,
                     services_clear,
                     services_rejected,
+                    benefits: benefits_result,
+                    benefits_clear,
+                    benefits_rejected,
                     relations: relations_result,
                     relations_clear,
                     relations_rejected,
@@ -3620,6 +3661,9 @@ fn worker_in(
                             services: None,
                             services_clear: false,
                             services_rejected: false,
+                            benefits: None,
+                            benefits_clear: false,
+                            benefits_rejected: false,
                             relations: None,
                             relations_clear: false,
                             relations_rejected: false,

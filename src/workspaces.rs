@@ -487,6 +487,7 @@ pub enum Section {
     Organization,
     Development,
     Relations,
+    Benefits,
 }
 pub fn hidden(page: Page, section: Section, data: &Snapshot) -> bool {
     !visible(page, data)
@@ -495,6 +496,7 @@ pub fn hidden(page: Page, section: Section, data: &Snapshot) -> bool {
                 Section::Organization => !organization(data),
                 Section::Development => !development(data),
                 Section::Directory => !people_directory(&data.access),
+                Section::Benefits => !crate::benefits::eligible(&data.access),
                 Section::Relations => !crate::relations::eligible(&data.access),
             })
 }

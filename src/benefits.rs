@@ -140,14 +140,14 @@ impl Plan {
                     || c.is_ascii_digit()
                     || c == b'-'
                     || c == b'_'),
-            "Use a unique 2â€“32 character uppercase plan code."
+            "Use a unique 2–32 character uppercase plan code."
         );
         ensure!(
             text(&self.name, 3, 160)
                 && text(&self.description, 3, 2000)
                 && text(&self.eligibility_guidance, 3, 2000)
                 && self.dependent_limit <= 25,
-            "Review plan details, eligibility guidance and dependent limit (0â€“25)."
+            "Review plan details, eligibility guidance and dependent limit (0–25)."
         );
         Ok(())
     }

@@ -558,3 +558,10 @@ fn postgres_benefits_contexts_decode_and_validate() {
         assert!(c.validate(&a).is_err());
     }
 }
+
+#[test]
+fn payroll_cannot_route_benefits_administration() {
+    let command = hris_desktop::backend::Command::Benefits(Operation::Refresh);
+    assert!(!hris_desktop::desktop::Product::Payroll.command_allowed(&command));
+    assert!(hris_desktop::desktop::Product::Hris.command_allowed(&command));
+}

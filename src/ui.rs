@@ -1,3 +1,4 @@
+mod benefits_view;
 mod services_view;
 mod relations_view;
 mod workspace_view;
@@ -105,6 +106,7 @@ mod payroll_navigation;
 pub struct HrisApp {
     services_state: services_view::State,
     relations_state: relations_view::State,
+    benefits_state: benefits_view::State,
     desktop: crate::desktop::Application,
     data: Snapshot,
     page: Page,
@@ -371,6 +373,7 @@ impl HrisApp {
             employee_view: EmployeeView::Directory,
             services_state: Default::default(),
             relations_state: Default::default(),
+            benefits_state: Default::default(),
             organization: organization_view::State::default(),
             leave_state: leave_view::State::default(),
             shift_state: shifts_view::State::default(),
@@ -1063,6 +1066,8 @@ impl HrisApp {
         app.prepare_relations_preview();
         #[cfg(feature="qa-screenshot")]
         app.prepare_services_preview();
+        #[cfg(feature="qa-screenshot")]
+        app.prepare_benefits_preview();
         if app.data.mode != Mode::SignedOut {
             desktop.product.project(&mut app.data);
             if desktop.product == crate::desktop::Product::Payroll {
@@ -1131,6 +1136,8 @@ impl HrisApp {
             self.busy = false;
             if update.services_clear { self.services_state.clear_context(); }
             if update.services_rejected { self.services_state.reject(); }
+            if update.benefits_clear { self.benefits_state.clear_context(); }
+            if update.benefits_rejected { self.benefits_state.reject(); }
             if update.relations_clear { self.relations_state.clear_context(); }
             if update.relations_rejected { self.relations_state.reject(); }
             match update.result {
@@ -1152,6 +1159,7 @@ impl HrisApp {
                         self.staff_provision_state = Default::default();
                         self.services_state = Default::default();
                         clear_edit_history(ctx, &["services-title", "services-body", "services-due"]);
+                        self.benefits_state=Default::default();benefits_view::clear_undo(ctx);
                         self.relations_state = Default::default();
                         clear_edit_history(ctx, &["relations-title", "relations-body"]);
                         self.organization = organization_view::State::default();
@@ -1192,6 +1200,7 @@ impl HrisApp {
                     if self.data.mode != data.mode {
                         self.services_state = Default::default();
                         clear_edit_history(ctx, &["services-title", "services-body", "services-due"]);
+                        self.benefits_state=Default::default();benefits_view::clear_undo(ctx);
                         self.relations_state = Default::default();
                         clear_edit_history(ctx, &["relations-title", "relations-body"]);
                         self.organization = organization_view::State::default();
@@ -1281,6 +1290,12 @@ impl HrisApp {
                             Ok(true) => clear_edit_history(ctx, &["services-title", "services-body", "services-due"]),
                             Ok(false) => {},
                             Err(e) => { self.services_state = Default::default(); clear_edit_history(ctx, &["services-title", "services-body", "services-due"]); self.notice = Some((e.to_string(),true)); },
+                        }
+                    }
+                    if let Some(response)=update.benefits {
+                        match self.benefits_state.accept(response,&data){
+                            Ok(true)=>benefits_view::clear_undo(ctx),Ok(false)=>{},
+                            Err(e)=>{self.benefits_state=Default::default();benefits_view::clear_undo(ctx);self.notice=Some((e.to_string(),true));},
                         }
                     }
                     if let Some(response) = update.relations {
@@ -2175,6 +2190,8 @@ impl HrisApp {
                     "Organization chart"
                 } else if self.employee_view == EmployeeView::Development {
                     "Development"
+                } else if self.employee_view == EmployeeView::Benefits {
+                    "Benefits administration"
                 } else if self.employee_view == EmployeeView::Relations {
                     "Employee relations"
                 } else {
@@ -2186,6 +2203,8 @@ impl HrisApp {
                     "Explore reporting relationships and open employee records."
                 } else if self.employee_view == EmployeeView::Development {
                     "Goals, appraisals, learning and career development."
+                } else if self.employee_view == EmployeeView::Benefits {
+                    "Review plans, eligibility, enrollment and dependents."
                 } else if self.employee_view == EmployeeView::Relations {
                     "Manage confidential cases and follow-ups."
                 } else {
@@ -2347,6 +2366,7 @@ impl HrisApp {
             || self.leave_request_import_state.has_draft()
             || self.services_state.editing()
             || self.relations_state.editing()
+            || self.benefits_state.editing()
             || self.hiring_state.editing()
             || self.onboarding_state.editing()
             || self.exit_state.editing()
@@ -2621,7 +2641,8 @@ impl HrisApp {
         let section_count = usize::from(workspaces::people_directory(&self.data.access))
             + usize::from(workspaces::organization(&self.data))
             + usize::from(workspaces::development(&self.data))
-            + usize::from(crate::relations::eligible(&self.data.access));
+            + usize::from(crate::relations::eligible(&self.data.access))
+            + usize::from(crate::benefits::eligible(&self.data.access));
         if section_count > 1 {
             ui.horizontal_wrapped(|ui| {
                 if workspaces::people_directory(&self.data.access) {
@@ -2645,12 +2666,14 @@ impl HrisApp {
                         "Development",
                     );
                 }
+                if crate::benefits::eligible(&self.data.access) { ui.selectable_value(&mut self.employee_view,EmployeeView::Benefits,"Benefits"); }
                 if crate::relations::eligible(&self.data.access) {
                     ui.selectable_value(&mut self.employee_view,EmployeeView::Relations,"Employee relations");
                 }
             });
             ui.add_space(10.0);
         }
+        if self.employee_view == EmployeeView::Benefits { self.benefits(ui);return; }
         if self.employee_view == EmployeeView::Relations {
             self.relations(ui);
             return;
