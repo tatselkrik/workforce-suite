@@ -706,3 +706,21 @@ Case rules are in docs/EMPLOYEE-RELATIONS.md. Keep current Administrator oversig
 ## Employee relations delivered; services next —29October2026
 
 HRIS0.1.66 is installed/private-published from frozen7970b2720611094a5b633e1d87711b9878a407d8; additive migration89 is deployed and role runtime remains TRUE. See docs/EMPLOYEE-RELATIONS-0.1.66-DELIVERY.md. Do not repeat these completed operations. Payroll0.1.0 and local portal0.1.7 are unchanged. Continue employee services, expanded benefits administration, then HR leadership reporting under the latest continuous instruction/SAME scheduler. Keep own/assigned service scope distinct from confidential case access and preserve canonical facts.
+
+
+## Employee-services local foundation —29October2026
+
+The contract is docs/EMPLOYEE-SERVICES.md. Preserve own-only portal scope even for
+Administrators, HR company routing and other staff's specific assignments, actual
+submitter identity, shared requester-visible messages, immutable actor/payload retry
+history and fresh protected access. Keep service data separate from confidential
+cases, Snapshot, Payroll and general reports/notices; service requests never edit
+canonical personnel/pay automatically. The browser field allowlist excludes private
+Auth/employee/assignee identifiers, routing directories and full history snapshots.
+
+The typed models, fictional repository/own projection and native HTTP adapter are
+local only:12model and8loopback-HTTP checks pass. Services SQL90/endpoints, native
+worker/UI and separate portal integration are not implemented/deployed/delivered.
+Do not cross out this milestone or replace frozen0.1.66 with a development build.
+Current installed066 and its publication/migration89 remain complete. Continue this
+unfinished milestone, then benefits and leadership, using the SAME active scheduler.

@@ -61,3 +61,5 @@ pub mod workspaces;
 pub mod desktop;
 
 pub mod relations;
+
+pub mod services;

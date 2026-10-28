@@ -1,3 +1,6 @@
+mod services_adapter;
+#[cfg(test)]
+mod services_tests;
 mod relations_adapter;
 #[cfg(test)]
 mod bir_builder_tests;
