@@ -739,7 +739,7 @@ impl HrisApp {
         let name = std::env::var("HRIS_PREVIEW_FORM").unwrap_or_default();
         if !name.starts_with("sr-")
             || self.data.mode != Mode::Demo
-            || self.product != crate::desktop::Product::Hris
+            || self.desktop.product != crate::desktop::Product::Hris
         {
             return;
         }
