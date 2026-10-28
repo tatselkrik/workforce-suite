@@ -1,6 +1,7 @@
 # Focused workspaces0.1.64 — testing checklist
 
-Candidate checklist. Delivery and actual installation have separate evidence.
+0.1.64 is installed and privately published. Work/scheduler are paused.
+See [delivery evidence and verification limits](WORKSPACES-0.1.64-DELIVERY.md).
 
 - Administrator: open Settings > Workspaces. All six optional sections start shown.
 - Hide/show Hiring, Development, Organization chart, Exit & clearance, Payroll &

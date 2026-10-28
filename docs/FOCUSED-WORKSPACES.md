@@ -1,7 +1,7 @@
 # Focused HRIS workspaces and optional desktop sections
 
-This is the bounded milestone following Account Manager0.1.63. Implementation
-is local until the separate delivery record confirms deployment and installation.
+This bounded milestone following Account Manager0.1.63 is delivered/installed
+in0.1.64. See [the delivery record](WORKSPACES-0.1.64-DELIVERY.md).
 Payroll remains inside HRIS during this increment. No Payroll extraction, new HR
 case/service/benefits module or portal redesign is included.
 

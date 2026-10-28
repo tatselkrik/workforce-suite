@@ -617,3 +617,20 @@ portal access and unsaved drafts. Keep Learning & Performance combined in the
 existing Employees > Development area; do not split it into another application.
 Keep settings industry-neutral and preserve existing module visibility by default.
 Use current checkpoint/reset protocol and the existing exact-target/free-only rules.
+
+
+## Focused workspaces completed; work paused —28October2026
+
+Kirk's focused-workspaces/optional-visibility milestone is delivered in0.1.64:
+migration88 deployed, existing private signed channel verified, exact release
+actually installed with hash/BUILD/Windows Apps/normal launch evidence. See
+docs/WORKSPACES-0.1.64-DELIVERY.md and checklist. Preserve role-focused navigation,
+combined Employees > Development, all-visible defaults, protected current-Admin
+company settings, immutable actor/source-bound receipts and draft-safe routing.
+Visibility changes presentation only, never roles, source facts or portal access.
+
+Work and the SAME usage-reset scheduler are PAUSED after this bounded milestone.
+Do not start Payroll extraction or later HR-function work until Kirk resumes.
+Do not repeat migration88, completed tests/packages/publication/installation.
+Role runtime remains TRUE; portal0.1.7 is unchanged. Existing exact-target standing
+authorizations and free/local/privacy/financial/deferred boundaries remain in effect.

@@ -1,11 +1,11 @@
 # HRIS workspaces and Payroll implementation â€” approved27October2026
 
-**Current delivery —28October2026:** Account Manager provisioning and complete
-specialist permission safeguards are delivered, privately published, installed and
-enabled in0.1.63. **Work and the SAME scheduler are PAUSED**, as Kirk requested after
-this milestone. Older active/disabled-gate progress entries below are historical.
-See [delivery evidence](ACCOUNT-MANAGER-0.1.63-DELIVERY.md).
-The wider workspace/Payroll/HR-function queue requires Kirk's explicit resumption.
+**Current delivery —28October2026:** focused HRIS workspaces and optional-module
+visibility are delivered, privately published and actually installed in0.1.64.
+Account Manager0.1.63 remains enabled and compatible. **Work and the SAME scheduler
+are PAUSED** after this authorized milestone. Older active/gate entries below are
+historical. See [0.1.64 delivery evidence](WORKSPACES-0.1.64-DELIVERY.md).
+Separate Payroll and later HR-function work stay queued until Kirk resumes.
 
 Kirk approved the reviewed proposal and authorized implementation plus automatic
 continuation across actual usage resets. This supersedes the preview-only hold
@@ -23,7 +23,8 @@ prototype for small companies and larger employers, including BPOs.
   can hold several staff responsibilities. Employee alone remains portal-only.
   Administrator remains highest application authority; developer access is an
   explicitly authorized company account, never an embedded support backdoor.
-- [ ] Focused native workspaces and optional-module visibility.
+- [x] ~~Focused native workspaces and optional-module visibility.~~
+  Delivered/installed0.1.64; see the delivery record above.
   Retain one Employees > Development workspace for Goals, Appraisals, Training,
   Certifications, Career plans and administrative Review cycles. Use one combined
   Learning & Performance Officer role. Preserve manager assignments and private
@@ -65,7 +66,7 @@ separate actors without creating a separate Payroll Approver role.
 
 ## Compatibility and implementation gate
 
-The installed0.1.63and protected database now support seven combinable roles.
+The installed0.1.64and protected database support seven combinable roles.
 The separate interactive preview illustrates proposed navigation only. Inspect
 all affected RPCs, RLS/storage policies, source snapshots, Account Manager provisioning,
 portal admission and native gates. Never grant a specialist the broad HR role merely
@@ -87,7 +88,8 @@ publishing there; complete independent local development and delivery first.
 ## Recovery and current evidence
 
 Use AGENTS.md's current context-freshness protocol and this chat's private checkpoint.
-The SAME resume-hris-after-usage-reset scheduler is ACTIVE for this bounded milestone. Check both five-hour
+The SAME resume-hris-after-usage-reset scheduler is PAUSED after delivered0.1.64.
+On a future authorized resumption, check both five-hour
 and weekly limits and arm the actual five-hour reset +2minutes before substantive work,
 checkpoint at meaningful milestones/around80% usage, and retime before exhaustion.
 The computer and desktop app must be available for local continuation. Do not repeat

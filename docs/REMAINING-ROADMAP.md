@@ -1,11 +1,11 @@
 # Remaining HRIS roadmap â€” agreed order
 
-**Current delivery —28October2026:** Account Manager provisioning and complete
-specialist permission safeguards are delivered, privately published, installed and
-enabled in0.1.63. **Work and the SAME scheduler are PAUSED**, as Kirk requested after
-this milestone. Older active/disabled-gate progress entries below are historical.
-See [delivery evidence](ACCOUNT-MANAGER-0.1.63-DELIVERY.md).
-The wider workspace/Payroll/HR-function queue requires Kirk's explicit resumption.
+**Current delivery —28October2026:** focused HRIS workspaces and optional-module
+visibility are delivered, privately published and actually installed in0.1.64.
+Account Manager0.1.63 remains enabled and compatible. **Work and the SAME scheduler
+are PAUSED** after this authorized milestone. Older active/gate entries below are
+historical. See [0.1.64 delivery evidence](WORKSPACES-0.1.64-DELIVERY.md).
+Separate Payroll and later HR-function work stay queued until Kirk resumes.
 
 **Latest human approval â€”27October2026:** Kirk approved the workspaces preview,
 authorized implementation and reactivated continuous work across actual usage resets.
