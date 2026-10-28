@@ -742,3 +742,8 @@ than treating earlier local-only notes or the queued checklist as delivery evide
 ## Employee services delivered —29October2026
 
 HRIS0.1.67 is installed/private-published from frozenf4183822a3b2eee1e1ecc374214c8b2a0e5db94a; additive90 is deployed. Local portal0.1.8 is separately packaged/verified; preserve older running portal drafts/sessions. See docs/EMPLOYEE-SERVICES-0.1.67-DELIVERY.md. Earlier local-only/candidate entries are superseded. Do not repeat these completed operations. Continue benefits administration, then leadership reporting under the SAME active scheduler. Shared service history is requester-visible; confidential cases stay separate.
+
+
+## Benefits administration contract
+
+Follow docs/BENEFITS-ADMINISTRATION.md. Benefits administration requires current protected Personnel capability and stays outside Snapshot, Payroll, portal, general reports and notifications. Record explicit HR eligibility reviews and captured plan/employment sources; preserve plan revisions, enrollment/dependent history, coverage overlap guards and terminal ended records. Current-role, actor/full-payload retry and source/revision checks remain server-authoritative. No benefits edit automatically changes pay, deductions, tax, receipts or provider enrollment.

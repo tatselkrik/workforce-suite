@@ -1,3 +1,6 @@
+mod benefits_adapter;
+#[cfg(test)]
+mod benefits_tests;
 mod services_adapter;
 #[cfg(test)]
 mod services_tests;
@@ -1070,7 +1073,7 @@ impl CloudClient {
             data.access
                 .allows(crate::staff_roles::Capability::Personnel)
                 && (1..=100).contains(&records.len()),
-            "HR access and 1–100 opening rows are required."
+            "HR access and 1â€“100 opening rows are required."
         );
         let preview: crate::leave::opening_import::BatchPreview = decode(
             self.request(Method::POST, "rpc/preview_leave_openings")?

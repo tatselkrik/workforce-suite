@@ -63,3 +63,5 @@ pub mod desktop;
 pub mod relations;
 
 pub mod services;
+
+pub mod benefits;
