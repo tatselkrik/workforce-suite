@@ -1,5 +1,10 @@
 # Remaining HRIS roadmap â€” agreed order
 
+**Latest delivery —29October2026, after Payroll:** confidential employee relations
+is installed/private-published in0.1.66. See [delivery](EMPLOYEE-RELATIONS-0.1.66-DELIVERY.md).
+Continue employee services, benefits administration and leadership reporting; the
+SAME scheduler remains ACTIVE. Older delivery/paused entries below are historical.
+
 **Latest delivery —29October2026:** Payroll Desktop0.1.0 and HRIS0.1.65 are
 installed and verified; HRIS is privately published. The separate Payroll companion
 preserves all existing financial sources/history. See [delivery](PAYROLL-DESKTOP-DELIVERY.md).

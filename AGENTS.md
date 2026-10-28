@@ -702,3 +702,7 @@ No new schema/rate/key/channel or payroll migration occurred. See docs/PAYROLL-D
 ## Employee-relations confidentiality
 
 Case rules are in docs/EMPLOYEE-RELATIONS.md. Keep current Administrator oversight and assigned-only HR access, Admin reassignment, immutable notes/events, dated retained follow-ups, explicit reasoned statuses, actor/full-payload retry receipts and current scope/revision guards. Load its bounded context separately from Snapshot; never expose cases through Payroll, portal, general reports, notifications, metadata or local files. Clear revoked assignments/access and affected drafts/undo history. Case tracking never changes canonical personnel, pay, attendance, leave or exit facts automatically.
+
+## Employee relations delivered; services next —29October2026
+
+HRIS0.1.66 is installed/private-published from frozen7970b2720611094a5b633e1d87711b9878a407d8; additive migration89 is deployed and role runtime remains TRUE. See docs/EMPLOYEE-RELATIONS-0.1.66-DELIVERY.md. Do not repeat these completed operations. Payroll0.1.0 and local portal0.1.7 are unchanged. Continue employee services, expanded benefits administration, then HR leadership reporting under the latest continuous instruction/SAME scheduler. Keep own/assigned service scope distinct from confidential case access and preserve canonical facts.

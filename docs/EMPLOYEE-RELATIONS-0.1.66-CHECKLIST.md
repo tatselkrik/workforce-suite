@@ -1,6 +1,6 @@
 # Employee relations — HRIS0.1.66 testing checklist
 
-Candidate checklist; delivery/actual installation have separate evidence.
+Delivered/installed0.1.66; see the separate delivery evidence.
 
 - Open Employees > Employee relations and Load assigned cases. Administrators have
  company oversight; an HR Generalist sees assigned cases. Unrelated roles have no tab.

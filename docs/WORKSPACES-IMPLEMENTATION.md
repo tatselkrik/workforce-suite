@@ -1,5 +1,10 @@
 # HRIS workspaces and Payroll implementation â€” approved27October2026
 
+**Latest delivery —29October2026, after Payroll:** confidential employee relations
+is installed/private-published in0.1.66. See [delivery](EMPLOYEE-RELATIONS-0.1.66-DELIVERY.md).
+Continue employee services, benefits administration and leadership reporting; the
+SAME scheduler remains ACTIVE. Older delivery/paused entries below are historical.
+
 **Latest delivery —29October2026:** Payroll Desktop0.1.0 and HRIS0.1.65 are
 installed and verified; HRIS is privately published. The separate Payroll companion
 preserves all existing financial sources/history. See [delivery](PAYROLL-DESKTOP-DELIVERY.md).
@@ -63,8 +68,9 @@ prototype for small companies and larger employers, including BPOs.
   also hold HR Generalist. Preserve independent Administrator financial approval,
   self-review exclusions and exact source/revision/receipt controls. Verify full
   feature parity and local delivery before removing payroll screens from HRIS.
-- [ ] Employee-relations case workflow with confidential, assigned access and
-  immutable history. Preserve existing personnel/exit/payroll facts.
+- [x] ~~Employee-relations case workflow with confidential, assigned access and immutable history.~~
+  Delivered/installed/private-published0.1.66; see [evidence](EMPLOYEE-RELATIONS-0.1.66-DELIVERY.md).
+  Existing personnel/exit/payroll facts are preserved.
 - [ ] Employee-service requests with ownership, routing, status and retained history.
 - [ ] Expanded benefits administration for eligibility, enrollment and dependents;
   approved monetary effects remain explicit payroll inputs, never automatic pay
