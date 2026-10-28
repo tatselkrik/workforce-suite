@@ -559,3 +559,15 @@ current membership/source guards and atomic employee/contact/role commit. Auth i
 a separate service: never claim cross-service SQL atomicity or delete/reset an Auth
 identity after uncertain delivery. Recovery must reuse the reserved identity and
 frozen receipt. Passwords/tokens stay in memory; confirmation is an explicit action.
+## Latest one-task boundary —28October2026
+
+Kirk instructed "continue with just one task." Finish only the current local
+notification/updater permission increment (migration84 and native guards), including
+its scoped database/native verification, documentation and saved source. Then stop
+work and pause the SAME usage-reset scheduler. This supersedes continuing through
+the whole Account Manager milestone in this run. Legacy account-write reconciliation,
+role/access audit/recovery, the broader workspace queue, hosted specialist activation
+and release/install of the incomplete role rollout remain queued. Keep the runtime
+gate FALSE until the complete permission milestone is verified. Existing exact-target
+standing authorizations are unchanged; do not infer a new deployment from this local
+increment. Resume further work only on a newer human instruction.

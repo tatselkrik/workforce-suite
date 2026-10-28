@@ -27,9 +27,9 @@ The audited legacy four-specialty mapping retains existing broad HR rights.
   actual writes recheck the assigned person's current protected authority.
   Unknown, malformed, duplicate or foreign directory scope is rejected.
 
-Current local evidence: the full normal Rust run passed751checks with28intentional
+Current local evidence: the full normal Rust run passed756checks with28intentional
 opt-ins ignored, including14shared role combinations and unchanged-base-role
-revocation. Staged82SQL passes12,353workflow/preservation assertions; dedicated
+revocation. Staged84SQL passes12,353workflow/preservation assertions; dedicated
 checks pass298capability,209payroll,562development,298Personnel,247Recruiting and
 168operational/context/principal/correction/import assertions. These checks use
 fictional records and managed Auth/Storage fixtures; they are not hosted or
@@ -87,13 +87,45 @@ delegation regressions pass; the unchanged public data/function grants pass the
 submission/decision, both-side same-base role changes, restoration, revocation,
 immutable receipts and direct private access denials. No hosted rollout occurred.
 
+## Notification and updater increment
+
+The native notification inbox uses current protected Desktop admission, Development
+administration for appraisal publication and company learning/certificate reminders,
+and current Manager reporting scope for team reminders. Private 201-file alerts
+still require Personnel Documents. Payroll notices remain own-advice notifications;
+HR notes, assessments, certificate identifiers and private evidence are omitted.
+The explicit portal surface stays own-only for all roles, including Administrators.
+Changing specialties invalidates no-longer-permitted notices/read operations even
+when the compatible base role stays Employee. Mixed legacy/lifecycle read updates
+roll back atomically on an unavailable key; each person's portal/native read markers
+remain separate.
+
+The private update catalog and Storage download policy admit all current desktop
+staff specialties while rejecting ordinary Employees, unassigned identities,
+anonymous callers and disabled/archived staff. Membership metadata is not authority.
+Authenticated staff, including Administrators, gain no catalog publication or updater
+upload authority. Signature/package verification and published artifacts are unchanged.
+
+Targeted local evidence:398PostgreSQL assertions pass across14shared role combinations
+and84chronological migrations;15native notification regressions pass, including three
+new matrix/privacy/revocation tests. Fixtures honor one-company deployment and
+deactivate-before-archive rules. Tests retain all notice/update source rows. These are
+local managed Auth/Storage simulations, not hosted API/S3 or installed-screen proof.
+Final normal native verification passes756tests with28intentional opt-ins ignored;
+staged84SQL passes12,353workflow/preservation assertions. The new test file passes
+its formatting check and the owned diff passes whitespace checks. Logs are retained
+under ignored work/staff-notifications-{native,native-full,schema}.log and
+staff-notifications-permissions-db.log. Specialist activation, hosted migration and
+installed0.1.62remain unchanged. The pre-existing repository-wide formatting gate
+and unrelated reports import warning remain for the later complete-release task.
+
 The repository formatting check currently reports90files, including untouched
 pre-resume source. Its required final release check remains unresolved; no CI
 success or delivery is claimed by these local checks.
 
 ## Remaining before activation and delivery
 
-Complete notifications/updater and legacy-write boundaries;
+Complete legacy-write boundaries;
 review every direct RPC, RLS/storage path and native snapshot/action/menu. Add the
 remaining scoped roster and current-role labels, reconcile legacy account writes
 with protected assignment/history, and finish role/access audit/recovery usability.
@@ -101,3 +133,10 @@ Verify own/team/assigned scopes, revocation, older clients, portal and updater
 access before enabling roles. Then apply guarded migrations, verify hosted
 behavior, package/publish/install the exact verified release and PAUSE work plus
 the same scheduler. Wider workspace changes and Payroll extraction stay queued.
+
+## Current one-task stop boundary
+
+Kirk narrowed this run to the notification/updater increment. Its local
+verification and saved source are complete; work and the same scheduler are paused. Do not continue
+the remaining Account Manager tasks or ship the incomplete role rollout. The wider
+scope above remains a queue, rather than instructions to resume automatically.

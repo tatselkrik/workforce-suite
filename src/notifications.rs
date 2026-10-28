@@ -1,5 +1,5 @@
 //! A live, access-scoped inbox. Read markers contain keys, never HR content.
-use crate::{access::Role, domain::*};
+use crate::domain::*;
 use anyhow::{Result, ensure};
 use chrono::{Duration, NaiveDate};
 use serde::{Deserialize, Serialize};
@@ -76,12 +76,12 @@ pub enum Target { Leave(Uuid), Correction(Uuid), Overtime(Uuid), Document { empl
 #[derive(Clone, Debug)]
 pub struct Alert { pub key: String, pub category: Category, pub title: String, pub detail: String, pub date: NaiveDate, pub urgent: bool, pub target: Target }
 pub fn alerts(data: &Snapshot, now: chrono::DateTime<chrono::Utc>) -> Vec<Alert> {
-    if data.mode == Mode::SignedOut || !data.access.role.uses_desktop() || data.company.id != data.access.company_id { return Vec::new(); }
+    if data.mode == Mode::SignedOut || !data.access.uses_desktop() || data.company.id != data.access.company_id { return Vec::new(); }
     let mut out = Vec::new();
     let today = now.with_timezone(&data.company.tz()).date_naive();
     let company = data.company.id;
     let own = data.access.employee_id;
-    let visible = |id:Uuid| data.access.role.manages_hr() || own == Some(id) || (data.access.role == Role::Manager && data.access.direct_reports.contains(&id));
+    let visible = |id:Uuid| data.access.allows(crate::staff_roles::Capability::PersonnelDocuments) || own == Some(id) || (data.access.allows(crate::staff_roles::Capability::TeamReview) && data.access.direct_reports.contains(&id));
     let active = |id:Uuid| data.employees.iter().any(|e| e.id == id && e.company_id == company && e.status == EmployeeStatus::Active);
     let name = |id| data.employee_name(id).to_owned();
     let recent = |date:NaiveDate| date >= today - Duration::days(30) && date <= today;
@@ -125,7 +125,7 @@ pub fn alerts(data: &Snapshot, now: chrono::DateTime<chrono::Utc>) -> Vec<Alert>
             }
         }
     }
-    if data.access.role.manages_hr() {
+    if data.access.allows(crate::staff_roles::Capability::PersonnelDocuments) {
         for d in data.documents.iter().filter(|d| d.company_id == company && active(d.employee_id) && d.state == crate::documents::DocumentState::Ready && !d.archived) {
             for (kind,label,date) in [("document-expiry","Document expiry",d.details.expires_on),("contract-end","Contract ending",d.details.contract_end)] {
                 if let Some(date) = date.filter(|date| *date <= today + Duration::days(30)) {
