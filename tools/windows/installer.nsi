@@ -61,7 +61,7 @@ Function .onInit
     Quit
   !endif
   ${IfNot} ${RunningX64}
-    MessageBox MB_OK|MB_ICONSTOP /SD IDOK "This build requires 64-bit Windows."
+    MessageBox MB_OK|MB_ICONSTOP "This build requires 64-bit Windows." /SD IDOK
     Abort
   ${EndIf}
   ; Refuse an unfamiliar directory rather than overwriting unrelated files.
@@ -76,7 +76,7 @@ fresh_install:
   IfFileExists "$DESKTOP\${APP_NAME}.lnk" unfamiliar_install
   Goto own_install
 unfamiliar_install:
-  MessageBox MB_OK|MB_ICONSTOP /SD IDOK "The HRIS installation path or shortcuts already contain unfamiliar files. No files were installed."
+  MessageBox MB_OK|MB_ICONSTOP "The HRIS installation path or shortcuts already contain unfamiliar files. No files were installed." /SD IDOK
   Abort
 own_install:
 FunctionEnd
@@ -143,7 +143,7 @@ Function un.onInit
   FileClose $0
   StrCmp $1 "${APP_ID}" un_own_install
 un_unfamiliar_install:
-  MessageBox MB_OK|MB_ICONSTOP /SD IDOK "The HRIS installation marker could not be verified. No files were removed."
+  MessageBox MB_OK|MB_ICONSTOP "The HRIS installation marker could not be verified. No files were removed." /SD IDOK
   Abort
 un_own_install:
 FunctionEnd
@@ -154,7 +154,7 @@ Section "Uninstall"
   ClearErrors
   Delete "$INSTDIR\${APP_EXE}"
   ${If} ${Errors}
-    MessageBox MB_OK|MB_ICONSTOP /SD IDOK "Close ${APP_NAME} and run the uninstaller again."
+    MessageBox MB_OK|MB_ICONSTOP "Close ${APP_NAME} and run the uninstaller again." /SD IDOK
     Abort
   ${EndIf}
   Delete "$INSTDIR\hris-connection.json"
