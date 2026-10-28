@@ -4,12 +4,13 @@ async function fixture(){
  const elements=new Map(),calls=[],messages=[];let nonce=1;
  const make=(tag='',text='')=>({tag,textContent:text,value:'',dataset:{},children:[],hidden:false,disabled:false,required:false,append(...v){this.children.push(...v)},replaceChildren(...v){this.children=v},reset(){},focus(){}});
  const $=id=>{if(!elements.has(id))elements.set(id,make());return elements.get(id)};
- const state={busy:false,page:'services',me:{}},response={mode:'ok',requests:[],receiptWrong:false};
+ const state={busy:false,page:'services',me:{company:{timezone:'Asia/Manila'}}},response={mode:'ok',requests:[],receiptWrong:false};
  const c=vm.createContext({$,state,TextEncoder,crypto:{randomUUID(){return'67000000-0000-4000-8000-'+String(nonce++).padStart(12,'0')}},node:(t,cl,text)=>make(t,text),day:String,blocked(e,d){e.disabled=d;e.dataset.blocked=String(d)},notify(v){messages.push(v)},async busy(fn){state.busy=true;try{return await fn()}finally{state.busy=false;c.serviceGuards()}},async api(path,body){
   calls.push({path,body});if(path==='/api/services')return{schema_version:1,requests:response.requests};
   if(response.mode!=='ok'){const e=Error('Fictional delivery outcome');if(response.mode!=='network')e.status=Number(response.mode);throw e;}
   return{schema_version:1,id:response.receiptWrong?'wrong':body.id,request_id:body.request_id,revision:body.expected_revision+1};
  }});
+ const helpers=await readFile(new URL('../web/self-service.js',import.meta.url),'utf8');const start=helpers.indexOf('function when(');const end=helpers.indexOf('\n',start);vm.runInContext(helpers.slice(start,end),c);
  vm.runInContext(await readFile(new URL('../web/services.js',import.meta.url),'utf8'),c);c.initServices();
  function draft(){c.openServiceForm('submit');$('services-title').value='Fictional service';$('services-body').value='Fictional shared message';$('services-category').value='general_support';$('services-priority').value='normal';}
  return{c,$,state,response,calls,messages,draft};
@@ -53,4 +54,9 @@ test('actual navigation code blocks leaving a service draft and never refreshes 
 test('the new services page uses no persisted tokens, drafts or HTML rendering',async()=>{
  const source=await readFile(new URL('../web/services.js',import.meta.url),'utf8');assert(!/localStorage|sessionStorage|indexedDB|innerHTML|outerHTML|insertAdjacentHTML/.test(source));
  const html=await readFile(new URL('../web/index.html',import.meta.url),'utf8');assert(html.includes('id="page-services"'));assert(html.includes('src="/services.js"'));
+});
+
+test('service history displays receipt instants in company time rather than slicing a UTC date',async()=>{
+ const f=await fixture();f.state.me={company:{timezone:'Asia/Manila'}};const t=ticket();t.messages[0].created_at='2026-10-28T23:30:00Z';f.response.requests=[t];await f.c.refreshServices();vm.runInContext('serviceState.selected="'+t.id+'"',f.c);f.c.renderServices();
+ const all=nodes(f.$('services-detail'));assert(all.some(n=>/Oct 29, 2026/.test(n.textContent)&&n.textContent.includes('7:30')));assert(!all.some(n=>/Oct 28, 2026/.test(n.textContent)));
 });

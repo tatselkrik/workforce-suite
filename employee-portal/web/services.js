@@ -50,7 +50,7 @@ function renderServices(){
   if(t.can_reply){const reply=node('button','primary','Reply');reply.onclick=()=>openServiceForm('reply',t);actions.append(reply);}
   if(t.can_cancel){const cancel=node('button','secondary','Cancel request');cancel.onclick=()=>openServiceForm('cancel',t);actions.append(cancel);}
   detail.append(actions,node('h3','','Shared request history'));
-  for(const m of t.messages){const item=node('div','service-message');item.append(node('strong','',`${m.actor_name} · ${m.kind==='submit'?'Submitted':m.kind==='reply'?'Reply':m.kind==='route'?'Routed':m.kind==='cancel'?'Cancelled':'Status updated'}`),node('p','fine',`Revision ${m.revision} · ${day(m.created_at)} · ${serviceStatuses[m.status]}`),node('p','service-body',m.body));detail.append(item);}
+  for(const m of t.messages){const item=node('div','service-message');item.append(node('strong','',`${m.actor_name} · ${m.kind==='submit'?'Submitted':m.kind==='reply'?'Reply':m.kind==='route'?'Routed':m.kind==='cancel'?'Cancelled':'Status updated'}`),node('p','fine',`Revision ${m.revision} · ${when(m.created_at)} · ${serviceStatuses[m.status]}`),node('p','service-body',m.body));detail.append(item);}
  }
  serviceGuards();
 }
