@@ -1,5 +1,12 @@
 # Remaining HRIS roadmap â€” agreed order
 
+**Next scheduled milestone —28October2026:** Kirk authorized ONLY Separate
+Payroll Desktop using the same Supabase and preserving all payroll features/history,
+starting AFTER the usage reset. The SAME scheduler is active for29October2026
+00:54:27UTC+8; implementation remains paused until then. Later HR-function work
+remains queued. The completed0.1.64 delivery and earlier pause below are historical;
+resume only Payroll separation on the scheduled wake, then pause after delivery.
+
 **Current delivery —28October2026:** focused HRIS workspaces and optional-module
 visibility are delivered, privately published and actually installed in0.1.64.
 Account Manager0.1.63 remains enabled and compatible. **Work and the SAME scheduler

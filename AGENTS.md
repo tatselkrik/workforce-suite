@@ -634,3 +634,19 @@ Do not start Payroll extraction or later HR-function work until Kirk resumes.
 Do not repeat migration88, completed tests/packages/publication/installation.
 Role runtime remains TRUE; portal0.1.7 is unchanged. Existing exact-target standing
 authorizations and free/local/privacy/financial/deferred boundaries remain in effect.
+
+
+## Scheduled next milestone —Payroll separation after the reset,28October2026
+
+Kirk authorized Separate Payroll Desktop using the same company Supabase and
+preserving all existing payroll features/history, explicitly AFTER the current
+usage reset, NOT immediately. The SAME heartbeat is scheduled for29October2026
+00:54:27UTC+8 (reported reset plus2minutes). Until then, implementation stays paused.
+On wake, apply the current context-freshness/usage protocol and resume ONLY this
+Payroll separation milestone from docs/WORKSPACES-IMPLEMENTATION.md. The wider
+HR-function queue remains on hold. Verify full feature parity/local delivery before
+removing payroll screens from HRIS. Preserve shared sources, immutable history,
+Payroll Officer scope and independent Administrator approvals. Existing HRIS
+publication authority does not authorize an unresolved new Payroll update channel.
+After this milestone is delivered, pause work and SAME scheduler. No implementation
+was started while queuing it; current0.1.64 delivery remains complete.
