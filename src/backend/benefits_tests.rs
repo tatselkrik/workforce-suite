@@ -167,3 +167,128 @@ fn wrong_receipt_never_acknowledges_or_replaces_an_uncertain_request() {
     assert_eq!(sent.len(), 2);
     assert_eq!(sent[1].1, json!({"p_change": r}));
 }
+
+#[test]
+#[ignore = "synthetic managed Auth on the exact installed prototype only"]
+fn hosted_native_benefits_context_and_save() {
+    let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let target = std::fs::read_to_string(root.join("supabase/.temp/project-ref")).unwrap();
+    let target = target.trim();
+    let guard =
+        std::fs::read_to_string(root.join("deployment-private/SQL-AUTHORIZATION.md")).unwrap();
+    assert!(guard.contains(&format!("{}{}{}", char::from(96), target, char::from(96))));
+    let installed = std::path::PathBuf::from(std::env::var("LOCALAPPDATA").unwrap())
+        .join("Programs/HRIS Desktop");
+    let config: ConnectionConfig =
+        serde_json::from_slice(&std::fs::read(installed.join("hris-connection.json")).unwrap())
+            .unwrap();
+    assert_eq!(
+        config.url.trim_end_matches('/'),
+        format!("https://{target}.supabase.co")
+    );
+    let session: AuthSession =
+        serde_json::from_str(&std::env::var("HRIS_BENEFITS_SESSION").unwrap()).unwrap();
+    assert!(
+        session.user.email.starts_with("qa-gov042-benefits068-")
+            && session.user.email.ends_with("@example.invalid")
+    );
+    let roles: crate::staff_roles::StaffRoles =
+        serde_json::from_str(&std::env::var("HRIS_BENEFITS_ROLES").unwrap()).unwrap();
+    let case = std::env::var("HRIS_BENEFITS_CASE").unwrap();
+    assert!(case.len() < 40 && case.bytes().all(|v| v.is_ascii_alphanumeric() || v == b'-'));
+    let payroll = std::env::var("HRIS_BENEFITS_PAYROLL").as_deref() == Ok("true");
+    let active = std::env::var("HRIS_BENEFITS_ACTIVE").as_deref() != Ok("false");
+    let allowed = roles.allows(crate::staff_roles::Capability::Personnel) && active && !payroll;
+    let mut client = client(config.url.clone(), &data(Role::Administrator));
+    client.config = config;
+    client.session = session;
+    client.product = Some(if payroll {
+        crate::desktop::Product::Payroll
+    } else {
+        crate::desktop::Product::Hris
+    });
+    client.http = Client::builder()
+        .timeout(Duration::from_secs(30))
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .unwrap();
+    let proof = match client.current_access() {
+        Ok(access) => {
+            assert!(access.staff_roles().is_ok_and(|v| v == roles));
+            let mut d = Snapshot::signed_out();
+            d.company.id = access.company_id;
+            d.access = access;
+            d.mode = Mode::Supabase;
+            let mut replay = false;
+            if let Ok(raw) = std::env::var("HRIS_BENEFITS_REQUEST") {
+                assert!(allowed);
+                let r: Request = serde_json::from_str(&raw).unwrap();
+                let context = client.benefit_context(&d).unwrap();
+                r.validate(&context, &d.access).unwrap();
+                match &r.change {
+                    Change::Plan(p) => {
+                        assert!(p.code.starts_with("QA-BN068-"));
+                        if r.expected_revision > 0 {
+                            assert!(
+                                context
+                                    .plan(r.subject_id)
+                                    .unwrap()
+                                    .data
+                                    .code
+                                    .starts_with("QA-BN068-")
+                            );
+                        }
+                    }
+                    Change::Enrollment(e) => {
+                        assert!(
+                            e.employee_source.employee_code.starts_with("QA-BN068-")
+                                && e.plan_snapshot.code.starts_with("QA-BN068-")
+                        );
+                        if r.expected_revision > 0 {
+                            assert!(
+                                context
+                                    .enrollment(r.subject_id)
+                                    .unwrap()
+                                    .data
+                                    .employee_source
+                                    .employee_code
+                                    .starts_with("QA-BN068-")
+                            );
+                        }
+                    }
+                }
+                let first = client
+                    .execute_benefit(&d, Operation::Save(Box::new(r.clone())))
+                    .unwrap();
+                let next = client
+                    .execute_benefit(&d, Operation::Save(Box::new(r)))
+                    .unwrap();
+                assert_eq!(first.receipt, next.receipt);
+                assert_eq!(first.context, next.context);
+                replay = true;
+            }
+            let result = client.benefit_context(&d);
+            assert_eq!(
+                result.is_ok(),
+                allowed,
+                "Native protected benefits admission mismatch"
+            );
+            if let Ok(c) = result {
+                json!({"allowed":true,"current_roles_verified":true,"plans":c.plans.len(),"enrollments":c.enrollments.len(),"events":c.events.len(),"native_save_exact_retry":replay})
+            } else {
+                json!({"allowed":false,"current_roles_verified":true})
+            }
+        }
+        Err(_) => {
+            assert!(!allowed);
+            json!({"allowed":false,"current_roles_verified":true})
+        }
+    };
+    std::fs::write(
+        root.join("work")
+            .join(format!("benefits-native-{case}.json")),
+        serde_json::to_vec(&proof).unwrap(),
+    )
+    .unwrap();
+    println!("Verified protected synthetic native benefits context/save boundary.");
+}
