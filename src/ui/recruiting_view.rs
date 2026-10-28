@@ -221,7 +221,9 @@ impl HrisApp {
         }
         self.data = data;
         self.recruiting_state.agenda = true;
-        if preview.starts_with("recruit-resume") && access.allows(crate::staff_roles::Capability::Recruiting) {
+        if preview.starts_with("recruit-resume")
+            && access.allows(crate::staff_roles::Capability::Recruiting)
+        {
             self.recruiting_state.agenda = false;
             self.hiring_state.open(app.clone());
             self.hiring_state.tab = super::hiring_view::Tab::Attachments;
@@ -531,7 +533,10 @@ impl HrisApp {
         self.send(Command::Resume(action));
     }
     pub(super) fn applicant_interviews(&mut self, ui: &mut Ui, applicant: Option<Uuid>) {
-        let hr = self.data.access.allows(crate::staff_roles::Capability::Recruiting);
+        let hr = self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::Recruiting);
         if !self.data.access.uses_desktop() {
             empty(ui, "Staff access is required.");
             return;
@@ -747,7 +752,10 @@ impl HrisApp {
         self.send(Command::Change(Action::Interview(action)));
     }
     fn interview_detail(&mut self, ui: &mut Ui, r: &recruiting::Interview) {
-        let hr = self.data.access.allows(crate::staff_roles::Capability::Recruiting);
+        let hr = self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::Recruiting);
         card(ui, |ui| {
             if ui
                 .add_enabled(

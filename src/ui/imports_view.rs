@@ -17,7 +17,11 @@ impl State {
 }
 impl HrisApp {
     pub(super) fn employee_import(&mut self, ui: &mut Ui) {
-        if !self.data.access.allows(crate::staff_roles::Capability::Personnel) {
+        if !self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::Personnel)
+        {
             empty(
                 ui,
                 "Only HR and Administrators can import employee records.",
@@ -46,9 +50,19 @@ impl HrisApp {
                     }
                 }
                 if ui.button("Save Excel template").clicked() {
-                    match reports::choose_export("hris-employee-import-template.xlsx").and_then(|p| p.map(|p| imports::template_xlsx().and_then(|b| reports::save_xlsx(&p,&b))).transpose()) {
-                        Ok(Some(())) => self.notice=Some(("Excel employee template saved.".into(),false)),
-                        Err(e) => self.notice=Some((e.to_string(),true)), _=>{}
+                    match reports::choose_export("hris-employee-import-template.xlsx").and_then(
+                        |p| {
+                            p.map(|p| {
+                                imports::template_xlsx().and_then(|b| reports::save_xlsx(&p, &b))
+                            })
+                            .transpose()
+                        },
+                    ) {
+                        Ok(Some(())) => {
+                            self.notice = Some(("Excel employee template saved.".into(), false))
+                        }
+                        Err(e) => self.notice = Some((e.to_string(), true)),
+                        _ => {}
                     }
                 }
                 if primary(
@@ -132,10 +146,17 @@ impl HrisApp {
                             _ => {}
                         }
                     }
-                    if ui.add_enabled(!p.valid(),egui::Button::new("Export errors Excel")).clicked() {
+                    if ui
+                        .add_enabled(!p.valid(), egui::Button::new("Export errors Excel"))
+                        .clicked()
+                    {
                         match reports::choose_export("hris-employee-import-errors.xlsx") {
-                            Ok(Some(destination))=>self.send(Command::ImportErrors{preview:p.clone(),destination}),
-                            Err(e)=>self.notice=Some((e.to_string(),true)), _=>{}
+                            Ok(Some(destination)) => self.send(Command::ImportErrors {
+                                preview: p.clone(),
+                                destination,
+                            }),
+                            Err(e) => self.notice = Some((e.to_string(), true)),
+                            _ => {}
                         }
                     }
                     if ui.button("Discard preview").clicked() {

@@ -221,9 +221,16 @@ fn person(data: &Snapshot, id: Uuid) -> Result<&Employee> {
 }
 pub fn in_scope(data: &Snapshot, id: Uuid) -> bool {
     person(data, id).is_ok_and(|e| {
-        (data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration) || data.access.allows(crate::staff_roles::Capability::PrivateHrNotes))
+        (data
+            .access
+            .allows(crate::staff_roles::Capability::DevelopmentAdministration)
+            || data
+                .access
+                .allows(crate::staff_roles::Capability::PrivateHrNotes))
             || Some(e.id) == data.access.employee_id
-            || (data.access.allows(crate::staff_roles::Capability::TeamReview)
+            || (data
+                .access
+                .allows(crate::staff_roles::Capability::TeamReview)
                 && data.access.employee_id.is_some()
                 && e.reports_to == data.access.employee_id
                 && e.status == EmployeeStatus::Active)
@@ -233,8 +240,11 @@ pub fn can_manage(data: &Snapshot, id: Uuid) -> bool {
     data.access.employee_id.is_some()
         && data.access.employee_id != Some(id)
         && person(data, id).is_ok_and(|e| {
-            data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration)
-                || (data.access.allows(crate::staff_roles::Capability::TeamReview)
+            data.access
+                .allows(crate::staff_roles::Capability::DevelopmentAdministration)
+                || (data
+                    .access
+                    .allows(crate::staff_roles::Capability::TeamReview)
                     && e.reports_to == data.access.employee_id
                     && e.status == EmployeeStatus::Active)
         })
@@ -591,7 +601,17 @@ impl CareerAction {
                 );
                 match self {
                     Self::Progress { .. } => {
-                        ensure!(data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration) || data.access.employee_id==Some(t.employee_id) || (data.access.allows(crate::staff_roles::Capability::TeamReview) && person(data,t.employee_id)?.reports_to==data.access.employee_id), "Only the employee, current Manager or development staff update progress.");
+                        ensure!(
+                            data.access
+                                .allows(crate::staff_roles::Capability::DevelopmentAdministration)
+                                || data.access.employee_id == Some(t.employee_id)
+                                || (data
+                                    .access
+                                    .allows(crate::staff_roles::Capability::TeamReview)
+                                    && person(data, t.employee_id)?.reports_to
+                                        == data.access.employee_id),
+                            "Only the employee, current Manager or development staff update progress."
+                        );
                         ensure!(t.status == "open", "Only open milestones accept progress.")
                     }
                     Self::MilestoneStatus {
@@ -601,7 +621,13 @@ impl CareerAction {
                         ..
                     } => {
                         ensure!(
-                            can_manage(data, t.employee_id) || (data.access.allows(crate::staff_roles::Capability::PrivateHrNotes) && data.access.employee_id!=Some(t.employee_id) && (status=="waived" || (t.status=="waived" && status=="open"))),
+                            can_manage(data, t.employee_id)
+                                || (data
+                                    .access
+                                    .allows(crate::staff_roles::Capability::PrivateHrNotes)
+                                    && data.access.employee_id != Some(t.employee_id)
+                                    && (status == "waived"
+                                        || (t.status == "waived" && status == "open"))),
                             "Another HR user or current Manager reviews your milestone."
                         );
                         ensure!(
@@ -611,7 +637,10 @@ impl CareerAction {
                             "Choose an available milestone transition."
                         );
                         ensure!(
-                            status != "waived" || data.access.allows(crate::staff_roles::Capability::PrivateHrNotes),
+                            status != "waived"
+                                || data
+                                    .access
+                                    .allows(crate::staff_roles::Capability::PrivateHrNotes),
                             "Only another HR user can waive a milestone."
                         );
                         let date = optional(completed_on)?;

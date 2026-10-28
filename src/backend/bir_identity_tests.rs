@@ -105,34 +105,79 @@ fn server(data: &Snapshot, scenario: Scenario) -> (String, thread::JoinHandle<Ve
 #[test]
 fn declaration_adapter_uses_fresh_scoped_wire_and_preserves_new_file_guards() {
     use sha2::Digest;
-    let mut data=DemoStore::new().data;data.access.user_id=Uuid::from_u128(4);
-    let folder=std::env::temp_dir().join(format!("hris-declarations-http-{}",Uuid::new_v4()));
-    std::fs::create_dir(&folder).unwrap();let source=folder.join(fixture::FILE_NAME);
-    let raw=fixture::source(&["234567890"]);std::fs::write(&source,&raw).unwrap();
-    let hash=format!("{:x}",sha2::Sha256::digest(&raw));
-    for scenario in [Scenario::Good,Scenario::RevokedAfter,Scenario::ForeignBinding,Scenario::NoEmployer,Scenario::StaleHash] {
-        for extension in ["csv","xlsx"] {
-            let (url,server)=server(&data,scenario);let mut cloud=client(url,&data);
-            let path=folder.join(format!("{scenario:?}.{extension}"));
-            let result=cloud.government_bir_declarations(&data,2026,&source,
-                Some(if scenario==Scenario::StaleHash{"stale"}else{&hash}),Some(&path));
+    let mut data = DemoStore::new().data;
+    data.access.user_id = Uuid::from_u128(4);
+    let folder = std::env::temp_dir().join(format!("hris-declarations-http-{}", Uuid::new_v4()));
+    std::fs::create_dir(&folder).unwrap();
+    let source = folder.join(fixture::FILE_NAME);
+    let raw = fixture::source(&["234567890"]);
+    std::fs::write(&source, &raw).unwrap();
+    let hash = format!("{:x}", sha2::Sha256::digest(&raw));
+    for scenario in [
+        Scenario::Good,
+        Scenario::RevokedAfter,
+        Scenario::ForeignBinding,
+        Scenario::NoEmployer,
+        Scenario::StaleHash,
+    ] {
+        for extension in ["csv", "xlsx"] {
+            let (url, server) = server(&data, scenario);
+            let mut cloud = client(url, &data);
+            let path = folder.join(format!("{scenario:?}.{extension}"));
+            let result = cloud.government_bir_declarations(
+                &data,
+                2026,
+                &source,
+                Some(if scenario == Scenario::StaleHash {
+                    "stale"
+                } else {
+                    &hash
+                }),
+                Some(&path),
+            );
             server.join().unwrap();
-            if scenario==Scenario::Good {
-                let report=result.unwrap();assert_eq!(report.rows[0].sources.len(),7);
-                assert_eq!(report.rows[0].declared.len(),31);assert!(path.exists());
-            } else {assert!(result.is_err());assert!(!path.exists());}
+            if scenario == Scenario::Good {
+                let report = result.unwrap();
+                assert_eq!(report.rows[0].sources.len(), 7);
+                assert_eq!(report.rows[0].declared.len(), 31);
+                assert!(path.exists());
+            } else {
+                assert!(result.is_err());
+                assert!(!path.exists());
+            }
         }
     }
-    let existing=folder.join("preserve.csv");std::fs::write(&existing,b"preserve existing export").unwrap();
-    let (url,server)=server(&data,Scenario::Good);let mut cloud=client(url,&data);
-    assert!(cloud.government_bir_declarations(&data,2026,&source,Some(&hash),Some(&existing)).is_err());
-    server.join().unwrap();assert_eq!(std::fs::read(&existing).unwrap(),b"preserve existing export");
-    for role in [Role::Manager,Role::Employee] {
-        data.access.role=role;let mut cloud=client("http://127.0.0.1:1".into(),&data);
-        assert!(cloud.government_bir_declarations(&data,2026,&source,Some(&hash),Some(&folder.join("denied.csv"))).is_err());
+    let existing = folder.join("preserve.csv");
+    std::fs::write(&existing, b"preserve existing export").unwrap();
+    let (url, server) = server(&data, Scenario::Good);
+    let mut cloud = client(url, &data);
+    assert!(
+        cloud
+            .government_bir_declarations(&data, 2026, &source, Some(&hash), Some(&existing))
+            .is_err()
+    );
+    server.join().unwrap();
+    assert_eq!(
+        std::fs::read(&existing).unwrap(),
+        b"preserve existing export"
+    );
+    for role in [Role::Manager, Role::Employee] {
+        data.access.role = role;
+        let mut cloud = client("http://127.0.0.1:1".into(), &data);
+        assert!(
+            cloud
+                .government_bir_declarations(
+                    &data,
+                    2026,
+                    &source,
+                    Some(&hash),
+                    Some(&folder.join("denied.csv"))
+                )
+                .is_err()
+        );
         assert!(!folder.join("denied.csv").exists());
     }
-    assert_eq!(std::fs::read(&source).unwrap(),raw);
+    assert_eq!(std::fs::read(&source).unwrap(), raw);
     std::fs::remove_dir_all(folder).unwrap();
 }
 #[test]
@@ -261,11 +306,14 @@ fn hosted_native_bir_builder_for_authorized_installation() {
     hosted_native_bir_projection("builder");
 }
 fn hosted_native_bir_projection(mode: &str) {
-    assert!(matches!(mode,"identities"|"declarations"|"paydetails"|"arithmetic"|"builder"));
-    let declarations=mode=="declarations";
-    let pay=mode=="paydetails";
-    let arithmetic=mode=="arithmetic";
-    let building=mode=="builder";
+    assert!(matches!(
+        mode,
+        "identities" | "declarations" | "paydetails" | "arithmetic" | "builder"
+    ));
+    let declarations = mode == "declarations";
+    let pay = mode == "paydetails";
+    let arithmetic = mode == "arithmetic";
+    let building = mode == "builder";
     use sha2::Digest;
     let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .canonicalize()
@@ -295,8 +343,18 @@ fn hosted_native_bir_projection(mode: &str) {
         reference
     );
     let session: AuthSession = serde_json::from_str(
-        &std::env::var(if building {"HRIS_BUILDER_AUTH_SESSION"}else if arithmetic {"HRIS_ARITHMETIC_AUTH_SESSION"}else if pay {"HRIS_PAYDETAIL_AUTH_SESSION"}else if declarations {"HRIS_DECLARATION_AUTH_SESSION"} else {"HRIS_IDENTITY_AUTH_SESSION"})
-            .expect("Explicit short-lived synthetic session"),
+        &std::env::var(if building {
+            "HRIS_BUILDER_AUTH_SESSION"
+        } else if arithmetic {
+            "HRIS_ARITHMETIC_AUTH_SESSION"
+        } else if pay {
+            "HRIS_PAYDETAIL_AUTH_SESSION"
+        } else if declarations {
+            "HRIS_DECLARATION_AUTH_SESSION"
+        } else {
+            "HRIS_IDENTITY_AUTH_SESSION"
+        })
+        .expect("Explicit short-lived synthetic session"),
     )
     .unwrap();
     assert!(
@@ -324,44 +382,108 @@ fn hosted_native_bir_projection(mode: &str) {
     } else {
         "hr_generalist"
     };
-    let folder = work.join(format!("{}-live-{role}", if building {"builder062-native"}else if arithmetic {"arithmetic061-native"}else if pay {"paydetails060-verified"}else if declarations {"declarations059"} else {"identities058"}));
+    let folder = work.join(format!(
+        "{}-live-{role}",
+        if building {
+            "builder062-native"
+        } else if arithmetic {
+            "arithmetic061-native"
+        } else if pay {
+            "paydetails060-verified"
+        } else if declarations {
+            "declarations059"
+        } else {
+            "identities058"
+        }
+    ));
     std::fs::create_dir(&folder).unwrap();
     if building {
-        use crate::payroll_government::bir_file::{self as bir,builder};
-        let registration=cloud.government_registration(&data,None,None).unwrap();
-        let ready=registration.record.as_ref().is_some_and(|r|
-            bir::matchable_identity(r.details.get("bir_tin").map_or("",String::as_str),
-                r.details.get("bir_branch").map_or("",String::as_str)));
-        let mut cases=vec![];
-        for (number,schedule) in [(1,bir::Schedule::One),(2,bir::Schedule::Two)] {
-            for excel in [false,true] {
-                let kind=if excel{"xlsx"}else{"csv"};
-                let case=folder.join(format!("s{number}-{kind}"));std::fs::create_dir(&case).unwrap();
-                let blank=case.join(format!("blank-template.{kind}"));
-                assert!(cloud.government_bir_build(&data,&builder::Action::Template{schedule,destination:blank.clone()}).unwrap().is_none());
-                let actual=std::fs::read(blank).unwrap();
+        use crate::payroll_government::bir_file::{self as bir, builder};
+        let registration = cloud.government_registration(&data, None, None).unwrap();
+        let ready = registration.record.as_ref().is_some_and(|r| {
+            bir::matchable_identity(
+                r.details.get("bir_tin").map_or("", String::as_str),
+                r.details.get("bir_branch").map_or("", String::as_str),
+            )
+        });
+        let mut cases = vec![];
+        for (number, schedule) in [(1, bir::Schedule::One), (2, bir::Schedule::Two)] {
+            for excel in [false, true] {
+                let kind = if excel { "xlsx" } else { "csv" };
+                let case = folder.join(format!("s{number}-{kind}"));
+                std::fs::create_dir(&case).unwrap();
+                let blank = case.join(format!("blank-template.{kind}"));
+                assert!(
+                    cloud
+                        .government_bir_build(
+                            &data,
+                            &builder::Action::Template {
+                                schedule,
+                                destination: blank.clone()
+                            }
+                        )
+                        .unwrap()
+                        .is_none()
+                );
+                let actual = std::fs::read(blank).unwrap();
                 if excel {
                     // Workbook creation timestamps are not template declarations.
-                    let rows=crate::tabular::read_xlsx(&actual,bir::MAX_DETAILS,builder::headers(schedule).len()).unwrap();
-                    assert_eq!(rows.len(),1);
-                    assert!(rows[0].cells.iter().map(String::as_str).eq(builder::headers(schedule).iter().copied()));
-                }else{assert_eq!(actual,builder::template(schedule,false).unwrap());}
-                let source=root.join(format!("work/bir062-vectors/schedule{number}-{kind}/declarations.{kind}"));
-                let before=std::fs::read(&source).unwrap();
-                let checked=cloud.government_bir_build(&data,&builder::Action::Prepare {
-                    selection:builder::Selection{schedule,year:2026},source:source.clone(),
-                    expected_basis:None,destination:None,reviewed:false,
-                });
-                if ready {
-                    let preview=checked.unwrap().unwrap();
-                    assert_eq!((preview.company_id,preview.user_id),(data.company.id,data.access.user_id));
-                    assert_eq!(preview.source_sha256,format!("{:x}",sha2::Sha256::digest(&before)));
-                    assert_eq!(preview.details,2);
-                }else{
-                    let error=checked.err().expect("Incomplete employer must not build a draft").to_string();
-                    assert!(error.contains("BIR registration")||error.contains("protected BIR registration"));
+                    let rows = crate::tabular::read_xlsx(
+                        &actual,
+                        bir::MAX_DETAILS,
+                        builder::headers(schedule).len(),
+                    )
+                    .unwrap();
+                    assert_eq!(rows.len(), 1);
+                    assert!(
+                        rows[0]
+                            .cells
+                            .iter()
+                            .map(String::as_str)
+                            .eq(builder::headers(schedule).iter().copied())
+                    );
+                } else {
+                    assert_eq!(actual, builder::template(schedule, false).unwrap());
                 }
-                assert_eq!(before,std::fs::read(source).unwrap());
+                let source = root.join(format!(
+                    "work/bir062-vectors/schedule{number}-{kind}/declarations.{kind}"
+                ));
+                let before = std::fs::read(&source).unwrap();
+                let checked = cloud.government_bir_build(
+                    &data,
+                    &builder::Action::Prepare {
+                        selection: builder::Selection {
+                            schedule,
+                            year: 2026,
+                        },
+                        source: source.clone(),
+                        expected_basis: None,
+                        destination: None,
+                        reviewed: false,
+                    },
+                );
+                if ready {
+                    let preview = checked.unwrap().unwrap();
+                    assert_eq!(
+                        (preview.company_id, preview.user_id),
+                        (data.company.id, data.access.user_id)
+                    );
+                    assert_eq!(
+                        preview.source_sha256,
+                        format!("{:x}", sha2::Sha256::digest(&before))
+                    );
+                    assert_eq!(preview.details, 2);
+                } else {
+                    let error = checked
+                        .err()
+                        .expect("Incomplete employer must not build a draft")
+                        .to_string();
+                    assert!(
+                        error.contains("BIR registration")
+                            || error.contains("protected BIR registration")
+                    );
+                }
+                assert_eq!(before, std::fs::read(source).unwrap());
                 cases.push(json!({"schedule":number,"format":kind,"blank_template_matches":true,
                     "preview_built":ready,"incomplete_registration_blocked":!ready,"source_unchanged":true}));
             }
@@ -375,29 +497,52 @@ fn hosted_native_bir_projection(mode: &str) {
     }
     if arithmetic {
         use crate::payroll_government::bir_file as bir;
-        let mut cases=vec![];
-        for (name,schedule,different) in [("s1-match",bir::Schedule::One,false),("s1-cent",bir::Schedule::One,true),
-            ("s2-match",bir::Schedule::Two,false),("s2-cent",bir::Schedule::Two,true)] {
-            let dir=folder.join(name);std::fs::create_dir(&dir).unwrap();
-            let source=dir.join("0123456780000123120261604C.DAT");
-            let raw=bir::arithmetic::fictional_source(schedule,different);std::fs::write(&source,&raw).unwrap();
-            let hash=format!("{:x}",sha2::Sha256::digest(&raw));
-            let r=cloud.government_bir_check(&data,&source,None,None).unwrap();
-            assert_eq!(r.errors,0,"Configured employer mismatch must remain a blocking finding; never manufacture employer facts for QA.");
-            assert_eq!(r.arithmetic.differences,usize::from(different));assert!(r.arithmetic.checked());
-            for ext in ["csv","xlsx"] {
-                let checked=cloud.government_bir_check(&data,&source,Some(&hash),Some(&dir.join(format!("findings.{ext}")))).unwrap();
-                assert_eq!(checked.arithmetic,r.arithmetic);
+        let mut cases = vec![];
+        for (name, schedule, different) in [
+            ("s1-match", bir::Schedule::One, false),
+            ("s1-cent", bir::Schedule::One, true),
+            ("s2-match", bir::Schedule::Two, false),
+            ("s2-cent", bir::Schedule::Two, true),
+        ] {
+            let dir = folder.join(name);
+            std::fs::create_dir(&dir).unwrap();
+            let source = dir.join("0123456780000123120261604C.DAT");
+            let raw = bir::arithmetic::fictional_source(schedule, different);
+            std::fs::write(&source, &raw).unwrap();
+            let hash = format!("{:x}", sha2::Sha256::digest(&raw));
+            let r = cloud
+                .government_bir_check(&data, &source, None, None)
+                .unwrap();
+            assert_eq!(
+                r.errors, 0,
+                "Configured employer mismatch must remain a blocking finding; never manufacture employer facts for QA."
+            );
+            assert_eq!(r.arithmetic.differences, usize::from(different));
+            assert!(r.arithmetic.checked());
+            for ext in ["csv", "xlsx"] {
+                let checked = cloud
+                    .government_bir_check(
+                        &data,
+                        &source,
+                        Some(&hash),
+                        Some(&dir.join(format!("findings.{ext}"))),
+                    )
+                    .unwrap();
+                assert_eq!(checked.arithmetic, r.arithmetic);
             }
-            assert_eq!(std::fs::read(&source).unwrap(),raw);
+            assert_eq!(std::fs::read(&source).unwrap(), raw);
             cases.push(json!({"case":name,"schedule":schedule,"source_sha256":hash,"source_unchanged":true,
                 "structural_errors":r.errors,"employer_match":r.employer_match,"arithmetic":r.arithmetic}));
         }
-        assert_eq!(cloud.current_access().unwrap(),data.access);
-        let proof=json!({"all_passed":true,"role":role,"cases":cases,
+        assert_eq!(cloud.current_access().unwrap(), data.access);
+        let proof = json!({"all_passed":true,"role":role,"cases":cases,
             "fixed_authorized_project_and_local_evidence":true,"hosted_identity_data_persisted":false,
             "official_acceptance":false});
-        std::fs::write(folder.join("proof.json"),serde_json::to_vec(&proof).unwrap()).unwrap();
+        std::fs::write(
+            folder.join("proof.json"),
+            serde_json::to_vec(&proof).unwrap(),
+        )
+        .unwrap();
         return;
     }
     let mut summaries = vec![];
@@ -406,13 +551,17 @@ fn hosted_native_bir_projection(mode: &str) {
         let before = cloud.current_access().unwrap();
         assert_eq!(before, data.access);
         if pay {
-            let r=cloud.government_annual_pay_details(&data,year,None).unwrap();
-            let mut exports=vec![];
-            for ext in ["csv","xlsx"] {
-                let bytes=r.export(std::path::Path::new(&format!("memory.{ext}"))).unwrap();
+            let r = cloud
+                .government_annual_pay_details(&data, year, None)
+                .unwrap();
+            let mut exports = vec![];
+            for ext in ["csv", "xlsx"] {
+                let bytes = r
+                    .export(std::path::Path::new(&format!("memory.{ext}")))
+                    .unwrap();
                 exports.push(json!({"format":ext,"bytes":bytes.len(),"sha256":format!("{:x}",sha2::Sha256::digest(&bytes))}));
             }
-            assert_eq!(cloud.current_access().unwrap(),before);
+            assert_eq!(cloud.current_access().unwrap(), before);
             summaries.push(json!({"year":year,"sources":r.ledger.wire.entries.len(),"details":r.details.len(),"in_memory_exports":exports}));
             continue;
         }
@@ -442,9 +591,13 @@ fn hosted_native_bir_projection(mode: &str) {
         let hash = format!("{:x}", sha2::Sha256::digest(&raw));
         let destination = folder.join("must-not-be-created.csv");
         let result = if declarations {
-            cloud.government_bir_declarations(&data, 2026, &source, Some(&hash), Some(&destination)).map(|_| ())
+            cloud
+                .government_bir_declarations(&data, 2026, &source, Some(&hash), Some(&destination))
+                .map(|_| ())
         } else {
-            cloud.government_bir_identities(&data, 2026, &source, Some(&hash), Some(&destination)).map(|_| ())
+            cloud
+                .government_bir_identities(&data, 2026, &source, Some(&hash), Some(&destination))
+                .map(|_| ())
         };
         assert!(
             result

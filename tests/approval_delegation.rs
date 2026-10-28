@@ -292,38 +292,59 @@ fn full_role_bindings_reject_same_base_role_changes_but_retain_inactive_history(
     let roles = StaffRoles::new(vec![S::Recruiter]).unwrap();
     data.access.role = Role::Employee;
     data.access.staff_contract_version = 1;
-    data.access.bind_staff_context(StaffContext {
-        schema_version: 1, company_id:data.access.company_id,user_id:data.access.user_id,
-        employee_id:data.access.employee_id.unwrap(),base_role:Role::Employee,revision:2,
-        runtime_ready:true,roles:roles.clone(),
-    }).unwrap();
+    data.access
+        .bind_staff_context(StaffContext {
+            schema_version: 1,
+            company_id: data.access.company_id,
+            user_id: data.access.user_id,
+            employee_id: data.access.employee_id.unwrap(),
+            base_role: Role::Employee,
+            revision: 2,
+            runtime_ready: true,
+            roles: roles.clone(),
+        })
+        .unwrap();
     let c = data.approvals.as_mut().unwrap();
-    c.version = "approval-delegation-v2".into(); c.role=Role::Employee;
+    c.version = "approval-delegation-v2".into();
+    c.role = Role::Employee;
     c.grants[0].principal_role = Role::Employee;
     c.grants[0].delegate_role = Role::Employee;
     c.grants[0].principal_staff_roles = Some(StaffRoles::new(vec![S::PayrollOfficer]).unwrap());
     c.grants[0].delegate_staff_roles = Some(roles);
-    c.validate_access(&data.access,data.company.today()).unwrap();
-    data.access.staff_context.as_mut().unwrap().roles = StaffRoles::new(vec![S::LearningPerformanceOfficer]).unwrap();
-    assert!(c.validate_access(&data.access,data.company.today()).is_err());
-    c.grants[0].current = false; c.permits.clear();
-    c.validate_access(&data.access,data.company.today()).unwrap();
+    c.validate_access(&data.access, data.company.today())
+        .unwrap();
+    data.access.staff_context.as_mut().unwrap().roles =
+        StaffRoles::new(vec![S::LearningPerformanceOfficer]).unwrap();
+    assert!(
+        c.validate_access(&data.access, data.company.today())
+            .is_err()
+    );
+    c.grants[0].current = false;
+    c.permits.clear();
+    c.validate_access(&data.access, data.company.today())
+        .unwrap();
     c.grants[0].delegate_staff_roles = None;
-    assert!(c.validate_access(&data.access,data.company.today()).is_err());
+    assert!(
+        c.validate_access(&data.access, data.company.today())
+            .is_err()
+    );
 }
 #[test]
 fn specialist_delegation_preserves_hr_admin_and_operational_scope_grades() {
-    use hris_desktop::staff_roles::{StaffRole as S,StaffRoles};
-    let roles = |items:Vec<S>| StaffRoles::new(items).unwrap();
-    let hr=roles(vec![S::HrGeneralist]); let payroll=roles(vec![S::PayrollOfficer]);
-    let recruiter=roles(vec![S::Recruiter]);let manager=roles(vec![S::Manager]);
-    let admin=roles(vec![S::Administrator]);let employee=roles(vec![S::Employee]);
-    assert!(substitute_roles(Scope::Leave,&payroll,&recruiter));
-    assert!(!substitute_roles(Scope::Attendance,&payroll,&recruiter));
-    assert!(!substitute_roles(Scope::Overtime,&manager,&payroll));
-    assert!(substitute_roles(Scope::Overtime,&manager,&hr));
-    assert!(!substitute_roles(Scope::Leave,&hr,&manager));
-    assert!(!substitute_roles(Scope::Leave,&admin,&hr));
-    assert!(substitute_roles(Scope::Leave,&admin,&admin));
-    assert!(!substitute_roles(Scope::Leave,&recruiter,&employee));
+    use hris_desktop::staff_roles::{StaffRole as S, StaffRoles};
+    let roles = |items: Vec<S>| StaffRoles::new(items).unwrap();
+    let hr = roles(vec![S::HrGeneralist]);
+    let payroll = roles(vec![S::PayrollOfficer]);
+    let recruiter = roles(vec![S::Recruiter]);
+    let manager = roles(vec![S::Manager]);
+    let admin = roles(vec![S::Administrator]);
+    let employee = roles(vec![S::Employee]);
+    assert!(substitute_roles(Scope::Leave, &payroll, &recruiter));
+    assert!(!substitute_roles(Scope::Attendance, &payroll, &recruiter));
+    assert!(!substitute_roles(Scope::Overtime, &manager, &payroll));
+    assert!(substitute_roles(Scope::Overtime, &manager, &hr));
+    assert!(!substitute_roles(Scope::Leave, &hr, &manager));
+    assert!(!substitute_roles(Scope::Leave, &admin, &hr));
+    assert!(substitute_roles(Scope::Leave, &admin, &admin));
+    assert!(!substitute_roles(Scope::Leave, &recruiter, &employee));
 }

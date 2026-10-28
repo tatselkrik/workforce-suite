@@ -119,7 +119,11 @@ impl HrisApp {
         true
     }
     pub(super) fn applicant_offers(&mut self, ui: &mut Ui, applicant: Uuid) {
-        if !self.data.access.allows(crate::staff_roles::Capability::Recruiting) {
+        if !self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::Recruiting)
+        {
             return;
         }
         if self.hiring_decision(ui) {
@@ -433,7 +437,10 @@ impl HrisApp {
             self.onboarding_task_form(ui);
             return;
         }
-        let hr = self.data.access.allows(crate::staff_roles::Capability::Recruiting);
+        let hr = self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::Recruiting);
         if !hr {
             self.assigned_onboarding(ui);
             return;
@@ -632,7 +639,10 @@ impl HrisApp {
         }
     }
     fn onboarding_task_card(&mut self, ui: &mut Ui, t: &onboarding::Task) {
-        let hr = self.data.access.allows(crate::staff_roles::Capability::Recruiting);
+        let hr = self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::Recruiting);
         card(ui, |ui| {
             ui.label(RichText::new(&t.title).strong().size(17.0));
             ui.horizontal_wrapped(|ui| {
@@ -908,7 +918,12 @@ fn history_preview() -> bool {
     }
 }
 fn history_value(key: &str, v: &serde_json::Value) -> String {
-    if key == "milestones_snapshot" {return format!("{} milestones saved at completion",v.as_array().map_or(0,Vec::len));}
+    if key == "milestones_snapshot" {
+        return format!(
+            "{} milestones saved at completion",
+            v.as_array().map_or(0, Vec::len)
+        );
+    }
     if key == "goals_snapshot" {
         return format!(
             "{} goals saved at submission",

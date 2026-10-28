@@ -31,11 +31,17 @@ impl State {
         self.source.is_some() || self.post.is_some() || self.withdraw.is_some()
     }
     pub fn sync(&mut self, data: &Snapshot) {
-        if !data.access.allows(crate::staff_roles::Capability::AttendanceAdministration) || self.scope.as_ref().is_some_and(|s| s != &data.access)
+        if !data
+            .access
+            .allows(crate::staff_roles::Capability::AttendanceAdministration)
+            || self.scope.as_ref().is_some_and(|s| s != &data.access)
         {
             *self = Self::default();
         }
-        if data.access.allows(crate::staff_roles::Capability::AttendanceAdministration) {
+        if data
+            .access
+            .allows(crate::staff_roles::Capability::AttendanceAdministration)
+        {
             self.scope = Some(data.access.clone());
         }
     }
@@ -133,7 +139,11 @@ impl HrisApp {
     pub(super) fn attendance_import(&mut self, ui: &mut Ui) {
         let mut state = std::mem::take(&mut self.attendance_import_state);
         state.sync(&self.data);
-        if !self.data.access.allows(crate::staff_roles::Capability::AttendanceAdministration) {
+        if !self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::AttendanceAdministration)
+        {
             empty(
                 ui,
                 "Only HR and Administrators can import attendance correction requests.",

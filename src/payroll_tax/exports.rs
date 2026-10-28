@@ -52,7 +52,9 @@ pub fn export_csv(data: &Snapshot, kind: &str, id: Option<Uuid>) -> Result<Vec<u
         data.mode != Mode::SignedOut && data.access.company_id == data.company.id,
         "Sign in to export annual tax."
     );
-    let hr = data.access.allows(crate::staff_roles::Capability::PayrollPreparation);
+    let hr = data
+        .access
+        .allows(crate::staff_roles::Capability::PayrollPreparation);
     let mut rows = vec![vec![
         "Tax year".into(),
         "As of".into(),

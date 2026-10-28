@@ -89,8 +89,15 @@ pub(crate) struct CsvRow {
 pub(crate) fn parse(text: &str) -> Result<Vec<CsvRow>> {
     parse_bounded(text, MAX_ROWS, HEADERS.len())
 }
-pub(crate) fn parse_bounded(text: &str, max_rows: usize, max_columns: usize) -> Result<Vec<CsvRow>> {
-    ensure!(max_rows <= 1000 && max_columns <= 100, "Unsupported CSV bounds.");
+pub(crate) fn parse_bounded(
+    text: &str,
+    max_rows: usize,
+    max_columns: usize,
+) -> Result<Vec<CsvRow>> {
+    ensure!(
+        max_rows <= 1000 && max_columns <= 100,
+        "Unsupported CSV bounds."
+    );
     ensure!(
         text.len() <= MAX_BYTES,
         "CSV exceeds 2 MiB. Split it into smaller files."
@@ -220,7 +227,9 @@ fn option_reference(option: Option<&EmploymentOption>) -> Value {
 impl Preview {
     pub fn from_csv(data: &Snapshot, filename: String, bytes: &[u8]) -> Result<Self> {
         ensure!(
-            data.access.allows(crate::staff_roles::Capability::Personnel) && data.access.company_id == data.company.id,
+            data.access
+                .allows(crate::staff_roles::Capability::Personnel)
+                && data.access.company_id == data.company.id,
             "Only HR or Administrators can preview employee imports."
         );
         ensure!(
@@ -232,9 +241,16 @@ impl Preview {
         Self::from_rows(data, filename, parse(text)?)
     }
     fn from_rows(data: &Snapshot, filename: String, mut parsed: Vec<CsvRow>) -> Result<Self> {
-        ensure!(data.access.allows(crate::staff_roles::Capability::Personnel) && data.access.company_id == data.company.id,
-            "Only HR or Administrators can preview employee imports.");
-        ensure!(!parsed.is_empty() && parsed.len() <= MAX_ROWS + 1, "Include headers and at most 500 employee rows.");
+        ensure!(
+            data.access
+                .allows(crate::staff_roles::Capability::Personnel)
+                && data.access.company_id == data.company.id,
+            "Only HR or Administrators can preview employee imports."
+        );
+        ensure!(
+            !parsed.is_empty() && parsed.len() <= MAX_ROWS + 1,
+            "Include headers and at most 500 employee rows."
+        );
         ensure!(
             parsed
                 .iter()
@@ -390,9 +406,24 @@ impl Preview {
         Ok(preview)
     }
     pub fn load(data: &Snapshot, path: &Path) -> Result<Self> {
-        if path.extension().is_some_and(|s| s.eq_ignore_ascii_case("xlsx")) {
+        if path
+            .extension()
+            .is_some_and(|s| s.eq_ignore_ascii_case("xlsx"))
+        {
             let rows = crate::tabular::load_xlsx(path, MAX_ROWS, HEADERS.len())?;
-            return Self::from_rows(data, path.file_name().unwrap_or_default().to_string_lossy().into_owned(), rows.into_iter().map(|r| CsvRow { line:r.number, cells:r.cells }).collect());
+            return Self::from_rows(
+                data,
+                path.file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into_owned(),
+                rows.into_iter()
+                    .map(|r| CsvRow {
+                        line: r.number,
+                        cells: r.cells,
+                    })
+                    .collect(),
+            );
         }
         ensure!(
             path.extension()
@@ -441,7 +472,8 @@ impl Preview {
     }
     pub fn validate_current(&self, data: &Snapshot) -> Result<()> {
         ensure!(
-            data.access.allows(crate::staff_roles::Capability::Personnel)
+            data.access
+                .allows(crate::staff_roles::Capability::Personnel)
                 && data.access.company_id == self.company_id
                 && data.company.id == self.company_id,
             "Only HR or Administrators in this company can apply the import."
@@ -493,7 +525,22 @@ impl Preview {
         )
     }
     pub fn error_xlsx(&self) -> Result<Vec<u8>> {
-        crate::tabular::text_xlsx(&["source_row", "employee_code", "full_name", "errors"], &self.rows.iter().filter(|r| !r.errors.is_empty()).map(|r| vec![r.source_row.to_string(), r.employee_code.clone(), r.full_name.clone(), r.errors.join(" | ")]).collect::<Vec<_>>())
+        crate::tabular::text_xlsx(
+            &["source_row", "employee_code", "full_name", "errors"],
+            &self
+                .rows
+                .iter()
+                .filter(|r| !r.errors.is_empty())
+                .map(|r| {
+                    vec![
+                        r.source_row.to_string(),
+                        r.employee_code.clone(),
+                        r.full_name.clone(),
+                        r.errors.join(" | "),
+                    ]
+                })
+                .collect::<Vec<_>>(),
+        )
     }
 }
 fn validate_reason(reason: &str) -> Result<()> {
@@ -558,7 +605,11 @@ pub fn template_xlsx() -> Result<Vec<u8>> {
 }
 pub fn apply_demo(store: &mut DemoStore, preview: Preview, reason: String) -> Result<()> {
     ensure!(
-        store.data.access.allows(crate::staff_roles::Capability::Personnel) && store.data.company.id == preview.company_id,
+        store
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::Personnel)
+            && store.data.company.id == preview.company_id,
         "Only HR or Administrators can import employees."
     );
     let payload = preview.payload(&reason)?;
@@ -632,14 +683,14 @@ pub fn choose_source() -> Result<Option<PathBuf>> {
     choose_tabular_source("Preview employee CSV or Excel import")
 }
 #[cfg(windows)]
-pub fn choose_tabular_source(caption:&str) -> Result<Option<PathBuf>> {
+pub fn choose_tabular_source(caption: &str) -> Result<Option<PathBuf>> {
     use std::{ffi::OsString, os::windows::ffi::OsStringExt};
     use windows_sys::Win32::UI::{Controls::Dialogs::*, Input::KeyboardAndMouse::GetActiveWindow};
     let mut path = vec![0u16; 32768];
     let filter: Vec<u16> = "CSV or Excel (*.csv;*.xlsx)\0*.csv;*.xlsx\0UTF-8 CSV (*.csv)\0*.csv\0Excel workbook (*.xlsx)\0*.xlsx\0\0"
         .encode_utf16()
         .collect();
-    ensure!(!caption.contains('\0'),"Invalid file chooser title.");
+    ensure!(!caption.contains('\0'), "Invalid file chooser title.");
     let title: Vec<u16> = format!("{caption}\0").encode_utf16().collect();
     // SAFETY: all buffers outlive this synchronous native dialog.
     let mut d: OPENFILENAMEW = unsafe { std::mem::zeroed() };
@@ -670,4 +721,6 @@ pub fn choose_source() -> Result<Option<PathBuf>> {
     anyhow::bail!("CSV selection currently supports Windows only.")
 }
 #[cfg(not(windows))]
-pub fn choose_tabular_source(_caption:&str)->Result<Option<PathBuf>> {anyhow::bail!("CSV/Excel selection currently supports Windows only.")}
+pub fn choose_tabular_source(_caption: &str) -> Result<Option<PathBuf>> {
+    anyhow::bail!("CSV/Excel selection currently supports Windows only.")
+}

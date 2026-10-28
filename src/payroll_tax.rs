@@ -4,8 +4,8 @@ use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 mod workflow;
-pub use workflow::{Record, Setup, Slip, apply_demo, payload, source};
 pub(crate) use workflow::demo_basis;
+pub use workflow::{Record, Setup, Slip, apply_demo, payload, source};
 mod exports;
 pub use exports::{export_csv, totals_rows};
 pub const RULE_VERSION: &str = "PH-annual-tax-2026-10-24-v1";
@@ -265,7 +265,11 @@ pub fn calculate(s: &Source, w: &Worksheet) -> Result<Calculation> {
         ensure!(
             p.starts_on.year() == s.as_of.year()
                 && p.starts_on <= p.ends_on
-                && (if s.service_end < s.starts_on { p.ends_on <= s.as_of } else { p.ends_on < s.starts_on }),
+                && (if s.service_end < s.starts_on {
+                    p.ends_on <= s.as_of
+                } else {
+                    p.ends_on < s.starts_on
+                }),
             "Certificates must fit successive employment in the payment year; later employment is allowed only when this employer's service ended before the year."
         );
         let mut d = p.starts_on;

@@ -54,7 +54,11 @@ struct Decision {
     reference: String,
 }
 impl State {
-    pub(super) fn open_notice(&mut self,id:Uuid){self.selected=None;self.slips=true;self.slip=Some(id);}
+    pub(super) fn open_notice(&mut self, id: Uuid) {
+        self.selected = None;
+        self.slips = true;
+        self.slip = Some(id);
+    }
     pub(super) fn editing(&self) -> bool {
         self.form.is_some()
     }
@@ -170,7 +174,10 @@ pub(super) fn signed_amount(ui: &mut Ui, label: &str, n: &mut i64) {
 }
 impl HrisApp {
     pub(super) fn payroll_tax(&mut self, ui: &mut Ui) {
-        let hr = self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation);
+        let hr = self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::PayrollPreparation);
         if !hr {
             self.payroll_state.tax.slips = true;
             self.payroll_state.tax.form = None;
@@ -330,7 +337,11 @@ impl HrisApp {
         }));
     }
     pub(super) fn payroll_tax_forms(&mut self, ui: &mut Ui) {
-        if !self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation) {
+        if !self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::PayrollPreparation)
+        {
             self.payroll_state.tax.form = None;
             return;
         }
@@ -620,7 +631,10 @@ impl HrisApp {
         !ui.button("Back to reconciliation").clicked()
     }
     fn tax_slips(&mut self, ui: &mut Ui) {
-        let hr = self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation);
+        let hr = self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::PayrollPreparation);
         let slips: Vec<_> = self
             .data
             .payroll

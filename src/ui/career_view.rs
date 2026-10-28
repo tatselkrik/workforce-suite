@@ -416,13 +416,27 @@ impl HrisApp {
                         a.reason_mut().clear();
                         self.career_state.decision = Some(a);
                     }
-                    if manage || (self.data.access.allows(crate::staff_roles::Capability::PrivateHrNotes) && self.data.access.employee_id!=Some(t.employee_id)) {
+                    if manage
+                        || (self
+                            .data
+                            .access
+                            .allows(crate::staff_roles::Capability::PrivateHrNotes)
+                            && self.data.access.employee_id != Some(t.employee_id))
+                    {
                         for (status, label) in if t.status == "open" {
                             vec![("done", "Review completion"), ("waived", "Waive")]
                         } else {
                             vec![("open", "Reopen milestone")]
                         } {
-                            if (!manage && status!="waived" && !(t.status=="waived" && status=="open")) || (status == "waived" && !self.data.access.allows(crate::staff_roles::Capability::PrivateHrNotes)) {
+                            if (!manage
+                                && status != "waived"
+                                && !(t.status == "waived" && status == "open"))
+                                || (status == "waived"
+                                    && !self
+                                        .data
+                                        .access
+                                        .allows(crate::staff_roles::Capability::PrivateHrNotes))
+                            {
                                 continue;
                             }
                             if ui.button(label).clicked() {

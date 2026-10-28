@@ -85,7 +85,9 @@ pub fn dates(year: i32, kind: &str, end: NaiveDate, asof: NaiveDate) -> Result<(
 pub fn payload(a: &PayrollAction, data: &Snapshot) -> Result<Value> {
     ensure!(
         data.mode != Mode::SignedOut
-            && data.access.allows(crate::staff_roles::Capability::PayrollPreparation)
+            && data
+                .access
+                .allows(crate::staff_roles::Capability::PayrollPreparation)
             && data.company.id == data.access.company_id,
         "Only Payroll Officers and Administrators manage annual tax reconciliation."
     );
@@ -193,8 +195,8 @@ pub fn demo_basis(data: &Snapshot, r: &Record) -> Result<Value> {
                    exempt: i64,
                    contribution: i64,
                    coverage: bool| {
-        let (paid, received) = crate::payroll_payments::effective(data,kind,id,paid,status);
-        let status=if received {"paid"}else{status};
+        let (paid, received) = crate::payroll_payments::effective(data, kind, id, paid, status);
+        let status = if received { "paid" } else { status };
         if last > r.as_of {
             return;
         }
@@ -297,12 +299,17 @@ pub fn demo_basis(data: &Snapshot, r: &Record) -> Result<Value> {
                     + s.item.totals.pagibig_adjustment_cents,
                 false,
             );
-            let (paid, received) = crate::payroll_payments::effective(data,"thirteenth",s.id,run.paid_on,&run.status);
+            let (paid, received) = crate::payroll_payments::effective(
+                data,
+                "thirteenth",
+                s.id,
+                run.paid_on,
+                &run.status,
+            );
             if s.year == r.year
                 && s.as_of <= r.as_of
                 && received
-                && paid
-                    .is_some_and(|p| p.year() == r.year && p <= r.as_of)
+                && paid.is_some_and(|p| p.year() == r.year && p <= r.as_of)
             {
                 ext = ext.max(s.item.worksheet.external_thirteenth_cents);
                 other = other.max(s.item.worksheet.other_benefits_cents);
@@ -333,8 +340,12 @@ pub fn demo_basis(data: &Snapshot, r: &Record) -> Result<Value> {
         }
     }
     previous.sort_by_key(|p| p["id"].as_str().unwrap().to_owned());
-    let b=crate::payroll_final::augment_annual_demo_basis(data,r,json!({"employee":{"id":e.id,"full_name":e.full_name,"employee_code":e.employee_code,"department":e.department,"joined_on":e.joined_on,"status":e.status},"payments":payments,"previous":previous,"calculation_source":Source{starts_on:lo,service_end:r.service_end,as_of:r.as_of,income,prior_adjustment_cents:adjustment,pending_payments:pending,pending_adjustments,external_thirteenth_floor:ext,other_benefits_floor:other}}))?;
-    crate::payroll_amendments::augment_annual(data,r,b)
+    let b = crate::payroll_final::augment_annual_demo_basis(
+        data,
+        r,
+        json!({"employee":{"id":e.id,"full_name":e.full_name,"employee_code":e.employee_code,"department":e.department,"joined_on":e.joined_on,"status":e.status},"payments":payments,"previous":previous,"calculation_source":Source{starts_on:lo,service_end:r.service_end,as_of:r.as_of,income,prior_adjustment_cents:adjustment,pending_payments:pending,pending_adjustments,external_thirteenth_floor:ext,other_benefits_floor:other}}),
+    )?;
+    crate::payroll_amendments::augment_annual(data, r, b)
 }
 pub fn apply_demo(data: &mut Snapshot, a: &PayrollAction) -> Result<()> {
     payload(a, data)?;

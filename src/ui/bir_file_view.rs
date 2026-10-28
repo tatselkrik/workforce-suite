@@ -14,7 +14,9 @@ pub(super) struct State {
 }
 impl State {
     pub(super) fn accept(&mut self, report: bir::Report, data: &Snapshot) {
-        if data.access.allows(crate::staff_roles::Capability::GovernmentPreparation)
+        if data
+            .access
+            .allows(crate::staff_roles::Capability::GovernmentPreparation)
             && report.company_id == data.company.id
             && report.user_id == data.access.user_id
         {
@@ -32,8 +34,8 @@ impl State {
     }
     #[cfg(feature = "qa-screenshot")]
     pub(super) fn preview_arithmetic(&mut self) {
-        if let Some(report)=&mut self.report {
-            report.arithmetic=bir::arithmetic::preview(report.schedule,true);
+        if let Some(report) = &mut self.report {
+            report.arithmetic = bir::arithmetic::preview(report.schedule, true);
         }
     }
     #[cfg(feature = "qa-screenshot")]
@@ -149,18 +151,20 @@ impl HrisApp {
         if let Some(report) = &state.report {
             let label = if report.errors > 0 {
                 "Issues found"
-            } else if report.arithmetic.differences>0 {
+            } else if report.arithmetic.differences > 0 {
                 "Declared compensation sums differ — review needed"
             } else if report.reviews > 0 {
                 "Structure consistent — review still needed"
             } else {
                 "Structure and exact control totals consistent"
             };
-            ui.label(RichText::new(label).strong().color(if report.errors > 0 || report.arithmetic.differences>0 {
-                Color32::from_rgb(196, 71, 63)
-            } else {
-                TEAL
-            }));
+            ui.label(RichText::new(label).strong().color(
+                if report.errors > 0 || report.arithmetic.differences > 0 {
+                    Color32::from_rgb(196, 71, 63)
+                } else {
+                    TEAL
+                },
+            ));
             ui.label(format!(
                 "{} · {} · Tax year {} · {} details",
                 report.file_name,
@@ -171,7 +175,10 @@ impl HrisApp {
                     .unwrap_or_else(|| "unresolved".into()),
                 report.details
             ));
-            ui.label(format!("Structure/control findings: {} errors · {} review items",report.errors,report.reviews));
+            ui.label(format!(
+                "Structure/control findings: {} errors · {} review items",
+                report.errors, report.reviews
+            ));
             ui.label(match report.employer_match{Some(true)=>"Header matches this company's registered BIR TIN/branch; agency assignment is not certified.",
                 Some(false)=>"Header belongs to a different registered employer. Review the chosen file; it has not been imported.",None=>"Employer matching is unverified because company BIR registration is incomplete."});
             ui.add(

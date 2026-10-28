@@ -294,17 +294,28 @@ impl Report {
             self.year.map(|y|y.to_string()).unwrap_or_default(),"0".into(),"Diagnostics limit".into(),"INCOMPLETE_LIST".into(),
             "More issues exist than can be listed. Fix these and check the source again; no data rows were treated as verified.".into()]);
         }
-        rows.push(vec!["PREFLIGHT_ONLY_NOT_OFFICIAL_VALIDATION".into(),self.sha256.clone(),
-            self.year.map(|y|y.to_string()).unwrap_or_default(),"0".into(),
+        rows.push(vec![
+            "PREFLIGHT_ONLY_NOT_OFFICIAL_VALIDATION".into(),
+            self.sha256.clone(),
+            self.year.map(|y| y.to_string()).unwrap_or_default(),
+            "0".into(),
             "Declared compensation arithmetic".into(),
-            if !self.arithmetic.checked(){"NOT_CHECKED"}else if self.arithmetic.differences>0{"DECLARED_SUM_DIFFERENCES"}else{"DECLARED_SUMS_CONSISTENT"}.into(),
-            self.arithmetic.summary()]);
+            if !self.arithmetic.checked() {
+                "NOT_CHECKED"
+            } else if self.arithmetic.differences > 0 {
+                "DECLARED_SUM_DIFFERENCES"
+            } else {
+                "DECLARED_SUMS_CONSISTENT"
+            }
+            .into(),
+            self.arithmetic.summary(),
+        ]);
         rows.extend(self.arithmetic.findings.iter().map(|f|vec![
             "PREFLIGHT_ONLY_NOT_OFFICIAL_VALIDATION".into(),self.sha256.clone(),
             self.year.map(|y|y.to_string()).unwrap_or_default(),f.line.to_string(),f.field.clone(),
             "DECLARED_SUM_DIFFERENCE".into(),
             format!("{}; declared compensation subtotal differs from its related fields. No amount was adjusted or certified.",f.equation)]));
-        if self.arithmetic.omitted()>0 {
+        if self.arithmetic.omitted() > 0 {
             rows.push(vec!["PREFLIGHT_ONLY_NOT_OFFICIAL_VALIDATION".into(),self.sha256.clone(),
                 self.year.map(|y|y.to_string()).unwrap_or_default(),"0".into(),
                 "Arithmetic findings limit".into(),"INCOMPLETE_LIST".into(),
@@ -339,17 +350,50 @@ fn digits(v: &str, n: usize) -> bool {
 fn tin(v: &str) -> bool {
     digits(v, 9) && !["000000000", "111111111", "999999999"].contains(&v)
 }
-pub(crate) fn matchable_identity(t: &str, b: &str) -> bool {tin(t) && digits(b,4)}
-pub(crate) struct IdentityRow {pub line:usize,pub tin:String,pub branch:String}
-pub(crate) fn checked_identities(bytes:&[u8],checked:&Report)->Result<Vec<IdentityRow>> {
-    ensure!(bytes.len()<=MAX_BYTES && checked.errors==0
-        && checked.sha256==format!("{:x}",Sha256::digest(bytes)),"Recheck the complete unchanged BIR file before identity review.");
-    let rows=crate::imports::parse_bounded(std::str::from_utf8(bytes)?,1000,75)?;
-    let tag=if checked.schedule==Schedule::One{"D1"}else{"D2"};
-    let identities=rows.into_iter().filter(|r|r.cells.first().is_some_and(|c|c.trim().eq_ignore_ascii_case(tag)))
-        .map(|r|{ensure!(r.cells.len()>7,"Recheck incomplete BIR identity columns.");
-            Ok(IdentityRow{line:r.line,tin:r.cells[6].trim().into(),branch:r.cells[7].trim().into()})}).collect::<Result<Vec<_>>>()?;
-    ensure!(identities.len()==checked.details && identities.len()<=MAX_DETAILS,"BIR identity rows changed or exceed the review limit.");
+pub(crate) fn matchable_identity(t: &str, b: &str) -> bool {
+    tin(t) && digits(b, 4)
+}
+pub(crate) struct IdentityRow {
+    pub line: usize,
+    pub tin: String,
+    pub branch: String,
+}
+pub(crate) fn checked_identities(bytes: &[u8], checked: &Report) -> Result<Vec<IdentityRow>> {
+    ensure!(
+        bytes.len() <= MAX_BYTES
+            && checked.errors == 0
+            && checked.sha256 == format!("{:x}", Sha256::digest(bytes)),
+        "Recheck the complete unchanged BIR file before identity review."
+    );
+    let rows = crate::imports::parse_bounded(std::str::from_utf8(bytes)?, 1000, 75)?;
+    let tag = if checked.schedule == Schedule::One {
+        "D1"
+    } else {
+        "D2"
+    };
+    let identities = rows
+        .into_iter()
+        .filter(|r| {
+            r.cells
+                .first()
+                .is_some_and(|c| c.trim().eq_ignore_ascii_case(tag))
+        })
+        .map(|r| {
+            ensure!(
+                r.cells.len() > 7,
+                "Recheck incomplete BIR identity columns."
+            );
+            Ok(IdentityRow {
+                line: r.line,
+                tin: r.cells[6].trim().into(),
+                branch: r.cells[7].trim().into(),
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    ensure!(
+        identities.len() == checked.details && identities.len() <= MAX_DETAILS,
+        "BIR identity rows changed or exceed the review limit."
+    );
     Ok(identities)
 }
 
@@ -362,28 +406,45 @@ pub struct DeclaredAmount {
     pub cents: i64,
 }
 pub(crate) fn checked_declared_money(
-    bytes: &[u8], checked: &Report,
+    bytes: &[u8],
+    checked: &Report,
 ) -> Result<Vec<(usize, Vec<DeclaredAmount>)>> {
-    ensure!(bytes.len() <= MAX_BYTES && checked.errors == 0
-        && checked.sha256 == format!("{:x}", Sha256::digest(bytes)),
-        "Recheck the complete unchanged BIR source before reviewing declarations.");
+    ensure!(
+        bytes.len() <= MAX_BYTES
+            && checked.errors == 0
+            && checked.sha256 == format!("{:x}", Sha256::digest(bytes)),
+        "Recheck the complete unchanged BIR source before reviewing declarations."
+    );
     let layout = checked.schedule.layout();
     let rows = crate::imports::parse_bounded(std::str::from_utf8(bytes)?, 1000, 75)?;
     let mut result = Vec::new();
-    for row in rows.into_iter().filter(|r| r.cells.first()
-        .is_some_and(|s| s.trim().eq_ignore_ascii_case(layout.detail))) {
-        ensure!(row.cells.len() == layout.fields.len(),
-            "BIR declaration columns changed after preflight.");
-        let amounts = layout.money.iter().map(|&column| Ok(DeclaredAmount {
-            column: column + 1,
-            field: layout.fields[column].into(),
-            cents: money(row.cells[column].trim())
-                .context("Recheck a missing or invalid BIR declaration amount.")?,
-        })).collect::<Result<Vec<_>>>()?;
+    for row in rows.into_iter().filter(|r| {
+        r.cells
+            .first()
+            .is_some_and(|s| s.trim().eq_ignore_ascii_case(layout.detail))
+    }) {
+        ensure!(
+            row.cells.len() == layout.fields.len(),
+            "BIR declaration columns changed after preflight."
+        );
+        let amounts = layout
+            .money
+            .iter()
+            .map(|&column| {
+                Ok(DeclaredAmount {
+                    column: column + 1,
+                    field: layout.fields[column].into(),
+                    cents: money(row.cells[column].trim())
+                        .context("Recheck a missing or invalid BIR declaration amount.")?,
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
         result.push((row.line, amounts));
     }
-    ensure!(result.len() == checked.details && result.len() <= MAX_DETAILS,
-        "BIR declaration rows changed or exceed the review limit.");
+    ensure!(
+        result.len() == checked.details && result.len() <= MAX_DETAILS,
+        "BIR declaration rows changed or exceed the review limit."
+    );
     Ok(result)
 }
 fn money(v: &str) -> Option<i64> {
@@ -1291,7 +1352,7 @@ pub(crate) fn preview_report(errors: bool, minimum_wage: bool) -> Report {
         );
         r.totals[0].detail_cents = None;
     } else {
-        r.arithmetic=arithmetic::preview(schedule,false);
+        r.arithmetic = arithmetic::preview(schedule, false);
     }
     r
 }

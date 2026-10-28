@@ -359,7 +359,7 @@ impl HrisApp {
             return;
         };
         let stale = r.status == Status::Pending && requests::stale(&self.data, &r);
-        self.delegated_review_history(ui,crate::approvals::Scope::Attendance,id);
+        self.delegated_review_history(ui, crate::approvals::Scope::Attendance, id);
         card(ui, |ui| {
             ui.heading(&r.employee_name);
             ui.horizontal_wrapped(|ui| {

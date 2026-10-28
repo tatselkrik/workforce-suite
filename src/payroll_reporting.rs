@@ -36,7 +36,8 @@ impl Filter {
                     "cutoff",
                     "thirteenth",
                     "annual_tax",
-                    "final", "amendment"
+                    "final",
+                    "amendment"
                 ]
                 .contains(&self.kind.as_str()),
             "Choose the report date basis and source kind."
@@ -94,11 +95,11 @@ pub struct Row {
     pub reserved_cents: i64,
     pub reserved_case_id: Option<Uuid>,
     pub rule_version: String,
-    #[serde(default,skip_serializing_if="Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub linked_kind: Option<String>,
-    #[serde(default,skip_serializing_if="Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub linked_id: Option<Uuid>,
-    #[serde(default,skip_serializing_if="Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub review_amount_cents: Option<i64>,
 }
 impl Row {
@@ -143,7 +144,9 @@ impl Row {
             reserved_cents: 0,
             reserved_case_id: None,
             rule_version: rule.into(),
-            linked_kind:None,linked_id:None,review_amount_cents:None,
+            linked_kind: None,
+            linked_id: None,
+            review_amount_cents: None,
         }
     }
     pub fn is_source(&self) -> bool {
@@ -162,12 +165,12 @@ pub struct Wire {
 }
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Summary {
-    pub amendment_gross_cents:i64,
-    pub amendment_net_cents:i64,
-    pub amendment_contributions_cents:i64,
-    pub amendment_withholding_cents:i64,
-    pub amendment_outstanding_cents:i64,
-    pub overpayment_review_cents:i64,
+    pub amendment_gross_cents: i64,
+    pub amendment_net_cents: i64,
+    pub amendment_contributions_cents: i64,
+    pub amendment_withholding_cents: i64,
+    pub amendment_outstanding_cents: i64,
+    pub overpayment_review_cents: i64,
     pub source_gross_cents: i64,
     pub source_net_cents: i64,
     pub source_employee_contributions_cents: i64,
@@ -199,7 +202,9 @@ pub fn authorize(data: &Snapshot) -> Result<()> {
     ensure!(
         data.mode != Mode::SignedOut
             && data.access.company_id == data.company.id
-            && data.access.allows(crate::staff_roles::Capability::PayrollReports),
+            && data
+                .access
+                .allows(crate::staff_roles::Capability::PayrollReports),
         "Only current HR/Admin can generate company payroll reports."
     );
     Ok(())
@@ -208,7 +213,9 @@ impl Report {
     pub fn from_wire(wire: Wire, cid: Uuid, filter: &Filter) -> Result<Self> {
         filter.validate()?;
         ensure!(
-            (wire.version == VERSION || (wire.version=="payroll-report-v1" && wire.rows.iter().all(|r|r.kind!="amendment")))
+            (wire.version == VERSION
+                || (wire.version == "payroll-report-v1"
+                    && wire.rows.iter().all(|r| r.kind != "amendment")))
                 && wire.company_id == cid
                 && wire.filter == *filter
                 && wire.rows.len() <= 5000,
@@ -233,8 +240,15 @@ impl Report {
                 "Report contains duplicate or out-of-scope facts."
             );
             ensure!(
-                ["monthly", "cutoff", "thirteenth", "annual_tax", "final", "amendment"]
-                    .contains(&r.kind.as_str()),
+                [
+                    "monthly",
+                    "cutoff",
+                    "thirteenth",
+                    "annual_tax",
+                    "final",
+                    "amendment"
+                ]
+                .contains(&r.kind.as_str()),
                 "Unknown payroll report source."
             );
             for s in [
@@ -253,9 +267,17 @@ impl Report {
             for v in [
                 r.basic_cents,
                 r.gross_cents,
-                if r.kind=="amendment"{None}else{r.employee_contributions_cents},
+                if r.kind == "amendment" {
+                    None
+                } else {
+                    r.employee_contributions_cents
+                },
                 r.employer_contributions_cents,
-                if r.kind=="amendment"{None}else{r.withholding_cents},
+                if r.kind == "amendment" {
+                    None
+                } else {
+                    r.withholding_cents
+                },
                 r.net_cents,
                 r.contained_source_net_cents,
                 r.outstanding_cents,
@@ -268,7 +290,23 @@ impl Report {
             {
                 ensure!((0..=LIMIT).contains(&v), "Invalid recorded payroll amount.");
             }
-            for v in [r.tax_adjustment_cents,r.review_amount_cents,if r.kind=="amendment"{r.employee_contributions_cents}else{None},if r.kind=="amendment"{r.withholding_cents}else{None}].into_iter().flatten() {
+            for v in [
+                r.tax_adjustment_cents,
+                r.review_amount_cents,
+                if r.kind == "amendment" {
+                    r.employee_contributions_cents
+                } else {
+                    None
+                },
+                if r.kind == "amendment" {
+                    r.withholding_cents
+                } else {
+                    None
+                },
+            ]
+            .into_iter()
+            .flatten()
+            {
                 ensure!(
                     (-LIMIT..=LIMIT).contains(&v),
                     "Invalid recorded tax adjustment."
@@ -281,7 +319,13 @@ impl Report {
             );
             add(&mut t.recorded_cash_cents, r.cash_cents)?;
             add(&mut t.source_offset_cents, r.offset_cents)?;
-            ensure!(r.kind=="amendment"||(r.linked_kind.is_none()&&r.linked_id.is_none()&&r.review_amount_cents.is_none()),"Original report rows cannot acquire amendment links or review amounts.");
+            ensure!(
+                r.kind == "amendment"
+                    || (r.linked_kind.is_none()
+                        && r.linked_id.is_none()
+                        && r.review_amount_cents.is_none()),
+                "Original report rows cannot acquire amendment links or review amounts."
+            );
             if r.is_source() {
                 let net = r.net_cents.context("Issued source net missing.")?;
                 ensure!(
@@ -374,19 +418,65 @@ impl Report {
                     t.missing_receipts += 1;
                 }
             } else if r.kind == "amendment" {
-                let net=r.net_cents.context("Supplemental net missing.")?;
-                ensure!(["monthly","cutoff","thirteenth","final"].contains(&r.linked_kind.as_deref().unwrap_or(""))&&r.linked_id.is_some_and(|id|!id.is_nil())&&r.offset_cents==0&&r.reserved_cents==0&&r.reserved_case_id.is_none()&&r.contained_source_net_cents.is_none()&&r.tax_adjustment_cents.is_none()&&r.payment_state==r.status,"Invalid linked supplemental report facts.");
-                ensure!(["approved","paid","withdrawn","reviewed"].contains(&r.status.as_str())&&(r.status=="paid")==r.received_on.is_some()&&r.cash_cents==if r.status=="paid"{net}else{0},"Supplemental cash and status do not reconcile.");
-                if r.status=="reviewed" {
-                    ensure!(r.review_amount_cents.is_some_and(|v|v<0)&&net==0&&r.gross_cents==Some(0)&&r.employee_contributions_cents==Some(0)&&r.withholding_cents==Some(0)&&r.outstanding_cents.is_none(),"Overpayment review is not cash or an automatic receivable.");
-                    add(&mut t.overpayment_review_cents,r.review_amount_cents.unwrap())?;
+                let net = r.net_cents.context("Supplemental net missing.")?;
+                ensure!(
+                    ["monthly", "cutoff", "thirteenth", "final"]
+                        .contains(&r.linked_kind.as_deref().unwrap_or(""))
+                        && r.linked_id.is_some_and(|id| !id.is_nil())
+                        && r.offset_cents == 0
+                        && r.reserved_cents == 0
+                        && r.reserved_case_id.is_none()
+                        && r.contained_source_net_cents.is_none()
+                        && r.tax_adjustment_cents.is_none()
+                        && r.payment_state == r.status,
+                    "Invalid linked supplemental report facts."
+                );
+                ensure!(
+                    ["approved", "paid", "withdrawn", "reviewed"].contains(&r.status.as_str())
+                        && (r.status == "paid") == r.received_on.is_some()
+                        && r.cash_cents == if r.status == "paid" { net } else { 0 },
+                    "Supplemental cash and status do not reconcile."
+                );
+                if r.status == "reviewed" {
+                    ensure!(
+                        r.review_amount_cents.is_some_and(|v| v < 0)
+                            && net == 0
+                            && r.gross_cents == Some(0)
+                            && r.employee_contributions_cents == Some(0)
+                            && r.withholding_cents == Some(0)
+                            && r.outstanding_cents.is_none(),
+                        "Overpayment review is not cash or an automatic receivable."
+                    );
+                    add(
+                        &mut t.overpayment_review_cents,
+                        r.review_amount_cents.unwrap(),
+                    )?;
                 } else {
-                    ensure!(r.review_amount_cents.is_none()&&r.outstanding_cents==Some(if r.status=="approved"{net}else{0}),"Supplemental outstanding balance does not reconcile.");
-                    add(&mut t.amendment_gross_cents,r.gross_cents.context("Supplemental gross missing.")?)?;
-                    add(&mut t.amendment_net_cents,net)?;
-                    add(&mut t.amendment_contributions_cents,r.employee_contributions_cents.context("Supplemental contributions missing.")?)?;
-                    add(&mut t.amendment_withholding_cents,r.withholding_cents.context("Supplemental withholding missing.")?)?;
-                    add(&mut t.amendment_outstanding_cents,r.outstanding_cents.unwrap())?;
+                    ensure!(
+                        r.review_amount_cents.is_none()
+                            && r.outstanding_cents
+                                == Some(if r.status == "approved" { net } else { 0 }),
+                        "Supplemental outstanding balance does not reconcile."
+                    );
+                    add(
+                        &mut t.amendment_gross_cents,
+                        r.gross_cents.context("Supplemental gross missing.")?,
+                    )?;
+                    add(&mut t.amendment_net_cents, net)?;
+                    add(
+                        &mut t.amendment_contributions_cents,
+                        r.employee_contributions_cents
+                            .context("Supplemental contributions missing.")?,
+                    )?;
+                    add(
+                        &mut t.amendment_withholding_cents,
+                        r.withholding_cents
+                            .context("Supplemental withholding missing.")?,
+                    )?;
+                    add(
+                        &mut t.amendment_outstanding_cents,
+                        r.outstanding_cents.unwrap(),
+                    )?;
                 }
             } else if r.kind == "final" {
                 let net = r.net_cents.context("Final statement net missing.")?;
@@ -507,7 +597,9 @@ impl Report {
                 "reserved subset",
                 "reserved/final case",
                 "rule version",
-                "linked original kind", "linked original record", "overpayment review only",
+                "linked original kind",
+                "linked original record",
+                "overpayment review only",
             ]
             .into_iter()
             .map(str::to_owned)
@@ -553,7 +645,9 @@ impl Report {
                     .map(|id| id.to_string())
                     .unwrap_or_default(),
                 r.rule_version.clone(),
-                r.linked_kind.clone().unwrap_or_default(),r.linked_id.map(|id|id.to_string()).unwrap_or_default(),money(r.review_amount_cents),
+                r.linked_kind.clone().unwrap_or_default(),
+                r.linked_id.map(|id| id.to_string()).unwrap_or_default(),
+                money(r.review_amount_cents),
             ])?;
         }
         Ok(out.into_bytes())
@@ -748,7 +842,9 @@ pub fn demo(data: &Snapshot, filter: &Filter, now: DateTime<Utc>) -> Result<Repo
             &s.employee_code,
             &s.employee_name,
             &s.department,
-            NaiveDate::from_ymd_opt(s.year, 1, 1).unwrap().min(s.service_end),
+            NaiveDate::from_ymd_opt(s.year, 1, 1)
+                .unwrap()
+                .min(s.service_end),
             s.service_end,
             s.approved_at.with_timezone(&tz).date_naive(),
             &s.rule_version,
@@ -801,12 +897,56 @@ pub fn demo(data: &Snapshot, filter: &Filter, now: DateTime<Utc>) -> Result<Repo
         }
         rows.push(r);
     }
-    for s in data.payroll.amendments.slips.iter().filter(|s|s.company_id==cid){
-        let c=data.payroll.amendments.records.iter().find(|c|c.id==s.id&&c.company_id==cid).context("Issued amendment status missing.")?;
-        let mut r=Row::empty(cid,s.id,s.employee_id,"amendment",&s.employee_code,&s.employee_name,&s.department,s.starts_on,s.ends_on,s.approved_at.with_timezone(&tz).date_naive(),&s.rule_version);
-        r.status=c.status.clone();r.payment_state=c.status.clone();r.basic_cents=Some(s.totals.basic_cents);r.gross_cents=Some(s.totals.gross_cents);r.employee_contributions_cents=Some(s.totals.contribution_cents);r.withholding_cents=Some(s.totals.withholding_cents);r.net_cents=Some(s.totals.net_cents);r.linked_kind=Some(s.target_kind.clone());r.linked_id=Some(s.target_id);
-        if s.purpose=="review_only"{r.review_amount_cents=Some(s.totals.review_amount_cents);}else{r.outstanding_cents=Some(if c.status=="approved"{s.totals.net_cents}else{0});}
-        if c.status=="paid"{r.received_on=c.paid_on;r.cash_cents=s.totals.net_cents;}rows.push(r);
+    for s in data
+        .payroll
+        .amendments
+        .slips
+        .iter()
+        .filter(|s| s.company_id == cid)
+    {
+        let c = data
+            .payroll
+            .amendments
+            .records
+            .iter()
+            .find(|c| c.id == s.id && c.company_id == cid)
+            .context("Issued amendment status missing.")?;
+        let mut r = Row::empty(
+            cid,
+            s.id,
+            s.employee_id,
+            "amendment",
+            &s.employee_code,
+            &s.employee_name,
+            &s.department,
+            s.starts_on,
+            s.ends_on,
+            s.approved_at.with_timezone(&tz).date_naive(),
+            &s.rule_version,
+        );
+        r.status = c.status.clone();
+        r.payment_state = c.status.clone();
+        r.basic_cents = Some(s.totals.basic_cents);
+        r.gross_cents = Some(s.totals.gross_cents);
+        r.employee_contributions_cents = Some(s.totals.contribution_cents);
+        r.withholding_cents = Some(s.totals.withholding_cents);
+        r.net_cents = Some(s.totals.net_cents);
+        r.linked_kind = Some(s.target_kind.clone());
+        r.linked_id = Some(s.target_id);
+        if s.purpose == "review_only" {
+            r.review_amount_cents = Some(s.totals.review_amount_cents);
+        } else {
+            r.outstanding_cents = Some(if c.status == "approved" {
+                s.totals.net_cents
+            } else {
+                0
+            });
+        }
+        if c.status == "paid" {
+            r.received_on = c.paid_on;
+            r.cash_cents = s.totals.net_cents;
+        }
+        rows.push(r);
     }
     rows.retain(|r| filter.matches(r));
     rows.sort_by_key(|r| {

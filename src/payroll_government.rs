@@ -5,12 +5,12 @@ use chrono::{DateTime, Datelike, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
-mod export;
 pub mod annual;
 pub mod annual_pay;
-pub mod bir_identity;
 pub mod bir_declarations;
 pub mod bir_file;
+pub mod bir_identity;
+mod export;
 pub mod preparation;
 #[cfg(any(test, feature = "qa-screenshot"))]
 mod preview;
@@ -210,11 +210,16 @@ fn add(a: i64, b: i64) -> Result<i64> {
     Ok(n.unwrap())
 }
 fn validate_fact(f: &Fact, cid: Uuid, asof: NaiveDate) -> Result<()> {
-    validate_fact_amounts(f,cid,asof,false)
+    validate_fact_amounts(f, cid, asof, false)
 }
 // Annual recorded-source review must retain an unavailable legacy BIR amount
 // as unknown. The older monthly reconciliation contract remains strict.
-fn validate_fact_amounts(f: &Fact, cid: Uuid, asof: NaiveDate, allow_unknown_bir_withholding:bool) -> Result<()> {
+fn validate_fact_amounts(
+    f: &Fact,
+    cid: Uuid,
+    asof: NaiveDate,
+    allow_unknown_bir_withholding: bool,
+) -> Result<()> {
     ensure!(
         f.company_id == cid && !f.id.is_nil() && !f.employee_id.is_nil(),
         "Government source is outside this company or lacks its immutable identity."
@@ -247,9 +252,11 @@ fn validate_fact_amounts(f: &Fact, cid: Uuid, asof: NaiveDate, allow_unknown_bir
         );
     }
     if matches!(f.kind, Kind::Monthly | Kind::Cutoff) {
-        let regular_parts_ok=if allow_unknown_bir_withholding && f.agency==Agency::Bir {
-            f.parts.employee_cents.is_none_or(|n|n>=0)
-        }else{f.parts.values().iter().all(|v|v.is_some_and(|n|n>=0))};
+        let regular_parts_ok = if allow_unknown_bir_withholding && f.agency == Agency::Bir {
+            f.parts.employee_cents.is_none_or(|n| n >= 0)
+        } else {
+            f.parts.values().iter().all(|v| v.is_some_and(|n| n >= 0))
+        };
         ensure!(
             regular_parts_ok
                 && f.starts_on.with_day(1) == f.ends_on.with_day(1)

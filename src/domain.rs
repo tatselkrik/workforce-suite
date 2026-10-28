@@ -622,11 +622,11 @@ impl DemoStore {
                 approvals: None,
                 recruiting: Default::default(),
                 onboarding: Default::default(),
-            exits: Default::default(),
-            learning: Default::default(),
-            payroll: Default::default(),
-            career: Default::default(),
-            performance: Default::default(),
+                exits: Default::default(),
+                learning: Default::default(),
+                payroll: Default::default(),
+                career: Default::default(),
+                performance: Default::default(),
                 hiring: Default::default(),
                 notification_reads: crate::notifications::ReadState {
                     company_id: company.id,
@@ -751,11 +751,21 @@ impl DemoStore {
     fn apply(&mut self, action: Action) -> Result<()> {
         self.data.access.authorize(&action, &self.data)?;
         match action {
-            Action::Payroll(action) => {crate::payroll::apply_demo(&mut self.data, &action)?;}
-            Action::Career(action) => {crate::career::apply_demo(&mut self.data,&action,chrono::Utc::now())?;}
-            Action::Learning(action) => {crate::learning::apply_demo(&mut self.data,&action,chrono::Utc::now())?;}
-            Action::Performance(action) => {crate::performance::apply_demo(&mut self.data,&action,chrono::Utc::now())?;}
-            Action::Exit(action) => { crate::exits::apply_demo(&mut self.data, &action, chrono::Utc::now())?; }
+            Action::Payroll(action) => {
+                crate::payroll::apply_demo(&mut self.data, &action)?;
+            }
+            Action::Career(action) => {
+                crate::career::apply_demo(&mut self.data, &action, chrono::Utc::now())?;
+            }
+            Action::Learning(action) => {
+                crate::learning::apply_demo(&mut self.data, &action, chrono::Utc::now())?;
+            }
+            Action::Performance(action) => {
+                crate::performance::apply_demo(&mut self.data, &action, chrono::Utc::now())?;
+            }
+            Action::Exit(action) => {
+                crate::exits::apply_demo(&mut self.data, &action, chrono::Utc::now())?;
+            }
             Action::Onboarding(action) => {
                 crate::onboarding::apply_demo(&mut self.data, &action, chrono::Utc::now())?
             }
@@ -765,9 +775,15 @@ impl DemoStore {
             Action::Hiring(action) => {
                 crate::hiring::apply_demo(&mut self.data, &action, chrono::Utc::now())?
             }
-            Action::LeaveCredit(record) => {crate::leave::credits::apply_demo(&mut self.data,&record)?;}
-            Action::DatedLeave(change) => {crate::leave::dated::apply_demo(&mut self.data,&change)?;}
-            Action::ApprovalDelegation(change) => {crate::approvals::apply_demo(&mut self.data,&change)?;}
+            Action::LeaveCredit(record) => {
+                crate::leave::credits::apply_demo(&mut self.data, &record)?;
+            }
+            Action::DatedLeave(change) => {
+                crate::leave::dated::apply_demo(&mut self.data, &change)?;
+            }
+            Action::ApprovalDelegation(change) => {
+                crate::approvals::apply_demo(&mut self.data, &change)?;
+            }
             Action::NotificationReads(action) => {
                 self.data.notification_reads.user_id = self.data.access.user_id;
                 self.data.notification_reads.company_id = self.data.company.id;

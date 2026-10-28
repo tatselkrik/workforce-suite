@@ -28,7 +28,9 @@ pub const HEADERS: [&str; 7] = [
 pub const MAX_ROWS: usize = 100;
 fn staff(data: &Snapshot) -> Result<()> {
     ensure!(
-        data.access.allows(crate::staff_roles::Capability::LeaveAdministration) && data.company.id == data.access.company_id,
+        data.access
+            .allows(crate::staff_roles::Capability::LeaveAdministration)
+            && data.company.id == data.access.company_id,
         "Current HR or Administrator access is required for leave imports."
     );
     Ok(())

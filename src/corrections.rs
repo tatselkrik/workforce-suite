@@ -105,7 +105,13 @@ impl CorrectionDraft {
     }
     // File imports already carry an unambiguous offset. Reuse the record rules
     // without discarding that offset through a local wall-clock conversion.
-    pub(crate) fn proposal_from_instants(&self, data: &Snapshot, now: DateTime<Utc>, time_in: DateTime<Utc>, time_out: Option<DateTime<Utc>>) -> Result<CorrectionChange> {
+    pub(crate) fn proposal_from_instants(
+        &self,
+        data: &Snapshot,
+        now: DateTime<Utc>,
+        time_in: DateTime<Utc>,
+        time_out: Option<DateTime<Utc>>,
+    ) -> Result<CorrectionChange> {
         let mut change = CorrectionChange {
             record: Attendance {
                 calculation_snapshot: self
@@ -165,7 +171,8 @@ pub(crate) fn local_time(day: NaiveDate, value: &str, tz: chrono_tz::Tz) -> Resu
 impl CorrectionChange {
     pub fn validate(&self, data: &Snapshot, now: DateTime<Utc>) -> Result<()> {
         ensure!(
-            data.access.allows(crate::staff_roles::Capability::AttendanceAdministration),
+            data.access
+                .allows(crate::staff_roles::Capability::AttendanceAdministration),
             "Only HR staff and administrators can correct attendance."
         );
         self.validate_record(data, now)

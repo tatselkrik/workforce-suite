@@ -579,19 +579,33 @@ impl PayrollAction {
         }
     }
     pub fn payload(&self, data: &Snapshot) -> Result<Value> {
-        if self.operation.starts_with("amendment_"){return crate::payroll_amendments::payload(self,data);}
-        if self.operation.starts_with("wage_"){return crate::payroll_wages::payload(self,data);}
-        crate::payroll_final::guard_payment(data,self)?;
-        if self.operation.starts_with("final_"){return crate::payroll_final::payload(self,data);}
-        if self.operation.starts_with("receipt_") { return crate::payroll_payments::payload(self,data); }
-        if self.operation.starts_with("tax_") { return crate::payroll_tax::payload(self,data); }
-        if self.operation.starts_with("thirteenth_") { return crate::payroll_thirteenth::payload(self,data); }
+        if self.operation.starts_with("amendment_") {
+            return crate::payroll_amendments::payload(self, data);
+        }
+        if self.operation.starts_with("wage_") {
+            return crate::payroll_wages::payload(self, data);
+        }
+        crate::payroll_final::guard_payment(data, self)?;
+        if self.operation.starts_with("final_") {
+            return crate::payroll_final::payload(self, data);
+        }
+        if self.operation.starts_with("receipt_") {
+            return crate::payroll_payments::payload(self, data);
+        }
+        if self.operation.starts_with("tax_") {
+            return crate::payroll_tax::payload(self, data);
+        }
+        if self.operation.starts_with("thirteenth_") {
+            return crate::payroll_thirteenth::payload(self, data);
+        }
         if self.operation.starts_with("cutoff_") {
             return crate::payroll_cutoffs::payload(self, data);
         }
         ensure!(
             data.mode != Mode::SignedOut
-                && data.access.allows(crate::staff_roles::Capability::PayrollPreparation)
+                && data
+                    .access
+                    .allows(crate::staff_roles::Capability::PayrollPreparation)
                 && data.access.company_id == data.company.id,
             "Only HR and Administrators manage payroll."
         );
@@ -825,25 +839,68 @@ pub(crate) fn demo_basis(data: &Snapshot, eid: Uuid, mon: NaiveDate) -> Result<V
     )
 }
 pub fn apply_demo(data: &mut Snapshot, a: &PayrollAction) -> Result<()> {
-    if a.operation.starts_with("amendment_"){return crate::payroll_amendments::apply_demo(data,a);}
+    if a.operation.starts_with("amendment_") {
+        return crate::payroll_amendments::apply_demo(data, a);
+    }
     a.payload(data)?;
     let mut copy = data.clone();
     demo_change(&mut copy, a)?;
-    if ["run_submit","run_approve","cutoff_run_submit","cutoff_run_approve"].contains(&a.operation.as_str()){
-        let id:Uuid=serde_json::from_value(a.record["id"].clone())?;
-        let cutoff=a.operation.starts_with("cutoff_");
-        let rev=if cutoff{copy.payroll.cutoffs.runs.iter().find(|r|r.base.id==id).map(|r|r.base.revision)}else{copy.payroll.runs.iter().find(|r|r.id==id).map(|r|r.revision)}.context("Run missing after wage check")?;
-        crate::payroll_wages::record_run_check(&mut copy,if cutoff{"cutoff"}else{"monthly"},id,if a.operation.ends_with("submit"){"submitted"}else{"approved"},rev)?;
+    if [
+        "run_submit",
+        "run_approve",
+        "cutoff_run_submit",
+        "cutoff_run_approve",
+    ]
+    .contains(&a.operation.as_str())
+    {
+        let id: Uuid = serde_json::from_value(a.record["id"].clone())?;
+        let cutoff = a.operation.starts_with("cutoff_");
+        let rev = if cutoff {
+            copy.payroll
+                .cutoffs
+                .runs
+                .iter()
+                .find(|r| r.base.id == id)
+                .map(|r| r.base.revision)
+        } else {
+            copy.payroll
+                .runs
+                .iter()
+                .find(|r| r.id == id)
+                .map(|r| r.revision)
+        }
+        .context("Run missing after wage check")?;
+        crate::payroll_wages::record_run_check(
+            &mut copy,
+            if cutoff { "cutoff" } else { "monthly" },
+            id,
+            if a.operation.ends_with("submit") {
+                "submitted"
+            } else {
+                "approved"
+            },
+            rev,
+        )?;
     }
     *data = copy;
     Ok(())
 }
 fn demo_change(data: &mut Snapshot, a: &PayrollAction) -> Result<()> {
-    if a.operation.starts_with("wage_"){return crate::payroll_wages::apply_demo(data,a);}
-    if a.operation.starts_with("final_"){return crate::payroll_final::apply_demo(data,a);}
-    if a.operation.starts_with("receipt_") { return crate::payroll_payments::apply_demo(data,a); }
-    if a.operation.starts_with("tax_") { return crate::payroll_tax::apply_demo(data,a); }
-    if a.operation.starts_with("thirteenth_") { return crate::payroll_thirteenth::apply_demo(data,a); }
+    if a.operation.starts_with("wage_") {
+        return crate::payroll_wages::apply_demo(data, a);
+    }
+    if a.operation.starts_with("final_") {
+        return crate::payroll_final::apply_demo(data, a);
+    }
+    if a.operation.starts_with("receipt_") {
+        return crate::payroll_payments::apply_demo(data, a);
+    }
+    if a.operation.starts_with("tax_") {
+        return crate::payroll_tax::apply_demo(data, a);
+    }
+    if a.operation.starts_with("thirteenth_") {
+        return crate::payroll_thirteenth::apply_demo(data, a);
+    }
     if a.operation.starts_with("cutoff_") {
         return crate::payroll_cutoffs::apply_demo(data, a);
     }
@@ -1194,7 +1251,9 @@ pub fn export_csv(data: &Snapshot, kind: &str, id: Option<Uuid>, year: i32) -> R
         ["register", "statutory", "annual", "payslip"].contains(&kind),
         "Choose a payroll report."
     );
-    let hr = data.access.allows(crate::staff_roles::Capability::PayrollPreparation);
+    let hr = data
+        .access
+        .allows(crate::staff_roles::Capability::PayrollPreparation);
     ensure!(
         kind == "payslip" || hr,
         "Only HR and Administrators export company payroll."

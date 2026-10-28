@@ -110,7 +110,11 @@ impl HrisApp {
             self.clearance_task_form(ui);
             return;
         }
-        if !self.data.access.allows(crate::staff_roles::Capability::Personnel) {
+        if !self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::Personnel)
+        {
             self.assigned_clearance(ui);
             return;
         }
@@ -370,7 +374,10 @@ impl HrisApp {
         }
     }
     fn clearance_task_card(&mut self, ui: &mut Ui, t: &exits::Task) {
-        let hr = self.data.access.allows(crate::staff_roles::Capability::Personnel);
+        let hr = self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::Personnel);
         card(ui, |ui| {
             ui.label(RichText::new(&t.title).strong().size(17.0));
             ui.horizontal_wrapped(|ui| {

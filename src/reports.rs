@@ -1,5 +1,5 @@
 use crate::{
-    access::{Access, Role},
+    access::Access,
     calculations,
     domain::{Employee, EmployeeStatus, LeaveStatus, Mode, Snapshot},
     employment::EmploymentKind,
@@ -156,8 +156,11 @@ pub fn same_scope(a: &Access, b: &Access) -> bool {
         && left == right
 }
 pub fn permitted(data: &Snapshot, employee: Uuid) -> bool {
-    data.access.allows(crate::staff_roles::Capability::GeneralHrReports)
-        || (data.access.allows(crate::staff_roles::Capability::TeamReview)
+    data.access
+        .allows(crate::staff_roles::Capability::GeneralHrReports)
+        || (data
+            .access
+            .allows(crate::staff_roles::Capability::TeamReview)
             && (data.access.employee_id == Some(employee)
                 || data.access.direct_reports.contains(&employee)))
 }
@@ -796,27 +799,89 @@ impl Report {
         save_export(path, &self.export_bytes(path)?)
     }
     pub(crate) fn export_bytes(&self, path: &Path) -> Result<Vec<u8>> {
-        if crate::tabular::is_xlsx(path) { self.xlsx() } else {
-            ensure!(path.extension().is_some_and(|s| s.eq_ignore_ascii_case("csv")), "Choose CSV or Excel (.xlsx) for this report.");
+        if crate::tabular::is_xlsx(path) {
+            self.xlsx()
+        } else {
+            ensure!(
+                path.extension()
+                    .is_some_and(|s| s.eq_ignore_ascii_case("csv")),
+                "Choose CSV or Excel (.xlsx) for this report."
+            );
             self.csv()
         }
     }
     pub fn xlsx(&self) -> Result<Vec<u8>> {
         // Run the same selection, shape and metadata checks as the CSV contract.
         self.csv()?;
-        let snapshot = self.generated_at.with_timezone(&self.timezone.parse::<chrono_tz::Tz>()?).date_naive();
+        let snapshot = self
+            .generated_at
+            .with_timezone(&self.timezone.parse::<chrono_tz::Tz>()?)
+            .date_naive();
         let at = self.filter.kind == Kind::Headcount;
-        let common = vec![self.company.clone(), self.filter.kind.label().into(), if at { snapshot } else { self.filter.starts_on }.to_string(), if at { snapshot } else { self.filter.ends_on }.to_string(), self.generated_at.to_rfc3339(), self.timezone.clone()];
-        let mut headers = vec!["Company", "Report", "From", "To", "Generated at (UTC)", "Company time zone"];
+        let common = vec![
+            self.company.clone(),
+            self.filter.kind.label().into(),
+            if at { snapshot } else { self.filter.starts_on }.to_string(),
+            if at { snapshot } else { self.filter.ends_on }.to_string(),
+            self.generated_at.to_rfc3339(),
+            self.timezone.clone(),
+        ];
+        let mut headers = vec![
+            "Company",
+            "Report",
+            "From",
+            "To",
+            "Generated at (UTC)",
+            "Company time zone",
+        ];
         headers.extend(self.headers.iter().copied());
-        let rows = self.rows.iter().map(|r| common.iter().cloned().chain(r.iter().cloned()).collect()).collect::<Vec<_>>();
+        let rows = self
+            .rows
+            .iter()
+            .map(|r| common.iter().cloned().chain(r.iter().cloned()).collect())
+            .collect::<Vec<_>>();
         use crate::tabular::ColumnKind::*;
-        let kinds = headers.iter().map(|h| match *h {
-            "From" | "To" | "Work date" | "Request start" | "Request end" | "Charge date" | "Period start" | "Period end" | "Snapshot date (company)" => Date,
-            "Approved leave days" | "Pending leave days" | "Filed charge on date (days)" | "Filed total (days)" => HalfDays,
-            "Gross minutes" | "Completed unpaid break minutes" | "Minutes excluding unpaid breaks" | "Late minutes" | "Early departure minutes" | "Overtime candidate minutes" | "Current approved overtime minutes" | "Pending correction requests" | "Attendance records" | "Completed records" | "Open records" | "Days without check-in" | "Scheduled past days without check-in" | "Records without completed net totals" | "Records needing calculation review" | "Approved steps" | "Total approval steps" | "Active employees" | "Archived employees" | "Employee records" | "Attendance employee-days" | "Late records" => Integer,
-            _ => Text,
-        }).collect::<Vec<_>>();
+        let kinds = headers
+            .iter()
+            .map(|h| match *h {
+                "From"
+                | "To"
+                | "Work date"
+                | "Request start"
+                | "Request end"
+                | "Charge date"
+                | "Period start"
+                | "Period end"
+                | "Snapshot date (company)" => Date,
+                "Approved leave days"
+                | "Pending leave days"
+                | "Filed charge on date (days)"
+                | "Filed total (days)" => HalfDays,
+                "Gross minutes"
+                | "Completed unpaid break minutes"
+                | "Minutes excluding unpaid breaks"
+                | "Late minutes"
+                | "Early departure minutes"
+                | "Overtime candidate minutes"
+                | "Current approved overtime minutes"
+                | "Pending correction requests"
+                | "Attendance records"
+                | "Completed records"
+                | "Open records"
+                | "Days without check-in"
+                | "Scheduled past days without check-in"
+                | "Records without completed net totals"
+                | "Records needing calculation review"
+                | "Approved steps"
+                | "Total approval steps"
+                | "Active employees"
+                | "Archived employees"
+                | "Employee records"
+                | "Attendance employee-days"
+                | "Late records" => Integer,
+                _ => Text,
+            })
+            .collect::<Vec<_>>();
         crate::tabular::xlsx(&headers, &rows, &kinds)
     }
 }
@@ -828,7 +893,11 @@ pub(crate) fn save_xlsx(path: &Path, bytes: &[u8]) -> Result<()> {
     save_new(path, bytes, "xlsx")
 }
 pub(crate) fn save_export(path: &Path, bytes: &[u8]) -> Result<()> {
-    if crate::tabular::is_xlsx(path) { save_xlsx(path, bytes) } else { save_csv(path, bytes) }
+    if crate::tabular::is_xlsx(path) {
+        save_xlsx(path, bytes)
+    } else {
+        save_csv(path, bytes)
+    }
 }
 fn save_new(path: &Path, bytes: &[u8], extension: &str) -> Result<()> {
     ensure!(
@@ -846,10 +915,12 @@ fn save_new(path: &Path, bytes: &[u8], extension: &str) -> Result<()> {
 }
 
 #[cfg(windows)]
-pub fn choose_export(filename: &str) -> Result<Option<PathBuf>> { choose_export_as(filename,false) }
+pub fn choose_export(filename: &str) -> Result<Option<PathBuf>> {
+    choose_export_as(filename, false)
+}
 
 #[cfg(windows)]
-pub fn choose_export_as(filename: &str,pdf:bool) -> Result<Option<PathBuf>> {
+pub fn choose_export_as(filename: &str, pdf: bool) -> Result<Option<PathBuf>> {
     use std::{ffi::OsString, os::windows::ffi::OsStringExt};
     use windows_sys::Win32::UI::{Controls::Dialogs::*, Input::KeyboardAndMouse::GetActiveWindow};
     let mut path = vec![0u16; 32768];
@@ -857,11 +928,25 @@ pub fn choose_export_as(filename: &str,pdf:bool) -> Result<Option<PathBuf>> {
         *slot = c
     }
     let excel = !pdf && crate::tabular::is_xlsx(Path::new(filename));
-    let filter: Vec<u16> = (if pdf {"PDF payslip (*.pdf)\0*.pdf\0\0"}else if excel {"Excel workbook (*.xlsx)\0*.xlsx\0\0"}else{"CSV spreadsheet (*.csv)\0*.csv\0\0"})
-        .encode_utf16()
-        .collect();
+    let filter: Vec<u16> = (if pdf {
+        "PDF payslip (*.pdf)\0*.pdf\0\0"
+    } else if excel {
+        "Excel workbook (*.xlsx)\0*.xlsx\0\0"
+    } else {
+        "CSV spreadsheet (*.csv)\0*.csv\0\0"
+    })
+    .encode_utf16()
+    .collect();
     let title: Vec<u16> = "Save HRIS export to a new file\0".encode_utf16().collect();
-    let ext: Vec<u16> = (if pdf{"pdf\0"}else if excel{"xlsx\0"}else{"csv\0"}).encode_utf16().collect();
+    let ext: Vec<u16> = (if pdf {
+        "pdf\0"
+    } else if excel {
+        "xlsx\0"
+    } else {
+        "csv\0"
+    })
+    .encode_utf16()
+    .collect();
     // SAFETY: the owned buffers remain valid throughout the synchronous dialog.
     let mut dialog: OPENFILENAMEW = unsafe { std::mem::zeroed() };
     dialog.lStructSize = std::mem::size_of::<OPENFILENAMEW>() as u32;
@@ -889,4 +974,6 @@ pub fn choose_export(_: &str) -> Result<Option<PathBuf>> {
 }
 
 #[cfg(not(windows))]
-pub fn choose_export_as(name:&str,_:bool)->Result<Option<PathBuf>>{choose_export(name)}
+pub fn choose_export_as(name: &str, _: bool) -> Result<Option<PathBuf>> {
+    choose_export(name)
+}

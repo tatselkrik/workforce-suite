@@ -13,7 +13,11 @@ pub(super) struct State {
 impl State {
     fn bind(&mut self, data: &Snapshot) {
         let scope = Some((data.company.id, data.access.user_id, data.access.role));
-        if self.scope != scope || !data.access.allows(crate::staff_roles::Capability::GovernmentPreparation) {
+        if self.scope != scope
+            || !data
+                .access
+                .allows(crate::staff_roles::Capability::GovernmentPreparation)
+        {
             *self = Self {
                 scope,
                 ..Default::default()
@@ -41,7 +45,9 @@ impl State {
     }
     pub(super) fn accept(&mut self, r: reg::Snapshot, data: &Snapshot) {
         self.bind(data);
-        if data.access.allows(crate::staff_roles::Capability::GovernmentPreparation)
+        if data
+            .access
+            .allows(crate::staff_roles::Capability::GovernmentPreparation)
             && r.company_id == data.company.id
             && self.target().is_ok_and(|e| e == r.employee_id)
         {
@@ -164,7 +170,11 @@ fn multiline(ui: &mut Ui, label: &str, value: &mut String) {
 impl HrisApp {
     pub(super) fn payroll_government_registration(&mut self, ui: &mut Ui) {
         self.payroll_state.government.registration.bind(&self.data);
-        if !self.data.access.allows(crate::staff_roles::Capability::GovernmentPreparation) {
+        if !self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::GovernmentPreparation)
+        {
             return;
         }
         if let Some(command) = render(
@@ -420,7 +430,11 @@ impl HrisApp {
         self.payroll_state.government.registration_open = true;
         let s = &mut self.payroll_state.government.registration;
         s.bind(&self.data);
-        if !self.data.access.allows(crate::staff_roles::Capability::GovernmentPreparation) {
+        if !self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::GovernmentPreparation)
+        {
             return;
         }
         s.person = preview.contains("employee");

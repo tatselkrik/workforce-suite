@@ -82,32 +82,175 @@ pub fn build_thirteenth(s: &crate::payroll_thirteenth::Slip) -> Result<Vec<u8>> 
     );
     render_lines(lines)
 }
-pub fn build_tax(s:&crate::payroll_tax::Slip)->Result<Vec<u8>> {
-    let mut lines=vec![];
-    for t in [s.company_name.clone(),format!("ANNUAL COMPENSATION TAX ADVICE | {} | {}",s.year,s.kind.replace('_'," ")),
-        format!("Payment as of: {} | Service end: {}",s.as_of,s.service_end),format!("Employee: {} - {}",s.employee_code,s.employee_name),
-        format!("Department: {}",s.department),format!("Approved: {} UTC",s.approved_at.format("%Y-%m-%d %H:%M")),format!("Rule pack: {}",s.rule_version),String::new()] {wrap(&t,&mut lines);}
-    for(label,n)in crate::payroll_tax::totals_rows(&s.totals){wrap(&format!("{label:<42} {:>20}",money(n)),&mut lines);}
-    wrap("",&mut lines);wrap("Approved tax advice. Settlement recorded separately; no money moved.",&mut lines);
-    wrap("Tax advice only; not Form 2316, a filed return or proof of remittance.",&mut lines);
-    render_titled_lines(lines,"ANNUAL TAX ADVICE")
+pub fn build_tax(s: &crate::payroll_tax::Slip) -> Result<Vec<u8>> {
+    let mut lines = vec![];
+    for t in [
+        s.company_name.clone(),
+        format!(
+            "ANNUAL COMPENSATION TAX ADVICE | {} | {}",
+            s.year,
+            s.kind.replace('_', " ")
+        ),
+        format!(
+            "Payment as of: {} | Service end: {}",
+            s.as_of, s.service_end
+        ),
+        format!("Employee: {} - {}", s.employee_code, s.employee_name),
+        format!("Department: {}", s.department),
+        format!("Approved: {} UTC", s.approved_at.format("%Y-%m-%d %H:%M")),
+        format!("Rule pack: {}", s.rule_version),
+        String::new(),
+    ] {
+        wrap(&t, &mut lines);
+    }
+    for (label, n) in crate::payroll_tax::totals_rows(&s.totals) {
+        wrap(&format!("{label:<42} {:>20}", money(n)), &mut lines);
+    }
+    wrap("", &mut lines);
+    wrap(
+        "Approved tax advice. Settlement recorded separately; no money moved.",
+        &mut lines,
+    );
+    wrap(
+        "Tax advice only; not Form 2316, a filed return or proof of remittance.",
+        &mut lines,
+    );
+    render_titled_lines(lines, "ANNUAL TAX ADVICE")
 }
-pub fn build_final(s:&crate::payroll_final::Slip,status:Option<&crate::payroll_final::Status>)->Result<Vec<u8>>{
- let mut lines=vec![];
- for t in [s.company_name.clone(),format!("Employee: {} - {}",s.employee_code,s.employee_name),format!("Department: {}",s.department),format!("Last working day: {} | Planned cash date: {}",s.service_end,s.cash_date),format!("Approved: {} UTC | {}",s.approved_at.format("%Y-%m-%d %H:%M"),s.rule_version),status.map(|p|format!("Recorded {}: {}",p.kind,p.recorded_on)).unwrap_or("Approved statement; actual final cash not yet recorded.".into()),String::new()]{wrap(&t,&mut lines);}
- for(label,n)in crate::payroll_final::totals_rows(&s.totals){wrap(&format!("{label:<42} {:>20}",money(n)),&mut lines);}
- wrap("",&mut lines);wrap("SOURCE PAYSLIPS (included above, not additional cash)",&mut lines);
- for source in s.sources.as_array().into_iter().flatten(){wrap(&format!("{} | through {} | {}",source["kind"].as_str().unwrap_or(""),source["ends_on"].as_str().unwrap_or(""),money(source["amount_cents"].as_i64().unwrap_or(0))),&mut lines);}
- for l in s.components.as_array().into_iter().flatten(){wrap(&format!("{}: {}",l["label"].as_str().unwrap_or(""),money(l["amount_cents"].as_i64().unwrap_or(0))),&mut lines);}
- wrap("",&mut lines);wrap("Original payslips remain unchanged. Actual combined cash is shown once.",&mut lines);wrap("Employer tax handling is not an automatic employee debt.",&mut lines);wrap("This record is not a bank transfer, Form2316, filing or remittance.",&mut lines);
- render_titled_lines(lines,"FINAL PAY STATEMENT")
+pub fn build_final(
+    s: &crate::payroll_final::Slip,
+    status: Option<&crate::payroll_final::Status>,
+) -> Result<Vec<u8>> {
+    let mut lines = vec![];
+    for t in [
+        s.company_name.clone(),
+        format!("Employee: {} - {}", s.employee_code, s.employee_name),
+        format!("Department: {}", s.department),
+        format!(
+            "Last working day: {} | Planned cash date: {}",
+            s.service_end, s.cash_date
+        ),
+        format!(
+            "Approved: {} UTC | {}",
+            s.approved_at.format("%Y-%m-%d %H:%M"),
+            s.rule_version
+        ),
+        status
+            .map(|p| format!("Recorded {}: {}", p.kind, p.recorded_on))
+            .unwrap_or("Approved statement; actual final cash not yet recorded.".into()),
+        String::new(),
+    ] {
+        wrap(&t, &mut lines);
+    }
+    for (label, n) in crate::payroll_final::totals_rows(&s.totals) {
+        wrap(&format!("{label:<42} {:>20}", money(n)), &mut lines);
+    }
+    wrap("", &mut lines);
+    wrap(
+        "SOURCE PAYSLIPS (included above, not additional cash)",
+        &mut lines,
+    );
+    for source in s.sources.as_array().into_iter().flatten() {
+        wrap(
+            &format!(
+                "{} | through {} | {}",
+                source["kind"].as_str().unwrap_or(""),
+                source["ends_on"].as_str().unwrap_or(""),
+                money(source["amount_cents"].as_i64().unwrap_or(0))
+            ),
+            &mut lines,
+        );
+    }
+    for l in s.components.as_array().into_iter().flatten() {
+        wrap(
+            &format!(
+                "{}: {}",
+                l["label"].as_str().unwrap_or(""),
+                money(l["amount_cents"].as_i64().unwrap_or(0))
+            ),
+            &mut lines,
+        );
+    }
+    wrap("", &mut lines);
+    wrap(
+        "Original payslips remain unchanged. Actual combined cash is shown once.",
+        &mut lines,
+    );
+    wrap(
+        "Employer tax handling is not an automatic employee debt.",
+        &mut lines,
+    );
+    wrap(
+        "This record is not a bank transfer, Form2316, filing or remittance.",
+        &mut lines,
+    );
+    render_titled_lines(lines, "FINAL PAY STATEMENT")
 }
-pub fn build_amendment(s:&crate::payroll_amendments::Slip,status:Option<&crate::payroll_amendments::Status>)->Result<Vec<u8>>{
- let mut lines=vec![];
- for t in [s.company_name.clone(),s.title.clone(),format!("Employee: {} - {}",s.employee_code,s.employee_name),format!("Department: {}",s.department),format!("Original {}: {}",s.target_kind,s.target_id),format!("Earned: {} to {} | Planned cash: {}",s.starts_on,s.ends_on,s.cash_date),format!("Approved: {} UTC",s.approved_at.format("%Y-%m-%d %H:%M")),format!("Rule pack: {}",s.rule_version),status.map(|p|format!("Recorded {}: {} | Cash {}",p.kind,p.recorded_on,money(p.net_cents))).unwrap_or(if s.purpose=="review_only"{"Reviewed discrepancy; no payment or recovery."}else{"Approved supplement; actual cash not yet recorded."}.into()),String::new()]{wrap(&t,&mut lines);}
- if s.purpose=="review_only"{wrap(&format!("Discrepancy review only: {}",money(s.totals.review_amount_cents)),&mut lines);}else{for(label,n)in crate::payroll_amendments::totals_rows(&s.totals){wrap(&format!("{label:<42} {:>20}",money(n)),&mut lines);}}
- wrap("",&mut lines);wrap("Original payslip and receipt remain unchanged. This is a linked correction.",&mut lines);wrap("Supplemental cash is recorded separately; no transfer or filing was made.",&mut lines);wrap("An overpayment review creates no automatic deduction or employee debt.",&mut lines);
- render_titled_lines(lines,"PAYROLL AMENDMENT")
+pub fn build_amendment(
+    s: &crate::payroll_amendments::Slip,
+    status: Option<&crate::payroll_amendments::Status>,
+) -> Result<Vec<u8>> {
+    let mut lines = vec![];
+    for t in [
+        s.company_name.clone(),
+        s.title.clone(),
+        format!("Employee: {} - {}", s.employee_code, s.employee_name),
+        format!("Department: {}", s.department),
+        format!("Original {}: {}", s.target_kind, s.target_id),
+        format!(
+            "Earned: {} to {} | Planned cash: {}",
+            s.starts_on, s.ends_on, s.cash_date
+        ),
+        format!("Approved: {} UTC", s.approved_at.format("%Y-%m-%d %H:%M")),
+        format!("Rule pack: {}", s.rule_version),
+        status
+            .map(|p| {
+                format!(
+                    "Recorded {}: {} | Cash {}",
+                    p.kind,
+                    p.recorded_on,
+                    money(p.net_cents)
+                )
+            })
+            .unwrap_or(
+                if s.purpose == "review_only" {
+                    "Reviewed discrepancy; no payment or recovery."
+                } else {
+                    "Approved supplement; actual cash not yet recorded."
+                }
+                .into(),
+            ),
+        String::new(),
+    ] {
+        wrap(&t, &mut lines);
+    }
+    if s.purpose == "review_only" {
+        wrap(
+            &format!(
+                "Discrepancy review only: {}",
+                money(s.totals.review_amount_cents)
+            ),
+            &mut lines,
+        );
+    } else {
+        for (label, n) in crate::payroll_amendments::totals_rows(&s.totals) {
+            wrap(&format!("{label:<42} {:>20}", money(n)), &mut lines);
+        }
+    }
+    wrap("", &mut lines);
+    wrap(
+        "Original payslip and receipt remain unchanged. This is a linked correction.",
+        &mut lines,
+    );
+    wrap(
+        "Supplemental cash is recorded separately; no transfer or filing was made.",
+        &mut lines,
+    );
+    wrap(
+        "An overpayment review creates no automatic deduction or employee debt.",
+        &mut lines,
+    );
+    render_titled_lines(lines, "PAYROLL AMENDMENT")
 }
 fn build_period(s: &Slip, period: &str) -> Result<Vec<u8>> {
     let mut lines = vec![];
@@ -162,9 +305,9 @@ fn build_period(s: &Slip, period: &str) -> Result<Vec<u8>> {
     render_lines(lines)
 }
 fn render_lines(lines: Vec<String>) -> Result<Vec<u8>> {
-    render_titled_lines(lines,"PAYSLIP")
+    render_titled_lines(lines, "PAYSLIP")
 }
-fn render_titled_lines(lines: Vec<String>,title:&str) -> Result<Vec<u8>> {
+fn render_titled_lines(lines: Vec<String>, title: &str) -> Result<Vec<u8>> {
     let chunks: Vec<_> = lines.chunks(47).collect();
     let page_ids: Vec<_> = (0..chunks.len()).map(|i| 5 + i * 2).collect();
     let mut objects = vec![
@@ -186,7 +329,8 @@ fn render_titled_lines(lines: Vec<String>,title:&str) -> Result<Vec<u8>> {
     for (n, chunk) in chunks.iter().enumerate() {
         let page = page_ids[n];
         let mut stream = format!(
-            "0.07 0.25 0.29 rg 0 780 595 62 re f\n1 1 1 rg BT /F2 18 Tf 36 805 Td {} Tj ET\n0.12 0.17 0.21 rg BT /F1 10.5 Tf 14 TL 36 756 Td\n",literal(title)?
+            "0.07 0.25 0.29 rg 0 780 595 62 re f\n1 1 1 rg BT /F2 18 Tf 36 805 Td {} Tj ET\n0.12 0.17 0.21 rg BT /F1 10.5 Tf 14 TL 36 756 Td\n",
+            literal(title)?
         );
         for line in *chunk {
             stream.push_str(&format!("{} Tj T*\n", literal(line)?));

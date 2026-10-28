@@ -7,11 +7,11 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 pub mod credits;
 pub mod dated;
-pub mod openings;
+pub mod entitlements;
 pub mod opening_import;
+pub mod openings;
 pub mod request_import;
 pub mod versions;
-pub mod entitlements;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -434,15 +434,29 @@ pub fn balance(
 ) -> Balance {
     // Callers showing an editable preview use balance_checked to surface the
     // reason. A failed finite calculation must never allow a positive charge.
-    balance_checked(data,e,t,year,as_of,exclude).unwrap_or_default()
+    balance_checked(data, e, t, year, as_of, exclude).unwrap_or_default()
 }
-pub fn balance_checked(data:&Snapshot,e:&Employee,t:&LeaveType,year:i32,as_of:NaiveDate,exclude:Option<Uuid>)->Result<Balance> {
-    if data.leave_setup.dated.as_ref().is_some_and(|c|c.enabled) {
-        return dated::balance(data,e,&t.code,year,as_of,exclude);
+pub fn balance_checked(
+    data: &Snapshot,
+    e: &Employee,
+    t: &LeaveType,
+    year: i32,
+    as_of: NaiveDate,
+    exclude: Option<Uuid>,
+) -> Result<Balance> {
+    if data.leave_setup.dated.as_ref().is_some_and(|c| c.enabled) {
+        return dated::balance(data, e, &t.code, year, as_of, exclude);
     }
-    Ok(legacy_balance(data,e,t,year,as_of,exclude))
+    Ok(legacy_balance(data, e, t, year, as_of, exclude))
 }
-fn legacy_balance(data:&Snapshot,e:&Employee,t:&LeaveType,year:i32,as_of:NaiveDate,exclude:Option<Uuid>)->Balance {
+fn legacy_balance(
+    data: &Snapshot,
+    e: &Employee,
+    t: &LeaveType,
+    year: i32,
+    as_of: NaiveDate,
+    exclude: Option<Uuid>,
+) -> Balance {
     let first = e
         .joined_on
         .map(|j| j.year())
@@ -460,7 +474,11 @@ fn legacy_balance(data:&Snapshot,e:&Employee,t:&LeaveType,year:i32,as_of:NaiveDa
             expiry(y, t.carryover_expiry_month),
             exclude,
         );
-        let adjustment = data.leave_setup.credits.as_ref().map_or(0,|c|c.units(e.id,&t.code,y,end));
+        let adjustment = data
+            .leave_setup
+            .credits
+            .as_ref()
+            .map_or(0, |c| c.units(e.id, &t.code, y, end));
         let unused = (earned(e, t, y, end) + adjustment - (used - before.min(carry))).max(0);
         carry = unused.min(t.carryover_units);
     }
@@ -478,7 +496,12 @@ fn legacy_balance(data:&Snapshot,e:&Employee,t:&LeaveType,year:i32,as_of:NaiveDa
         })
         .map(|r| r.units())
         .sum();
-    let earned = earned(e, t, year, as_of) + data.leave_setup.credits.as_ref().map_or(0,|c|c.units(e.id,&t.code,year,as_of));
+    let earned = earned(e, t, year, as_of)
+        + data
+            .leave_setup
+            .credits
+            .as_ref()
+            .map_or(0, |c| c.units(e.id, &t.code, year, as_of));
     let applicable = if as_of <= boundary {
         carry
     } else {
@@ -520,7 +543,15 @@ fn usage(
     (total, before)
 }
 pub fn can_review(data: &Snapshot, row: &LeaveRequest) -> bool {
-    can_review_access(&data.access, row) || (row.status==LeaveStatus::Pending && data.access.employee_id!=Some(row.employee_id) && crate::approvals::permitted(data,crate::approvals::Scope::Leave,row.id,row.policy.revision))
+    can_review_access(&data.access, row)
+        || (row.status == LeaveStatus::Pending
+            && data.access.employee_id != Some(row.employee_id)
+            && crate::approvals::permitted(
+                data,
+                crate::approvals::Scope::Leave,
+                row.id,
+                row.policy.revision,
+            ))
 }
 pub fn can_review_access(access: &crate::access::Access, row: &LeaveRequest) -> bool {
     if row.status != LeaveStatus::Pending
@@ -591,7 +622,7 @@ pub fn prepare(data: &Snapshot, draft: &LeaveDraft) -> Result<LeaveRequest> {
     } else {
         &draft.options.type_code
     };
-    let selected_policy = dated::policy_on(data,row.starts_on);
+    let selected_policy = dated::policy_on(data, row.starts_on);
     let t = selected_policy
         .leave_type(code)
         .filter(|t| t.active)
@@ -600,7 +631,13 @@ pub fn prepare(data: &Snapshot, draft: &LeaveDraft) -> Result<LeaveRequest> {
         t.accrual != Accrual::Monthly || e.joined_on.is_some(),
         "Set the employee Date joined before requesting accrued leave."
     );
-    let charges = dated::charges(data,code,row.starts_on,row.ends_on,draft.options.day_part)?;
+    let charges = dated::charges(
+        data,
+        code,
+        row.starts_on,
+        row.ends_on,
+        draft.options.day_part,
+    )?;
     row.policy = RequestPolicy {
         type_code: t.code.clone(),
         type_name: t.name.clone(),
@@ -750,10 +787,31 @@ pub fn apply_demo(data: &mut Snapshot, action: Action) -> Result<()> {
                     .ok_or_else(|| anyhow::anyhow!("Leave type not found."))?;
                 if t.accrual != Accrual::Unlimited {
                     ensure!(
-                        if data.leave_setup.dated.as_ref().is_some_and(|c|c.enabled) {
-                            let end=NaiveDate::from_ymd_opt(row.starts_on.year(),12,31).unwrap();
-                            balance_checked(data,e,t,row.starts_on.year(),row.starts_on.max(data.company.today().min(end)),None)?.available_units>=0
-                        } else {balance_checked(data, e, t, row.starts_on.year(), row.starts_on, Some(id))?.available_units>=row.units()},
+                        if data.leave_setup.dated.as_ref().is_some_and(|c| c.enabled) {
+                            let end =
+                                NaiveDate::from_ymd_opt(row.starts_on.year(), 12, 31).unwrap();
+                            balance_checked(
+                                data,
+                                e,
+                                t,
+                                row.starts_on.year(),
+                                row.starts_on.max(data.company.today().min(end)),
+                                None,
+                            )?
+                            .available_units
+                                >= 0
+                        } else {
+                            balance_checked(
+                                data,
+                                e,
+                                t,
+                                row.starts_on.year(),
+                                row.starts_on,
+                                Some(id),
+                            )?
+                            .available_units
+                                >= row.units()
+                        },
                         "This request exceeds the available leave balance."
                     );
                 }
@@ -794,7 +852,9 @@ pub fn apply_demo(data: &mut Snapshot, action: Action) -> Result<()> {
                 "Enter a cancellation reason up to 500 characters."
             );
             let today = data.company.today();
-            let hr = data.access.allows(crate::staff_roles::Capability::LeaveAdministration);
+            let hr = data
+                .access
+                .allows(crate::staff_roles::Capability::LeaveAdministration);
             let own = data.access.employee_id;
             let row = data
                 .leave

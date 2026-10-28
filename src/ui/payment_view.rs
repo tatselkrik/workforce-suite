@@ -37,7 +37,11 @@ impl State {
 }
 impl HrisApp {
     pub(super) fn payroll_payments(&mut self, ui: &mut Ui) {
-        if !self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation) {
+        if !self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::PayrollPreparation)
+        {
             return;
         }
         ui.heading("Employee payment records");
@@ -91,7 +95,9 @@ impl HrisApp {
                     r.ends_on
                 ));
                 if let Some(date) = r.paid_on {
-                    let final_settlement=self.data.payroll.receipts.iter().any(|p|p.slip_id==r.slip_id&&p.kind==r.kind&&p.origin=="final_settlement");
+                    let final_settlement = self.data.payroll.receipts.iter().any(|p| {
+                        p.slip_id == r.slip_id && p.kind == r.kind && p.origin == "final_settlement"
+                    });
                     ui.label(if final_settlement{format!("Source balance settled in final pay on {date}; actual combined cash is on its final statement.")}else{format!("Payment recorded {date}")});
                     ui.label(&r.payment_reference);
                 } else {

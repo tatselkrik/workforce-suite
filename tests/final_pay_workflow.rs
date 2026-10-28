@@ -7,7 +7,11 @@ use hris_desktop::{
 use serde_json::{Value, json};
 use uuid::Uuid;
 fn send(s: &mut DemoStore, op: &str, v: Value) {
-    let a=Change::new(op,v);a.payload(&s.data).unwrap_or_else(|e|panic!("{op} payload: {e:#}"));s.execute(Action::Payroll(a)).unwrap_or_else(|e|panic!("{op}: {e:#}"));
+    let a = Change::new(op, v);
+    a.payload(&s.data)
+        .unwrap_or_else(|e| panic!("{op} payload: {e:#}"));
+    s.execute(Action::Payroll(a))
+        .unwrap_or_else(|e| panic!("{op}: {e:#}"));
 }
 fn act(s: &mut DemoStore, op: &str, id: Uuid, extra: Value) -> Change {
     let r = s

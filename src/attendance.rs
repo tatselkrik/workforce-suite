@@ -17,7 +17,7 @@ pub fn daily_roster(data: &Snapshot, date: NaiveDate) -> Vec<DailyRow> {
     let mut rows: Vec<_> = data
         .employees
         .iter()
-        .filter(|employee|data.access.can_read_operational_employee(employee))
+        .filter(|employee| data.access.can_read_operational_employee(employee))
         .filter_map(|employee| {
             let attendance = data
                 .attendance
@@ -58,7 +58,7 @@ pub fn daily_roster(data: &Snapshot, date: NaiveDate) -> Vec<DailyRow> {
                     .shifts
                     .plan(employee.id, date)
                     .map(|p| p.working(data, date))
-                    .unwrap_or_else(|| crate::leave::dated::policy_on(data,date).working(date)),
+                    .unwrap_or_else(|| crate::leave::dated::policy_on(data, date).working(date)),
                 attendance,
                 approved_leave,
             })

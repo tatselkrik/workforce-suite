@@ -4,13 +4,13 @@
 //! A role set is not authority by itself: the server supplies it, and existing
 //! authorization remains in force until the matching runtime contract is ready.
 pub mod admin;
-pub mod history;
 pub mod editor;
+pub mod history;
+#[cfg(test)]
+mod permission_tests;
 pub mod provision;
 pub mod provision_editor;
 pub mod workflow;
-#[cfg(test)]
-mod permission_tests;
 use anyhow::{Result, ensure};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Deserializer, Serialize, de};

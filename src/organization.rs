@@ -60,7 +60,9 @@ pub fn readable(data: &Snapshot) -> Vec<&Employee> {
         .filter(|employee| {
             employee.company_id == data.company.id
                 && (data.access.has_full_employee_directory()
-                    || (data.access.allows(crate::staff_roles::Capability::TeamReview)
+                    || (data
+                        .access
+                        .allows(crate::staff_roles::Capability::TeamReview)
                         && (data.access.employee_id == Some(employee.id)
                             || (employee.status == EmployeeStatus::Active
                                 && employee.reports_to == data.access.employee_id

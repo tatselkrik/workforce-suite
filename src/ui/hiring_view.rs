@@ -212,7 +212,11 @@ fn history_fields(ui: &mut Ui, e: &hiring::Event) -> Vec<(egui::Rect, egui::Rect
 }
 impl HrisApp {
     pub(super) fn hiring(&mut self, ui: &mut Ui) {
-        if !self.data.access.allows(crate::staff_roles::Capability::Recruiting) {
+        if !self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::Recruiting)
+        {
             card(ui, |ui| {
                 ui.horizontal_wrapped(|ui| {
                     ui.add_enabled_ui(

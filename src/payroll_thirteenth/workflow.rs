@@ -76,7 +76,9 @@ fn field(v: &Value, k: &str, max: usize) -> Result<()> {
 pub fn payload(a: &PayrollAction, data: &Snapshot) -> Result<Value> {
     ensure!(
         data.mode != Mode::SignedOut
-            && data.access.allows(crate::staff_roles::Capability::PayrollPreparation)
+            && data
+                .access
+                .allows(crate::staff_roles::Capability::PayrollPreparation)
             && data.access.company_id == data.company.id,
         "Only Payroll Officers and Administrators manage annual benefit pay."
     );
@@ -245,8 +247,13 @@ pub fn demo_basis(data: &Snapshot, eid: Uuid, r: &Run) -> Result<Value> {
         }
     }
     prior.sort_by_key(|p| p.id);
-    let b=crate::payroll_final::augment_benefit_demo_basis(data,eid,r,json!({"employee":{"id":e.id,"full_name":e.full_name,"employee_code":e.employee_code,"department":e.department,"joined_on":e.joined_on,"status":e.status},"calculation_source":Source{starts_on:lo,as_of:r.as_of,periods,prior,external_thirteenth_floor:external,other_benefits_floor:other}}))?;
-    crate::payroll_amendments::augment_benefits(data,eid,r,b)
+    let b = crate::payroll_final::augment_benefit_demo_basis(
+        data,
+        eid,
+        r,
+        json!({"employee":{"id":e.id,"full_name":e.full_name,"employee_code":e.employee_code,"department":e.department,"joined_on":e.joined_on,"status":e.status},"calculation_source":Source{starts_on:lo,as_of:r.as_of,periods,prior,external_thirteenth_floor:external,other_benefits_floor:other}}),
+    )?;
+    crate::payroll_amendments::augment_benefits(data, eid, r, b)
 }
 pub fn apply_demo(data: &mut Snapshot, a: &PayrollAction) -> Result<()> {
     payload(a, data)?;

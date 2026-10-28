@@ -509,9 +509,11 @@ pub fn calculate(s: &Source, w: &Worksheet) -> Result<Calculation> {
 }
 pub fn ready(s: &Source, w: &Worksheet) -> Result<Calculation> {
     let c = calculate(s, w)?;
-    ensure!(s.service_end.year() == s.cash_date.year()
-        || (w.cash_year_reviewed && !w.cash_year_note.trim().is_empty()),
-        "Review the payment year's actual/constructive receipt evidence, prior-year withholding and other employment before issuing delayed final pay. Do not move earlier received income into this year.");
+    ensure!(
+        s.service_end.year() == s.cash_date.year()
+            || (w.cash_year_reviewed && !w.cash_year_note.trim().is_empty()),
+        "Review the payment year's actual/constructive receipt evidence, prior-year withholding and other employment before issuing delayed final pay. Do not move earlier received income into this year."
+    );
     ensure!(
         s.annual.pending_adjustments == 0
             && c.tax.coverage_gaps.is_empty()

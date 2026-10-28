@@ -104,28 +104,54 @@ impl Access {
         }
     }
     pub fn allows(&self, capability: crate::staff_roles::Capability) -> bool {
-        self.staff_roles().is_ok_and(|roles| roles.allows(capability))
+        self.staff_roles()
+            .is_ok_and(|roles| roles.allows(capability))
     }
     pub fn uses_desktop(&self) -> bool {
         self.allows(crate::staff_roles::Capability::Desktop)
     }
     pub fn can_manage_reports(&self) -> bool {
-        self.allows(crate::staff_roles::Capability::GeneralHrReports) || self.allows(crate::staff_roles::Capability::TeamReview)
+        self.allows(crate::staff_roles::Capability::GeneralHrReports)
+            || self.allows(crate::staff_roles::Capability::TeamReview)
     }
     pub fn has_full_employee_directory(&self) -> bool {
-        [crate::staff_roles::Capability::Personnel,crate::staff_roles::Capability::Recruiting,crate::staff_roles::Capability::DevelopmentAdministration,crate::staff_roles::Capability::PayrollPreparation].into_iter().any(|cap|self.allows(cap))
+        [
+            crate::staff_roles::Capability::Personnel,
+            crate::staff_roles::Capability::Recruiting,
+            crate::staff_roles::Capability::DevelopmentAdministration,
+            crate::staff_roles::Capability::PayrollPreparation,
+        ]
+        .into_iter()
+        .any(|cap| self.allows(cap))
     }
-    pub fn can_read_operational_employee(&self, employee:&crate::domain::Employee) -> bool {
-        self.company_id==employee.company_id && self.staff_roles().is_ok_and(|roles|roles.allows(crate::staff_roles::Capability::Personnel)
-            || self.employee_id==Some(employee.id)
-            || (roles.allows(crate::staff_roles::Capability::TeamReview) && employee.status==crate::domain::EmployeeStatus::Active && employee.reports_to==self.employee_id && self.direct_reports.contains(&employee.id)))
+    pub fn can_read_operational_employee(&self, employee: &crate::domain::Employee) -> bool {
+        self.company_id == employee.company_id
+            && self.staff_roles().is_ok_and(|roles| {
+                roles.allows(crate::staff_roles::Capability::Personnel)
+                    || self.employee_id == Some(employee.id)
+                    || (roles.allows(crate::staff_roles::Capability::TeamReview)
+                        && employee.status == crate::domain::EmployeeStatus::Active
+                        && employee.reports_to == self.employee_id
+                        && self.direct_reports.contains(&employee.id))
+            })
     }
     pub fn role_label(&self) -> String {
-        self.staff_roles().map(|roles|roles.as_slice().iter().map(|r|r.label()).collect::<Vec<_>>().join(", ")).unwrap_or_else(|_|"Access unavailable".into())
+        self.staff_roles()
+            .map(|roles| {
+                roles
+                    .as_slice()
+                    .iter()
+                    .map(|r| r.label())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            })
+            .unwrap_or_else(|_| "Access unavailable".into())
     }
     pub fn can_read_contacts(&self, employee: Uuid) -> bool {
-        self.staff_roles().is_ok_and(|roles| roles.allows(crate::staff_roles::Capability::Personnel)
-            || self.employee_id == Some(employee))
+        self.staff_roles().is_ok_and(|roles| {
+            roles.allows(crate::staff_roles::Capability::Personnel)
+                || self.employee_id == Some(employee)
+        })
     }
 
     pub fn demo_admin() -> Self {
@@ -137,14 +163,18 @@ impl Access {
         }
     }
     pub fn can_record(&self, employee: Uuid) -> bool {
-        self.staff_roles().is_ok_and(|roles| roles.allows(crate::staff_roles::Capability::AttendanceAdministration)
-            || self.employee_id == Some(employee))
+        self.staff_roles().is_ok_and(|roles| {
+            roles.allows(crate::staff_roles::Capability::AttendanceAdministration)
+                || self.employee_id == Some(employee)
+        })
     }
     pub fn can_review(&self, employee: Uuid) -> bool {
-        self.employee_id != Some(employee) && self.staff_roles().is_ok_and(|roles|
-            roles.allows(crate::staff_roles::Capability::LeaveAdministration)
-            || (roles.allows(crate::staff_roles::Capability::TeamReview)
-                && self.direct_reports.contains(&employee)))
+        self.employee_id != Some(employee)
+            && self.staff_roles().is_ok_and(|roles| {
+                roles.allows(crate::staff_roles::Capability::LeaveAdministration)
+                    || (roles.allows(crate::staff_roles::Capability::TeamReview)
+                        && self.direct_reports.contains(&employee))
+            })
     }
     pub fn authorize(&self, action: &Action, data: &Snapshot) -> Result<()> {
         let allowed = match action {
@@ -165,16 +195,22 @@ impl Access {
                     && data.mode != crate::domain::Mode::SignedOut
                     && self.company_id == data.company.id
             }
-            Action::LeaveCredit(_) | Action::ApprovalDelegation(_) | Action::DatedLeave(_) => self.role.manages_accounts(),
+            Action::LeaveCredit(_) | Action::ApprovalDelegation(_) | Action::DatedLeave(_) => {
+                self.role.manages_accounts()
+            }
             Action::ImportEmployees(_, _) => self.allows(crate::staff_roles::Capability::Personnel),
             Action::Overtime(action) => crate::overtime::allowed(self, action, data),
             Action::AttendanceRequest(action) => crate::requests::allowed(self, action, data),
             Action::SaveCalculationPolicy(_) => self.role.manages_accounts(),
-            Action::ApplyCalculationPolicy(_) => self.allows(crate::staff_roles::Capability::Personnel),
+            Action::ApplyCalculationPolicy(_) => {
+                self.allows(crate::staff_roles::Capability::Personnel)
+            }
             Action::AttendanceBreak(action) => action.allowed(self, data),
             Action::SaveEmployee(_)
             | Action::SaveEmployeeRecord(_, _)
-            | Action::SaveEmployeeContacts(_) => self.allows(crate::staff_roles::Capability::Personnel),
+            | Action::SaveEmployeeContacts(_) => {
+                self.allows(crate::staff_roles::Capability::Personnel)
+            }
             Action::SaveOwnContacts(contacts) => {
                 self.employee_id == Some(contacts.employee_id)
                     && contacts.company_id == self.company_id
@@ -185,7 +221,9 @@ impl Access {
             | Action::SaveEmploymentOption(_)
             | Action::SaveLeavePolicy(_) => self.role.manages_accounts(),
             Action::CheckIn(id) => self.can_record(*id),
-            Action::SaveShiftTemplate(_) | Action::AssignShift(_) => self.allows(crate::staff_roles::Capability::Personnel),
+            Action::SaveShiftTemplate(_) | Action::AssignShift(_) => {
+                self.allows(crate::staff_roles::Capability::Personnel)
+            }
             Action::CorrectAttendance(_) => self.allows(crate::staff_roles::Capability::Personnel),
             Action::CheckOut(id) => data
                 .attendance
@@ -195,20 +233,21 @@ impl Access {
             Action::RequestLeave(draft) => draft.employee_id.is_some_and(|id| self.can_record(id)),
             Action::DecideLeave(id, status) => {
                 matches!(status, LeaveStatus::Approved | LeaveStatus::Rejected)
-                    && data
-                        .leave
-                        .iter()
-                        .find(|r| r.id == *id)
-                        .is_some_and(|r| crate::leave::can_review_access(self,r)||(self==&data.access&&crate::leave::can_review(data,r)))
+                    && data.leave.iter().find(|r| r.id == *id).is_some_and(|r| {
+                        crate::leave::can_review_access(self, r)
+                            || (self == &data.access && crate::leave::can_review(data, r))
+                    })
             }
-            Action::ReviewLeave(id, _, _, _) => data
-                .leave
-                .iter()
-                .find(|r| r.id == *id)
-                .is_some_and(|r| crate::leave::can_review_access(self,r)||(self==&data.access&&crate::leave::can_review(data,r))),
+            Action::ReviewLeave(id, _, _, _) => {
+                data.leave.iter().find(|r| r.id == *id).is_some_and(|r| {
+                    crate::leave::can_review_access(self, r)
+                        || (self == &data.access && crate::leave::can_review(data, r))
+                })
+            }
             Action::CancelLeave(id, _, _) => {
                 data.leave.iter().find(|r| r.id == *id).is_some_and(|r| {
-                    self.allows(crate::staff_roles::Capability::Personnel) || self.employee_id == Some(r.employee_id)
+                    self.allows(crate::staff_roles::Capability::Personnel)
+                        || self.employee_id == Some(r.employee_id)
                 })
             }
         };

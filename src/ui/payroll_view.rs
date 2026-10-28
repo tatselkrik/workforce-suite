@@ -7,10 +7,10 @@ use serde_json::Value;
 use serde_json::json;
 #[derive(Default)]
 pub(super) struct State {
-    pub(super) government:super::government_view::State,
-    pub(super) amendments:super::amendment_view::State,
-    pub(super) reports:super::payroll_report_view::State,
-    pub(super) exchange:super::payroll_exchange_view::State,
+    pub(super) government: super::government_view::State,
+    pub(super) amendments: super::amendment_view::State,
+    pub(super) reports: super::payroll_report_view::State,
+    pub(super) exchange: super::payroll_exchange_view::State,
     pub(super) wages: super::wage_view::State,
     pub(super) finals: super::final_view::State,
     pub(super) payments: super::payment_view::State,
@@ -204,21 +204,48 @@ struct Decision {
     payment_reference: String,
 }
 impl State {
-    pub(super) fn open_notice(&mut self,page:&str,id:Uuid){
-        self.selected=None;self.employee=None;
+    pub(super) fn open_notice(&mut self, page: &str, id: Uuid) {
+        self.selected = None;
+        self.employee = None;
         match page {
-            "payroll_monthly"=>{self.tab=3;self.slip=Some(id);}
-            "payroll_cutoff"=>{self.tab=6;self.cutoffs.open_notice(id);}
-            "payroll_thirteenth"=>{self.tab=7;self.thirteenth.open_notice(id);}
-            "payroll_tax"=>{self.tab=8;self.tax.open_notice(id);}
-            "payroll_final"=>{self.tab=10;self.finals.open_notice(id);}
-            "payroll_amendment"=>{self.tab=12;self.amendments.open_notice(id);}
-            _=>{}
+            "payroll_monthly" => {
+                self.tab = 3;
+                self.slip = Some(id);
+            }
+            "payroll_cutoff" => {
+                self.tab = 6;
+                self.cutoffs.open_notice(id);
+            }
+            "payroll_thirteenth" => {
+                self.tab = 7;
+                self.thirteenth.open_notice(id);
+            }
+            "payroll_tax" => {
+                self.tab = 8;
+                self.tax.open_notice(id);
+            }
+            "payroll_final" => {
+                self.tab = 10;
+                self.finals.open_notice(id);
+            }
+            "payroll_amendment" => {
+                self.tab = 12;
+                self.amendments.open_notice(id);
+            }
+            _ => {}
         }
     }
     pub fn editing(&self) -> bool {
-        if self.government.editing(){return true;}
-        self.amendments.editing() || self.wages.editing() || self.finals.editing() || self.payments.editing() || self.tax.editing() || self.thirteenth.editing() || self.profile.is_some()
+        if self.government.editing() {
+            return true;
+        }
+        self.amendments.editing()
+            || self.wages.editing()
+            || self.finals.editing()
+            || self.payments.editing()
+            || self.tax.editing()
+            || self.thirteenth.editing()
+            || self.profile.is_some()
             || self.cutoffs.editing()
             || self.holiday.is_some()
             || self.run.is_some()
@@ -232,12 +259,30 @@ impl State {
         if !a.saved(data) {
             return false;
         }
-        if a.operation.starts_with("amendment_"){self.amendments.accept(&a,data);return true;}
-        if a.operation.starts_with("wage_"){self.wages.accept(&a);return true;}
-        if a.operation.starts_with("final_"){self.finals.accept(&a,data);return true;}
-        if a.operation.starts_with("receipt_") {self.payments.accept();return true;}
-        if a.operation.starts_with("tax_") {self.tax.accept(&a,data);return true;}
-        if a.operation.starts_with("thirteenth_") {self.thirteenth.accept(&a,data);return true;}
+        if a.operation.starts_with("amendment_") {
+            self.amendments.accept(&a, data);
+            return true;
+        }
+        if a.operation.starts_with("wage_") {
+            self.wages.accept(&a);
+            return true;
+        }
+        if a.operation.starts_with("final_") {
+            self.finals.accept(&a, data);
+            return true;
+        }
+        if a.operation.starts_with("receipt_") {
+            self.payments.accept();
+            return true;
+        }
+        if a.operation.starts_with("tax_") {
+            self.tax.accept(&a, data);
+            return true;
+        }
+        if a.operation.starts_with("thirteenth_") {
+            self.thirteenth.accept(&a, data);
+            return true;
+        }
         if a.operation == "item_refresh" || a.operation == "cutoff_item_refresh" {
             if let (Some(f), Some(item)) = (
                 self.item.as_mut(),
@@ -435,15 +480,36 @@ impl HrisApp {
     }
     pub(super) fn payroll(&mut self, ui: &mut Ui) {
         self.payroll_state.government.bind(&self.data);
-        if self.payroll_state.government.editing(){self.payroll_government(ui);return;}
-        if self.payroll_state.amendments.editing(){self.payroll_amendment_forms(ui);return;}
+        if self.payroll_state.government.editing() {
+            self.payroll_government(ui);
+            return;
+        }
+        if self.payroll_state.amendments.editing() {
+            self.payroll_amendment_forms(ui);
+            return;
+        }
         self.payroll_state.wages.bind(&self.data);
         self.payroll_state.reports.bind(&self.data);
-        if self.payroll_state.wages.editing(){self.payroll_wage_forms(ui);return;}
-        if self.payroll_state.finals.editing(){self.payroll_final_forms(ui);return;}
-        if self.payroll_state.payments.editing() {self.payroll_payment_forms(ui);return;}
-        if self.payroll_state.tax.editing() {self.payroll_tax_forms(ui);return;}
-        if self.payroll_state.thirteenth.editing() {self.payroll_thirteenth_forms(ui);return;}
+        if self.payroll_state.wages.editing() {
+            self.payroll_wage_forms(ui);
+            return;
+        }
+        if self.payroll_state.finals.editing() {
+            self.payroll_final_forms(ui);
+            return;
+        }
+        if self.payroll_state.payments.editing() {
+            self.payroll_payment_forms(ui);
+            return;
+        }
+        if self.payroll_state.tax.editing() {
+            self.payroll_tax_forms(ui);
+            return;
+        }
+        if self.payroll_state.thirteenth.editing() {
+            self.payroll_thirteenth_forms(ui);
+            return;
+        }
         if self.payroll_state.cutoffs.editing() {
             self.payroll_cutoff_forms(ui);
             return;
@@ -455,7 +521,10 @@ impl HrisApp {
             self.payroll_forms(ui);
             return;
         }
-        let hr = self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation);
+        let hr = self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::PayrollPreparation);
         if !hr && ![3, 6, 7, 8, 10, 12].contains(&self.payroll_state.tab) {
             self.payroll_state.tab = 3;
         }
@@ -1237,7 +1306,21 @@ impl HrisApp {
         }
     }
     fn payroll_slips(&mut self, ui: &mut Ui) {
-        let visible:Vec<_>=self.data.payroll.slips.iter().filter(|s|s.company_id==self.data.company.id && (self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation) || self.data.access.employee_id==Some(s.employee_id))).cloned().collect();
+        let visible: Vec<_> = self
+            .data
+            .payroll
+            .slips
+            .iter()
+            .filter(|s| {
+                s.company_id == self.data.company.id
+                    && (self
+                        .data
+                        .access
+                        .allows(crate::staff_roles::Capability::PayrollPreparation)
+                        || self.data.access.employee_id == Some(s.employee_id))
+            })
+            .cloned()
+            .collect();
         if let Some(id) = self.payroll_state.slip {
             if let Some(s) = visible.iter().find(|s| s.id == id).cloned() {
                 if ui.button("Back to payslips").clicked() {
@@ -1352,7 +1435,9 @@ impl HrisApp {
         }
     }
     pub(super) fn payroll_export(&mut self, kind: &str, id: Option<Uuid>) {
-        let pdf = kind.ends_with("payslip_pdf")||kind=="final_statement_pdf"||kind=="amendment_statement_pdf";
+        let pdf = kind.ends_with("payslip_pdf")
+            || kind == "final_statement_pdf"
+            || kind == "amendment_statement_pdf";
         let extension = if pdf { "pdf" } else { "csv" };
         let name = format!(
             "HRIS-payroll-{kind}-{}.{extension}",
@@ -1397,15 +1482,45 @@ impl HrisApp {
             return;
         }
         self.page = Page::Payroll;
-        if form.starts_with("payroll-exchange"){self.prepare_exchange_preview(&form);return;}
-        if form.starts_with("payroll-government"){self.prepare_government_preview(&form);return;}
-        if form.starts_with("payroll-amendment"){self.prepare_amendment_preview(&form);return;}
-        if form.starts_with("payroll-report"){self.prepare_consolidated_report_preview(&form);return;}
-        if form.starts_with("payroll-wage"){self.prepare_wage_preview(&form);return;}
-        if form.starts_with("payroll-final"){self.prepare_final_preview(&form);return;}
-        if form.starts_with("payroll-payment") {self.payroll_state.tab=9;self.prepare_payment_preview(&form);return;}
-        if form.starts_with("payroll-tax") {self.payroll_state.tab=8;self.prepare_tax_preview(&form);return;}
-        if form.starts_with("payroll-thirteenth") {self.payroll_state.tab=7;self.prepare_thirteenth_preview(&form);return;}
+        if form.starts_with("payroll-exchange") {
+            self.prepare_exchange_preview(&form);
+            return;
+        }
+        if form.starts_with("payroll-government") {
+            self.prepare_government_preview(&form);
+            return;
+        }
+        if form.starts_with("payroll-amendment") {
+            self.prepare_amendment_preview(&form);
+            return;
+        }
+        if form.starts_with("payroll-report") {
+            self.prepare_consolidated_report_preview(&form);
+            return;
+        }
+        if form.starts_with("payroll-wage") {
+            self.prepare_wage_preview(&form);
+            return;
+        }
+        if form.starts_with("payroll-final") {
+            self.prepare_final_preview(&form);
+            return;
+        }
+        if form.starts_with("payroll-payment") {
+            self.payroll_state.tab = 9;
+            self.prepare_payment_preview(&form);
+            return;
+        }
+        if form.starts_with("payroll-tax") {
+            self.payroll_state.tab = 8;
+            self.prepare_tax_preview(&form);
+            return;
+        }
+        if form.starts_with("payroll-thirteenth") {
+            self.payroll_state.tab = 7;
+            self.prepare_thirteenth_preview(&form);
+            return;
+        }
         if form.starts_with("payroll-cutoff") {
             self.payroll_state.tab = 6;
             self.prepare_cutoff_preview(&form);

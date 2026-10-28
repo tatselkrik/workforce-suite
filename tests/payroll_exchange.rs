@@ -1,54 +1,409 @@
 use chrono::Utc;
-use hris_desktop::{access::{Access,Role},payroll_exchange as x,payroll_reporting as p};
+use hris_desktop::{
+    access::{Access, Role},
+    payroll_exchange as x, payroll_reporting as p,
+};
 use serde_json::json;
 use uuid::Uuid;
-fn id(n:u128)->Uuid{Uuid::from_u128(n)}
-fn fixture()->(Access,x::Request,x::Detail){
- let access=Access{company_id:id(1),user_id:id(2),role:Role::HrGeneralist,employee_id:Some(id(3)),..Default::default()};
- let filter:p::Filter=serde_json::from_value(json!({"starts_on":"2026-01-01","ends_on":"2026-12-31","axis":"issued","kind":"all","employee_id":null,"search":""})).unwrap();
- let row:p::Row=serde_json::from_value(json!({"id":id(10),"company_id":id(1),"employee_id":id(3),"kind":"monthly","employee_code":"0007","employee_name":"\u{2007}=Fictional \"name\"","department":"@Synthetic","period_start":"2026-09-01","period_end":"2026-09-30","issued_on":"2026-10-01","received_on":null,"status":"approved","payment_state":"unpaid","basic_cents":10001,"gross_cents":10001,"employee_contributions_cents":null,"employer_contributions_cents":null,"withholding_cents":null,"net_cents":10001,"contained_source_net_cents":null,"cash_cents":0,"offset_cents":0,"tax_adjustment_cents":null,"outstanding_cents":10001,"reserved_cents":0,"reserved_case_id":null,"rule_version":"fictional"})).unwrap();
- let profile=x::Profile{id:id(4),revision:0,name:"Fictional exchange".into(),enabled:true,columns:x::default_columns(),created_at:Utc::now()};
- let request=x::Request{id:id(5),profile_id:profile.id,expected_revision:0,filter:filter.clone(),reason:"Fictional private reason".into()};
- let mut basis=x::Basis{company_id:id(1),exchange_id:request.id,profile,report:p::Wire{version:p::VERSION.into(),company_id:id(1),company_name:"Fictional company".into(),generated_at:Utc::now(),filter,rows:vec![row]},controls:vec![x::Control{record_key:format!("monthly:{}",id(10)),row_sha256:"a".repeat(64)}],csv:String::new(),sha256:String::new(),fingerprint:"b".repeat(64)};
- basis.csv=basis.render().unwrap();basis.sha256=x::sha(basis.csv.as_bytes());
- let detail=x::Detail{version:"payroll-exchange-detail-v1".into(),company_id:id(1),user_id:id(2),role:Role::HrGeneralist,basis,created_at:Utc::now(),events:vec![]};(access,request,detail)
+fn id(n: u128) -> Uuid {
+    Uuid::from_u128(n)
 }
-fn ack(d:&x::Detail)->x::Ack{x::Ack{id:id(20),exchange_id:d.basis.exchange_id,reason:"Fictional reconciliation".into(),rows:vec![x::AckRow{record_key:d.basis.controls[0].record_key.clone(),row_sha256:d.basis.controls[0].row_sha256.clone(),expected_revision:0,status:"accepted".into(),reference:String::new(),note:String::new()}]}}
-fn event(d:&x::Detail,n:i64,status:&str)->x::Event{x::Event{record_key:d.basis.controls[0].record_key.clone(),revision:n,batch_id:id(20+n as u128),status:status.into(),reference:String::new(),note:if status=="pending"{"Fictional reset reason".into()}else{String::new()},created_at:Utc::now()}}
-#[test]fn canonical_csv_preserves_controls_centavos_unknowns_and_formula_safety(){let(a,_,d)=fixture();d.validate(&a,d.basis.exchange_id).unwrap();let csv=&d.basis.csv;assert!(csv.contains("\"0007\",\"monthly\",\"unpaid\",\"PHP_CENTAVOS\""));assert!(csv.contains("'\u{2007}=Fictional \"\"name\"\""));assert!(csv.contains("\"'@Synthetic\""));assert!(csv.contains("\"10001\""));assert!(!csv.contains("100.01"));assert_eq!(x::sha(csv.as_bytes()),d.basis.sha256);assert_eq!(d.basis.validate(&a).unwrap().totals.recorded_cash_cents,0);}
-#[test]fn scoped_wire_rejects_manager_foreign_user_company_and_private_fields(){let(a,_,d)=fixture();for role in[Role::Manager,Role::Employee]{let mut other=a.clone();other.role=role;assert!(d.validate(&other,d.basis.exchange_id).is_err());}let mut other=a.clone();other.user_id=id(99);assert!(d.validate(&other,d.basis.exchange_id).is_err());other=a.clone();other.company_id=id(99);assert!(d.validate(&other,d.basis.exchange_id).is_err());let mut v=serde_json::to_value(&d).unwrap();v["basis"]["report"]["rows"][0]["payment_reference"]=json!("private");assert!(serde_json::from_value::<x::Detail>(v).is_err());}
-#[test]fn signed_tax_centavos_remain_exact_numbers_and_never_become_cash(){let(a,_,mut d)=fixture();let mut tax=d.basis.report.rows[0].clone();tax.id=id(11);tax.kind="annual_tax".into();tax.status="settled".into();tax.payment_state="settled_adjustment".into();tax.received_on=Some("2026-10-09".parse().unwrap());tax.basic_cents=None;tax.gross_cents=None;tax.net_cents=None;tax.outstanding_cents=None;tax.tax_adjustment_cents=Some(-1234);d.basis.report.rows.push(tax);d.basis.controls.push(x::Control{record_key:format!("annual_tax:{}",id(11)),row_sha256:"c".repeat(64)});d.basis.csv=d.basis.render().unwrap();d.basis.sha256=x::sha(d.basis.csv.as_bytes());let report=d.basis.validate(&a).unwrap();assert_eq!(report.totals.recorded_cash_cents,0);assert_eq!(report.totals.annual_settled_adjustment_cents,-1234);assert!(d.basis.csv.contains("\"-1234\""));assert!(!d.basis.csv.contains("\"'-1234\""));}
-#[test]fn profile_mapping_is_bounded_distinct_and_whitelisted(){let(_,_,d)=fixture();let mut p=d.basis.profile;for key in["payment_reference","bank_account","created_by"]{p.columns=vec![x::Column{key:key.into(),header:"Header".into()}];assert!(p.validate().is_err());}for header in["=bad","exchange_id","Row_SHA256","bad\nheader",""]{p.columns=vec![x::Column{key:"cash_cents".into(),header:header.into()}];assert!(p.validate().is_err());}p.columns=vec![x::Column{key:"cash_cents".into(),header:"Cash".into()},x::Column{key:"cash_cents".into(),header:"Other".into()}];assert!(p.validate().is_err());p.columns=x::default_columns();p.columns[0].header="Reviewed name".into();p.validate().unwrap();}
-#[test]fn checksum_and_row_binding_fail_closed_after_tampering(){let(a,_,d)=fixture();let mut bad=d.clone();bad.basis.csv.push('x');assert!(bad.validate(&a,bad.basis.exchange_id).is_err());bad=d.clone();bad.basis.report.rows[0].employee_code="changed".into();assert!(bad.validate(&a,bad.basis.exchange_id).is_err());bad=d.clone();bad.basis.controls[0].record_key=format!("cutoff:{}",id(10));bad.basis.sha256=x::sha(bad.basis.csv.as_bytes());assert!(bad.validate(&a,bad.basis.exchange_id).is_err());}
-#[test]fn preview_binds_exact_profile_filter_and_identity(){let(a,r,d)=fixture();let p=x::Preview{version:"payroll-exchange-preview-v1".into(),company_id:a.company_id,user_id:a.user_id,role:a.role,basis:d.basis};p.validate(&a,&r).unwrap();let mut changed=r.clone();changed.filter.axis="received".into();assert!(p.validate(&a,&changed).is_err());changed=r.clone();changed.expected_revision=1;assert!(p.validate(&a,&changed).is_err());changed=r;changed.id=id(99);assert!(p.validate(&a,&changed).is_err());}
-#[test]fn acknowledgement_template_roundtrip_posts_only_reviewed_rows(){let(a,_,d)=fixture();let template=String::from_utf8(d.template().unwrap()).unwrap();assert!(x::Ack::from_csv(template.as_bytes(),&d,"Review".into(),&a).is_err());let filled=template.replace("\"0\",\"\",\"\",\"\"","\"0\",\"accepted\",\"Reference\",\"Checked locally\"");let imported=x::Ack::from_csv(filled.as_bytes(),&d,"Review".into(),&a).unwrap();assert_eq!(imported.rows.len(),1);assert_eq!(imported.rows[0].reference,"Reference");assert_eq!(imported.rows[0].expected_revision,0);assert_eq!(imported.rows[0].status,"accepted");}
-#[test]fn acknowledgement_context_identifies_people_and_rejects_changed_labels(){let(a,_,d)=fixture();let text=String::from_utf8(d.template().unwrap()).unwrap().replace("\"0\",\"\",\"\",\"\"","\"0\",\"accepted\",\"\",\"\"");assert!(text.contains("employee_code")&&text.contains("employee_name")&&text.contains("service_period"));assert!(text.contains("2026-09-01 through 2026-09-30"));x::Ack::from_csv(text.as_bytes(),&d,"Reviewed person and period".into(),&a).unwrap();for changed in[text.replace("0007","0008"),text.replace("Fictional","Different"),text.replace("2026-09-01 through","2026-08-01 through")]{assert!(x::Ack::from_csv(changed.as_bytes(),&d,"Review".into(),&a).is_err());}}
-#[test]fn acknowledgement_rejects_duplicates_forged_digest_and_stale_revision(){let(a,_,d)=fixture();let good=ack(&d);good.validate(&d,&a).unwrap();let mut bad=good.clone();bad.rows.push(bad.rows[0].clone());assert!(bad.validate(&d,&a).is_err());bad=good.clone();bad.rows[0].row_sha256="0".repeat(64);assert!(bad.validate(&d,&a).is_err());bad=good;bad.rows[0].expected_revision=1;assert!(bad.validate(&d,&a).is_err());}
-#[test]fn terminal_outcomes_need_reasoned_admin_reset_and_keep_prior_events(){let(mut a,_,mut d)=fixture();d.events.push(event(&d,1,"accepted"));let mut input=ack(&d);input.rows[0].expected_revision=1;input.rows[0].status="rejected".into();assert!(input.validate(&d,&a).is_err());input.rows[0].status="pending".into();input.rows[0].note="Verified wrong response".into();assert!(input.validate(&d,&a).is_err());a.role=Role::Administrator;d.role=a.role;input.validate(&d,&a).unwrap();d.events.push(event(&d,2,"pending"));d.events.push(event(&d,3,"rejected"));d.validate(&a,d.basis.exchange_id).unwrap();assert_eq!(d.current(&input.rows[0].record_key).unwrap().revision,3);assert_eq!(d.events.len(),3);}
-#[test]fn history_detects_gaps_duplicate_revisions_and_forged_resets(){let(a,_,mut d)=fixture();d.events.push(event(&d,2,"accepted"));assert!(d.validate(&a,d.basis.exchange_id).is_err());d.events=vec![event(&d,1,"accepted"),event(&d,1,"rejected")];assert!(d.validate(&a,d.basis.exchange_id).is_err());d.events=vec![event(&d,1,"pending")];assert!(d.validate(&a,d.basis.exchange_id).is_err());}
-#[test]fn csv_rejects_ambiguous_revision_headers_and_unsupported_formula_status(){let(a,_,d)=fixture();let template=String::from_utf8(d.template().unwrap()).unwrap();for text in[template.replace("row_sha256","other"),template.replace("\"0\",\"\",\"\",\"\"","\"1.0\",\"accepted\",\"\",\"\""),template.replace("\"0\",\"\",\"\",\"\"","\"0\",\"=accepted\",\"\",\"\""),template.replace("\"0\",\"\",\"\",\"\"","\"0\",\"\",\"unreviewed\",\"\"")]{assert!(x::Ack::from_csv(text.as_bytes(),&d,"Review".into(),&a).is_err());}assert!(x::Ack::from_csv(&[255,254,0,1],&d,"Review".into(),&a).is_err());}
-#[test]fn exact_retry_payload_retains_request_reason_nonce_and_fingerprint(){let(_,r,d)=fixture();let op=x::Operation::Prepare{request:r.clone(),fingerprint:d.basis.fingerprint.clone()};let(kind,nonce,payload)=op.attempt().unwrap();assert_eq!(kind,"prepare");assert_eq!(nonce,r.id);assert_eq!(payload["request"],serde_json::to_value(r).unwrap());assert_eq!(payload["fingerprint"],d.basis.fingerprint);assert!(x::Operation::State.attempt().is_none());}
-#[test]fn history_counts_cannot_hide_unreconciled_or_duplicate_exports(){let(a,_,d)=fixture();let h=x::History{id:d.basis.exchange_id,profile_name:d.basis.profile.name,profile_revision:0,row_count:1,sha256:d.basis.sha256,created_at:Utc::now(),accepted:1,rejected:1};let mut state=x::State{version:"payroll-exchange-state-v1".into(),company_id:a.company_id,user_id:a.user_id,role:a.role,profiles:vec![],history:vec![h]};assert!(state.validate(&a).is_err());state.history[0].rejected=0;state.validate(&a).unwrap();state.history.push(state.history[0].clone());assert!(state.validate(&a).is_err());}
+fn fixture() -> (Access, x::Request, x::Detail) {
+    let access = Access {
+        company_id: id(1),
+        user_id: id(2),
+        role: Role::HrGeneralist,
+        employee_id: Some(id(3)),
+        ..Default::default()
+    };
+    let filter:p::Filter=serde_json::from_value(json!({"starts_on":"2026-01-01","ends_on":"2026-12-31","axis":"issued","kind":"all","employee_id":null,"search":""})).unwrap();
+    let row:p::Row=serde_json::from_value(json!({"id":id(10),"company_id":id(1),"employee_id":id(3),"kind":"monthly","employee_code":"0007","employee_name":"\u{2007}=Fictional \"name\"","department":"@Synthetic","period_start":"2026-09-01","period_end":"2026-09-30","issued_on":"2026-10-01","received_on":null,"status":"approved","payment_state":"unpaid","basic_cents":10001,"gross_cents":10001,"employee_contributions_cents":null,"employer_contributions_cents":null,"withholding_cents":null,"net_cents":10001,"contained_source_net_cents":null,"cash_cents":0,"offset_cents":0,"tax_adjustment_cents":null,"outstanding_cents":10001,"reserved_cents":0,"reserved_case_id":null,"rule_version":"fictional"})).unwrap();
+    let profile = x::Profile {
+        id: id(4),
+        revision: 0,
+        name: "Fictional exchange".into(),
+        enabled: true,
+        columns: x::default_columns(),
+        created_at: Utc::now(),
+    };
+    let request = x::Request {
+        id: id(5),
+        profile_id: profile.id,
+        expected_revision: 0,
+        filter: filter.clone(),
+        reason: "Fictional private reason".into(),
+    };
+    let mut basis = x::Basis {
+        company_id: id(1),
+        exchange_id: request.id,
+        profile,
+        report: p::Wire {
+            version: p::VERSION.into(),
+            company_id: id(1),
+            company_name: "Fictional company".into(),
+            generated_at: Utc::now(),
+            filter,
+            rows: vec![row],
+        },
+        controls: vec![x::Control {
+            record_key: format!("monthly:{}", id(10)),
+            row_sha256: "a".repeat(64),
+        }],
+        csv: String::new(),
+        sha256: String::new(),
+        fingerprint: "b".repeat(64),
+    };
+    basis.csv = basis.render().unwrap();
+    basis.sha256 = x::sha(basis.csv.as_bytes());
+    let detail = x::Detail {
+        version: "payroll-exchange-detail-v1".into(),
+        company_id: id(1),
+        user_id: id(2),
+        role: Role::HrGeneralist,
+        basis,
+        created_at: Utc::now(),
+        events: vec![],
+    };
+    (access, request, detail)
+}
+fn ack(d: &x::Detail) -> x::Ack {
+    x::Ack {
+        id: id(20),
+        exchange_id: d.basis.exchange_id,
+        reason: "Fictional reconciliation".into(),
+        rows: vec![x::AckRow {
+            record_key: d.basis.controls[0].record_key.clone(),
+            row_sha256: d.basis.controls[0].row_sha256.clone(),
+            expected_revision: 0,
+            status: "accepted".into(),
+            reference: String::new(),
+            note: String::new(),
+        }],
+    }
+}
+fn event(d: &x::Detail, n: i64, status: &str) -> x::Event {
+    x::Event {
+        record_key: d.basis.controls[0].record_key.clone(),
+        revision: n,
+        batch_id: id(20 + n as u128),
+        status: status.into(),
+        reference: String::new(),
+        note: if status == "pending" {
+            "Fictional reset reason".into()
+        } else {
+            String::new()
+        },
+        created_at: Utc::now(),
+    }
+}
 #[test]
-#[ignore="Requires an explicit file of local or actual hosted protected exchange captures."]
-fn protected_exchange_projection_validates_exact_native_csv_bytes(){
- let path=std::env::var("HRIS_TEST_EXCHANGE_VECTORS").expect("Set explicit fictional projection evidence file.");
- let vectors:Vec<serde_json::Value>=serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();assert!(!vectors.is_empty());
- let output=std::env::var_os("HRIS_TEST_EXCHANGE_TEMPLATES").map(std::path::PathBuf::from);
- if let Some(dir)=&output{std::fs::create_dir(dir).expect("Preserve previous template evidence.");}
- let mut count=0;
- for (index,v)in vectors.into_iter().enumerate(){
-  let access:Access=serde_json::from_value(v["access"].clone()).unwrap();
-  let request:x::Request=serde_json::from_value(v["request"].clone()).unwrap();
-  let csv=if !v["preview"].is_null(){let p:x::Preview=serde_json::from_value(v["preview"].clone()).unwrap();p.validate(&access,&request).unwrap();Some(p.basis.csv)}else{None};
-  let mut found=csv.is_some();
-  for key in["detail","final_detail"]{if !v[key].is_null(){
-   let d:x::Detail=serde_json::from_value(v[key].clone()).unwrap();d.validate(&access,request.id).unwrap();d.basis.matches(&request).unwrap();
-   if let Some(csv)=&csv{assert_eq!(&d.basis.csv,csv);}
-   if let Some(dir)=&output{std::fs::write(dir.join(format!("{index}-{key}.csv")),d.template().unwrap()).unwrap();}
-   found=true;
-  }}
-  assert!(found);count+=1;
- }
- println!("Verified{count}protected exchange snapshots with native report/CSV/hash/receipt bindings.");
+fn canonical_csv_preserves_controls_centavos_unknowns_and_formula_safety() {
+    let (a, _, d) = fixture();
+    d.validate(&a, d.basis.exchange_id).unwrap();
+    let csv = &d.basis.csv;
+    assert!(csv.contains("\"0007\",\"monthly\",\"unpaid\",\"PHP_CENTAVOS\""));
+    assert!(csv.contains("'\u{2007}=Fictional \"\"name\"\""));
+    assert!(csv.contains("\"'@Synthetic\""));
+    assert!(csv.contains("\"10001\""));
+    assert!(!csv.contains("100.01"));
+    assert_eq!(x::sha(csv.as_bytes()), d.basis.sha256);
+    assert_eq!(d.basis.validate(&a).unwrap().totals.recorded_cash_cents, 0);
+}
+#[test]
+fn scoped_wire_rejects_manager_foreign_user_company_and_private_fields() {
+    let (a, _, d) = fixture();
+    for role in [Role::Manager, Role::Employee] {
+        let mut other = a.clone();
+        other.role = role;
+        assert!(d.validate(&other, d.basis.exchange_id).is_err());
+    }
+    let mut other = a.clone();
+    other.user_id = id(99);
+    assert!(d.validate(&other, d.basis.exchange_id).is_err());
+    other = a.clone();
+    other.company_id = id(99);
+    assert!(d.validate(&other, d.basis.exchange_id).is_err());
+    let mut v = serde_json::to_value(&d).unwrap();
+    v["basis"]["report"]["rows"][0]["payment_reference"] = json!("private");
+    assert!(serde_json::from_value::<x::Detail>(v).is_err());
+}
+#[test]
+fn signed_tax_centavos_remain_exact_numbers_and_never_become_cash() {
+    let (a, _, mut d) = fixture();
+    let mut tax = d.basis.report.rows[0].clone();
+    tax.id = id(11);
+    tax.kind = "annual_tax".into();
+    tax.status = "settled".into();
+    tax.payment_state = "settled_adjustment".into();
+    tax.received_on = Some("2026-10-09".parse().unwrap());
+    tax.basic_cents = None;
+    tax.gross_cents = None;
+    tax.net_cents = None;
+    tax.outstanding_cents = None;
+    tax.tax_adjustment_cents = Some(-1234);
+    d.basis.report.rows.push(tax);
+    d.basis.controls.push(x::Control {
+        record_key: format!("annual_tax:{}", id(11)),
+        row_sha256: "c".repeat(64),
+    });
+    d.basis.csv = d.basis.render().unwrap();
+    d.basis.sha256 = x::sha(d.basis.csv.as_bytes());
+    let report = d.basis.validate(&a).unwrap();
+    assert_eq!(report.totals.recorded_cash_cents, 0);
+    assert_eq!(report.totals.annual_settled_adjustment_cents, -1234);
+    assert!(d.basis.csv.contains("\"-1234\""));
+    assert!(!d.basis.csv.contains("\"'-1234\""));
+}
+#[test]
+fn profile_mapping_is_bounded_distinct_and_whitelisted() {
+    let (_, _, d) = fixture();
+    let mut p = d.basis.profile;
+    for key in ["payment_reference", "bank_account", "created_by"] {
+        p.columns = vec![x::Column {
+            key: key.into(),
+            header: "Header".into(),
+        }];
+        assert!(p.validate().is_err());
+    }
+    for header in ["=bad", "exchange_id", "Row_SHA256", "bad\nheader", ""] {
+        p.columns = vec![x::Column {
+            key: "cash_cents".into(),
+            header: header.into(),
+        }];
+        assert!(p.validate().is_err());
+    }
+    p.columns = vec![
+        x::Column {
+            key: "cash_cents".into(),
+            header: "Cash".into(),
+        },
+        x::Column {
+            key: "cash_cents".into(),
+            header: "Other".into(),
+        },
+    ];
+    assert!(p.validate().is_err());
+    p.columns = x::default_columns();
+    p.columns[0].header = "Reviewed name".into();
+    p.validate().unwrap();
+}
+#[test]
+fn checksum_and_row_binding_fail_closed_after_tampering() {
+    let (a, _, d) = fixture();
+    let mut bad = d.clone();
+    bad.basis.csv.push('x');
+    assert!(bad.validate(&a, bad.basis.exchange_id).is_err());
+    bad = d.clone();
+    bad.basis.report.rows[0].employee_code = "changed".into();
+    assert!(bad.validate(&a, bad.basis.exchange_id).is_err());
+    bad = d.clone();
+    bad.basis.controls[0].record_key = format!("cutoff:{}", id(10));
+    bad.basis.sha256 = x::sha(bad.basis.csv.as_bytes());
+    assert!(bad.validate(&a, bad.basis.exchange_id).is_err());
+}
+#[test]
+fn preview_binds_exact_profile_filter_and_identity() {
+    let (a, r, d) = fixture();
+    let p = x::Preview {
+        version: "payroll-exchange-preview-v1".into(),
+        company_id: a.company_id,
+        user_id: a.user_id,
+        role: a.role,
+        basis: d.basis,
+    };
+    p.validate(&a, &r).unwrap();
+    let mut changed = r.clone();
+    changed.filter.axis = "received".into();
+    assert!(p.validate(&a, &changed).is_err());
+    changed = r.clone();
+    changed.expected_revision = 1;
+    assert!(p.validate(&a, &changed).is_err());
+    changed = r;
+    changed.id = id(99);
+    assert!(p.validate(&a, &changed).is_err());
+}
+#[test]
+fn acknowledgement_template_roundtrip_posts_only_reviewed_rows() {
+    let (a, _, d) = fixture();
+    let template = String::from_utf8(d.template().unwrap()).unwrap();
+    assert!(x::Ack::from_csv(template.as_bytes(), &d, "Review".into(), &a).is_err());
+    let filled = template.replace(
+        "\"0\",\"\",\"\",\"\"",
+        "\"0\",\"accepted\",\"Reference\",\"Checked locally\"",
+    );
+    let imported = x::Ack::from_csv(filled.as_bytes(), &d, "Review".into(), &a).unwrap();
+    assert_eq!(imported.rows.len(), 1);
+    assert_eq!(imported.rows[0].reference, "Reference");
+    assert_eq!(imported.rows[0].expected_revision, 0);
+    assert_eq!(imported.rows[0].status, "accepted");
+}
+#[test]
+fn acknowledgement_context_identifies_people_and_rejects_changed_labels() {
+    let (a, _, d) = fixture();
+    let text = String::from_utf8(d.template().unwrap())
+        .unwrap()
+        .replace("\"0\",\"\",\"\",\"\"", "\"0\",\"accepted\",\"\",\"\"");
+    assert!(
+        text.contains("employee_code")
+            && text.contains("employee_name")
+            && text.contains("service_period")
+    );
+    assert!(text.contains("2026-09-01 through 2026-09-30"));
+    x::Ack::from_csv(text.as_bytes(), &d, "Reviewed person and period".into(), &a).unwrap();
+    for changed in [
+        text.replace("0007", "0008"),
+        text.replace("Fictional", "Different"),
+        text.replace("2026-09-01 through", "2026-08-01 through"),
+    ] {
+        assert!(x::Ack::from_csv(changed.as_bytes(), &d, "Review".into(), &a).is_err());
+    }
+}
+#[test]
+fn acknowledgement_rejects_duplicates_forged_digest_and_stale_revision() {
+    let (a, _, d) = fixture();
+    let good = ack(&d);
+    good.validate(&d, &a).unwrap();
+    let mut bad = good.clone();
+    bad.rows.push(bad.rows[0].clone());
+    assert!(bad.validate(&d, &a).is_err());
+    bad = good.clone();
+    bad.rows[0].row_sha256 = "0".repeat(64);
+    assert!(bad.validate(&d, &a).is_err());
+    bad = good;
+    bad.rows[0].expected_revision = 1;
+    assert!(bad.validate(&d, &a).is_err());
+}
+#[test]
+fn terminal_outcomes_need_reasoned_admin_reset_and_keep_prior_events() {
+    let (mut a, _, mut d) = fixture();
+    d.events.push(event(&d, 1, "accepted"));
+    let mut input = ack(&d);
+    input.rows[0].expected_revision = 1;
+    input.rows[0].status = "rejected".into();
+    assert!(input.validate(&d, &a).is_err());
+    input.rows[0].status = "pending".into();
+    input.rows[0].note = "Verified wrong response".into();
+    assert!(input.validate(&d, &a).is_err());
+    a.role = Role::Administrator;
+    d.role = a.role;
+    input.validate(&d, &a).unwrap();
+    d.events.push(event(&d, 2, "pending"));
+    d.events.push(event(&d, 3, "rejected"));
+    d.validate(&a, d.basis.exchange_id).unwrap();
+    assert_eq!(d.current(&input.rows[0].record_key).unwrap().revision, 3);
+    assert_eq!(d.events.len(), 3);
+}
+#[test]
+fn history_detects_gaps_duplicate_revisions_and_forged_resets() {
+    let (a, _, mut d) = fixture();
+    d.events.push(event(&d, 2, "accepted"));
+    assert!(d.validate(&a, d.basis.exchange_id).is_err());
+    d.events = vec![event(&d, 1, "accepted"), event(&d, 1, "rejected")];
+    assert!(d.validate(&a, d.basis.exchange_id).is_err());
+    d.events = vec![event(&d, 1, "pending")];
+    assert!(d.validate(&a, d.basis.exchange_id).is_err());
+}
+#[test]
+fn csv_rejects_ambiguous_revision_headers_and_unsupported_formula_status() {
+    let (a, _, d) = fixture();
+    let template = String::from_utf8(d.template().unwrap()).unwrap();
+    for text in [
+        template.replace("row_sha256", "other"),
+        template.replace("\"0\",\"\",\"\",\"\"", "\"1.0\",\"accepted\",\"\",\"\""),
+        template.replace("\"0\",\"\",\"\",\"\"", "\"0\",\"=accepted\",\"\",\"\""),
+        template.replace("\"0\",\"\",\"\",\"\"", "\"0\",\"\",\"unreviewed\",\"\""),
+    ] {
+        assert!(x::Ack::from_csv(text.as_bytes(), &d, "Review".into(), &a).is_err());
+    }
+    assert!(x::Ack::from_csv(&[255, 254, 0, 1], &d, "Review".into(), &a).is_err());
+}
+#[test]
+fn exact_retry_payload_retains_request_reason_nonce_and_fingerprint() {
+    let (_, r, d) = fixture();
+    let op = x::Operation::Prepare {
+        request: r.clone(),
+        fingerprint: d.basis.fingerprint.clone(),
+    };
+    let (kind, nonce, payload) = op.attempt().unwrap();
+    assert_eq!(kind, "prepare");
+    assert_eq!(nonce, r.id);
+    assert_eq!(payload["request"], serde_json::to_value(r).unwrap());
+    assert_eq!(payload["fingerprint"], d.basis.fingerprint);
+    assert!(x::Operation::State.attempt().is_none());
+}
+#[test]
+fn history_counts_cannot_hide_unreconciled_or_duplicate_exports() {
+    let (a, _, d) = fixture();
+    let h = x::History {
+        id: d.basis.exchange_id,
+        profile_name: d.basis.profile.name,
+        profile_revision: 0,
+        row_count: 1,
+        sha256: d.basis.sha256,
+        created_at: Utc::now(),
+        accepted: 1,
+        rejected: 1,
+    };
+    let mut state = x::State {
+        version: "payroll-exchange-state-v1".into(),
+        company_id: a.company_id,
+        user_id: a.user_id,
+        role: a.role,
+        profiles: vec![],
+        history: vec![h],
+    };
+    assert!(state.validate(&a).is_err());
+    state.history[0].rejected = 0;
+    state.validate(&a).unwrap();
+    state.history.push(state.history[0].clone());
+    assert!(state.validate(&a).is_err());
+}
+#[test]
+#[ignore = "Requires an explicit file of local or actual hosted protected exchange captures."]
+fn protected_exchange_projection_validates_exact_native_csv_bytes() {
+    let path = std::env::var("HRIS_TEST_EXCHANGE_VECTORS")
+        .expect("Set explicit fictional projection evidence file.");
+    let vectors: Vec<serde_json::Value> =
+        serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    assert!(!vectors.is_empty());
+    let output = std::env::var_os("HRIS_TEST_EXCHANGE_TEMPLATES").map(std::path::PathBuf::from);
+    if let Some(dir) = &output {
+        std::fs::create_dir(dir).expect("Preserve previous template evidence.");
+    }
+    let mut count = 0;
+    for (index, v) in vectors.into_iter().enumerate() {
+        let access: Access = serde_json::from_value(v["access"].clone()).unwrap();
+        let request: x::Request = serde_json::from_value(v["request"].clone()).unwrap();
+        let csv = if !v["preview"].is_null() {
+            let p: x::Preview = serde_json::from_value(v["preview"].clone()).unwrap();
+            p.validate(&access, &request).unwrap();
+            Some(p.basis.csv)
+        } else {
+            None
+        };
+        let mut found = csv.is_some();
+        for key in ["detail", "final_detail"] {
+            if !v[key].is_null() {
+                let d: x::Detail = serde_json::from_value(v[key].clone()).unwrap();
+                d.validate(&access, request.id).unwrap();
+                d.basis.matches(&request).unwrap();
+                if let Some(csv) = &csv {
+                    assert_eq!(&d.basis.csv, csv);
+                }
+                if let Some(dir) = &output {
+                    std::fs::write(
+                        dir.join(format!("{index}-{key}.csv")),
+                        d.template().unwrap(),
+                    )
+                    .unwrap();
+                }
+                found = true;
+            }
+        }
+        assert!(found);
+        count += 1;
+    }
+    println!(
+        "Verified{count}protected exchange snapshots with native report/CSV/hash/receipt bindings."
+    );
 }

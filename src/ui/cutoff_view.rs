@@ -14,7 +14,12 @@ pub(super) struct State {
     decision: Option<Decision>,
 }
 impl State {
-    pub(super) fn open_notice(&mut self,id:Uuid){self.selected=None;self.employee=None;self.show_slips=true;self.slip=Some(id);}
+    pub(super) fn open_notice(&mut self, id: Uuid) {
+        self.selected = None;
+        self.employee = None;
+        self.show_slips = true;
+        self.slip = Some(id);
+    }
     pub(super) fn editing(&self) -> bool {
         self.run.is_some() || self.decision.is_some()
     }
@@ -190,7 +195,10 @@ impl HrisApp {
         }
     }
     pub(super) fn payroll_cutoffs(&mut self, ui: &mut Ui) {
-        let hr = self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation);
+        let hr = self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::PayrollPreparation);
         if !hr {
             self.payroll_state.cutoffs.show_slips = true;
         }
@@ -528,13 +536,24 @@ impl HrisApp {
         }
     }
     fn cutoff_slips(&mut self, ui: &mut Ui) {
-        let visible:Vec<_>=self.data.payroll.cutoffs.slips.iter().filter(|s|s.base.company_id==self.data.company.id && (self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation) || self.data.access.employee_id==Some(s.base.employee_id))).cloned().collect();
+        let visible: Vec<_> = self
+            .data
+            .payroll
+            .cutoffs
+            .slips
+            .iter()
+            .filter(|s| {
+                s.base.company_id == self.data.company.id
+                    && (self
+                        .data
+                        .access
+                        .allows(crate::staff_roles::Capability::PayrollPreparation)
+                        || self.data.access.employee_id == Some(s.base.employee_id))
+            })
+            .cloned()
+            .collect();
         if let Some(id) = self.payroll_state.cutoffs.slip {
-            if let Some(s) = visible
-                .iter()
-                .find(|s| s.base.id == id)
-                .cloned()
-            {
+            if let Some(s) = visible.iter().find(|s| s.base.id == id).cloned() {
                 if ui.button("Back to cutoff payslips").clicked() {
                     self.payroll_state.cutoffs.slip = None;
                     return;

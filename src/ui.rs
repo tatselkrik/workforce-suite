@@ -22,50 +22,50 @@ const TEAL: Color32 = Color32::from_rgb(0, 123, 112);
 const BG: Color32 = Color32::from_rgb(245, 247, 250);
 const LINE: Color32 = Color32::from_rgb(226, 232, 238);
 
-mod staff_roles_view;
-mod staff_provision_view;
+mod amendment_view;
+mod approval_delegation_view;
+mod attendance_import_view;
+mod bir_builder_view;
+mod bir_file_view;
 mod breaks_view;
 mod calculations_view;
+mod career_view;
+mod cutoff_view;
+mod exits_view;
+mod final_view;
+mod government_annual_view;
+mod government_collection_view;
+mod government_declarations_view;
+mod government_identity_view;
+mod government_registration_view;
+mod government_view;
 mod hiring_view;
 mod imports_view;
-mod attendance_import_view;
-mod leave_request_import_view;
-mod leave_view;
+mod learning_view;
 mod leave_credits_view;
 mod leave_openings_view;
+mod leave_request_import_view;
 mod leave_versions_view;
-mod approval_delegation_view;
+mod leave_view;
 mod notifications_view;
 mod onboarding_view;
-mod exits_view;
-mod performance_view;
-mod learning_view;
-mod career_view;
-mod payroll_view;
-mod cutoff_view;
-mod thirteenth_view;
-mod tax_view;
-mod payment_view;
-mod final_view;
-mod amendment_view;
-mod wage_view;
-mod payroll_report_view;
-mod payroll_exchange_view;
-mod government_view;
-mod government_registration_view;
-mod government_collection_view;
-mod bir_file_view;
-mod bir_builder_view;
-mod government_annual_view;
-mod government_identity_view;
-mod government_declarations_view;
 mod organization_view;
 mod overtime_view;
+mod payment_view;
+mod payroll_exchange_view;
+mod payroll_report_view;
+mod payroll_view;
+mod performance_view;
 mod recruiting_view;
 mod report_columns;
 mod reports_view;
 mod requests_view;
 mod shifts_view;
+mod staff_provision_view;
+mod staff_roles_view;
+mod tax_view;
+mod thirteenth_view;
+mod wage_view;
 mod workforce_view;
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
@@ -167,8 +167,8 @@ pub struct HrisApp {
     overtime_state: overtime_view::State,
     report_state: reports_view::State,
     import_state: imports_view::State,
-    attendance_import_state:attendance_import_view::State,
-    leave_request_import_state:leave_request_import_view::State,
+    attendance_import_state: attendance_import_view::State,
+    leave_request_import_state: leave_request_import_view::State,
     notification_state: notifications_view::State,
     hiring_state: hiring_view::State,
     recruiting_state: recruiting_view::State,
@@ -401,8 +401,8 @@ impl HrisApp {
             overtime_state: overtime_view::State::default(),
             report_state,
             import_state: imports_view::State::default(),
-            attendance_import_state:attendance_import_view::State::default(),
-            leave_request_import_state:leave_request_import_view::State::default(),
+            attendance_import_state: attendance_import_view::State::default(),
+            leave_request_import_state: leave_request_import_view::State::default(),
             notification_state: notifications_view::State::default(),
             hiring_state: hiring_view::State::default(),
             recruiting_state: Default::default(),
@@ -492,7 +492,11 @@ impl HrisApp {
                         "employee" => Role::Employee,
                         _ => Role::Administrator,
                     };
-                    if !app.data.access.allows(crate::staff_roles::Capability::Personnel) {
+                    if !app
+                        .data
+                        .access
+                        .allows(crate::staff_roles::Capability::Personnel)
+                    {
                         let own = Uuid::from_u128(if app.data.access.role == Role::Manager {
                             103
                         } else {
@@ -923,7 +927,11 @@ impl HrisApp {
                         }
                     }
                     app.open_employee(person);
-                    if app.data.access.allows(crate::staff_roles::Capability::Personnel) {
+                    if app
+                        .data
+                        .access
+                        .allows(crate::staff_roles::Capability::Personnel)
+                    {
                         app.contacts_section = ContactSection::Documents;
                     }
                     if preview == "documents-archived" {
@@ -1021,7 +1029,11 @@ impl HrisApp {
                     }
                     app.data = store.data;
                     app.open_employee(target);
-                    if app.data.access.allows(crate::staff_roles::Capability::Personnel) {
+                    if app
+                        .data
+                        .access
+                        .allows(crate::staff_roles::Capability::Personnel)
+                    {
                         app.contacts_section = ContactSection::History;
                     }
                 }
@@ -1038,7 +1050,8 @@ impl HrisApp {
             app.prepare_overtime_preview();
             app.prepare_reports_preview();
             app.prepare_import_preview();
-            app.prepare_attendance_import_preview();app.prepare_leave_request_import_preview();
+            app.prepare_attendance_import_preview();
+            app.prepare_leave_request_import_preview();
             app.prepare_notifications_preview();
             app.prepare_hiring_preview();
             app.prepare_recruiting_preview();
@@ -1118,8 +1131,8 @@ impl HrisApp {
                         self.leave_state.saving_revision = None;
                     }
                     if self.data.access != data.access {
-                        self.staff_roles_state=Default::default();
-                        self.staff_provision_state=Default::default();
+                        self.staff_roles_state = Default::default();
+                        self.staff_provision_state = Default::default();
                         self.organization = organization_view::State::default();
                         self.leave_state = leave_view::State::default();
                         self.shift_state = shifts_view::State::default();
@@ -1138,7 +1151,9 @@ impl HrisApp {
                         self.career_state = Default::default();
                         self.payroll_state = Default::default();
                         self.import_state = imports_view::State::default();
-                        self.attendance_import_state=attendance_import_view::State::default();self.leave_request_import_state=leave_request_import_view::State::default();
+                        self.attendance_import_state = attendance_import_view::State::default();
+                        self.leave_request_import_state =
+                            leave_request_import_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
                         self.account_form = None;
@@ -1172,7 +1187,9 @@ impl HrisApp {
                         self.career_state = Default::default();
                         self.payroll_state = Default::default();
                         self.import_state = imports_view::State::default();
-                        self.attendance_import_state=attendance_import_view::State::default();self.leave_request_import_state=leave_request_import_view::State::default();
+                        self.attendance_import_state = attendance_import_view::State::default();
+                        self.leave_request_import_state =
+                            leave_request_import_view::State::default();
                         self.employee_view = EmployeeView::Directory;
                         self.document_form = None;
                         self.clear_profile_secrets(ctx);
@@ -1203,17 +1220,51 @@ impl HrisApp {
                         }
                     }
                     self.import_state.applying = false;
-                    if let Some(report)=update.government_bir_declarations{self.payroll_state.government.accept_declarations(report,&data);}
-                    if let Some(report)=update.government_bir_identities{self.payroll_state.government.accept_identities(report,&data);}
-                    if let Some(ledger)=update.government_annual{self.payroll_state.government.accept_annual(ledger,&data);}
-                    if let Some(report)=update.government_annual_pay{self.payroll_state.government.accept_annual_pay(report,&data);}
-                    if let Some(basis)=update.government_sss{self.payroll_state.government.accept_collection(basis,&data);}
-                    if let Some(report)=update.government_bir{self.payroll_state.government.accept_bir(report,&data);}
-                    if let Some(report)=update.government_bir_build{self.payroll_state.government.accept_bir_build(report,&data);}
-                    if let Some(record)=update.government_registration{self.payroll_state.government.accept_registration(record,&data);}
-                    if let Some(report)=update.government{self.payroll_state.government.accept(report,&data);}
-                    if let Some(report)=update.payroll_report{self.payroll_state.reports.accept(report,&data);}
-                    if let Some(exchange)=update.payroll_exchange{self.payroll_state.exchange.accept(exchange,&data);}
+                    if let Some(report) = update.government_bir_declarations {
+                        self.payroll_state
+                            .government
+                            .accept_declarations(report, &data);
+                    }
+                    if let Some(report) = update.government_bir_identities {
+                        self.payroll_state
+                            .government
+                            .accept_identities(report, &data);
+                    }
+                    if let Some(ledger) = update.government_annual {
+                        self.payroll_state.government.accept_annual(ledger, &data);
+                    }
+                    if let Some(report) = update.government_annual_pay {
+                        self.payroll_state
+                            .government
+                            .accept_annual_pay(report, &data);
+                    }
+                    if let Some(basis) = update.government_sss {
+                        self.payroll_state
+                            .government
+                            .accept_collection(basis, &data);
+                    }
+                    if let Some(report) = update.government_bir {
+                        self.payroll_state.government.accept_bir(report, &data);
+                    }
+                    if let Some(report) = update.government_bir_build {
+                        self.payroll_state
+                            .government
+                            .accept_bir_build(report, &data);
+                    }
+                    if let Some(record) = update.government_registration {
+                        self.payroll_state
+                            .government
+                            .accept_registration(record, &data);
+                    }
+                    if let Some(report) = update.government {
+                        self.payroll_state.government.accept(report, &data);
+                    }
+                    if let Some(report) = update.payroll_report {
+                        self.payroll_state.reports.accept(report, &data);
+                    }
+                    if let Some(exchange) = update.payroll_exchange {
+                        self.payroll_state.exchange.accept(exchange, &data);
+                    }
                     if let Some(report) = update.report {
                         if report.filter == self.report_state.filter {
                             self.report_state.result = Some(report);
@@ -1270,25 +1321,56 @@ impl HrisApp {
                     let learning_saved = self.learning_state.accept(&data);
                     let payroll_saved = self.payroll_state.accept(&data);
                     let career_saved = self.career_state.accept(&data);
-                    let hiring_saved = hiring_record_saved && recruiting_saved && onboarding_saved && exit_saved && performance_saved && learning_saved && career_saved && payroll_saved;
+                    let hiring_saved = hiring_record_saved
+                        && recruiting_saved
+                        && onboarding_saved
+                        && exit_saved
+                        && performance_saved
+                        && learning_saved
+                        && career_saved
+                        && payroll_saved;
                     self.data = data;
-                    let mut staff_update_error=None;
-                    if let Some(roles)=update.staff_roles {
-                        if let Err(error)=self.staff_roles_state.accept(&self.data.access,roles) {staff_update_error=Some(error.to_string());}
+                    let mut staff_update_error = None;
+                    if let Some(roles) = update.staff_roles {
+                        if let Err(error) = self.staff_roles_state.accept(&self.data.access, roles)
+                        {
+                            staff_update_error = Some(error.to_string());
+                        }
                     }
-                    if let Some(provision)=update.staff_provision {
-                        if let Err(error)=self.accept_staff_provision(provision) {staff_update_error=Some(error.to_string());}
+                    if let Some(provision) = update.staff_provision {
+                        if let Err(error) = self.accept_staff_provision(provision) {
+                            staff_update_error = Some(error.to_string());
+                        }
                     }
                     self.leave_request_import_state.sync(&self.data);
-                    if let Some(p)=update.leave_import_preview{self.leave_request_import_state.accept_preview(p,&self.data);}
-                    if let Some(r)=update.leave_import_receipt{self.leave_request_import_state.accept_receipt(r,&self.data);}
-                    if let Some(h)=update.leave_import_history{self.leave_request_import_state.accept_history(h,&self.data);}
+                    if let Some(p) = update.leave_import_preview {
+                        self.leave_request_import_state
+                            .accept_preview(p, &self.data);
+                    }
+                    if let Some(r) = update.leave_import_receipt {
+                        self.leave_request_import_state
+                            .accept_receipt(r, &self.data);
+                    }
+                    if let Some(h) = update.leave_import_history {
+                        self.leave_request_import_state
+                            .accept_history(h, &self.data);
+                    }
                     self.attendance_import_state.sync(&self.data);
-                    if let Some(p)=update.attendance_import_preview{self.attendance_import_state.accept_preview(p,&self.data);}
-                    if let Some(r)=update.attendance_import_receipt{self.attendance_import_state.accept_receipt(r,&self.data);}
-                    if let Some(h)=update.attendance_import_history{self.attendance_import_state.accept_history(h,&self.data);}
-                    if let Some(preview)=update.leave_opening_preview {self.leave_state.openings.accept(preview);}
-                    if let Some(preview)=update.leave_opening_import_preview {self.leave_state.openings.accept_import(preview,&self.data);}
+                    if let Some(p) = update.attendance_import_preview {
+                        self.attendance_import_state.accept_preview(p, &self.data);
+                    }
+                    if let Some(r) = update.attendance_import_receipt {
+                        self.attendance_import_state.accept_receipt(r, &self.data);
+                    }
+                    if let Some(h) = update.attendance_import_history {
+                        self.attendance_import_state.accept_history(h, &self.data);
+                    }
+                    if let Some(preview) = update.leave_opening_preview {
+                        self.leave_state.openings.accept(preview);
+                    }
+                    if let Some(preview) = update.leave_opening_import_preview {
+                        self.leave_state.openings.accept_import(preview, &self.data);
+                    }
                     self.notification_state.invalidate();
                     if !self.data.active().any(|e| {
                         Some(e.id) == self.check_in_employee && self.data.access.can_record(e.id)
@@ -1340,17 +1422,25 @@ impl HrisApp {
                     if self.close_document_on_success {
                         self.document_form = None;
                     }
-                    if let Some(error)=staff_update_error {self.notice=Some((error,true));}
-                    else if !hiring_saved {
+                    if let Some(error) = staff_update_error {
+                        self.notice = Some((error, true));
+                    } else if !hiring_saved {
                         self.notice = Some(("The saved record has changed. Your draft is preserved; reload the saved record before continuing.".into(), true));
                     } else if !update.message.is_empty() {
                         self.notice = Some((update.message, false));
                     }
                 }
                 Err(error) => {
-                    if update.staff_role_rejected {self.staff_roles_state.reject();}
-                    if let Some(rejection)=update.staff_provision_rejection {let _=self.staff_provision_state.reject(&rejection);}
-                    if !update.background{self.attendance_import_state.failed(&error);self.leave_request_import_state.failed(&error);}
+                    if update.staff_role_rejected {
+                        self.staff_roles_state.reject();
+                    }
+                    if let Some(rejection) = update.staff_provision_rejection {
+                        let _ = self.staff_provision_state.reject(&rejection);
+                    }
+                    if !update.background {
+                        self.attendance_import_state.failed(&error);
+                        self.leave_request_import_state.failed(&error);
+                    }
                     self.hiring_state.pending = None;
                     self.onboarding_state.pending = None;
                     self.exit_state.pending = None;
@@ -1360,7 +1450,7 @@ impl HrisApp {
                     self.payroll_state.pending = None;
                     self.payroll_state.government.pending = None;
                     self.payroll_state.government.registration.pending = false;
-                    self.payroll_state.government.collection_export_pending=false;
+                    self.payroll_state.government.collection_export_pending = false;
                     self.payroll_state.government.bir.failed();
                     self.payroll_state.government.builder.failed();
                     self.payroll_state.government.annual.failed();
@@ -1449,7 +1539,11 @@ impl HrisApp {
     }
 
     fn new_employee(&mut self) {
-        if !self.data.access.allows(crate::staff_roles::Capability::Personnel) {
+        if !self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::Personnel)
+        {
             return;
         }
         self.contacts_form = Some(EmployeeContacts::empty(self.data.company.id, Uuid::nil()));
@@ -1498,10 +1592,20 @@ impl HrisApp {
             EmployeeContacts::empty(self.data.company.id, draft.id.unwrap_or_default())
         });
         let mut access = self.account_form.take();
-        let versioned_staff=self.data.access.staff_context.as_ref().is_some_and(|c|c.runtime_ready);
-        if versioned_staff{access=None;}
-        let mut transferred=false;
-        let editable = self.data.access.allows(crate::staff_roles::Capability::Personnel);
+        let versioned_staff = self
+            .data
+            .access
+            .staff_context
+            .as_ref()
+            .is_some_and(|c| c.runtime_ready);
+        if versioned_staff {
+            access = None;
+        }
+        let mut transferred = false;
+        let editable = self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::Personnel);
         let private_visible = editable
             || draft
                 .id
@@ -1744,9 +1848,17 @@ impl HrisApp {
         });
         ui.add_space(if compact { 14.0 } else { 28.0 });
         let nav_height = (ui.available_height() - 112.0).max(70.0);
-        let page_count = Page::ALL.iter().filter(|p| **p != Page::Accounts || self.data.access.role.manages_accounts()).count() as f32;
-        let nav_gap = if compact { 4.0 } else { ui.spacing().item_spacing.y };
-        let button_height = ((nav_height - nav_gap * (page_count - 1.0)) / page_count).clamp(28.0, 42.0);
+        let page_count = Page::ALL
+            .iter()
+            .filter(|p| **p != Page::Accounts || self.data.access.role.manages_accounts())
+            .count() as f32;
+        let nav_gap = if compact {
+            4.0
+        } else {
+            ui.spacing().item_spacing.y
+        };
+        let button_height =
+            ((nav_height - nav_gap * (page_count - 1.0)) / page_count).clamp(28.0, 42.0);
         egui::ScrollArea::vertical()
             .id_salt("sidebar_navigation")
             .max_height(nav_height)
@@ -1774,10 +1886,7 @@ impl HrisApp {
                         .stroke(Stroke::NONE)
                         .corner_radius(8);
                     if ui
-                        .add_sized(
-                            [ui.available_width(), button_height],
-                            button,
-                        )
+                        .add_sized([ui.available_width(), button_height], button)
                         .clicked()
                     {
                         self.navigate(page, ui.ctx());
@@ -1907,16 +2016,29 @@ impl HrisApp {
                 "Time away, organized",
                 "Manage requests, leave policies and ordered approvals.",
             ),
-            Page::Hiring if !self.data.access.allows(crate::staff_roles::Capability::Recruiting) => (
-                "Your hiring tasks",
-                "Review assigned interviews, record assessments and complete assigned onboarding tasks.",
-            ),
+            Page::Hiring
+                if !self
+                    .data
+                    .access
+                    .allows(crate::staff_roles::Capability::Recruiting) =>
+            {
+                (
+                    "Your hiring tasks",
+                    "Review assigned interviews, record assessments and complete assigned onboarding tasks.",
+                )
+            }
             Page::Hiring => (
                 "Hiring",
                 "Manage applications, interviews and hiring workflows.",
             ),
-            Page::Exits => ("Exit & clearance", "Manage employee handover, clearance and protected exit finalization."),
-            Page::Payroll => ("Payroll & benefits", "Reviewed Philippine pay, private salary records and approved payslips."),
+            Page::Exits => (
+                "Exit & clearance",
+                "Manage employee handover, clearance and protected exit finalization.",
+            ),
+            Page::Payroll => (
+                "Payroll & benefits",
+                "Reviewed Philippine pay, private salary records and approved payslips.",
+            ),
             Page::Reports => (
                 "Reports",
                 "Attendance, filed leave charges and employee totals within your access.",
@@ -2009,11 +2131,14 @@ impl HrisApp {
             || self.request_state.editing()
             || self.overtime_state.editing()
             || self.import_state.editing()
-            || self.attendance_import_state.has_draft() || self.leave_request_import_state.has_draft()
+            || self.attendance_import_state.has_draft()
+            || self.leave_request_import_state.has_draft()
             || self.hiring_state.editing()
             || self.onboarding_state.editing()
             || self.exit_state.editing()
-            || (self.performance_state.editing() || self.learning_state.editing() || self.career_state.editing())
+            || (self.performance_state.editing()
+                || self.learning_state.editing()
+                || self.career_state.editing())
             || self.payroll_state.editing()
             || self.payroll_state.exchange.has_draft()
             || self.recruiting_state.editing()
@@ -2106,7 +2231,11 @@ impl HrisApp {
 
     fn overview(&mut self, ui: &mut Ui) {
         let today = self.data.company.today();
-        let active = self.data.active().filter(|e|self.data.access.can_read_operational_employee(e)).count();
+        let active = self
+            .data
+            .active()
+            .filter(|e| self.data.access.can_read_operational_employee(e))
+            .count();
         let attendance = self
             .data
             .attendance
@@ -2129,7 +2258,11 @@ impl HrisApp {
             .count();
         ui.columns(4, |columns| {
             for (ui, (label, value, caption)) in columns.iter_mut().zip([
-                ("ACTIVE EMPLOYEES", active, "Your attendance and leave scope"),
+                (
+                    "ACTIVE EMPLOYEES",
+                    active,
+                    "Your attendance and leave scope",
+                ),
                 ("CHECKED IN TODAY", attendance, "Daily attendance records"),
                 ("AWAITING REVIEW", pending, "Pending leave requests"),
                 ("ON LEAVE TODAY", away, "Approved time away"),
@@ -2245,7 +2378,12 @@ impl HrisApp {
         });
         ui.add_space(10.0);
         ui.horizontal(|ui| {
-            if self.data.access.allows(crate::staff_roles::Capability::Personnel) && primary(ui, "+ Add employee") {
+            if self
+                .data
+                .access
+                .allows(crate::staff_roles::Capability::Personnel)
+                && primary(ui, "+ Add employee")
+            {
                 self.new_employee();
             }
             if ui.button("+ Request leave").clicked() {
@@ -2259,7 +2397,13 @@ impl HrisApp {
             self.employee_record(ui);
             return;
         }
-        if self.performance_state.editing() || self.learning_state.editing() || self.career_state.editing(){self.performance(ui);return;}
+        if self.performance_state.editing()
+            || self.learning_state.editing()
+            || self.career_state.editing()
+        {
+            self.performance(ui);
+            return;
+        }
         ui.horizontal_wrapped(|ui| {
             ui.selectable_value(
                 &mut self.employee_view,
@@ -2271,10 +2415,17 @@ impl HrisApp {
                 EmployeeView::Organization,
                 "Organization chart",
             );
-            ui.selectable_value(&mut self.employee_view,EmployeeView::Development,"Development");
+            ui.selectable_value(
+                &mut self.employee_view,
+                EmployeeView::Development,
+                "Development",
+            );
         });
         ui.add_space(10.0);
-        if self.employee_view == EmployeeView::Development {self.performance(ui);return;}
+        if self.employee_view == EmployeeView::Development {
+            self.performance(ui);
+            return;
+        }
         if self.employee_view == EmployeeView::Organization {
             self.organization_chart(ui);
             return;
@@ -2352,7 +2503,12 @@ impl HrisApp {
                     .color(muted(ui)),
             );
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if self.data.access.allows(crate::staff_roles::Capability::Personnel) && primary(ui, "+ Add employee") {
+                if self
+                    .data
+                    .access
+                    .allows(crate::staff_roles::Capability::Personnel)
+                    && primary(ui, "+ Add employee")
+                {
                     self.new_employee();
                 }
             });
@@ -2440,7 +2596,9 @@ impl HrisApp {
                                         .map(|d| d.to_string())
                                         .unwrap_or_else(|| "Not set".into()),
                                 );
-                                if !self.data.access.can_read_operational_employee(employee) { ui.label("Restricted"); } else if let Some(kind) =
+                                if !self.data.access.can_read_operational_employee(employee) {
+                                    ui.label("Restricted");
+                                } else if let Some(kind) =
                                     self.data.leave_setup.policy.leave_type("annual")
                                 {
                                     let today = self.data.company.today();
@@ -2463,7 +2621,10 @@ impl HrisApp {
                                     employee.status == EmployeeStatus::Active,
                                 );
                                 ui.horizontal(|ui| {
-                                    if self.data.access.allows(crate::staff_roles::Capability::Personnel)
+                                    if self
+                                        .data
+                                        .access
+                                        .allows(crate::staff_roles::Capability::Personnel)
                                         && ui.button("Edit").clicked()
                                     {
                                         self.open_employee(employee.id);
@@ -2521,7 +2682,12 @@ impl HrisApp {
         card(ui, |ui| {
             ui.label(RichText::new("Record a check-in").strong());
             ui.horizontal_wrapped(|ui| {
-                if date < today && self.data.access.allows(crate::staff_roles::Capability::Personnel) {
+                if date < today
+                    && self
+                        .data
+                        .access
+                        .allows(crate::staff_roles::Capability::Personnel)
+                {
                     egui::ComboBox::from_id_salt("past_attendance_employee")
                         .width(250.0)
                         .selected_text(
@@ -2565,7 +2731,11 @@ impl HrisApp {
                         }
                     }
                 });
-                if self.data.access.allows(crate::staff_roles::Capability::Personnel) {
+                if self
+                    .data
+                    .access
+                    .allows(crate::staff_roles::Capability::Personnel)
+                {
                     if ui
                         .add_enabled(
                             date <= today && self.check_in_employee.is_some(),
@@ -2742,8 +2912,15 @@ impl HrisApp {
         if !self.data.access.role.manages_accounts() {
             return;
         }
-        if self.data.access.staff_context.as_ref().is_some_and(|c|c.runtime_ready) {
-            self.staff_roles_panel(ui);return;
+        if self
+            .data
+            .access
+            .staff_context
+            .as_ref()
+            .is_some_and(|c| c.runtime_ready)
+        {
+            self.staff_roles_panel(ui);
+            return;
         }
         let staff: Vec<_> = self
             .data
@@ -4110,16 +4287,20 @@ impl eframe::App for HrisApp {
                             && !self.onboarding_state.editing()
                             && !self.exit_state.editing()
                             && !self.payroll_state.editing()
-                            && !(self.performance_state.editing() || self.learning_state.editing() || self.career_state.editing()),
+                            && !(self.performance_state.editing()
+                                || self.learning_state.editing()
+                                || self.career_state.editing()),
                         |ui| self.sidebar(ui),
                     );
                 });
             egui::CentralPanel::default()
                 .frame(Frame::new().fill(ui.visuals().panel_fill).inner_margin(28))
                 .show(ui, |ui| {
-                    if self.staff_provision_state.form.is_some(){
+                    if self.staff_provision_state.form.is_some() {
                         self.header(ui);
-                        egui::ScrollArea::vertical().id_salt("staff_provision_form").show(ui,|ui|self.staff_provision_form(ui));
+                        egui::ScrollArea::vertical()
+                            .id_salt("staff_provision_form")
+                            .show(ui, |ui| self.staff_provision_form(ui));
                         return;
                     }
                     if matches!(self.page, Page::Employees | Page::Accounts)
@@ -4131,10 +4312,13 @@ impl eframe::App for HrisApp {
                         });
                         return;
                     }
-                    let scroll_id=("main_scroll",self.page as u8);
-                    let scroll=if self.page==Page::Payroll&&self.payroll_state.tab==13{
-                        egui::ScrollArea::vertical().id_salt((scroll_id,self.payroll_state.government.scroll_key()))
-                    }else{egui::ScrollArea::vertical().id_salt(scroll_id)};
+                    let scroll_id = ("main_scroll", self.page as u8);
+                    let scroll = if self.page == Page::Payroll && self.payroll_state.tab == 13 {
+                        egui::ScrollArea::vertical()
+                            .id_salt((scroll_id, self.payroll_state.government.scroll_key()))
+                    } else {
+                        egui::ScrollArea::vertical().id_salt(scroll_id)
+                    };
                     #[cfg(feature = "qa-screenshot")]
                     let scroll = if std::env::var("HRIS_PREVIEW_SCROLL").as_deref() == Ok("bottom")
                     {
@@ -4475,7 +4659,9 @@ fn employment_fields(ui: &mut Ui, draft: &mut EmployeeDraft, data: &Snapshot) {
                 .suffix(" days"),
         );
     });
-    if data.leave_setup.dated.as_ref().is_some_and(|c|c.enabled) {ui.label(RichText::new("Future-year default. The captured current-year entitlement stays unchanged; use Leave > Credit adjustments for a reviewed current-year correction.").small().color(muted(ui)));}
+    if data.leave_setup.dated.as_ref().is_some_and(|c| c.enabled) {
+        ui.label(RichText::new("Future-year default. The captured current-year entitlement stays unchanged; use Leave > Credit adjustments for a reviewed current-year correction.").small().color(muted(ui)));
+    }
     egui::ComboBox::from_id_salt("employee_record_status")
         .selected_text(draft.status.label())
         .show_ui(ui, |ui| {
@@ -4811,11 +4997,15 @@ fn profile_link(
                 )
                 .truncate(),
             );
-            ui.add(egui::Label::new(
-                RichText::new(role)
-                    .color(Color32::from_rgb(175, 206, 208))
-                    .size(11.0),
-            ).truncate()).on_hover_text(role);
+            ui.add(
+                egui::Label::new(
+                    RichText::new(role)
+                        .color(Color32::from_rgb(175, 206, 208))
+                        .size(11.0),
+                )
+                .truncate(),
+            )
+            .on_hover_text(role);
         });
     });
     response

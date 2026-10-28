@@ -16,9 +16,13 @@ enum Scenario {
     WrongYear,
 }
 fn server(data: &Snapshot, scenario: Scenario) -> (String, thread::JoinHandle<Vec<String>>) {
-    source_server(data,scenario,false)
+    source_server(data, scenario, false)
 }
-fn source_server(data: &Snapshot, scenario: Scenario, pay: bool) -> (String, thread::JoinHandle<Vec<String>>) {
+fn source_server(
+    data: &Snapshot,
+    scenario: Scenario,
+    pay: bool,
+) -> (String, thread::JoinHandle<Vec<String>>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     listener.set_nonblocking(true).unwrap();
     let url = format!("http://{}", listener.local_addr().unwrap());
@@ -31,12 +35,23 @@ fn source_server(data: &Snapshot, scenario: Scenario, pay: bool) -> (String, thr
         wire.year = 2025;
     }
     let source = if pay {
-        let r=crate::payroll_government::annual_pay::fixture();
-        let mut v=serde_json::to_value(crate::payroll_government::annual_pay::Wire{version:"government-annual-pay-v1".into(),ledger:r.ledger.wire,details:r.details}).unwrap();
-        if scenario==Scenario::ForeignCompany{v["ledger"]["company_id"]=json!(Uuid::new_v4());}
-        if scenario==Scenario::WrongYear{v["ledger"]["year"]=json!(2025);}
+        let r = crate::payroll_government::annual_pay::fixture();
+        let mut v = serde_json::to_value(crate::payroll_government::annual_pay::Wire {
+            version: "government-annual-pay-v1".into(),
+            ledger: r.ledger.wire,
+            details: r.details,
+        })
+        .unwrap();
+        if scenario == Scenario::ForeignCompany {
+            v["ledger"]["company_id"] = json!(Uuid::new_v4());
+        }
+        if scenario == Scenario::WrongYear {
+            v["ledger"]["year"] = json!(2025);
+        }
         v
-    }else{serde_json::to_value(wire).unwrap()};
+    } else {
+        serde_json::to_value(wire).unwrap()
+    };
     let handle = thread::spawn(move || {
         let count = match scenario {
             Scenario::RevokedBefore => 1,
@@ -84,7 +99,14 @@ fn source_server(data: &Snapshot, scenario: Scenario, pay: bool) -> (String, thr
             reader.read_exact(&mut body).unwrap();
             let n = paths.len();
             if n == 1 {
-                assert_eq!(path, if pay {"/rest/v1/rpc/government_annual_pay_details"}else{"/rest/v1/rpc/government_annual_ledger"});
+                assert_eq!(
+                    path,
+                    if pay {
+                        "/rest/v1/rpc/government_annual_pay_details"
+                    } else {
+                        "/rest/v1/rpc/government_annual_ledger"
+                    }
+                );
                 assert_eq!(
                     serde_json::from_slice::<Value>(&body).unwrap(),
                     json!({"p_year":2026})
@@ -112,20 +134,44 @@ fn source_server(data: &Snapshot, scenario: Scenario, pay: bool) -> (String, thr
 }
 #[test]
 fn annual_pay_fresh_read_and_export_obey_all_access_and_file_guards() {
-    let data=DemoStore::new().data;
-    let folder=std::env::temp_dir().join(format!("hris-pay-detail-http-{}",Uuid::new_v4()));std::fs::create_dir(&folder).unwrap();
-    for scenario in [Scenario::Good,Scenario::RevokedBefore,Scenario::RevokedAfter,Scenario::ForeignCompany,Scenario::WrongYear] {
-        for extension in ["csv","xlsx"] {
-            let(url,server)=source_server(&data,scenario,true);let mut c=client(url,&data);let path=folder.join(format!("{scenario:?}.{extension}"));
-            let result=c.government_annual_pay_details(&data,2026,Some(&path));
-            assert_eq!(result.is_ok(),scenario==Scenario::Good,"{scenario:?}: {result:?}");
-            assert_eq!(path.exists(),scenario==Scenario::Good);server.join().unwrap();
+    let data = DemoStore::new().data;
+    let folder = std::env::temp_dir().join(format!("hris-pay-detail-http-{}", Uuid::new_v4()));
+    std::fs::create_dir(&folder).unwrap();
+    for scenario in [
+        Scenario::Good,
+        Scenario::RevokedBefore,
+        Scenario::RevokedAfter,
+        Scenario::ForeignCompany,
+        Scenario::WrongYear,
+    ] {
+        for extension in ["csv", "xlsx"] {
+            let (url, server) = source_server(&data, scenario, true);
+            let mut c = client(url, &data);
+            let path = folder.join(format!("{scenario:?}.{extension}"));
+            let result = c.government_annual_pay_details(&data, 2026, Some(&path));
+            assert_eq!(
+                result.is_ok(),
+                scenario == Scenario::Good,
+                "{scenario:?}: {result:?}"
+            );
+            assert_eq!(path.exists(), scenario == Scenario::Good);
+            server.join().unwrap();
         }
     }
-    let(url,server)=source_server(&data,Scenario::Good,true);let mut c=client(url,&data);let path=folder.join("existing.csv");std::fs::write(&path,b"KEEP").unwrap();
-    assert!(c.government_annual_pay_details(&data,2026,Some(&path)).is_err());server.join().unwrap();assert_eq!(std::fs::read(path).unwrap(),b"KEEP");
-    let mut data=data;data.access.role=Role::Manager;let mut c=client("http://127.0.0.1:1".into(),&data);
-    assert!(c.government_annual_pay_details(&data,2026,None).is_err());
+    let (url, server) = source_server(&data, Scenario::Good, true);
+    let mut c = client(url, &data);
+    let path = folder.join("existing.csv");
+    std::fs::write(&path, b"KEEP").unwrap();
+    assert!(
+        c.government_annual_pay_details(&data, 2026, Some(&path))
+            .is_err()
+    );
+    server.join().unwrap();
+    assert_eq!(std::fs::read(path).unwrap(), b"KEEP");
+    let mut data = data;
+    data.access.role = Role::Manager;
+    let mut c = client("http://127.0.0.1:1".into(), &data);
+    assert!(c.government_annual_pay_details(&data, 2026, None).is_err());
     std::fs::remove_dir_all(folder).unwrap();
 }
 #[test]

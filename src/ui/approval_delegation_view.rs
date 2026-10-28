@@ -238,11 +238,17 @@ impl HrisApp {
             });
         }
         ui.add_space(12.0);
-        ui.heading(if self.data.access.allows(crate::staff_roles::Capability::LeaveAdministration) {
-            "Delegation history"
-        } else {
-            "Your delegation assignments"
-        });
+        ui.heading(
+            if self
+                .data
+                .access
+                .allows(crate::staff_roles::Capability::LeaveAdministration)
+            {
+                "Delegation history"
+            } else {
+                "Your delegation assignments"
+            },
+        );
         let total = c.grants.len();
         let pages = total.div_ceil(15).max(1);
         state.page = state.page.min(pages - 1);

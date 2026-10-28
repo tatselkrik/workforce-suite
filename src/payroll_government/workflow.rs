@@ -633,34 +633,33 @@ impl Reconciliation {
         let s = &self.wire.source;
         let summary = &self.summary;
         let mut rows = Vec::new();
-        let headers =
-            [
-                "record_type",
-                "company",
-                "agency",
-                "report_month",
-                "generated_utc",
-                "HRIS_record_id",
-                "employee_code_current",
-                "employee_name_current",
-                "source",
-                "period_start",
-                "period_end",
-                "received_on",
-                "status",
-                "included_in_liability",
-                "known_employee_php",
-                "known_employer_php",
-                "known_ec_php",
-                "known_total_php",
-                "complete_liability_php",
-                "recorded_remitted_php",
-                "difference_php",
-                "review_note",
-            ]
-            .into_iter()
-            .map(str::to_owned)
-            .collect();
+        let headers = [
+            "record_type",
+            "company",
+            "agency",
+            "report_month",
+            "generated_utc",
+            "HRIS_record_id",
+            "employee_code_current",
+            "employee_name_current",
+            "source",
+            "period_start",
+            "period_end",
+            "received_on",
+            "status",
+            "included_in_liability",
+            "known_employee_php",
+            "known_employer_php",
+            "known_ec_php",
+            "known_total_php",
+            "complete_liability_php",
+            "recorded_remitted_php",
+            "difference_php",
+            "review_note",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
         let prefix = |kind: &str| {
             vec![
                 kind.into(),

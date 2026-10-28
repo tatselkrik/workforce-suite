@@ -717,10 +717,13 @@ fn report_export_reloads_scoped_data_and_rechecks_access_before_creating_csv() {
                     .starts_with("POST /rest/v1/rpc/list_company_accounts ")
                 || r.line
                     .starts_with("POST /rest/v1/rpc/recruiting_interviewers ")
-                || r.line.starts_with("POST /rest/v1/rpc/lifecycle_notifications ")
-                || r.line.starts_with("POST /rest/v1/rpc/leave_credit_context ")
+                || r.line
+                    .starts_with("POST /rest/v1/rpc/lifecycle_notifications ")
+                || r.line
+                    .starts_with("POST /rest/v1/rpc/leave_credit_context ")
                 || r.line.starts_with("POST /rest/v1/rpc/leave_dated_context ")
-                || r.line.starts_with("POST /rest/v1/rpc/approval_delegation_context ")
+                || r.line
+                    .starts_with("POST /rest/v1/rpc/approval_delegation_context ")
                 || r.line.starts_with("POST /rest/v1/rpc/exit_readiness_list "))
     );
 }
@@ -908,8 +911,8 @@ fn fixture(replies: Vec<Reply>) -> (ConnectionConfig, thread::JoinHandle<()>, Re
     let observed = requests.clone();
     let server = thread::spawn(move || {
         let deadline = Instant::now() + Duration::from_secs(20);
-        let mut last_access=Value::Null;
-        let mut last_leave_policy=Value::Null;
+        let mut last_access = Value::Null;
+        let mut last_leave_policy = Value::Null;
         for mut reply in replies {
             let (mut stream, _) = loop {
                 match listener.accept() {
@@ -958,31 +961,36 @@ fn fixture(replies: Vec<Reply>) -> (ConnectionConfig, thread::JoinHandle<()>, Re
                 "Expected {}, got {line}",
                 reply.prefix
             );
-            if reply.prefix=="POST /rest/v1/rpc/my_hris_access "&&reply.status==200{last_access=serde_json::from_slice(&reply.body).unwrap();}
-            if reply.prefix=="GET /rest/v1/leave_policies?"&&reply.status==200{let rows:Value=serde_json::from_slice(&reply.body).unwrap();last_leave_policy=rows[0].clone();}
-            if reply.prefix=="POST /rest/v1/rpc/leave_dated_context " {
-                let wire:Value=serde_json::from_slice(&reply.body).unwrap();
-                if wire.get("fixture_empty")==Some(&json!(true)){
+            if reply.prefix == "POST /rest/v1/rpc/my_hris_access " && reply.status == 200 {
+                last_access = serde_json::from_slice(&reply.body).unwrap();
+            }
+            if reply.prefix == "GET /rest/v1/leave_policies?" && reply.status == 200 {
+                let rows: Value = serde_json::from_slice(&reply.body).unwrap();
+                last_leave_policy = rows[0].clone();
+            }
+            if reply.prefix == "POST /rest/v1/rpc/leave_dated_context " {
+                let wire: Value = serde_json::from_slice(&reply.body).unwrap();
+                if wire.get("fixture_empty") == Some(&json!(true)) {
                     reply.body=serde_json::to_vec(&json!({"version":"leave-dated-v1","company_id":last_access["company_id"],"user_id":last_access["user_id"],"employee_id":last_access["employee_id"],"role":last_access["role"],"as_of":wire["as_of"],"revision":0,"enabled":false,"timeline":{"baseline":last_leave_policy,"versions":[]},"anchors":[],"openings":[],"withdrawals":[],"audit":[]})).unwrap();
                 }
             }
-            if reply.prefix=="POST /rest/v1/rpc/approval_delegation_context " {
-                let wire:Value=serde_json::from_slice(&reply.body).unwrap();
-                if wire.get("fixture_empty")==Some(&json!(true)){
+            if reply.prefix == "POST /rest/v1/rpc/approval_delegation_context " {
+                let wire: Value = serde_json::from_slice(&reply.body).unwrap();
+                if wire.get("fixture_empty") == Some(&json!(true)) {
                     reply.body=serde_json::to_vec(&json!({"version":"approval-delegation-v1","company_id":last_access["company_id"],"user_id":last_access["user_id"],"employee_id":last_access["employee_id"],"role":last_access["role"],"as_of":wire["as_of"],"revision":0,"grants":[],"revocations":[],"receipts":[],"permits":[],"audit":[],"staff":[]})).unwrap();
                 }
             }
-            if reply.prefix=="POST /rest/v1/rpc/leave_credit_context " {
-                let wire:Value=serde_json::from_slice(&reply.body).unwrap();
-                if wire.get("fixture_empty")==Some(&json!(true)){
+            if reply.prefix == "POST /rest/v1/rpc/leave_credit_context " {
+                let wire: Value = serde_json::from_slice(&reply.body).unwrap();
+                if wire.get("fixture_empty") == Some(&json!(true)) {
                     reply.body=serde_json::to_vec(&json!({"version":"leave-credits-v1","company_id":last_access["company_id"],"user_id":last_access["user_id"],"employee_id":last_access["employee_id"],"role":last_access["role"],"as_of":wire["as_of"],"revision":0,"entries":[],"audit":[]})).unwrap();
                 }
             }
-            if reply.prefix=="POST /rest/v1/rpc/lifecycle_notifications " {
-                let mut wire:Value=serde_json::from_slice(&reply.body).unwrap();
-                if wire.get("fixture_empty")==Some(&json!(true)){
-                    wire=json!({"version":"lifecycle-notifications-v1","company_id":last_access["company_id"],"user_id":last_access["user_id"],"employee_id":last_access["employee_id"],"role":last_access["role"],"surface":"desktop","as_of":wire["as_of"],"generated_at":chrono::Utc::now(),"read_keys":[],"total_items":0,"truncated":false,"items":[]});
-                    reply.body=serde_json::to_vec(&wire).unwrap();
+            if reply.prefix == "POST /rest/v1/rpc/lifecycle_notifications " {
+                let mut wire: Value = serde_json::from_slice(&reply.body).unwrap();
+                if wire.get("fixture_empty") == Some(&json!(true)) {
+                    wire = json!({"version":"lifecycle-notifications-v1","company_id":last_access["company_id"],"user_id":last_access["user_id"],"employee_id":last_access["employee_id"],"role":last_access["role"],"surface":"desktop","as_of":wire["as_of"],"generated_at":chrono::Utc::now(),"read_keys":[],"total_items":0,"truncated":false,"items":[]});
+                    reply.body = serde_json::to_vec(&wire).unwrap();
                 }
             }
             observed.lock().unwrap().push(Request {
@@ -1060,8 +1068,16 @@ fn baseline(company: &Company) -> Vec<Reply> {
             }]),
         ),
         reply("GET /rest/v1/leave_events?", 200, json!([])),
-        reply("POST /rest/v1/rpc/leave_credit_context ",200,json!({"fixture_empty":true,"as_of":company.today()})),
-        reply("POST /rest/v1/rpc/leave_dated_context ",200,json!({"fixture_empty":true,"as_of":company.today()})),
+        reply(
+            "POST /rest/v1/rpc/leave_credit_context ",
+            200,
+            json!({"fixture_empty":true,"as_of":company.today()}),
+        ),
+        reply(
+            "POST /rest/v1/rpc/leave_dated_context ",
+            200,
+            json!({"fixture_empty":true,"as_of":company.today()}),
+        ),
         reply("GET /rest/v1/shift_templates?", 200, json!([])),
         reply("GET /rest/v1/shift_assignments?", 200, json!([])),
         reply("GET /rest/v1/shift_template_versions?", 200, json!([])),
@@ -1121,33 +1137,41 @@ fn baseline(company: &Company) -> Vec<Reply> {
         reply("GET /rest/v1/career_plans?", 200, json!([])),
         reply("GET /rest/v1/career_milestones?", 200, json!([])),
         reply("GET /rest/v1/career_events?", 200, json!([])),
-        reply("GET /rest/v1/payroll_slips?",200,json!([])),
-        reply("GET /rest/v1/payroll_cutoff_slips?",200,json!([])),
-        reply("GET /rest/v1/payroll_thirteenth_slips?",200,json!([])),
-        reply("GET /rest/v1/payroll_final_slips?",200,json!([])),
-        reply("GET /rest/v1/payroll_final_status?",200,json!([])),
-        reply("GET /rest/v1/payroll_amendment_slips?",200,json!([])),
-        reply("GET /rest/v1/payroll_amendment_status?",200,json!([])),
-        reply("GET /rest/v1/payroll_tax_slips?",200,json!([])),
-        reply("GET /rest/v1/payroll_amendment_cases?",200,json!([])),
-        reply("GET /rest/v1/payroll_wage_classifications?",200,json!([])),
-        reply("GET /rest/v1/payroll_wage_settings?",200,json!([])),
-        reply("GET /rest/v1/payroll_wage_check_index?",200,json!([])),
-        reply("GET /rest/v1/payroll_profiles?",200,json!([])),
-        reply("GET /rest/v1/payroll_holidays?",200,json!([])),
-        reply("GET /rest/v1/payroll_runs?",200,json!([])),
-        reply("GET /rest/v1/payroll_items?",200,json!([])),
-        reply("GET /rest/v1/payroll_events?",200,json!([])),
-        reply("GET /rest/v1/payroll_cutoff_runs?",200,json!([])),
-        reply("GET /rest/v1/payroll_cutoff_items?",200,json!([])),
-        reply("GET /rest/v1/payroll_thirteenth_runs?",200,json!([])),
-        reply("GET /rest/v1/payroll_thirteenth_items?",200,json!([])),
-        reply("GET /rest/v1/payroll_final_cases?",200,json!([])),
-        reply("GET /rest/v1/payroll_tax_reconciliations?",200,json!([])),
-        reply("GET /rest/v1/payroll_payment_receipts?",200,json!([])),
+        reply("GET /rest/v1/payroll_slips?", 200, json!([])),
+        reply("GET /rest/v1/payroll_cutoff_slips?", 200, json!([])),
+        reply("GET /rest/v1/payroll_thirteenth_slips?", 200, json!([])),
+        reply("GET /rest/v1/payroll_final_slips?", 200, json!([])),
+        reply("GET /rest/v1/payroll_final_status?", 200, json!([])),
+        reply("GET /rest/v1/payroll_amendment_slips?", 200, json!([])),
+        reply("GET /rest/v1/payroll_amendment_status?", 200, json!([])),
+        reply("GET /rest/v1/payroll_tax_slips?", 200, json!([])),
+        reply("GET /rest/v1/payroll_amendment_cases?", 200, json!([])),
+        reply("GET /rest/v1/payroll_wage_classifications?", 200, json!([])),
+        reply("GET /rest/v1/payroll_wage_settings?", 200, json!([])),
+        reply("GET /rest/v1/payroll_wage_check_index?", 200, json!([])),
+        reply("GET /rest/v1/payroll_profiles?", 200, json!([])),
+        reply("GET /rest/v1/payroll_holidays?", 200, json!([])),
+        reply("GET /rest/v1/payroll_runs?", 200, json!([])),
+        reply("GET /rest/v1/payroll_items?", 200, json!([])),
+        reply("GET /rest/v1/payroll_events?", 200, json!([])),
+        reply("GET /rest/v1/payroll_cutoff_runs?", 200, json!([])),
+        reply("GET /rest/v1/payroll_cutoff_items?", 200, json!([])),
+        reply("GET /rest/v1/payroll_thirteenth_runs?", 200, json!([])),
+        reply("GET /rest/v1/payroll_thirteenth_items?", 200, json!([])),
+        reply("GET /rest/v1/payroll_final_cases?", 200, json!([])),
+        reply("GET /rest/v1/payroll_tax_reconciliations?", 200, json!([])),
+        reply("GET /rest/v1/payroll_payment_receipts?", 200, json!([])),
         reply("GET /rest/v1/notification_read_state?", 200, json!([])),
-        reply("POST /rest/v1/rpc/lifecycle_notifications ",200,json!({"fixture_empty":true,"as_of":company.today()})),
-        reply("POST /rest/v1/rpc/approval_delegation_context ",200,json!({"fixture_empty":true,"as_of":company.today()})),
+        reply(
+            "POST /rest/v1/rpc/lifecycle_notifications ",
+            200,
+            json!({"fixture_empty":true,"as_of":company.today()}),
+        ),
+        reply(
+            "POST /rest/v1/rpc/approval_delegation_context ",
+            200,
+            json!({"fixture_empty":true,"as_of":company.today()}),
+        ),
         reply("GET /auth/v1/user ", 200, user(company)),
         reply(
             "GET /storage/v1/object/authenticated/profile-photos/",
@@ -2019,11 +2043,20 @@ fn company_logo_upload_refresh_and_removal_use_private_storage_and_revision_cach
     replies.push(
         baseline(&revised)
             .into_iter()
-            .find(|r| r.prefix.starts_with("POST /rest/v1/rpc/lifecycle_notifications "))
+            .find(|r| {
+                r.prefix
+                    .starts_with("POST /rest/v1/rpc/lifecycle_notifications ")
+            })
             .unwrap(),
     );
     replies.push(
-        baseline(&revised).into_iter().find(|r|r.prefix.starts_with("POST /rest/v1/rpc/approval_delegation_context ")).unwrap(),
+        baseline(&revised)
+            .into_iter()
+            .find(|r| {
+                r.prefix
+                    .starts_with("POST /rest/v1/rpc/approval_delegation_context ")
+            })
+            .unwrap(),
     );
     replies.extend(
         baseline(&revised)
@@ -3167,9 +3200,9 @@ fn learning_training_retries_original_id_after_saved_write_and_failed_refresh() 
 
 #[test]
 fn career_plan_retries_original_id_after_saved_write_and_failed_refresh() {
-    use hris_desktop::{domain::Action, career::*};
+    use hris_desktop::{career::*, domain::Action};
     let mut demo = DemoStore::new();
-    let mut d = PlanDraft::new(Some(demo.data.employees[1].id),demo.data.company.today());
+    let mut d = PlanDraft::new(Some(demo.data.employees[1].id), demo.data.company.today());
     d.title = "Synthetic transport goal".into();
     d.reason = "Synthetic assigned goal".into();
     let action = CareerAction::PlanSave(d);
@@ -3184,9 +3217,7 @@ fn career_plan_retries_original_id_after_saved_write_and_failed_refresh() {
                     json!({"company_id":data.company.id,"user_id":data.access.user_id,"employee_id":data.access.employee_id,"role":data.access.role,"direct_reports":data.access.direct_reports}),
                 ),
                 p if p.starts_with("GET /rest/v1/employees?") => Some(json!(data.employees)),
-                p if p.starts_with("GET /rest/v1/career_plans?") => {
-                    Some(json!(data.career.plans))
-                }
+                p if p.starts_with("GET /rest/v1/career_plans?") => Some(json!(data.career.plans)),
                 p if p.starts_with("GET /rest/v1/career_events?") => {
                     Some(json!(data.career.events))
                 }
@@ -3199,21 +3230,13 @@ fn career_plan_retries_original_id_after_saved_write_and_failed_refresh() {
         r
     };
     let mut replies = prepare(&before);
-    replies.push(reply(
-        "POST /rest/v1/rpc/manage_career ",
-        200,
-        json!(saved),
-    ));
+    replies.push(reply("POST /rest/v1/rpc/manage_career ", 200, json!(saved)));
     replies.push(reply(
         "POST /rest/v1/rpc/my_hris_access ",
         500,
         json!({"message":"Synthetic refresh failure"}),
     ));
-    replies.push(reply(
-        "POST /rest/v1/rpc/manage_career ",
-        200,
-        json!(saved),
-    ));
+    replies.push(reply("POST /rest/v1/rpc/manage_career ", 200, json!(saved)));
     replies.extend(
         prepare(&demo.data)
             .into_iter()
@@ -3254,9 +3277,12 @@ fn career_plan_retries_original_id_after_saved_write_and_failed_refresh() {
 
 #[test]
 fn payroll_creation_retries_original_identity_after_saved_write_and_failed_refresh() {
-    use hris_desktop::{domain::Action,payroll::*};
+    use hris_desktop::{domain::Action, payroll::*};
     let mut demo = DemoStore::new();
-    let action=PayrollAction::new("run_create",json!({"id":uuid::Uuid::new_v4(),"month":"2026-09-01","title":"Synthetic payroll transport","reason":"Synthetic creation"}));
+    let action = PayrollAction::new(
+        "run_create",
+        json!({"id":uuid::Uuid::new_v4(),"month":"2026-09-01","title":"Synthetic payroll transport","reason":"Synthetic creation"}),
+    );
     let before = demo.data.clone();
     demo.execute(Action::Payroll(action.clone())).unwrap();
     let saved = demo.data.payroll.runs[0].clone();
@@ -3268,9 +3294,7 @@ fn payroll_creation_retries_original_identity_after_saved_write_and_failed_refre
                     json!({"company_id":data.company.id,"user_id":data.access.user_id,"employee_id":data.access.employee_id,"role":data.access.role,"direct_reports":data.access.direct_reports}),
                 ),
                 p if p.starts_with("GET /rest/v1/employees?") => Some(json!(data.employees)),
-                p if p.starts_with("GET /rest/v1/payroll_runs?") => {
-                    Some(json!(data.payroll.runs))
-                }
+                p if p.starts_with("GET /rest/v1/payroll_runs?") => Some(json!(data.payroll.runs)),
                 p if p.starts_with("GET /rest/v1/payroll_events?") => {
                     Some(json!(data.payroll.events))
                 }
@@ -3337,309 +3361,1508 @@ fn payroll_creation_retries_original_identity_after_saved_write_and_failed_refre
 }
 
 #[test]
-fn cutoff_creation_uses_its_guarded_rpc_and_retries_one_identity_after_refresh_failure(){
-    use hris_desktop::{domain::Action,payroll::PayrollAction};
-    let mut demo=DemoStore::new();let action=PayrollAction::new("cutoff_run_create",json!({"id":uuid::Uuid::new_v4(),"month":"2026-09-01","part":1,"pay_date":"2026-09-15","title":"Synthetic cutoff transport","reason":"Synthetic creation"}));
-    let before=demo.data.clone();demo.execute(Action::Payroll(action.clone())).unwrap();let saved=demo.data.payroll.cutoffs.runs[0].clone();
-    let prepare=|data:&hris_desktop::domain::Snapshot|{
-        let mut r=baseline(&data.company);for response in &mut r{
-            let value=match response.prefix.as_str(){
-                "POST /rest/v1/rpc/my_hris_access "=>Some(json!({"company_id":data.company.id,"user_id":data.access.user_id,"employee_id":data.access.employee_id,"role":data.access.role,"direct_reports":data.access.direct_reports})),
-                p if p.starts_with("GET /rest/v1/employees?")=>Some(json!(data.employees)),
-                p if p.starts_with("GET /rest/v1/payroll_cutoff_runs?")=>Some(json!(data.payroll.cutoffs.runs)),
-                p if p.starts_with("GET /rest/v1/payroll_events?")=>Some(json!(data.payroll.events)),_=>None
-            };if let Some(v)=value{response.body=serde_json::to_vec(&v).unwrap();}
-        }r
+fn cutoff_creation_uses_its_guarded_rpc_and_retries_one_identity_after_refresh_failure() {
+    use hris_desktop::{domain::Action, payroll::PayrollAction};
+    let mut demo = DemoStore::new();
+    let action = PayrollAction::new(
+        "cutoff_run_create",
+        json!({"id":uuid::Uuid::new_v4(),"month":"2026-09-01","part":1,"pay_date":"2026-09-15","title":"Synthetic cutoff transport","reason":"Synthetic creation"}),
+    );
+    let before = demo.data.clone();
+    demo.execute(Action::Payroll(action.clone())).unwrap();
+    let saved = demo.data.payroll.cutoffs.runs[0].clone();
+    let prepare = |data: &hris_desktop::domain::Snapshot| {
+        let mut r = baseline(&data.company);
+        for response in &mut r {
+            let value = match response.prefix.as_str() {
+                "POST /rest/v1/rpc/my_hris_access " => Some(
+                    json!({"company_id":data.company.id,"user_id":data.access.user_id,"employee_id":data.access.employee_id,"role":data.access.role,"direct_reports":data.access.direct_reports}),
+                ),
+                p if p.starts_with("GET /rest/v1/employees?") => Some(json!(data.employees)),
+                p if p.starts_with("GET /rest/v1/payroll_cutoff_runs?") => {
+                    Some(json!(data.payroll.cutoffs.runs))
+                }
+                p if p.starts_with("GET /rest/v1/payroll_events?") => {
+                    Some(json!(data.payroll.events))
+                }
+                _ => None,
+            };
+            if let Some(v) = value {
+                response.body = serde_json::to_vec(&v).unwrap();
+            }
+        }
+        r
     };
-    let mut replies=prepare(&before);replies.push(reply("POST /rest/v1/rpc/manage_payroll_cutoff ",200,json!(saved)));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",500,json!({"message":"Synthetic refresh failure"})));replies.push(reply("POST /rest/v1/rpc/manage_payroll_cutoff ",200,json!(saved)));replies.extend(prepare(&demo.data).into_iter().skip(1).take_while(|r|!r.prefix.starts_with("GET /auth/v1/user ")));
-    let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
-    assert!(client.execute(Action::Payroll(action.clone()),&data).unwrap_err().to_string().contains("refresh failed"));let result=client.execute(Action::Payroll(action.clone()),&data).unwrap();assert!(action.saved(&result));server.join().unwrap();
-    let req=requests.lock().unwrap();let writes:Vec<_>=req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/manage_payroll_cutoff ")).collect();assert_eq!(writes.len(),2);assert_eq!(writes[0].json(),writes[1].json());assert_eq!(writes[0].json()["p_operation"],"run_create");assert!(!req.iter().any(|r|r.line.starts_with("POST /rest/v1/payroll_cutoff_runs")));
+    let mut replies = prepare(&before);
+    replies.push(reply(
+        "POST /rest/v1/rpc/manage_payroll_cutoff ",
+        200,
+        json!(saved),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/my_hris_access ",
+        500,
+        json!({"message":"Synthetic refresh failure"}),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/manage_payroll_cutoff ",
+        200,
+        json!(saved),
+    ));
+    replies.extend(
+        prepare(&demo.data)
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
+    let (config, server, requests) = fixture(replies);
+    let (mut client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert!(
+        client
+            .execute(Action::Payroll(action.clone()), &data)
+            .unwrap_err()
+            .to_string()
+            .contains("refresh failed")
+    );
+    let result = client
+        .execute(Action::Payroll(action.clone()), &data)
+        .unwrap();
+    assert!(action.saved(&result));
+    server.join().unwrap();
+    let req = requests.lock().unwrap();
+    let writes: Vec<_> = req
+        .iter()
+        .filter(|r| {
+            r.line
+                .starts_with("POST /rest/v1/rpc/manage_payroll_cutoff ")
+        })
+        .collect();
+    assert_eq!(writes.len(), 2);
+    assert_eq!(writes[0].json(), writes[1].json());
+    assert_eq!(writes[0].json()["p_operation"], "run_create");
+    assert!(
+        !req.iter()
+            .any(|r| r.line.starts_with("POST /rest/v1/payroll_cutoff_runs"))
+    );
 }
 
 #[test]
-fn thirteenth_creation_uses_its_guarded_rpc_and_retries_one_identity_after_refresh_failure(){
-    use hris_desktop::{domain::Action,payroll::PayrollAction};
-    let mut demo=DemoStore::new();let action=PayrollAction::new("thirteenth_run_create",json!({"id":uuid::Uuid::new_v4(),"year":2026,"as_of":"2026-09-30","pay_date":"2026-10-01","title":"Synthetic annual benefit transport","reason":"Synthetic creation"}));
-    let before=demo.data.clone();demo.execute(Action::Payroll(action.clone())).unwrap();let saved=demo.data.payroll.thirteenth.runs[0].clone();
-    let prepare=|data:&hris_desktop::domain::Snapshot|{
-        let mut r=baseline(&data.company);for response in &mut r{
-            let value=match response.prefix.as_str(){
-                "POST /rest/v1/rpc/my_hris_access "=>Some(json!({"company_id":data.company.id,"user_id":data.access.user_id,"employee_id":data.access.employee_id,"role":data.access.role,"direct_reports":data.access.direct_reports})),
-                p if p.starts_with("GET /rest/v1/employees?")=>Some(json!(data.employees)),
-                p if p.starts_with("GET /rest/v1/payroll_thirteenth_runs?")=>Some(json!(data.payroll.thirteenth.runs)),
-                p if p.starts_with("GET /rest/v1/payroll_events?")=>Some(json!(data.payroll.events)),_=>None
-            };if let Some(v)=value{response.body=serde_json::to_vec(&v).unwrap();}
-        }r
+fn thirteenth_creation_uses_its_guarded_rpc_and_retries_one_identity_after_refresh_failure() {
+    use hris_desktop::{domain::Action, payroll::PayrollAction};
+    let mut demo = DemoStore::new();
+    let action = PayrollAction::new(
+        "thirteenth_run_create",
+        json!({"id":uuid::Uuid::new_v4(),"year":2026,"as_of":"2026-09-30","pay_date":"2026-10-01","title":"Synthetic annual benefit transport","reason":"Synthetic creation"}),
+    );
+    let before = demo.data.clone();
+    demo.execute(Action::Payroll(action.clone())).unwrap();
+    let saved = demo.data.payroll.thirteenth.runs[0].clone();
+    let prepare = |data: &hris_desktop::domain::Snapshot| {
+        let mut r = baseline(&data.company);
+        for response in &mut r {
+            let value = match response.prefix.as_str() {
+                "POST /rest/v1/rpc/my_hris_access " => Some(
+                    json!({"company_id":data.company.id,"user_id":data.access.user_id,"employee_id":data.access.employee_id,"role":data.access.role,"direct_reports":data.access.direct_reports}),
+                ),
+                p if p.starts_with("GET /rest/v1/employees?") => Some(json!(data.employees)),
+                p if p.starts_with("GET /rest/v1/payroll_thirteenth_runs?") => {
+                    Some(json!(data.payroll.thirteenth.runs))
+                }
+                p if p.starts_with("GET /rest/v1/payroll_events?") => {
+                    Some(json!(data.payroll.events))
+                }
+                _ => None,
+            };
+            if let Some(v) = value {
+                response.body = serde_json::to_vec(&v).unwrap();
+            }
+        }
+        r
     };
-    let mut replies=prepare(&before);replies.push(reply("POST /rest/v1/rpc/manage_payroll_thirteenth ",200,json!(saved)));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",500,json!({"message":"Synthetic refresh failure"})));replies.push(reply("POST /rest/v1/rpc/manage_payroll_thirteenth ",200,json!(saved)));replies.extend(prepare(&demo.data).into_iter().skip(1).take_while(|r|!r.prefix.starts_with("GET /auth/v1/user ")));
-    let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
-    assert!(client.execute(Action::Payroll(action.clone()),&data).unwrap_err().to_string().contains("refresh failed"));let result=client.execute(Action::Payroll(action.clone()),&data).unwrap();assert!(action.saved(&result));server.join().unwrap();
-    let req=requests.lock().unwrap();let writes:Vec<_>=req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/manage_payroll_thirteenth ")).collect();assert_eq!(writes.len(),2);assert_eq!(writes[0].json(),writes[1].json());assert_eq!(writes[0].json()["p_operation"],"run_create");assert!(!req.iter().any(|r|r.line.starts_with("POST /rest/v1/payroll_thirteenth_runs")));
+    let mut replies = prepare(&before);
+    replies.push(reply(
+        "POST /rest/v1/rpc/manage_payroll_thirteenth ",
+        200,
+        json!(saved),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/my_hris_access ",
+        500,
+        json!({"message":"Synthetic refresh failure"}),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/manage_payroll_thirteenth ",
+        200,
+        json!(saved),
+    ));
+    replies.extend(
+        prepare(&demo.data)
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
+    let (config, server, requests) = fixture(replies);
+    let (mut client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert!(
+        client
+            .execute(Action::Payroll(action.clone()), &data)
+            .unwrap_err()
+            .to_string()
+            .contains("refresh failed")
+    );
+    let result = client
+        .execute(Action::Payroll(action.clone()), &data)
+        .unwrap();
+    assert!(action.saved(&result));
+    server.join().unwrap();
+    let req = requests.lock().unwrap();
+    let writes: Vec<_> = req
+        .iter()
+        .filter(|r| {
+            r.line
+                .starts_with("POST /rest/v1/rpc/manage_payroll_thirteenth ")
+        })
+        .collect();
+    assert_eq!(writes.len(), 2);
+    assert_eq!(writes[0].json(), writes[1].json());
+    assert_eq!(writes[0].json()["p_operation"], "run_create");
+    assert!(
+        !req.iter()
+            .any(|r| r.line.starts_with("POST /rest/v1/payroll_thirteenth_runs"))
+    );
 }
 
 #[test]
-fn annual_tax_creation_uses_its_guarded_rpc_and_retries_one_identity_after_refresh_failure(){
-    use hris_desktop::{domain::Action,payroll::PayrollAction};
-    let mut demo=DemoStore::new();let action=PayrollAction::new("tax_create",json!({"id":uuid::Uuid::new_v4(),"year":2026,"as_of":"2026-09-30","employee_id":demo.data.employees[1].id,"kind":"termination","service_end":"2026-09-30","title":"Synthetic annual benefit transport","reason":"Synthetic creation"}));
-    let before=demo.data.clone();demo.execute(Action::Payroll(action.clone())).unwrap();let saved=demo.data.payroll.tax.records[0].clone();
-    let prepare=|data:&hris_desktop::domain::Snapshot|{
-        let mut r=baseline(&data.company);for response in &mut r{
-            let value=match response.prefix.as_str(){
-                "POST /rest/v1/rpc/my_hris_access "=>Some(json!({"company_id":data.company.id,"user_id":data.access.user_id,"employee_id":data.access.employee_id,"role":data.access.role,"direct_reports":data.access.direct_reports})),
-                p if p.starts_with("GET /rest/v1/employees?")=>Some(json!(data.employees)),
-                p if p.starts_with("GET /rest/v1/payroll_tax_reconciliations?")=>Some(json!(data.payroll.tax.records)),
-                p if p.starts_with("GET /rest/v1/payroll_events?")=>Some(json!(data.payroll.events)),_=>None
-            };if let Some(v)=value{response.body=serde_json::to_vec(&v).unwrap();}
-        }r
+fn annual_tax_creation_uses_its_guarded_rpc_and_retries_one_identity_after_refresh_failure() {
+    use hris_desktop::{domain::Action, payroll::PayrollAction};
+    let mut demo = DemoStore::new();
+    let action = PayrollAction::new(
+        "tax_create",
+        json!({"id":uuid::Uuid::new_v4(),"year":2026,"as_of":"2026-09-30","employee_id":demo.data.employees[1].id,"kind":"termination","service_end":"2026-09-30","title":"Synthetic annual benefit transport","reason":"Synthetic creation"}),
+    );
+    let before = demo.data.clone();
+    demo.execute(Action::Payroll(action.clone())).unwrap();
+    let saved = demo.data.payroll.tax.records[0].clone();
+    let prepare = |data: &hris_desktop::domain::Snapshot| {
+        let mut r = baseline(&data.company);
+        for response in &mut r {
+            let value = match response.prefix.as_str() {
+                "POST /rest/v1/rpc/my_hris_access " => Some(
+                    json!({"company_id":data.company.id,"user_id":data.access.user_id,"employee_id":data.access.employee_id,"role":data.access.role,"direct_reports":data.access.direct_reports}),
+                ),
+                p if p.starts_with("GET /rest/v1/employees?") => Some(json!(data.employees)),
+                p if p.starts_with("GET /rest/v1/payroll_tax_reconciliations?") => {
+                    Some(json!(data.payroll.tax.records))
+                }
+                p if p.starts_with("GET /rest/v1/payroll_events?") => {
+                    Some(json!(data.payroll.events))
+                }
+                _ => None,
+            };
+            if let Some(v) = value {
+                response.body = serde_json::to_vec(&v).unwrap();
+            }
+        }
+        r
     };
-    let mut replies=prepare(&before);replies.push(reply("POST /rest/v1/rpc/manage_payroll_tax ",200,json!(saved)));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",500,json!({"message":"Synthetic refresh failure"})));replies.push(reply("POST /rest/v1/rpc/manage_payroll_tax ",200,json!(saved)));replies.extend(prepare(&demo.data).into_iter().skip(1).take_while(|r|!r.prefix.starts_with("GET /auth/v1/user ")));
-    let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
-    assert!(client.execute(Action::Payroll(action.clone()),&data).unwrap_err().to_string().contains("refresh failed"));let result=client.execute(Action::Payroll(action.clone()),&data).unwrap();assert!(action.saved(&result));server.join().unwrap();
-    let req=requests.lock().unwrap();let writes:Vec<_>=req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/manage_payroll_tax ")).collect();assert_eq!(writes.len(),2);assert_eq!(writes[0].json(),writes[1].json());assert_eq!(writes[0].json()["p_operation"],"create");assert!(!req.iter().any(|r|r.line.starts_with("POST /rest/v1/payroll_tax_reconciliations")));
+    let mut replies = prepare(&before);
+    replies.push(reply(
+        "POST /rest/v1/rpc/manage_payroll_tax ",
+        200,
+        json!(saved),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/my_hris_access ",
+        500,
+        json!({"message":"Synthetic refresh failure"}),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/manage_payroll_tax ",
+        200,
+        json!(saved),
+    ));
+    replies.extend(
+        prepare(&demo.data)
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
+    let (config, server, requests) = fixture(replies);
+    let (mut client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert!(
+        client
+            .execute(Action::Payroll(action.clone()), &data)
+            .unwrap_err()
+            .to_string()
+            .contains("refresh failed")
+    );
+    let result = client
+        .execute(Action::Payroll(action.clone()), &data)
+        .unwrap();
+    assert!(action.saved(&result));
+    server.join().unwrap();
+    let req = requests.lock().unwrap();
+    let writes: Vec<_> = req
+        .iter()
+        .filter(|r| r.line.starts_with("POST /rest/v1/rpc/manage_payroll_tax "))
+        .collect();
+    assert_eq!(writes.len(), 2);
+    assert_eq!(writes[0].json(), writes[1].json());
+    assert_eq!(writes[0].json()["p_operation"], "create");
+    assert!(!req.iter().any(|r| {
+        r.line
+            .starts_with("POST /rest/v1/payroll_tax_reconciliations")
+    }));
 }
 
 #[test]
-fn final_pay_creation_uses_its_guarded_rpc_and_retries_one_identity_after_refresh_failure(){
- use hris_desktop::{domain::Action,payroll::PayrollAction};
- let mut demo=DemoStore::new();let company=demo.data.company.clone();let id=uuid::Uuid::from_u128(99391);let employee=demo.data.employees[1].id;
- let action=PayrollAction::new("final_create",json!({"id":id,"employee_id":employee,"service_end":"2026-09-30","cash_date":company.today(),"title":"Synthetic transport final pay","reason":"PRIVATE_FINAL_TRANSPORT"}));
- demo.execute(Action::Payroll(action.clone())).unwrap();let saved=demo.data.payroll.finals.records[0].clone();
- let mut replies=baseline(&company);replies.push(reply("POST /rest/v1/rpc/manage_payroll_final ",200,json!(saved)));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",500,json!({"message":"Synthetic saved-write refresh failure"})));replies.push(reply("POST /rest/v1/rpc/manage_payroll_final ",200,json!(saved)));
- let mut after=baseline(&company);for r in &mut after{if r.prefix.starts_with("GET /rest/v1/payroll_final_cases?"){r.body=serde_json::to_vec(&demo.data.payroll.finals.records).unwrap();}if r.prefix.starts_with("GET /rest/v1/payroll_events?"){r.body=serde_json::to_vec(&demo.data.payroll.events).unwrap();}}
- replies.extend(after.into_iter().skip(1).take_while(|r|!r.prefix.starts_with("GET /auth/v1/user ")));
- let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();assert!(client.execute(Action::Payroll(action.clone()),&data).unwrap_err().to_string().contains("Payroll change saved, but refresh failed"));let result=client.execute(Action::Payroll(action),&data).unwrap();assert_eq!(result.payroll.finals.records[0].id,id);drop(client);server.join().unwrap();let req=requests.lock().unwrap();let writes=req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/manage_payroll_final ")).collect::<Vec<_>>();assert_eq!(writes.len(),2);assert_eq!(writes[0].json(),writes[1].json());assert_eq!(writes[0].json()["p_operation"],"create");assert!(!req.iter().any(|r|r.line.starts_with("POST /rest/v1/payroll_final_cases")));
+fn final_pay_creation_uses_its_guarded_rpc_and_retries_one_identity_after_refresh_failure() {
+    use hris_desktop::{domain::Action, payroll::PayrollAction};
+    let mut demo = DemoStore::new();
+    let company = demo.data.company.clone();
+    let id = uuid::Uuid::from_u128(99391);
+    let employee = demo.data.employees[1].id;
+    let action = PayrollAction::new(
+        "final_create",
+        json!({"id":id,"employee_id":employee,"service_end":"2026-09-30","cash_date":company.today(),"title":"Synthetic transport final pay","reason":"PRIVATE_FINAL_TRANSPORT"}),
+    );
+    demo.execute(Action::Payroll(action.clone())).unwrap();
+    let saved = demo.data.payroll.finals.records[0].clone();
+    let mut replies = baseline(&company);
+    replies.push(reply(
+        "POST /rest/v1/rpc/manage_payroll_final ",
+        200,
+        json!(saved),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/my_hris_access ",
+        500,
+        json!({"message":"Synthetic saved-write refresh failure"}),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/manage_payroll_final ",
+        200,
+        json!(saved),
+    ));
+    let mut after = baseline(&company);
+    for r in &mut after {
+        if r.prefix.starts_with("GET /rest/v1/payroll_final_cases?") {
+            r.body = serde_json::to_vec(&demo.data.payroll.finals.records).unwrap();
+        }
+        if r.prefix.starts_with("GET /rest/v1/payroll_events?") {
+            r.body = serde_json::to_vec(&demo.data.payroll.events).unwrap();
+        }
+    }
+    replies.extend(
+        after
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
+    let (config, server, requests) = fixture(replies);
+    let (mut client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert!(
+        client
+            .execute(Action::Payroll(action.clone()), &data)
+            .unwrap_err()
+            .to_string()
+            .contains("Payroll change saved, but refresh failed")
+    );
+    let result = client.execute(Action::Payroll(action), &data).unwrap();
+    assert_eq!(result.payroll.finals.records[0].id, id);
+    drop(client);
+    server.join().unwrap();
+    let req = requests.lock().unwrap();
+    let writes = req
+        .iter()
+        .filter(|r| {
+            r.line
+                .starts_with("POST /rest/v1/rpc/manage_payroll_final ")
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(writes.len(), 2);
+    assert_eq!(writes[0].json(), writes[1].json());
+    assert_eq!(writes[0].json()["p_operation"], "create");
+    assert!(
+        !req.iter()
+            .any(|r| r.line.starts_with("POST /rest/v1/payroll_final_cases"))
+    );
 }
 #[test]
-fn amendment_creation_retries_one_identity_and_never_writes_financial_tables_directly(){
- use hris_desktop::{domain::Action,payroll::PayrollAction,payroll_amendments as a};
- let company=DemoStore::new().data.company;let id=uuid::Uuid::from_u128(99451);let target=uuid::Uuid::from_u128(99452);let employee=uuid::Uuid::from_u128(99453);
- let action=PayrollAction::new("amendment_create",json!({"id":id,"target_kind":"cutoff","target_id":target,"cash_date":company.today(),"title":"Synthetic transport supplement","purpose":"payout","reason":"PRIVATE_AMENDMENT_TRANSPORT"}));
- let saved=json!({"id":id,"company_id":company.id,"employee_id":employee,"target_kind":"cutoff","target_id":target,"starts_on":"2026-09-01","ends_on":"2026-09-15","cash_date":company.today(),"title":"Synthetic transport supplement","employee_name":"Fictional recipient","employee_code":"QA-TRANSPORT","department":"Operations","status":"draft","revision":0,"created_by":uuid::Uuid::from_u128(1),"prepared_by":uuid::Uuid::from_u128(1),"submitted_by":null,"approved_by":null,"approved_at":null,"paid_on":null,"payment_reference":"","source_basis":{},"worksheet":a::Worksheet{purpose:"payout".into(),..Default::default()},"totals":a::Calculation::default(),"rule_version":a::RULE_VERSION});
- let mut replies=baseline(&company);replies.push(reply("POST /rest/v1/rpc/manage_payroll_amendment ",200,saved.clone()));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",500,json!({"message":"Synthetic post-save refresh failure"})));replies.push(reply("POST /rest/v1/rpc/manage_payroll_amendment ",200,saved.clone()));
- let mut after=baseline(&company);for r in &mut after{if r.prefix.starts_with("GET /rest/v1/payroll_amendment_cases?"){r.body=serde_json::to_vec(&json!([saved])).unwrap();}}
- replies.extend(after.into_iter().skip(1).take_while(|r|!r.prefix.starts_with("GET /auth/v1/user ")));
- let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();assert!(client.execute(Action::Payroll(action.clone()),&data).unwrap_err().to_string().contains("Payroll change saved, but refresh failed"));let result=client.execute(Action::Payroll(action),&data).unwrap();assert_eq!(result.payroll.amendments.records[0].id,id);drop(client);server.join().unwrap();let req=requests.lock().unwrap();let writes=req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/manage_payroll_amendment ")).collect::<Vec<_>>();assert_eq!(writes.len(),2);assert_eq!(writes[0].json(),writes[1].json());assert_eq!(writes[0].json()["p_operation"],"create");assert!(!req.iter().any(|r|r.line.starts_with("POST /rest/v1/payroll_amendment_cases")));
+fn amendment_creation_retries_one_identity_and_never_writes_financial_tables_directly() {
+    use hris_desktop::{domain::Action, payroll::PayrollAction, payroll_amendments as a};
+    let company = DemoStore::new().data.company;
+    let id = uuid::Uuid::from_u128(99451);
+    let target = uuid::Uuid::from_u128(99452);
+    let employee = uuid::Uuid::from_u128(99453);
+    let action = PayrollAction::new(
+        "amendment_create",
+        json!({"id":id,"target_kind":"cutoff","target_id":target,"cash_date":company.today(),"title":"Synthetic transport supplement","purpose":"payout","reason":"PRIVATE_AMENDMENT_TRANSPORT"}),
+    );
+    let saved = json!({"id":id,"company_id":company.id,"employee_id":employee,"target_kind":"cutoff","target_id":target,"starts_on":"2026-09-01","ends_on":"2026-09-15","cash_date":company.today(),"title":"Synthetic transport supplement","employee_name":"Fictional recipient","employee_code":"QA-TRANSPORT","department":"Operations","status":"draft","revision":0,"created_by":uuid::Uuid::from_u128(1),"prepared_by":uuid::Uuid::from_u128(1),"submitted_by":null,"approved_by":null,"approved_at":null,"paid_on":null,"payment_reference":"","source_basis":{},"worksheet":a::Worksheet{purpose:"payout".into(),..Default::default()},"totals":a::Calculation::default(),"rule_version":a::RULE_VERSION});
+    let mut replies = baseline(&company);
+    replies.push(reply(
+        "POST /rest/v1/rpc/manage_payroll_amendment ",
+        200,
+        saved.clone(),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/my_hris_access ",
+        500,
+        json!({"message":"Synthetic post-save refresh failure"}),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/manage_payroll_amendment ",
+        200,
+        saved.clone(),
+    ));
+    let mut after = baseline(&company);
+    for r in &mut after {
+        if r.prefix
+            .starts_with("GET /rest/v1/payroll_amendment_cases?")
+        {
+            r.body = serde_json::to_vec(&json!([saved])).unwrap();
+        }
+    }
+    replies.extend(
+        after
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
+    let (config, server, requests) = fixture(replies);
+    let (mut client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert!(
+        client
+            .execute(Action::Payroll(action.clone()), &data)
+            .unwrap_err()
+            .to_string()
+            .contains("Payroll change saved, but refresh failed")
+    );
+    let result = client.execute(Action::Payroll(action), &data).unwrap();
+    assert_eq!(result.payroll.amendments.records[0].id, id);
+    drop(client);
+    server.join().unwrap();
+    let req = requests.lock().unwrap();
+    let writes = req
+        .iter()
+        .filter(|r| {
+            r.line
+                .starts_with("POST /rest/v1/rpc/manage_payroll_amendment ")
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(writes.len(), 2);
+    assert_eq!(writes[0].json(), writes[1].json());
+    assert_eq!(writes[0].json()["p_operation"], "create");
+    assert!(
+        !req.iter()
+            .any(|r| r.line.starts_with("POST /rest/v1/payroll_amendment_cases"))
+    );
 }
 
 #[test]
-fn wage_review_creation_uses_guarded_rpc_and_retry_identity(){
- use hris_desktop::{domain::Action,payroll::PayrollAction};
- let mut demo=DemoStore::new();let company=demo.data.company.clone();let id=uuid::Uuid::from_u128(39391);let employee=demo.data.employees[1].id;
- let action=PayrollAction::new("wage_create",json!({"id":id,"employee_id":employee,"starts_on":"2026-01-01","ends_on":"2026-12-31","coverage":"covered","series_key":"vi-nonagri-large","workplace":"Synthetic Bacolod workplace","evidence":"PRIVATE_WAGE_TRANSPORT","note":"Reviewed industry and establishment size","reason":"Synthetic transport wage review","catalog_version":hris_desktop::payroll_wages::VERSION}));
- demo.execute(Action::Payroll(action.clone())).unwrap();let saved=demo.data.payroll.wages.classifications[0].clone();
- let mut replies=baseline(&company);for r in &mut replies{if r.prefix.starts_with("GET /rest/v1/employees?"){r.body=serde_json::to_vec(&demo.data.employees).unwrap();}}replies.push(reply("POST /rest/v1/rpc/manage_payroll_wage ",200,json!(saved)));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",500,json!({"message":"Synthetic saved-write refresh failure"})));replies.push(reply("POST /rest/v1/rpc/manage_payroll_wage ",200,json!(saved)));
- let mut after=baseline(&company);for r in &mut after{if r.prefix.starts_with("GET /rest/v1/employees?"){r.body=serde_json::to_vec(&demo.data.employees).unwrap();}if r.prefix.starts_with("GET /rest/v1/payroll_wage_classifications?"){r.body=serde_json::to_vec(&demo.data.payroll.wages.classifications).unwrap();}if r.prefix.starts_with("GET /rest/v1/payroll_events?"){r.body=serde_json::to_vec(&demo.data.payroll.events).unwrap();}}
- replies.extend(after.into_iter().skip(1).take_while(|r|!r.prefix.starts_with("GET /auth/v1/user ")));
- let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();assert!(client.execute(Action::Payroll(action.clone()),&data).unwrap_err().to_string().contains("Payroll change saved, but refresh failed"));let result=client.execute(Action::Payroll(action),&data).unwrap();assert_eq!(result.payroll.wages.classifications[0].id,id);drop(client);server.join().unwrap();let req=requests.lock().unwrap();let writes=req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/manage_payroll_wage ")).collect::<Vec<_>>();assert_eq!(writes.len(),2);assert_eq!(writes[0].json(),writes[1].json());assert_eq!(writes[0].json()["p_operation"],"create");assert!(!req.iter().any(|r|r.line.starts_with("POST /rest/v1/payroll_wage_classifications")));
+fn wage_review_creation_uses_guarded_rpc_and_retry_identity() {
+    use hris_desktop::{domain::Action, payroll::PayrollAction};
+    let mut demo = DemoStore::new();
+    let company = demo.data.company.clone();
+    let id = uuid::Uuid::from_u128(39391);
+    let employee = demo.data.employees[1].id;
+    let action = PayrollAction::new(
+        "wage_create",
+        json!({"id":id,"employee_id":employee,"starts_on":"2026-01-01","ends_on":"2026-12-31","coverage":"covered","series_key":"vi-nonagri-large","workplace":"Synthetic Bacolod workplace","evidence":"PRIVATE_WAGE_TRANSPORT","note":"Reviewed industry and establishment size","reason":"Synthetic transport wage review","catalog_version":hris_desktop::payroll_wages::VERSION}),
+    );
+    demo.execute(Action::Payroll(action.clone())).unwrap();
+    let saved = demo.data.payroll.wages.classifications[0].clone();
+    let mut replies = baseline(&company);
+    for r in &mut replies {
+        if r.prefix.starts_with("GET /rest/v1/employees?") {
+            r.body = serde_json::to_vec(&demo.data.employees).unwrap();
+        }
+    }
+    replies.push(reply(
+        "POST /rest/v1/rpc/manage_payroll_wage ",
+        200,
+        json!(saved),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/my_hris_access ",
+        500,
+        json!({"message":"Synthetic saved-write refresh failure"}),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/manage_payroll_wage ",
+        200,
+        json!(saved),
+    ));
+    let mut after = baseline(&company);
+    for r in &mut after {
+        if r.prefix.starts_with("GET /rest/v1/employees?") {
+            r.body = serde_json::to_vec(&demo.data.employees).unwrap();
+        }
+        if r.prefix
+            .starts_with("GET /rest/v1/payroll_wage_classifications?")
+        {
+            r.body = serde_json::to_vec(&demo.data.payroll.wages.classifications).unwrap();
+        }
+        if r.prefix.starts_with("GET /rest/v1/payroll_events?") {
+            r.body = serde_json::to_vec(&demo.data.payroll.events).unwrap();
+        }
+    }
+    replies.extend(
+        after
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
+    let (config, server, requests) = fixture(replies);
+    let (mut client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert!(
+        client
+            .execute(Action::Payroll(action.clone()), &data)
+            .unwrap_err()
+            .to_string()
+            .contains("Payroll change saved, but refresh failed")
+    );
+    let result = client.execute(Action::Payroll(action), &data).unwrap();
+    assert_eq!(result.payroll.wages.classifications[0].id, id);
+    drop(client);
+    server.join().unwrap();
+    let req = requests.lock().unwrap();
+    let writes = req
+        .iter()
+        .filter(|r| r.line.starts_with("POST /rest/v1/rpc/manage_payroll_wage "))
+        .collect::<Vec<_>>();
+    assert_eq!(writes.len(), 2);
+    assert_eq!(writes[0].json(), writes[1].json());
+    assert_eq!(writes[0].json()["p_operation"], "create");
+    assert!(!req.iter().any(|r| {
+        r.line
+            .starts_with("POST /rest/v1/payroll_wage_classifications")
+    }));
 }
 
 #[test]
-fn consolidated_payroll_report_uses_one_scoped_rpc_and_rechecks_before_export(){
- use hris_desktop::payroll_reporting::{Filter,VERSION};use chrono::Utc;
- let d=DemoStore::new();let company=d.data.company.clone();
- let f:Filter=serde_json::from_value(json!({"starts_on":"2026-01-01","ends_on":"2026-12-31","axis":"issued","kind":"all","employee_id":null,"search":""})).unwrap();
- let access=json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});
- let wire=json!({"version":VERSION,"company_id":company.id,"company_name":company.name,"generated_at":Utc::now(),"filter":f,"rows":[]});
- let mut responses=baseline(&company);responses.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access.clone()));responses.push(reply("POST /rest/v1/rpc/payroll_report_v2 ",200,wire));responses.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access));
- let(config,server,requests)=fixture(responses);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
- let report=client.consolidated_payroll_report(&data,&f,None).unwrap();assert!(report.wire.rows.is_empty());drop(client);server.join().unwrap();
- let req=requests.lock().unwrap();let reports:Vec<_>=req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/payroll_report_v2 ")).collect();assert_eq!(reports.len(),1);assert_eq!(reports[0].json(),json!({"p_filter":f}));
+fn consolidated_payroll_report_uses_one_scoped_rpc_and_rechecks_before_export() {
+    use chrono::Utc;
+    use hris_desktop::payroll_reporting::{Filter, VERSION};
+    let d = DemoStore::new();
+    let company = d.data.company.clone();
+    let f:Filter=serde_json::from_value(json!({"starts_on":"2026-01-01","ends_on":"2026-12-31","axis":"issued","kind":"all","employee_id":null,"search":""})).unwrap();
+    let access = json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});
+    let wire = json!({"version":VERSION,"company_id":company.id,"company_name":company.name,"generated_at":Utc::now(),"filter":f,"rows":[]});
+    let mut responses = baseline(&company);
+    responses.push(reply(
+        "POST /rest/v1/rpc/my_hris_access ",
+        200,
+        access.clone(),
+    ));
+    responses.push(reply("POST /rest/v1/rpc/payroll_report_v2 ", 200, wire));
+    responses.push(reply("POST /rest/v1/rpc/my_hris_access ", 200, access));
+    let (config, server, requests) = fixture(responses);
+    let (mut client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    let report = client.consolidated_payroll_report(&data, &f, None).unwrap();
+    assert!(report.wire.rows.is_empty());
+    drop(client);
+    server.join().unwrap();
+    let req = requests.lock().unwrap();
+    let reports: Vec<_> = req
+        .iter()
+        .filter(|r| r.line.starts_with("POST /rest/v1/rpc/payroll_report_v2 "))
+        .collect();
+    assert_eq!(reports.len(), 1);
+    assert_eq!(reports[0].json(), json!({"p_filter":f}));
 }
 #[test]
-fn consolidated_report_revocation_after_fetch_cannot_write_csv(){
- use hris_desktop::payroll_reporting::{Filter,VERSION};use chrono::Utc;
- let d=DemoStore::new();let company=d.data.company.clone();let f:Filter=serde_json::from_value(json!({"starts_on":"2026-01-01","ends_on":"2026-12-31","axis":"issued","kind":"all","employee_id":null,"search":""})).unwrap();
- let access=json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});let mut denied=access.clone();denied["role"]=json!("manager");
- let wire=json!({"version":VERSION,"company_id":company.id,"company_name":company.name,"generated_at":Utc::now(),"filter":f,"rows":[]});
- let mut responses=baseline(&company);responses.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access));responses.push(reply("POST /rest/v1/rpc/payroll_report_v2 ",200,wire));responses.push(reply("POST /rest/v1/rpc/my_hris_access ",200,denied));
- let path=std::env::temp_dir().join(format!("hris-report-revoked-{}.csv",uuid::Uuid::new_v4()));assert!(!path.exists());
- let(config,server,_)=fixture(responses);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
- assert!(client.consolidated_payroll_report(&data,&f,Some(&path)).is_err());assert!(!path.exists());drop(client);server.join().unwrap();
+fn consolidated_report_revocation_after_fetch_cannot_write_csv() {
+    use chrono::Utc;
+    use hris_desktop::payroll_reporting::{Filter, VERSION};
+    let d = DemoStore::new();
+    let company = d.data.company.clone();
+    let f:Filter=serde_json::from_value(json!({"starts_on":"2026-01-01","ends_on":"2026-12-31","axis":"issued","kind":"all","employee_id":null,"search":""})).unwrap();
+    let access = json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});
+    let mut denied = access.clone();
+    denied["role"] = json!("manager");
+    let wire = json!({"version":VERSION,"company_id":company.id,"company_name":company.name,"generated_at":Utc::now(),"filter":f,"rows":[]});
+    let mut responses = baseline(&company);
+    responses.push(reply("POST /rest/v1/rpc/my_hris_access ", 200, access));
+    responses.push(reply("POST /rest/v1/rpc/payroll_report_v2 ", 200, wire));
+    responses.push(reply("POST /rest/v1/rpc/my_hris_access ", 200, denied));
+    let path =
+        std::env::temp_dir().join(format!("hris-report-revoked-{}.csv", uuid::Uuid::new_v4()));
+    assert!(!path.exists());
+    let (config, server, _) = fixture(responses);
+    let (mut client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert!(
+        client
+            .consolidated_payroll_report(&data, &f, Some(&path))
+            .is_err()
+    );
+    assert!(!path.exists());
+    drop(client);
+    server.join().unwrap();
 }
 
 #[test]
-fn government_registration_reads_one_scoped_rpc_and_discards_a_revoked_response(){
- for revoked in [false,true]{
-  let company=Company{owner_id:uuid::Uuid::from_u128(170001),..Default::default()};
-  let access=json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});let mut after=access.clone();if revoked{after["role"]=json!("manager");}
-  let wire=json!({"version":"government-registration-v1","company_id":company.id,"employee_id":null,"record":null,"history":[]});
-  let mut replies=baseline(&company);replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access));replies.push(reply("POST /rest/v1/rpc/government_registration ",200,wire));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,after));
-  let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
-  let result=client.government_registration(&data,None,None);assert_eq!(result.is_err(),revoked);
-  assert!(client.government_registration(&data,Some(uuid::Uuid::new_v4()),None).is_err());
-  drop(client);server.join().unwrap();let requests=requests.lock().unwrap();
-  let reads:Vec<_>=requests.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/government_registration ")).collect();assert_eq!(reads.len(),1);assert_eq!(reads[0].json(),json!({"p_employee_id":null}));
-  assert!(!requests.iter().any(|r|r.line.contains("/government_registration_records?")));
- }
+fn government_registration_reads_one_scoped_rpc_and_discards_a_revoked_response() {
+    for revoked in [false, true] {
+        let company = Company {
+            owner_id: uuid::Uuid::from_u128(170001),
+            ..Default::default()
+        };
+        let access = json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});
+        let mut after = access.clone();
+        if revoked {
+            after["role"] = json!("manager");
+        }
+        let wire = json!({"version":"government-registration-v1","company_id":company.id,"employee_id":null,"record":null,"history":[]});
+        let mut replies = baseline(&company);
+        replies.push(reply("POST /rest/v1/rpc/my_hris_access ", 200, access));
+        replies.push(reply(
+            "POST /rest/v1/rpc/government_registration ",
+            200,
+            wire,
+        ));
+        replies.push(reply("POST /rest/v1/rpc/my_hris_access ", 200, after));
+        let (config, server, requests) = fixture(replies);
+        let (mut client, data) = CloudClient::connect(
+            config,
+            "person@example.invalid".into(),
+            "synthetic passphrase".into(),
+        )
+        .unwrap();
+        let result = client.government_registration(&data, None, None);
+        assert_eq!(result.is_err(), revoked);
+        assert!(
+            client
+                .government_registration(&data, Some(uuid::Uuid::new_v4()), None)
+                .is_err()
+        );
+        drop(client);
+        server.join().unwrap();
+        let requests = requests.lock().unwrap();
+        let reads: Vec<_> = requests
+            .iter()
+            .filter(|r| {
+                r.line
+                    .starts_with("POST /rest/v1/rpc/government_registration ")
+            })
+            .collect();
+        assert_eq!(reads.len(), 1);
+        assert_eq!(reads[0].json(), json!({"p_employee_id":null}));
+        assert!(
+            !requests
+                .iter()
+                .any(|r| r.line.contains("/government_registration_records?"))
+        );
+    }
 }
 
 #[test]
-fn registration_save_retry_preserves_operation_and_unknowns_after_a_failed_refresh(){
- use hris_desktop::payroll_government::registration as reg;
- let company=Company{owner_id:uuid::Uuid::from_u128(170001),..Default::default()};let now=chrono::Utc::now();
- let id=uuid::Uuid::from_u128(170002);let op=uuid::Uuid::from_u128(170003);
- let details=reg::normalize(&[("registered_name".into(),"Fictional Legal Registration".into())].into_iter().collect(),false,company.today()).unwrap();
- let record=reg::Record{id,company_id:company.id,employee_id:None,revision:0,details:details.clone(),reference:"Synthetic registration".into(),note:"Private evidence".into(),created_by:company.owner_id,updated_by:company.owner_id,created_at:now,updated_at:now};
- let saved=reg::Snapshot{version:"government-registration-v1".into(),company_id:company.id,employee_id:None,record:Some(record.clone()),history:vec![reg::Event{id:op,company_id:company.id,record_id:id,revision:0,actor_id:company.owner_id,actor_name:"Synthetic HR".into(),reason:"Initial registration review".into(),before_record:None,after_record:record,recorded_at:now}]};
- let action=reg::Save{id,operation_id:op,employee_id:None,expected_revision:None,details,reference:"Synthetic registration".into(),note:"Private evidence".into(),reason:"Initial registration review".into(),reviewed:true};
- let access=json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});let receipt=json!({"operation_id":op,"record_id":id,"saved_revision":0});
- let mut replies=baseline(&company);
- for failure in [true,false]{
-  replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access.clone()));replies.push(reply("POST /rest/v1/rpc/save_government_registration ",200,receipt.clone()));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access.clone()));
-  replies.push(if failure{reply("POST /rest/v1/rpc/government_registration ",500,json!({"message":"Synthetic refresh failure"}))}else{reply("POST /rest/v1/rpc/government_registration ",200,json!(saved))});
-  if !failure{replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access.clone()));}
- }
- let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
- assert!(client.government_registration(&data,None,Some(&action)).is_err());let result=client.government_registration(&data,None,Some(&action)).unwrap();assert_eq!(result.record.unwrap().revision,0);
- drop(client);server.join().unwrap();let requests=requests.lock().unwrap();let writes:Vec<_>=requests.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/save_government_registration ")).collect();assert_eq!(writes.len(),2);assert_eq!(writes[0].json(),writes[1].json());assert_eq!(writes[0].json()["p_record"]["details"]["bir_tin"],json!(""));assert_eq!(writes[0].json()["p_record"]["operation_id"],json!(op));
+fn registration_save_retry_preserves_operation_and_unknowns_after_a_failed_refresh() {
+    use hris_desktop::payroll_government::registration as reg;
+    let company = Company {
+        owner_id: uuid::Uuid::from_u128(170001),
+        ..Default::default()
+    };
+    let now = chrono::Utc::now();
+    let id = uuid::Uuid::from_u128(170002);
+    let op = uuid::Uuid::from_u128(170003);
+    let details = reg::normalize(
+        &[(
+            "registered_name".into(),
+            "Fictional Legal Registration".into(),
+        )]
+        .into_iter()
+        .collect(),
+        false,
+        company.today(),
+    )
+    .unwrap();
+    let record = reg::Record {
+        id,
+        company_id: company.id,
+        employee_id: None,
+        revision: 0,
+        details: details.clone(),
+        reference: "Synthetic registration".into(),
+        note: "Private evidence".into(),
+        created_by: company.owner_id,
+        updated_by: company.owner_id,
+        created_at: now,
+        updated_at: now,
+    };
+    let saved = reg::Snapshot {
+        version: "government-registration-v1".into(),
+        company_id: company.id,
+        employee_id: None,
+        record: Some(record.clone()),
+        history: vec![reg::Event {
+            id: op,
+            company_id: company.id,
+            record_id: id,
+            revision: 0,
+            actor_id: company.owner_id,
+            actor_name: "Synthetic HR".into(),
+            reason: "Initial registration review".into(),
+            before_record: None,
+            after_record: record,
+            recorded_at: now,
+        }],
+    };
+    let action = reg::Save {
+        id,
+        operation_id: op,
+        employee_id: None,
+        expected_revision: None,
+        details,
+        reference: "Synthetic registration".into(),
+        note: "Private evidence".into(),
+        reason: "Initial registration review".into(),
+        reviewed: true,
+    };
+    let access = json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});
+    let receipt = json!({"operation_id":op,"record_id":id,"saved_revision":0});
+    let mut replies = baseline(&company);
+    for failure in [true, false] {
+        replies.push(reply(
+            "POST /rest/v1/rpc/my_hris_access ",
+            200,
+            access.clone(),
+        ));
+        replies.push(reply(
+            "POST /rest/v1/rpc/save_government_registration ",
+            200,
+            receipt.clone(),
+        ));
+        replies.push(reply(
+            "POST /rest/v1/rpc/my_hris_access ",
+            200,
+            access.clone(),
+        ));
+        replies.push(if failure {
+            reply(
+                "POST /rest/v1/rpc/government_registration ",
+                500,
+                json!({"message":"Synthetic refresh failure"}),
+            )
+        } else {
+            reply(
+                "POST /rest/v1/rpc/government_registration ",
+                200,
+                json!(saved),
+            )
+        });
+        if !failure {
+            replies.push(reply(
+                "POST /rest/v1/rpc/my_hris_access ",
+                200,
+                access.clone(),
+            ));
+        }
+    }
+    let (config, server, requests) = fixture(replies);
+    let (mut client, data) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert!(
+        client
+            .government_registration(&data, None, Some(&action))
+            .is_err()
+    );
+    let result = client
+        .government_registration(&data, None, Some(&action))
+        .unwrap();
+    assert_eq!(result.record.unwrap().revision, 0);
+    drop(client);
+    server.join().unwrap();
+    let requests = requests.lock().unwrap();
+    let writes: Vec<_> = requests
+        .iter()
+        .filter(|r| {
+            r.line
+                .starts_with("POST /rest/v1/rpc/save_government_registration ")
+        })
+        .collect();
+    assert_eq!(writes.len(), 2);
+    assert_eq!(writes[0].json(), writes[1].json());
+    assert_eq!(
+        writes[0].json()["p_record"]["details"]["bir_tin"],
+        json!("")
+    );
+    assert_eq!(writes[0].json()["p_record"]["operation_id"], json!(op));
 }
 
 #[test]
-fn agency_preparation_uses_one_fresh_rpc_and_revocation_prevents_file_creation(){
- use chrono::Datelike;
- use hris_desktop::payroll_government::{Agency,Filter};
- for revoked in[false,true]{
-  let company=Company{owner_id:uuid::Uuid::from_u128(171001),..Default::default()};let month=company.today().with_day(1).unwrap();
-  let access=json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});let mut after=access.clone();if revoked{after["role"]=json!("manager");}
-  let source=json!({"version":"government-payroll-sources-v1","company_id":company.id,"company_name":company.name,"generated_at":chrono::Utc::now(),"as_of":company.today(),"month":month,"agency":"sss","facts":[]});
-  let review=json!({"version":"government-reconciliation-v1","source":source,"effective_facts":[],"reviews":[],"remittances":[],"history":[],"employees":[]});
-  let wire=json!({"version":"government-preparation-v1","review":review,"registrations":[]});
-  let mut replies=baseline(&company);replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access));replies.push(reply("POST /rest/v1/rpc/government_preparation ",200,wire));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,after));
-  let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
-  let path=std::env::current_dir().unwrap().join("work").join(format!("preparation-{}.csv",uuid::Uuid::new_v4()));
-  let result=client.government_preparation(&data,Filter{month,agency:Agency::Sss},&path);assert_eq!(result.is_err(),revoked);
-  if revoked{assert!(!path.exists());}else{let b=std::fs::read(&path).unwrap();assert!(String::from_utf8(b).unwrap().contains("INTERNAL_AGENCY_PREPARATION_NOT_AN_UPLOAD_FILE"));std::fs::remove_file(&path).unwrap();}
-  drop(client);server.join().unwrap();let req=requests.lock().unwrap();assert_eq!(req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/government_preparation ")).count(),1);
-  assert!(!req.iter().any(|r|r.line.contains("/government_registration_records?")));
- }
+fn agency_preparation_uses_one_fresh_rpc_and_revocation_prevents_file_creation() {
+    use chrono::Datelike;
+    use hris_desktop::payroll_government::{Agency, Filter};
+    for revoked in [false, true] {
+        let company = Company {
+            owner_id: uuid::Uuid::from_u128(171001),
+            ..Default::default()
+        };
+        let month = company.today().with_day(1).unwrap();
+        let access = json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});
+        let mut after = access.clone();
+        if revoked {
+            after["role"] = json!("manager");
+        }
+        let source = json!({"version":"government-payroll-sources-v1","company_id":company.id,"company_name":company.name,"generated_at":chrono::Utc::now(),"as_of":company.today(),"month":month,"agency":"sss","facts":[]});
+        let review = json!({"version":"government-reconciliation-v1","source":source,"effective_facts":[],"reviews":[],"remittances":[],"history":[],"employees":[]});
+        let wire =
+            json!({"version":"government-preparation-v1","review":review,"registrations":[]});
+        let mut replies = baseline(&company);
+        replies.push(reply("POST /rest/v1/rpc/my_hris_access ", 200, access));
+        replies.push(reply(
+            "POST /rest/v1/rpc/government_preparation ",
+            200,
+            wire,
+        ));
+        replies.push(reply("POST /rest/v1/rpc/my_hris_access ", 200, after));
+        let (config, server, requests) = fixture(replies);
+        let (mut client, data) = CloudClient::connect(
+            config,
+            "person@example.invalid".into(),
+            "synthetic passphrase".into(),
+        )
+        .unwrap();
+        let path = std::env::current_dir()
+            .unwrap()
+            .join("work")
+            .join(format!("preparation-{}.csv", uuid::Uuid::new_v4()));
+        let result = client.government_preparation(
+            &data,
+            Filter {
+                month,
+                agency: Agency::Sss,
+            },
+            &path,
+        );
+        assert_eq!(result.is_err(), revoked);
+        if revoked {
+            assert!(!path.exists());
+        } else {
+            let b = std::fs::read(&path).unwrap();
+            assert!(
+                String::from_utf8(b)
+                    .unwrap()
+                    .contains("INTERNAL_AGENCY_PREPARATION_NOT_AN_UPLOAD_FILE")
+            );
+            std::fs::remove_file(&path).unwrap();
+        }
+        drop(client);
+        server.join().unwrap();
+        let req = requests.lock().unwrap();
+        assert_eq!(
+            req.iter()
+                .filter(|r| r
+                    .line
+                    .starts_with("POST /rest/v1/rpc/government_preparation "))
+                .count(),
+            1
+        );
+        assert!(
+            !req.iter()
+                .any(|r| r.line.contains("/government_registration_records?"))
+        );
+    }
 }
 
-fn collection_source(company:&Company)->serde_json::Value{
- use chrono::Datelike;
- let month=company.today().with_day(1).unwrap().checked_sub_months(chrono::Months::new(1)).unwrap();let end=month.checked_add_months(chrono::Months::new(1)).unwrap().pred_opt().unwrap();
- let eid=uuid::Uuid::from_u128(181001);let receipt=uuid::Uuid::from_u128(181002);let actor=uuid::Uuid::from_u128(181003);
- let fact=json!({"company_id":company.id,"employee_id":eid,"id":uuid::Uuid::from_u128(181004),"agency":"sss","kind":"monthly","state":"received","starts_on":month,"ends_on":end,"contribution_month":month,"received_on":company.today(),"parts":{"employee_cents":150000,"employer_cents":300000,"ec_cents":3000}});
- json!({"version":"government-preparation-v1","review":{"version":"government-reconciliation-v1","source":{"version":"government-payroll-sources-v1","company_id":company.id,"company_name":company.name,"generated_at":chrono::Utc::now(),"as_of":company.today(),"month":month,"agency":"sss","facts":[fact.clone()]},"effective_facts":[fact],"reviews":[],"history":[],"employees":[{"employee_id":eid,"employee_code":"TEST-SSS","employee_name":"Fictional Staff"}],"remittances":[{"id":receipt,"company_id":company.id,"agency":"sss","paid_on":company.today(),"amount_cents":453000,"allocations":[{"month":month,"amount_cents":453000}],"reference":"QA-SBR-01","evidence":"Fictional receipt","note":"","replaces_id":null,"recorded_by":actor,"recorded_at":chrono::Utc::now(),"void_id":null,"void_reason":null,"voided_by":null,"voided_at":null,"replacement_id":null}]},"registrations":[{"id":uuid::Uuid::from_u128(181005),"company_id":company.id,"employee_id":null,"revision":0,"details":{"registered_name":"Fictional Company","sss_number":"0123456789"}},{"id":uuid::Uuid::from_u128(181006),"company_id":company.id,"employee_id":eid,"revision":0,"details":{"last_name":"Dela Cruz","first_name":"Alex","middle_name":"M","name_suffix":"","sss_number":"0212345678"}}]})
+fn collection_source(company: &Company) -> serde_json::Value {
+    use chrono::Datelike;
+    let month = company
+        .today()
+        .with_day(1)
+        .unwrap()
+        .checked_sub_months(chrono::Months::new(1))
+        .unwrap();
+    let end = month
+        .checked_add_months(chrono::Months::new(1))
+        .unwrap()
+        .pred_opt()
+        .unwrap();
+    let eid = uuid::Uuid::from_u128(181001);
+    let receipt = uuid::Uuid::from_u128(181002);
+    let actor = uuid::Uuid::from_u128(181003);
+    let fact = json!({"company_id":company.id,"employee_id":eid,"id":uuid::Uuid::from_u128(181004),"agency":"sss","kind":"monthly","state":"received","starts_on":month,"ends_on":end,"contribution_month":month,"received_on":company.today(),"parts":{"employee_cents":150000,"employer_cents":300000,"ec_cents":3000}});
+    json!({"version":"government-preparation-v1","review":{"version":"government-reconciliation-v1","source":{"version":"government-payroll-sources-v1","company_id":company.id,"company_name":company.name,"generated_at":chrono::Utc::now(),"as_of":company.today(),"month":month,"agency":"sss","facts":[fact.clone()]},"effective_facts":[fact],"reviews":[],"history":[],"employees":[{"employee_id":eid,"employee_code":"TEST-SSS","employee_name":"Fictional Staff"}],"remittances":[{"id":receipt,"company_id":company.id,"agency":"sss","paid_on":company.today(),"amount_cents":453000,"allocations":[{"month":month,"amount_cents":453000}],"reference":"QA-SBR-01","evidence":"Fictional receipt","note":"","replaces_id":null,"recorded_by":actor,"recorded_at":chrono::Utc::now(),"void_id":null,"void_reason":null,"voided_by":null,"voided_at":null,"replacement_id":null}]},"registrations":[{"id":uuid::Uuid::from_u128(181005),"company_id":company.id,"employee_id":null,"revision":0,"details":{"registered_name":"Fictional Company","sss_number":"0123456789"}},{"id":uuid::Uuid::from_u128(181006),"company_id":company.id,"employee_id":eid,"revision":0,"details":{"last_name":"Dela Cruz","first_name":"Alex","middle_name":"M","name_suffix":"","sss_number":"0212345678"}}]})
 }
-fn lifecycle_wire(company:&Company,employee:uuid::Uuid,read_keys:Vec<String>)->Value{
- let id=uuid::Uuid::from_u128(184601);let key=format!("payroll-monthly-issued:{id}:0");
- json!({"version":"lifecycle-notifications-v1","company_id":company.id,"user_id":company.owner_id,"employee_id":employee,"role":"administrator","surface":"desktop","as_of":company.today(),"generated_at":chrono::Utc::now(),"read_keys":read_keys,"total_items":1,"truncated":false,
+fn lifecycle_wire(company: &Company, employee: uuid::Uuid, read_keys: Vec<String>) -> Value {
+    let id = uuid::Uuid::from_u128(184601);
+    let key = format!("payroll-monthly-issued:{id}:0");
+    json!({"version":"lifecycle-notifications-v1","company_id":company.id,"user_id":company.owner_id,"employee_id":employee,"role":"administrator","surface":"desktop","as_of":company.today(),"generated_at":chrono::Utc::now(),"read_keys":read_keys,"total_items":1,"truncated":false,
  "items":[{"key":key,"kind":"payroll-monthly-issued","title":"Your monthly payslip is available","detail":"Approval is separate from payment","date":company.today(),"urgent":false,"target_id":id,"target_page":"payroll_monthly","employee_id":employee}]})
 }
 #[test]
-fn lifecycle_projection_rejects_a_changed_protected_role_before_loading_account_data(){
- let company=Company{owner_id:uuid::Uuid::from_u128(184600),..Default::default()};let mut replies=baseline(&company);
- let at=replies.iter().position(|r|r.prefix=="POST /rest/v1/rpc/lifecycle_notifications ").unwrap();
- let mut wire=lifecycle_wire(&company,uuid::Uuid::from_u128(184602),vec![]);wire["employee_id"]=Value::Null;wire["role"]=json!("manager");replies[at]=reply("POST /rest/v1/rpc/lifecycle_notifications ",200,wire);replies.truncate(at+1);
- let(config,server,requests)=fixture(replies);assert!(CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).is_err());server.join().unwrap();
- assert!(!requests.lock().unwrap().iter().any(|r|r.line.starts_with("GET /auth/v1/user ")));
+fn lifecycle_projection_rejects_a_changed_protected_role_before_loading_account_data() {
+    let company = Company {
+        owner_id: uuid::Uuid::from_u128(184600),
+        ..Default::default()
+    };
+    let mut replies = baseline(&company);
+    let at = replies
+        .iter()
+        .position(|r| r.prefix == "POST /rest/v1/rpc/lifecycle_notifications ")
+        .unwrap();
+    let mut wire = lifecycle_wire(&company, uuid::Uuid::from_u128(184602), vec![]);
+    wire["employee_id"] = Value::Null;
+    wire["role"] = json!("manager");
+    replies[at] = reply("POST /rest/v1/rpc/lifecycle_notifications ", 200, wire);
+    replies.truncate(at + 1);
+    let (config, server, requests) = fixture(replies);
+    assert!(
+        CloudClient::connect(
+            config,
+            "person@example.invalid".into(),
+            "synthetic passphrase".into()
+        )
+        .is_err()
+    );
+    server.join().unwrap();
+    assert!(
+        !requests
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|r| r.line.starts_with("GET /auth/v1/user "))
+    );
 }
 #[test]
-fn mixed_lifecycle_reads_use_atomic_new_rpc_and_keep_legacy_state_separate(){
- use hris_desktop::{domain::Action,notifications::ReadAction};
- let data=DemoStore::new().data;let company=data.company.clone();let person=data.employees[0].clone();let eid=person.id;
- let new_key=format!("payroll-monthly-issued:{}:0",uuid::Uuid::from_u128(184601));let old_key=format!("checkout:{}:0",uuid::Uuid::from_u128(184603));
- let prepare=|reads:Vec<String>|{
-  let mut v=baseline(&company);let mut access:Value=serde_json::from_slice(&v[1].body).unwrap();access["employee_id"]=json!(eid);v[1].body=serde_json::to_vec(&access).unwrap();v[3]=reply("GET /rest/v1/employees?",200,json!([person]));
-  response_at(&mut v,"POST /rest/v1/rpc/lifecycle_notifications ").body=serde_json::to_vec(&lifecycle_wire(&company,eid,reads)).unwrap();v
- };
- let mut replies=prepare(vec![]);let saved=json!({"company_id":company.id,"user_id":company.owner_id,"read_keys":[old_key]});replies.push(reply("POST /rest/v1/rpc/staff_notification_reads ",200,saved.clone()));
- let mut after=prepare(vec![new_key.clone()]);response_at(&mut after,"GET /rest/v1/notification_read_state?").body=serde_json::to_vec(&json!([saved])).unwrap();replies.extend(after.into_iter().skip(1).take_while(|r|!r.prefix.starts_with("GET /auth/v1/user ")));
- let(config,server,requests)=fixture(replies);let(mut client,current)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
- let next=client.execute(Action::NotificationReads(ReadAction::Mark{keys:vec![old_key.clone(),new_key.clone()],read:true}),&current).unwrap();server.join().unwrap();
- assert_eq!(next.notification_reads.read_keys,vec![old_key.clone()]);assert_eq!(next.lifecycle_notifications.unwrap().read_keys,vec![new_key.clone()]);
- let req=requests.lock().unwrap();let sent=request_at(&req,"POST /rest/v1/rpc/staff_notification_reads ",0).json();assert_eq!(sent,json!({"p_company_id":company.id,"p_keys":[old_key,new_key],"p_read":true,"p_reset":false}));
+fn mixed_lifecycle_reads_use_atomic_new_rpc_and_keep_legacy_state_separate() {
+    use hris_desktop::{domain::Action, notifications::ReadAction};
+    let data = DemoStore::new().data;
+    let company = data.company.clone();
+    let person = data.employees[0].clone();
+    let eid = person.id;
+    let new_key = format!("payroll-monthly-issued:{}:0", uuid::Uuid::from_u128(184601));
+    let old_key = format!("checkout:{}:0", uuid::Uuid::from_u128(184603));
+    let prepare = |reads: Vec<String>| {
+        let mut v = baseline(&company);
+        let mut access: Value = serde_json::from_slice(&v[1].body).unwrap();
+        access["employee_id"] = json!(eid);
+        v[1].body = serde_json::to_vec(&access).unwrap();
+        v[3] = reply("GET /rest/v1/employees?", 200, json!([person]));
+        response_at(&mut v, "POST /rest/v1/rpc/lifecycle_notifications ").body =
+            serde_json::to_vec(&lifecycle_wire(&company, eid, reads)).unwrap();
+        v
+    };
+    let mut replies = prepare(vec![]);
+    let saved = json!({"company_id":company.id,"user_id":company.owner_id,"read_keys":[old_key]});
+    replies.push(reply(
+        "POST /rest/v1/rpc/staff_notification_reads ",
+        200,
+        saved.clone(),
+    ));
+    let mut after = prepare(vec![new_key.clone()]);
+    response_at(&mut after, "GET /rest/v1/notification_read_state?").body =
+        serde_json::to_vec(&json!([saved])).unwrap();
+    replies.extend(
+        after
+            .into_iter()
+            .skip(1)
+            .take_while(|r| !r.prefix.starts_with("GET /auth/v1/user ")),
+    );
+    let (config, server, requests) = fixture(replies);
+    let (mut client, current) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    let next = client
+        .execute(
+            Action::NotificationReads(ReadAction::Mark {
+                keys: vec![old_key.clone(), new_key.clone()],
+                read: true,
+            }),
+            &current,
+        )
+        .unwrap();
+    server.join().unwrap();
+    assert_eq!(next.notification_reads.read_keys, vec![old_key.clone()]);
+    assert_eq!(
+        next.lifecycle_notifications.unwrap().read_keys,
+        vec![new_key.clone()]
+    );
+    let req = requests.lock().unwrap();
+    let sent = request_at(&req, "POST /rest/v1/rpc/staff_notification_reads ", 0).json();
+    assert_eq!(
+        sent,
+        json!({"p_company_id":company.id,"p_keys":[old_key,new_key],"p_read":true,"p_reset":false})
+    );
 }
 #[test]
-fn sss_collection_load_is_private_and_membership_is_rechecked_before_return(){
- use hris_desktop::payroll_government::{Agency,Filter};use chrono::Datelike;
- for revoked in[false,true]{
-  let company=Company{owner_id:uuid::Uuid::from_u128(181100),..Default::default()};let month=company.today().with_day(1).unwrap().checked_sub_months(chrono::Months::new(1)).unwrap();
-  let access=json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});let mut after=access.clone();if revoked{after["role"]=json!("manager");}
-  let mut replies=baseline(&company);replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access));replies.push(reply("POST /rest/v1/rpc/government_preparation ",200,collection_source(&company)));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,after));
-  let(config,server,requests)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
-  assert_eq!(client.sss_collection_prepare(&data,Filter{month,agency:Agency::Sss}).is_err(),revoked);drop(client);server.join().unwrap();
-  let req=requests.lock().unwrap();assert_eq!(req.iter().filter(|r|r.line.starts_with("POST /rest/v1/rpc/government_preparation ")).count(),1);assert!(!req.iter().any(|r|r.line.contains("/government_registration_records?")));
- }
+fn sss_collection_load_is_private_and_membership_is_rechecked_before_return() {
+    use chrono::Datelike;
+    use hris_desktop::payroll_government::{Agency, Filter};
+    for revoked in [false, true] {
+        let company = Company {
+            owner_id: uuid::Uuid::from_u128(181100),
+            ..Default::default()
+        };
+        let month = company
+            .today()
+            .with_day(1)
+            .unwrap()
+            .checked_sub_months(chrono::Months::new(1))
+            .unwrap();
+        let access = json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});
+        let mut after = access.clone();
+        if revoked {
+            after["role"] = json!("manager");
+        }
+        let mut replies = baseline(&company);
+        replies.push(reply("POST /rest/v1/rpc/my_hris_access ", 200, access));
+        replies.push(reply(
+            "POST /rest/v1/rpc/government_preparation ",
+            200,
+            collection_source(&company),
+        ));
+        replies.push(reply("POST /rest/v1/rpc/my_hris_access ", 200, after));
+        let (config, server, requests) = fixture(replies);
+        let (mut client, data) = CloudClient::connect(
+            config,
+            "person@example.invalid".into(),
+            "synthetic passphrase".into(),
+        )
+        .unwrap();
+        assert_eq!(
+            client
+                .sss_collection_prepare(
+                    &data,
+                    Filter {
+                        month,
+                        agency: Agency::Sss
+                    }
+                )
+                .is_err(),
+            revoked
+        );
+        drop(client);
+        server.join().unwrap();
+        let req = requests.lock().unwrap();
+        assert_eq!(
+            req.iter()
+                .filter(|r| r
+                    .line
+                    .starts_with("POST /rest/v1/rpc/government_preparation "))
+                .count(),
+            1
+        );
+        assert!(
+            !req.iter()
+                .any(|r| r.line.contains("/government_registration_records?"))
+        );
+    }
 }
 #[test]
-fn sss_collection_export_refetches_and_rejects_stale_or_revoked_inputs_before_io(){
- use hris_desktop::payroll_government::{Agency,Filter,preparation::{Preparation,PreparationWire},sss_collection::{Basis,Request,Declaration},sss_r3::Remark};use chrono::Datelike;
- for case in["success","stale","revoked"]{
-  let company=Company{owner_id:uuid::Uuid::from_u128(181100),..Default::default()};let month=company.today().with_day(1).unwrap().checked_sub_months(chrono::Months::new(1)).unwrap();let filter=Filter{month,agency:Agency::Sss};
-  let mut wire=collection_source(&company);let original:PreparationWire=serde_json::from_value(wire.clone()).unwrap();let basis=Basis::from_preparation(&Preparation::from_wire(original,company.id,filter).unwrap()).unwrap();
-  let request=Request{expected_fingerprint:basis.fingerprint.clone(),receipt_id:basis.receipt.id,employer_name:basis.employer_name.clone(),reviewed:true,declarations:vec![Declaration{employee_id:basis.people[0].employee_id,last_name:"Dela Cruz".into(),first_name:"Alex".into(),middle_initial:"M".into(),remark:Remark::Normal,event_on:None}]};
-  if case=="stale"{wire["registrations"][1]["revision"]=json!(1);}
-  let access=json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});let mut after=access.clone();if case=="revoked"{after["role"]=json!("manager");}
-  let mut replies=baseline(&company);replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,access));replies.push(reply("POST /rest/v1/rpc/government_preparation ",200,wire));if case!="stale"{replies.push(reply("POST /rest/v1/rpc/my_hris_access ",200,after));}
-  let(config,server,_)=fixture(replies);let(mut client,data)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();let path=std::env::current_dir().unwrap().join("work").join(format!("sss-reference-{}.txt",uuid::Uuid::new_v4()));
-  let result=client.sss_collection_export(&data,filter,&request,&path);assert_eq!(result.is_ok(),case=="success");
-  if case=="success"{assert_eq!(std::fs::read(&path).unwrap(),basis.render(&request).unwrap());std::fs::remove_file(path).unwrap();}else{assert!(!path.exists());}
-  drop(client);server.join().unwrap();
- }
+fn sss_collection_export_refetches_and_rejects_stale_or_revoked_inputs_before_io() {
+    use chrono::Datelike;
+    use hris_desktop::payroll_government::{
+        Agency, Filter,
+        preparation::{Preparation, PreparationWire},
+        sss_collection::{Basis, Declaration, Request},
+        sss_r3::Remark,
+    };
+    for case in ["success", "stale", "revoked"] {
+        let company = Company {
+            owner_id: uuid::Uuid::from_u128(181100),
+            ..Default::default()
+        };
+        let month = company
+            .today()
+            .with_day(1)
+            .unwrap()
+            .checked_sub_months(chrono::Months::new(1))
+            .unwrap();
+        let filter = Filter {
+            month,
+            agency: Agency::Sss,
+        };
+        let mut wire = collection_source(&company);
+        let original: PreparationWire = serde_json::from_value(wire.clone()).unwrap();
+        let basis =
+            Basis::from_preparation(&Preparation::from_wire(original, company.id, filter).unwrap())
+                .unwrap();
+        let request = Request {
+            expected_fingerprint: basis.fingerprint.clone(),
+            receipt_id: basis.receipt.id,
+            employer_name: basis.employer_name.clone(),
+            reviewed: true,
+            declarations: vec![Declaration {
+                employee_id: basis.people[0].employee_id,
+                last_name: "Dela Cruz".into(),
+                first_name: "Alex".into(),
+                middle_initial: "M".into(),
+                remark: Remark::Normal,
+                event_on: None,
+            }],
+        };
+        if case == "stale" {
+            wire["registrations"][1]["revision"] = json!(1);
+        }
+        let access = json!({"company_id":company.id,"user_id":company.owner_id,"role":"administrator","employee_id":null,"direct_reports":[]});
+        let mut after = access.clone();
+        if case == "revoked" {
+            after["role"] = json!("manager");
+        }
+        let mut replies = baseline(&company);
+        replies.push(reply("POST /rest/v1/rpc/my_hris_access ", 200, access));
+        replies.push(reply(
+            "POST /rest/v1/rpc/government_preparation ",
+            200,
+            wire,
+        ));
+        if case != "stale" {
+            replies.push(reply("POST /rest/v1/rpc/my_hris_access ", 200, after));
+        }
+        let (config, server, _) = fixture(replies);
+        let (mut client, data) = CloudClient::connect(
+            config,
+            "person@example.invalid".into(),
+            "synthetic passphrase".into(),
+        )
+        .unwrap();
+        let path = std::env::current_dir()
+            .unwrap()
+            .join("work")
+            .join(format!("sss-reference-{}.txt", uuid::Uuid::new_v4()));
+        let result = client.sss_collection_export(&data, filter, &request, &path);
+        assert_eq!(result.is_ok(), case == "success");
+        if case == "success" {
+            assert_eq!(
+                std::fs::read(&path).unwrap(),
+                basis.render(&request).unwrap()
+            );
+            std::fs::remove_file(path).unwrap();
+        } else {
+            assert!(!path.exists());
+        }
+        drop(client);
+        server.join().unwrap();
+    }
 }
 
 #[test]
-fn leave_credit_post_keeps_retry_identity_after_saved_write_and_failed_refresh(){
- use hris_desktop::{domain::Action,leave::credits::{Record,Entry}};
- let data=DemoStore::new().data;let company=data.company.clone();let person=data.employees[0].clone();
- let r=Record{id:uuid::Uuid::from_u128(184700),employee_id:person.id,type_code:"annual".into(),effective_on:company.today(),units:1,reverses_id:None,expected_revision:0,reason:"Synthetic reviewed credit".into(),reference:String::new()};
- let prepare=||{let mut v=baseline(&company);response_at(&mut v,"GET /rest/v1/employees?").body=serde_json::to_vec(&json!([person])).unwrap();v};
- let saved=json!({"id":r.id,"company_revision":1});let mut replies=prepare();replies.push(reply("POST /rest/v1/rpc/post_leave_credit ",200,saved.clone()));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",500,json!({"message":"Synthetic refresh failure"})));replies.push(reply("POST /rest/v1/rpc/post_leave_credit ",200,saved));
- let mut after=prepare();response_at(&mut after,"POST /rest/v1/rpc/leave_credit_context ").body=serde_json::to_vec(&json!({"version":"leave-credits-v1","company_id":company.id,"user_id":company.owner_id,"employee_id":null,"role":"administrator","as_of":company.today(),"revision":1,"entries":[Entry{id:r.id,employee_id:r.employee_id,type_code:r.type_code.clone(),effective_on:r.effective_on,units:1,reverses_id:None}],"audit":[{"id":r.id,"reason":r.reason,"reference":"","created_by_name":"Fictional Administrator","posted_at":chrono::Utc::now(),"company_revision":1}]})).unwrap();
- replies.extend(after.into_iter().skip(1).take_while(|v|!v.prefix.starts_with("GET /auth/v1/user ")));
- let(config,server,requests)=fixture(replies);let(mut client,current)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
- assert!(client.execute(Action::LeaveCredit(r.clone()),&current).unwrap_err().to_string().contains("Credit saved, but refresh failed"));
- let fresh=client.execute(Action::LeaveCredit(r.clone()),&current).unwrap();assert_eq!(fresh.leave_setup.credits.unwrap().entries.len(),1);server.join().unwrap();
- let requests=requests.lock().unwrap();assert_eq!(request_at(&requests,"POST /rest/v1/rpc/post_leave_credit ",0).json(),request_at(&requests,"POST /rest/v1/rpc/post_leave_credit ",1).json());
- let p=request_at(&requests,"POST /rest/v1/rpc/post_leave_credit ",0).json();assert_eq!(p,json!({"p_record":r}));assert!(request_at(&requests,"POST /rest/v1/rpc/post_leave_credit ",0).headers.to_lowercase().contains("x-hris-leave-credits: 1"));
+fn leave_credit_post_keeps_retry_identity_after_saved_write_and_failed_refresh() {
+    use hris_desktop::{
+        domain::Action,
+        leave::credits::{Entry, Record},
+    };
+    let data = DemoStore::new().data;
+    let company = data.company.clone();
+    let person = data.employees[0].clone();
+    let r = Record {
+        id: uuid::Uuid::from_u128(184700),
+        employee_id: person.id,
+        type_code: "annual".into(),
+        effective_on: company.today(),
+        units: 1,
+        reverses_id: None,
+        expected_revision: 0,
+        reason: "Synthetic reviewed credit".into(),
+        reference: String::new(),
+    };
+    let prepare = || {
+        let mut v = baseline(&company);
+        response_at(&mut v, "GET /rest/v1/employees?").body =
+            serde_json::to_vec(&json!([person])).unwrap();
+        v
+    };
+    let saved = json!({"id":r.id,"company_revision":1});
+    let mut replies = prepare();
+    replies.push(reply(
+        "POST /rest/v1/rpc/post_leave_credit ",
+        200,
+        saved.clone(),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/my_hris_access ",
+        500,
+        json!({"message":"Synthetic refresh failure"}),
+    ));
+    replies.push(reply("POST /rest/v1/rpc/post_leave_credit ", 200, saved));
+    let mut after = prepare();
+    response_at(&mut after,"POST /rest/v1/rpc/leave_credit_context ").body=serde_json::to_vec(&json!({"version":"leave-credits-v1","company_id":company.id,"user_id":company.owner_id,"employee_id":null,"role":"administrator","as_of":company.today(),"revision":1,"entries":[Entry{id:r.id,employee_id:r.employee_id,type_code:r.type_code.clone(),effective_on:r.effective_on,units:1,reverses_id:None}],"audit":[{"id":r.id,"reason":r.reason,"reference":"","created_by_name":"Fictional Administrator","posted_at":chrono::Utc::now(),"company_revision":1}]})).unwrap();
+    replies.extend(
+        after
+            .into_iter()
+            .skip(1)
+            .take_while(|v| !v.prefix.starts_with("GET /auth/v1/user ")),
+    );
+    let (config, server, requests) = fixture(replies);
+    let (mut client, current) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert!(
+        client
+            .execute(Action::LeaveCredit(r.clone()), &current)
+            .unwrap_err()
+            .to_string()
+            .contains("Credit saved, but refresh failed")
+    );
+    let fresh = client
+        .execute(Action::LeaveCredit(r.clone()), &current)
+        .unwrap();
+    assert_eq!(fresh.leave_setup.credits.unwrap().entries.len(), 1);
+    server.join().unwrap();
+    let requests = requests.lock().unwrap();
+    assert_eq!(
+        request_at(&requests, "POST /rest/v1/rpc/post_leave_credit ", 0).json(),
+        request_at(&requests, "POST /rest/v1/rpc/post_leave_credit ", 1).json()
+    );
+    let p = request_at(&requests, "POST /rest/v1/rpc/post_leave_credit ", 0).json();
+    assert_eq!(p, json!({"p_record":r}));
+    assert!(
+        request_at(&requests, "POST /rest/v1/rpc/post_leave_credit ", 0)
+            .headers
+            .to_lowercase()
+            .contains("x-hris-leave-credits: 1")
+    );
 }
 
 #[test]
-fn delegation_context_rejects_a_changed_protected_role_before_any_write(){
- let company=Company::default();let mut replies=baseline(&company);let at=replies.iter().position(|r|r.prefix=="POST /rest/v1/rpc/approval_delegation_context ").unwrap();
- replies[at]=reply("POST /rest/v1/rpc/approval_delegation_context ",200,json!({"version":"approval-delegation-v1","company_id":company.id,"user_id":company.owner_id,"employee_id":null,"role":"manager","as_of":company.today(),"revision":0,"grants":[],"revocations":[],"receipts":[],"permits":[],"audit":[],"staff":[]}));replies.truncate(at+1);
- let(config,server,requests)=fixture(replies);assert!(CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).is_err());server.join().unwrap();assert!(!requests.lock().unwrap().iter().any(|r|r.line.contains("save_approval_delegation")));
+fn delegation_context_rejects_a_changed_protected_role_before_any_write() {
+    let company = Company::default();
+    let mut replies = baseline(&company);
+    let at = replies
+        .iter()
+        .position(|r| r.prefix == "POST /rest/v1/rpc/approval_delegation_context ")
+        .unwrap();
+    replies[at] = reply(
+        "POST /rest/v1/rpc/approval_delegation_context ",
+        200,
+        json!({"version":"approval-delegation-v1","company_id":company.id,"user_id":company.owner_id,"employee_id":null,"role":"manager","as_of":company.today(),"revision":0,"grants":[],"revocations":[],"receipts":[],"permits":[],"audit":[],"staff":[]}),
+    );
+    replies.truncate(at + 1);
+    let (config, server, requests) = fixture(replies);
+    assert!(
+        CloudClient::connect(
+            config,
+            "person@example.invalid".into(),
+            "synthetic passphrase".into()
+        )
+        .is_err()
+    );
+    server.join().unwrap();
+    assert!(
+        !requests
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|r| r.line.contains("save_approval_delegation"))
+    );
 }
 
 #[test]
-fn delegation_post_keeps_identical_request_after_saved_write_and_failed_refresh(){
- use hris_desktop::{approvals::{self,Change,Scope,Context},access::{Access,Role},domain::Action};
- let mut data=DemoStore::new().data;let company=data.company.clone();data.access=Access{company_id:company.id,user_id:company.owner_id,employee_id:None,role:Role::Administrator,..Default::default()};let context=Context::empty(&data);
- let principal=context.staff.iter().find(|s|s.role==Role::Manager).unwrap();let delegate=context.staff.iter().find(|s|s.role==Role::HrGeneralist).unwrap();
- let change=Change::Grant{id:uuid::Uuid::from_u128(184800),expected_revision:0,scope:Scope::Leave,principal_id:principal.user_id,delegate_id:delegate.user_id,starts_on:company.today(),ends_on:company.today()+chrono::Duration::days(7),reason:"Synthetic documented delegation".into(),reference:"Synthetic reference".into()};
- data.approvals=Some(context.clone());approvals::apply_demo(&mut data,&change).unwrap();let after_context=data.approvals.as_ref().unwrap().clone();
- let prepare=|c:&Context|{let mut replies=baseline(&company);response_at(&mut replies,"POST /rest/v1/rpc/approval_delegation_context ").body=serde_json::to_vec(c).unwrap();replies};
- let saved=json!({"id":change.id(),"company_revision":1});let mut replies=prepare(&context);replies.push(reply("POST /rest/v1/rpc/save_approval_delegation ",200,saved.clone()));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",500,json!({"message":"Synthetic refresh failure"})));replies.push(reply("POST /rest/v1/rpc/save_approval_delegation ",200,saved));
- replies.extend(prepare(&after_context).into_iter().skip(1).take_while(|v|!v.prefix.starts_with("GET /auth/v1/user ")));
- let(config,server,requests)=fixture(replies);let(mut client,current)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
- assert!(client.execute(Action::ApprovalDelegation(change.clone()),&current).err().unwrap().to_string().contains("Delegation saved, but refresh failed"));let fresh=client.execute(Action::ApprovalDelegation(change.clone()),&current).unwrap();assert!(change.matches_history(fresh.approvals.as_ref().unwrap()));server.join().unwrap();
- let requests=requests.lock().unwrap();assert_eq!(request_at(&requests,"POST /rest/v1/rpc/save_approval_delegation ",0).json(),request_at(&requests,"POST /rest/v1/rpc/save_approval_delegation ",1).json());
+fn delegation_post_keeps_identical_request_after_saved_write_and_failed_refresh() {
+    use hris_desktop::{
+        access::{Access, Role},
+        approvals::{self, Change, Context, Scope},
+        domain::Action,
+    };
+    let mut data = DemoStore::new().data;
+    let company = data.company.clone();
+    data.access = Access {
+        company_id: company.id,
+        user_id: company.owner_id,
+        employee_id: None,
+        role: Role::Administrator,
+        ..Default::default()
+    };
+    let context = Context::empty(&data);
+    let principal = context
+        .staff
+        .iter()
+        .find(|s| s.role == Role::Manager)
+        .unwrap();
+    let delegate = context
+        .staff
+        .iter()
+        .find(|s| s.role == Role::HrGeneralist)
+        .unwrap();
+    let change = Change::Grant {
+        id: uuid::Uuid::from_u128(184800),
+        expected_revision: 0,
+        scope: Scope::Leave,
+        principal_id: principal.user_id,
+        delegate_id: delegate.user_id,
+        starts_on: company.today(),
+        ends_on: company.today() + chrono::Duration::days(7),
+        reason: "Synthetic documented delegation".into(),
+        reference: "Synthetic reference".into(),
+    };
+    data.approvals = Some(context.clone());
+    approvals::apply_demo(&mut data, &change).unwrap();
+    let after_context = data.approvals.as_ref().unwrap().clone();
+    let prepare = |c: &Context| {
+        let mut replies = baseline(&company);
+        response_at(
+            &mut replies,
+            "POST /rest/v1/rpc/approval_delegation_context ",
+        )
+        .body = serde_json::to_vec(c).unwrap();
+        replies
+    };
+    let saved = json!({"id":change.id(),"company_revision":1});
+    let mut replies = prepare(&context);
+    replies.push(reply(
+        "POST /rest/v1/rpc/save_approval_delegation ",
+        200,
+        saved.clone(),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/my_hris_access ",
+        500,
+        json!({"message":"Synthetic refresh failure"}),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/save_approval_delegation ",
+        200,
+        saved,
+    ));
+    replies.extend(
+        prepare(&after_context)
+            .into_iter()
+            .skip(1)
+            .take_while(|v| !v.prefix.starts_with("GET /auth/v1/user ")),
+    );
+    let (config, server, requests) = fixture(replies);
+    let (mut client, current) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert!(
+        client
+            .execute(Action::ApprovalDelegation(change.clone()), &current)
+            .err()
+            .unwrap()
+            .to_string()
+            .contains("Delegation saved, but refresh failed")
+    );
+    let fresh = client
+        .execute(Action::ApprovalDelegation(change.clone()), &current)
+        .unwrap();
+    assert!(change.matches_history(fresh.approvals.as_ref().unwrap()));
+    server.join().unwrap();
+    let requests = requests.lock().unwrap();
+    assert_eq!(
+        request_at(&requests, "POST /rest/v1/rpc/save_approval_delegation ", 0).json(),
+        request_at(&requests, "POST /rest/v1/rpc/save_approval_delegation ", 1).json()
+    );
 }
 
 #[test]
-fn opening_post_retains_identical_retry_and_checked_leave_binds_the_entire_preview(){
- use hris_desktop::{access::{Access,Role},domain::{Action,LeaveDraft},leave::{self,dated::{Context,OpeningRecord,Change}}};
- let mut d=DemoStore::new().data;d.leave.clear();d.employees.truncate(1);let company=d.company.clone();let person=d.employees[0].clone();
- d.access=Access{company_id:company.id,user_id:company.owner_id,employee_id:None,role:Role::Administrator,..Default::default()};d.leave_setup.dated=Some(Context::empty(&d));d.leave_setup.credits=Some(leave::credits::Context::empty(&d));
- let record=OpeningRecord{id:uuid::Uuid::from_u128(184901),employee_id:person.id,type_code:"annual".into(),effective_on:company.today(),target_available_units:12,remaining_carry_units:0,source_requests_reviewed:true,expected_revision:0,reason:"Fictional reviewed opening".into(),reference:"Fictional source only".into()};
- let preview=leave::dated::preview_demo(&d,&record).unwrap();let change=Change::Opening(Box::new(preview));let initial=d.leave_setup.dated.clone().unwrap();leave::dated::apply_demo(&mut d,&change).unwrap();let after=d.leave_setup.dated.clone().unwrap();
- let prepare=|c:&Context|{let mut v=baseline(&company);response_at(&mut v,"GET /rest/v1/employees?").body=serde_json::to_vec(&json!([person])).unwrap();response_at(&mut v,"POST /rest/v1/rpc/leave_dated_context ").body=serde_json::to_vec(c).unwrap();v};
- let saved=json!({"id":record.id,"company_revision":1});let mut replies=prepare(&initial);replies.push(reply("POST /rest/v1/rpc/post_leave_opening ",200,saved.clone()));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",500,json!({"message":"Fictional refresh failure"})));replies.push(reply("POST /rest/v1/rpc/post_leave_opening ",200,saved));
- replies.extend(prepare(&after).into_iter().skip(1).take_while(|v|!v.prefix.starts_with("GET /auth/v1/user ")));
- replies.push(reply("POST /rest/v1/rpc/submit_leave_checked ",200,json!(uuid::Uuid::from_u128(184902))));replies.push(reply("POST /rest/v1/rpc/my_hris_access ",500,json!({"message":"Fictional refresh failure"})));
- let(config,server,requests)=fixture(replies);let(mut client,current)=CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).unwrap();
- assert!(client.execute(Action::DatedLeave(change.clone()),&current).unwrap_err().to_string().contains("Leave setup saved, but refresh failed"));let fresh=client.execute(Action::DatedLeave(change),&current).unwrap();assert_eq!(fresh.leave_setup.dated.as_ref().unwrap().openings.len(),1);
- let mut day=company.today()+chrono::Duration::days(1);while chrono::Datelike::weekday(&day).number_from_monday()>5{day+=chrono::Duration::days(1);}
- let draft=LeaveDraft{employee_id:Some(person.id),starts_on:day.to_string(),ends_on:day.to_string(),options:leave::LeaveOptions{type_code:"annual".into(),day_part:leave::DayPart::Full},..Default::default()};assert!(client.execute(Action::RequestLeave(draft),&fresh).is_err());server.join().unwrap();
- let seen=requests.lock().unwrap();assert_eq!(request_at(&seen,"POST /rest/v1/rpc/post_leave_opening ",0).json(),request_at(&seen,"POST /rest/v1/rpc/post_leave_opening ",1).json());
- let checked=request_at(&seen,"POST /rest/v1/rpc/submit_leave_checked ",0);let body=checked.json();assert_eq!(body["p_expected"]["setup_revision"],1);assert_eq!(body["p_expected"]["credit_revision"],0);assert_eq!(body["p_expected"]["balance"]["available_units"],12);assert_eq!(body["p_expected"]["charged_dates"],json!([{"date":day,"units":2}]));assert!(checked.headers.to_lowercase().contains("x-hris-leave-dated: 1"));
+fn opening_post_retains_identical_retry_and_checked_leave_binds_the_entire_preview() {
+    use hris_desktop::{
+        access::{Access, Role},
+        domain::{Action, LeaveDraft},
+        leave::{
+            self,
+            dated::{Change, Context, OpeningRecord},
+        },
+    };
+    let mut d = DemoStore::new().data;
+    d.leave.clear();
+    d.employees.truncate(1);
+    let company = d.company.clone();
+    let person = d.employees[0].clone();
+    d.access = Access {
+        company_id: company.id,
+        user_id: company.owner_id,
+        employee_id: None,
+        role: Role::Administrator,
+        ..Default::default()
+    };
+    d.leave_setup.dated = Some(Context::empty(&d));
+    d.leave_setup.credits = Some(leave::credits::Context::empty(&d));
+    let record = OpeningRecord {
+        id: uuid::Uuid::from_u128(184901),
+        employee_id: person.id,
+        type_code: "annual".into(),
+        effective_on: company.today(),
+        target_available_units: 12,
+        remaining_carry_units: 0,
+        source_requests_reviewed: true,
+        expected_revision: 0,
+        reason: "Fictional reviewed opening".into(),
+        reference: "Fictional source only".into(),
+    };
+    let preview = leave::dated::preview_demo(&d, &record).unwrap();
+    let change = Change::Opening(Box::new(preview));
+    let initial = d.leave_setup.dated.clone().unwrap();
+    leave::dated::apply_demo(&mut d, &change).unwrap();
+    let after = d.leave_setup.dated.clone().unwrap();
+    let prepare = |c: &Context| {
+        let mut v = baseline(&company);
+        response_at(&mut v, "GET /rest/v1/employees?").body =
+            serde_json::to_vec(&json!([person])).unwrap();
+        response_at(&mut v, "POST /rest/v1/rpc/leave_dated_context ").body =
+            serde_json::to_vec(c).unwrap();
+        v
+    };
+    let saved = json!({"id":record.id,"company_revision":1});
+    let mut replies = prepare(&initial);
+    replies.push(reply(
+        "POST /rest/v1/rpc/post_leave_opening ",
+        200,
+        saved.clone(),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/my_hris_access ",
+        500,
+        json!({"message":"Fictional refresh failure"}),
+    ));
+    replies.push(reply("POST /rest/v1/rpc/post_leave_opening ", 200, saved));
+    replies.extend(
+        prepare(&after)
+            .into_iter()
+            .skip(1)
+            .take_while(|v| !v.prefix.starts_with("GET /auth/v1/user ")),
+    );
+    replies.push(reply(
+        "POST /rest/v1/rpc/submit_leave_checked ",
+        200,
+        json!(uuid::Uuid::from_u128(184902)),
+    ));
+    replies.push(reply(
+        "POST /rest/v1/rpc/my_hris_access ",
+        500,
+        json!({"message":"Fictional refresh failure"}),
+    ));
+    let (config, server, requests) = fixture(replies);
+    let (mut client, current) = CloudClient::connect(
+        config,
+        "person@example.invalid".into(),
+        "synthetic passphrase".into(),
+    )
+    .unwrap();
+    assert!(
+        client
+            .execute(Action::DatedLeave(change.clone()), &current)
+            .unwrap_err()
+            .to_string()
+            .contains("Leave setup saved, but refresh failed")
+    );
+    let fresh = client
+        .execute(Action::DatedLeave(change), &current)
+        .unwrap();
+    assert_eq!(fresh.leave_setup.dated.as_ref().unwrap().openings.len(), 1);
+    let mut day = company.today() + chrono::Duration::days(1);
+    while chrono::Datelike::weekday(&day).number_from_monday() > 5 {
+        day += chrono::Duration::days(1);
+    }
+    let draft = LeaveDraft {
+        employee_id: Some(person.id),
+        starts_on: day.to_string(),
+        ends_on: day.to_string(),
+        options: leave::LeaveOptions {
+            type_code: "annual".into(),
+            day_part: leave::DayPart::Full,
+        },
+        ..Default::default()
+    };
+    assert!(client.execute(Action::RequestLeave(draft), &fresh).is_err());
+    server.join().unwrap();
+    let seen = requests.lock().unwrap();
+    assert_eq!(
+        request_at(&seen, "POST /rest/v1/rpc/post_leave_opening ", 0).json(),
+        request_at(&seen, "POST /rest/v1/rpc/post_leave_opening ", 1).json()
+    );
+    let checked = request_at(&seen, "POST /rest/v1/rpc/submit_leave_checked ", 0);
+    let body = checked.json();
+    assert_eq!(body["p_expected"]["setup_revision"], 1);
+    assert_eq!(body["p_expected"]["credit_revision"], 0);
+    assert_eq!(body["p_expected"]["balance"]["available_units"], 12);
+    assert_eq!(
+        body["p_expected"]["charged_dates"],
+        json!([{"date":day,"units":2}])
+    );
+    assert!(
+        checked
+            .headers
+            .to_lowercase()
+            .contains("x-hris-leave-dated: 1")
+    );
 }
 
 #[test]
-fn dated_context_role_mismatch_is_rejected_before_any_mutation(){
- let company=Company::default();let mut replies=baseline(&company);let at=replies.iter().position(|r|r.prefix=="POST /rest/v1/rpc/leave_dated_context ").unwrap();
- replies[at]=reply("POST /rest/v1/rpc/leave_dated_context ",200,json!({"version":"leave-dated-v1","company_id":company.id,"user_id":company.owner_id,"employee_id":null,"role":"manager","as_of":company.today(),"revision":0,"enabled":false,"timeline":{"baseline":hris_desktop::leave::LeavePolicy{company_id:company.id,..Default::default()},"versions":[]},"anchors":[],"openings":[],"withdrawals":[],"audit":[]}));replies.truncate(at+1);
- let(config,server,requests)=fixture(replies);assert!(CloudClient::connect(config,"person@example.invalid".into(),"synthetic passphrase".into()).is_err());server.join().unwrap();assert!(requests.lock().unwrap().iter().all(|r|!r.line.starts_with("POST /rest/v1/rpc/post_leave_open")));
+fn dated_context_role_mismatch_is_rejected_before_any_mutation() {
+    let company = Company::default();
+    let mut replies = baseline(&company);
+    let at = replies
+        .iter()
+        .position(|r| r.prefix == "POST /rest/v1/rpc/leave_dated_context ")
+        .unwrap();
+    replies[at] = reply(
+        "POST /rest/v1/rpc/leave_dated_context ",
+        200,
+        json!({"version":"leave-dated-v1","company_id":company.id,"user_id":company.owner_id,"employee_id":null,"role":"manager","as_of":company.today(),"revision":0,"enabled":false,"timeline":{"baseline":hris_desktop::leave::LeavePolicy{company_id:company.id,..Default::default()},"versions":[]},"anchors":[],"openings":[],"withdrawals":[],"audit":[]}),
+    );
+    replies.truncate(at + 1);
+    let (config, server, requests) = fixture(replies);
+    assert!(
+        CloudClient::connect(
+            config,
+            "person@example.invalid".into(),
+            "synthetic passphrase".into()
+        )
+        .is_err()
+    );
+    server.join().unwrap();
+    assert!(
+        requests
+            .lock()
+            .unwrap()
+            .iter()
+            .all(|r| !r.line.starts_with("POST /rest/v1/rpc/post_leave_open"))
+    );
 }

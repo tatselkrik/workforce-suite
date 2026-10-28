@@ -133,8 +133,8 @@ impl HrisApp {
         if state.date.is_empty() {
             state.date = today.to_string();
         }
-        let selected_on=parse_date(&state.date).unwrap_or(today);
-        let dated_policy=leave::dated::policy_on(data,selected_on);
+        let selected_on = parse_date(&state.date).unwrap_or(today);
+        let dated_policy = leave::dated::policy_on(data, selected_on);
         card(ui, |ui| {
             ui.label(
                 RichText::new("Leave credit adjustments")
@@ -174,7 +174,8 @@ impl HrisApp {
                                 .unwrap_or("Choose finite leave type"),
                         )
                         .show_ui(ui, |ui| {
-                            for t in dated_policy.types
+                            for t in dated_policy
+                                .types
                                 .iter()
                                 .filter(|t| t.accrual != leave::Accrual::Unlimited)
                             {
@@ -194,8 +195,23 @@ impl HrisApp {
                     .and_then(|id| data.employees.iter().find(|e| e.id == id)),
                 dated_policy.leave_type(&state.code),
             ) {
-                let adjustments = context.units(person.id, &kind.code, selected_on.year(), selected_on);
-                match leave::balance_checked(data,person,kind,selected_on.year(),selected_on,None){Ok(b)=>{ui.label(format!("At {selected_on}: {} available · {} used · {} reserved · {} carryover day(s)",leave::days(b.available_units),leave::days(b.used_units),leave::days(b.reserved_units),leave::days(b.carryover_units)));},Err(e)=>{ui.colored_label(ui.visuals().error_fg_color,e.to_string());}}
+                let adjustments =
+                    context.units(person.id, &kind.code, selected_on.year(), selected_on);
+                match leave::balance_checked(
+                    data,
+                    person,
+                    kind,
+                    selected_on.year(),
+                    selected_on,
+                    None,
+                ) {
+                    Ok(b) => {
+                        ui.label(format!("At {selected_on}: {} available · {} used · {} reserved · {} carryover day(s)",leave::days(b.available_units),leave::days(b.used_units),leave::days(b.reserved_units),leave::days(b.carryover_units)));
+                    }
+                    Err(e) => {
+                        ui.colored_label(ui.visuals().error_fg_color, e.to_string());
+                    }
+                }
                 ui.label(format!(
                     "Base adjustments through this date: {} day(s)",
                     leave::days(adjustments)

@@ -1,23 +1,23 @@
-mod recruiting_adapter;
-mod performance_adapter;
-mod learning_adapter;
-mod career_adapter;
-mod payroll_adapter;
-mod payroll_exchange_adapter;
-mod staff_roles_adapter;
-mod staff_provision_adapter;
-#[cfg(test)]
-mod staff_provision_tests;
-#[cfg(test)]
-mod government_export_tests;
-#[cfg(test)]
-mod bir_file_tests;
 #[cfg(test)]
 mod bir_builder_tests;
 #[cfg(test)]
-mod government_annual_tests;
+mod bir_file_tests;
 #[cfg(test)]
 mod bir_identity_tests;
+mod career_adapter;
+#[cfg(test)]
+mod government_annual_tests;
+#[cfg(test)]
+mod government_export_tests;
+mod learning_adapter;
+mod payroll_adapter;
+mod payroll_exchange_adapter;
+mod performance_adapter;
+mod recruiting_adapter;
+mod staff_provision_adapter;
+#[cfg(test)]
+mod staff_provision_tests;
+mod staff_roles_adapter;
 #[cfg(test)]
 mod staff_roles_tests;
 use crate::access::{Access, AccessEvent, AdminAction, ManagedAccount};
@@ -773,29 +773,43 @@ impl CloudClient {
     }
 
     fn current_access(&mut self) -> Result<Access> {
-        let response = self.request(Method::POST, "rpc/my_hris_access")?
-            .json(&json!({})).send()
+        let response = self
+            .request(Method::POST, "rpc/my_hris_access")?
+            .json(&json!({}))
+            .send()
             .context("Could not verify your current HRIS access. Check your connection.")?;
-        if matches!(response.status(), StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN) {
+        if matches!(
+            response.status(),
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN
+        ) {
             return Err(AccessRevoked.into());
         }
         let mut access: Access = decode(response)?;
         if access.user_id != self.session.user.id {
-            return Err(anyhow::Error::new(AccessRevoked).context("The access response did not match your account."));
+            return Err(anyhow::Error::new(AccessRevoked)
+                .context("The access response did not match your account."));
         }
         if access.staff_contract_version > crate::staff_roles::SCHEMA_VERSION {
-            return Err(anyhow::Error::new(AccessRevoked).context("Update HRIS to use the current staff-permissions contract."));
+            return Err(anyhow::Error::new(AccessRevoked)
+                .context("Update HRIS to use the current staff-permissions contract."));
         }
         if access.staff_contract_version == crate::staff_roles::SCHEMA_VERSION {
-            let response = self.request(Method::POST, "rpc/staff_role_context")?
-                .json(&json!({})).send()
+            let response = self
+                .request(Method::POST, "rpc/staff_role_context")?
+                .json(&json!({}))
+                .send()
                 .context("Could not verify your staff-role permissions. Check your connection.")?;
-            if matches!(response.status(), StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN) {
+            if matches!(
+                response.status(),
+                StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN
+            ) {
                 return Err(AccessRevoked.into());
             }
-            let context: crate::staff_roles::Context = decode(response)
+            let context: crate::staff_roles::Context =
+                decode(response).map_err(|_| anyhow::Error::new(AccessRevoked))?;
+            access
+                .bind_staff_context(context)
                 .map_err(|_| anyhow::Error::new(AccessRevoked))?;
-            access.bind_staff_context(context).map_err(|_| anyhow::Error::new(AccessRevoked))?;
         }
         if !access.uses_desktop() {
             let _ = self.sign_out_scope("local");
@@ -819,7 +833,9 @@ impl CloudClient {
         filter.validate()?;
         let data = self.snapshot()?;
         let report = crate::reports::build(&data, filter, Utc::now())?;
-        let bytes = destination.map(|path| report.export_bytes(path)).transpose()?;
+        let bytes = destination
+            .map(|path| report.export_bytes(path))
+            .transpose()?;
         let access = self.current_access()?;
         if !crate::reports::same_scope(&data.access, &access) {
             return Err(AccessRevoked.into());
@@ -830,62 +846,187 @@ impl CloudClient {
         Ok((data, report))
     }
 
-    fn leave_import_history_for(&mut self,data:&Snapshot)->Result<crate::leave::request_import::History>{
-        ensure!(data.access.allows(crate::staff_roles::Capability::Personnel),"Current HR access is required for leave import history.");
-        let h:crate::leave::request_import::History=decode(self.request(Method::POST,"rpc/leave_import_context")?.json(&json!({})).send().context("Could not refresh leave import history.")?)?;
-        h.validate(data)?;if self.current_access()?!=data.access{return Err(AccessRevoked.into());}Ok(h)
+    fn leave_import_history_for(
+        &mut self,
+        data: &Snapshot,
+    ) -> Result<crate::leave::request_import::History> {
+        ensure!(
+            data.access
+                .allows(crate::staff_roles::Capability::Personnel),
+            "Current HR access is required for leave import history."
+        );
+        let h: crate::leave::request_import::History = decode(
+            self.request(Method::POST, "rpc/leave_import_context")?
+                .json(&json!({}))
+                .send()
+                .context("Could not refresh leave import history.")?,
+        )?;
+        h.validate(data)?;
+        if self.current_access()? != data.access {
+            return Err(AccessRevoked.into());
+        }
+        Ok(h)
     }
-    pub fn leave_import_history(&mut self)->Result<(Snapshot,crate::leave::request_import::History)>{let data=self.snapshot()?;let h=self.leave_import_history_for(&data)?;Ok((data,h))}
-    pub fn leave_import_preview(&mut self,batch:&crate::leave::request_import::Batch)->Result<(Snapshot,crate::leave::request_import::Preview)>{
-        let data=self.snapshot()?;batch.validate(&data)?;
-        let p:crate::leave::request_import::Preview=decode(self.request(Method::POST,"rpc/preview_leave_import")?.json(&json!({"p_batch":batch})).send().context("Could not prepare the protected leave import preview.")?)?;
-        p.validate(&data,batch)?;if self.current_access()?!=data.access{return Err(AccessRevoked.into());}Ok((data,p))
+    pub fn leave_import_history(
+        &mut self,
+    ) -> Result<(Snapshot, crate::leave::request_import::History)> {
+        let data = self.snapshot()?;
+        let h = self.leave_import_history_for(&data)?;
+        Ok((data, h))
     }
-    pub fn post_leave_import(&mut self,post:&crate::leave::request_import::Post)->Result<(Snapshot,crate::leave::request_import::Receipt,crate::leave::request_import::History)>{
+    pub fn leave_import_preview(
+        &mut self,
+        batch: &crate::leave::request_import::Batch,
+    ) -> Result<(Snapshot, crate::leave::request_import::Preview)> {
+        let data = self.snapshot()?;
+        batch.validate(&data)?;
+        let p: crate::leave::request_import::Preview = decode(
+            self.request(Method::POST, "rpc/preview_leave_import")?
+                .json(&json!({"p_batch":batch}))
+                .send()
+                .context("Could not prepare the protected leave import preview.")?,
+        )?;
+        p.validate(&data, batch)?;
+        if self.current_access()? != data.access {
+            return Err(AccessRevoked.into());
+        }
+        Ok((data, p))
+    }
+    pub fn post_leave_import(
+        &mut self,
+        post: &crate::leave::request_import::Post,
+    ) -> Result<(
+        Snapshot,
+        crate::leave::request_import::Receipt,
+        crate::leave::request_import::History,
+    )> {
         // Keep retries independent of later source/request changes. The server
         // binds an existing receipt to the original actor and complete payload.
         post.identity(&self.current_access()?)?;
         let receipt:crate::leave::request_import::Receipt=decode(self.request(Method::POST,"rpc/post_leave_import")?.json(&json!({"p_batch":post.batch,"p_fingerprint":post.preview.fingerprint})).send().context("Leave import delivery is uncertain. Refresh history or retry this exact submission; do not create another batch.")?)?;
-        let data=self.snapshot()?;receipt.validate(&data,post)?;let history=self.leave_import_history_for(&data)?;Ok((data,receipt,history))
+        let data = self.snapshot()?;
+        receipt.validate(&data, post)?;
+        let history = self.leave_import_history_for(&data)?;
+        Ok((data, receipt, history))
     }
-    fn attendance_import_history_for(&mut self,data:&Snapshot)->Result<crate::attendance_imports::History>{
-        ensure!(data.access.allows(crate::staff_roles::Capability::Personnel),"Current HR access is required for attendance import history.");
-        let h:crate::attendance_imports::History=decode(self.request(Method::POST,"rpc/attendance_import_context")?.json(&json!({})).send().context("Could not refresh attendance import history.")?)?;
-        h.validate(data)?;if self.current_access()?!=data.access{return Err(AccessRevoked.into());}Ok(h)
+    fn attendance_import_history_for(
+        &mut self,
+        data: &Snapshot,
+    ) -> Result<crate::attendance_imports::History> {
+        ensure!(
+            data.access
+                .allows(crate::staff_roles::Capability::Personnel),
+            "Current HR access is required for attendance import history."
+        );
+        let h: crate::attendance_imports::History = decode(
+            self.request(Method::POST, "rpc/attendance_import_context")?
+                .json(&json!({}))
+                .send()
+                .context("Could not refresh attendance import history.")?,
+        )?;
+        h.validate(data)?;
+        if self.current_access()? != data.access {
+            return Err(AccessRevoked.into());
+        }
+        Ok(h)
     }
-    pub fn attendance_import_history(&mut self)->Result<(Snapshot,crate::attendance_imports::History)>{let data=self.snapshot()?;let h=self.attendance_import_history_for(&data)?;Ok((data,h))}
-    pub fn attendance_import_preview(&mut self,batch:&crate::attendance_imports::Batch)->Result<(Snapshot,crate::attendance_imports::Preview)>{
-        let data=self.snapshot()?;batch.validate(&data)?;
-        let p:crate::attendance_imports::Preview=decode(self.request(Method::POST,"rpc/preview_attendance_import")?.json(&json!({"p_batch":batch})).send().context("Could not prepare the protected attendance import preview.")?)?;
-        p.validate(&data,batch)?;if self.current_access()?!=data.access{return Err(AccessRevoked.into());}Ok((data,p))
+    pub fn attendance_import_history(
+        &mut self,
+    ) -> Result<(Snapshot, crate::attendance_imports::History)> {
+        let data = self.snapshot()?;
+        let h = self.attendance_import_history_for(&data)?;
+        Ok((data, h))
     }
-    pub fn post_attendance_import(&mut self,post:&crate::attendance_imports::Post)->Result<(Snapshot,crate::attendance_imports::Receipt,crate::attendance_imports::History)>{
+    pub fn attendance_import_preview(
+        &mut self,
+        batch: &crate::attendance_imports::Batch,
+    ) -> Result<(Snapshot, crate::attendance_imports::Preview)> {
+        let data = self.snapshot()?;
+        batch.validate(&data)?;
+        let p: crate::attendance_imports::Preview = decode(
+            self.request(Method::POST, "rpc/preview_attendance_import")?
+                .json(&json!({"p_batch":batch}))
+                .send()
+                .context("Could not prepare the protected attendance import preview.")?,
+        )?;
+        p.validate(&data, batch)?;
+        if self.current_access()? != data.access {
+            return Err(AccessRevoked.into());
+        }
+        Ok((data, p))
+    }
+    pub fn post_attendance_import(
+        &mut self,
+        post: &crate::attendance_imports::Post,
+    ) -> Result<(
+        Snapshot,
+        crate::attendance_imports::Receipt,
+        crate::attendance_imports::History,
+    )> {
         // Keep retries independent of later source/request changes. The server
         // binds an existing receipt to the original actor and complete payload.
         post.identity(&self.current_access()?)?;
         let receipt:crate::attendance_imports::Receipt=decode(self.request(Method::POST,"rpc/post_attendance_import")?.json(&json!({"p_batch":post.batch,"p_fingerprint":post.preview.fingerprint})).send().context("Attendance import delivery is uncertain. Refresh history or retry this exact submission; do not create another batch.")?)?;
-        let data=self.snapshot()?;receipt.validate(&data,post)?;let history=self.attendance_import_history_for(&data)?;Ok((data,receipt,history))
+        let data = self.snapshot()?;
+        receipt.validate(&data, post)?;
+        let history = self.attendance_import_history_for(&data)?;
+        Ok((data, receipt, history))
     }
-    pub fn withdraw_attendance_import(&mut self,change:&crate::attendance_imports::Withdraw)->Result<(Snapshot,crate::attendance_imports::History)>{
-        ensure!(self.current_access()?.allows(crate::staff_roles::Capability::AttendanceAdministration),"Current HR access is required to withdraw an imported request.");
+    pub fn withdraw_attendance_import(
+        &mut self,
+        change: &crate::attendance_imports::Withdraw,
+    ) -> Result<(Snapshot, crate::attendance_imports::History)> {
+        ensure!(
+            self.current_access()?
+                .allows(crate::staff_roles::Capability::AttendanceAdministration),
+            "Current HR access is required to withdraw an imported request."
+        );
         let receipt:Value=decode(self.request(Method::POST,"rpc/withdraw_attendance_import")?.json(&json!({"p_change":change})).send().context("Withdrawal delivery is uncertain. Keep this exact draft and refresh history before retrying.")?)?;
-        ensure!(receipt.get("id")==Some(&json!(change.id))&&receipt.get("item_id")==Some(&json!(change.item_id)),"Withdrawal receipt does not match the request.");
+        ensure!(
+            receipt.get("id") == Some(&json!(change.id))
+                && receipt.get("item_id") == Some(&json!(change.item_id)),
+            "Withdrawal receipt does not match the request."
+        );
         self.attendance_import_history()
     }
-    pub fn leave_opening_preview(&mut self,record:&crate::leave::dated::OpeningRecord)->Result<(Snapshot,crate::leave::dated::Preview)> {
-        let data=self.snapshot()?;
+    pub fn leave_opening_preview(
+        &mut self,
+        record: &crate::leave::dated::OpeningRecord,
+    ) -> Result<(Snapshot, crate::leave::dated::Preview)> {
+        let data = self.snapshot()?;
         record.validate(&data)?;
-        let preview:crate::leave::dated::Preview=decode(self.request(Method::POST,"rpc/preview_leave_opening")?.json(&json!({"p_record":record})).send()?)?;
-        if self.current_access()?!=data.access {return Err(AccessRevoked.into());}
-        preview.validate(&data,record)?;
-        Ok((data,preview))
+        let preview: crate::leave::dated::Preview = decode(
+            self.request(Method::POST, "rpc/preview_leave_opening")?
+                .json(&json!({"p_record":record}))
+                .send()?,
+        )?;
+        if self.current_access()? != data.access {
+            return Err(AccessRevoked.into());
+        }
+        preview.validate(&data, record)?;
+        Ok((data, preview))
     }
-    pub fn leave_opening_import_preview(&mut self,records:&[crate::leave::dated::OpeningRecord])->Result<(Snapshot,crate::leave::opening_import::BatchPreview)> {
-        let data=self.snapshot()?;
-        ensure!(data.access.allows(crate::staff_roles::Capability::Personnel) && (1..=100).contains(&records.len()),"HR access and 1–100 opening rows are required.");
-        let preview:crate::leave::opening_import::BatchPreview=decode(self.request(Method::POST,"rpc/preview_leave_openings")?.json(&json!({"p_records":records})).send()?)?;
-        if self.current_access()?!=data.access{return Err(AccessRevoked.into());}
-        preview.validate(&data,records)?;Ok((data,preview))
+    pub fn leave_opening_import_preview(
+        &mut self,
+        records: &[crate::leave::dated::OpeningRecord],
+    ) -> Result<(Snapshot, crate::leave::opening_import::BatchPreview)> {
+        let data = self.snapshot()?;
+        ensure!(
+            data.access
+                .allows(crate::staff_roles::Capability::Personnel)
+                && (1..=100).contains(&records.len()),
+            "HR access and 1–100 opening rows are required."
+        );
+        let preview: crate::leave::opening_import::BatchPreview = decode(
+            self.request(Method::POST, "rpc/preview_leave_openings")?
+                .json(&json!({"p_records":records}))
+                .send()?,
+        )?;
+        if self.current_access()? != data.access {
+            return Err(AccessRevoked.into());
+        }
+        preview.validate(&data, records)?;
+        Ok((data, preview))
     }
     pub fn snapshot(&mut self) -> Result<Snapshot> {
         let access = self.current_access()?;
@@ -908,7 +1049,8 @@ impl CloudClient {
         let contacts = self.rows("employee_contacts", Some(company.id))?;
         let mut attendance: Vec<Attendance> = self.rows("attendance", Some(company.id))?;
         attendance.sort_by(|a, b| b.checked_in_at.cmp(&a.checked_in_at));
-        let corrections = if access.allows(crate::staff_roles::Capability::AttendanceAdministration) {
+        let corrections = if access.allows(crate::staff_roles::Capability::AttendanceAdministration)
+        {
             self.rows("attendance_corrections", Some(company.id))?
         } else {
             Vec::new()
@@ -951,25 +1093,61 @@ impl CloudClient {
         } else {
             Vec::new()
         };
-        let (documents, document_events) = if access.allows(crate::staff_roles::Capability::PersonnelDocuments) {
-            (
-                self.rows("employee_documents", Some(company.id))?,
-                self.rows("employee_document_events", Some(company.id))?,
-            )
-        } else {
-            (Vec::new(), Vec::new())
-        };
+        let (documents, document_events) =
+            if access.allows(crate::staff_roles::Capability::PersonnelDocuments) {
+                (
+                    self.rows("employee_documents", Some(company.id))?,
+                    self.rows("employee_document_events", Some(company.id))?,
+                )
+            } else {
+                (Vec::new(), Vec::new())
+            };
         let _legacy_policy = self.rows::<crate::leave::LeavePolicy>("leave_policies",Some(company.id))?.into_iter().next().ok_or_else(||anyhow::anyhow!("Leave policies are not configured. Ask the deployment administrator to apply the required migration."))?;
         let leave_events = self.rows("leave_events", Some(company.id))?;
-        let credits:crate::leave::credits::Context=decode(self.request(Method::POST,"rpc/leave_credit_context")?.json(&json!({})).send()?)?;
-        if credits.company_id!=access.company_id || credits.user_id!=access.user_id || credits.employee_id!=access.employee_id || credits.role!=access.role {return Err(AccessRevoked.into());}
-        credits.validate(&access,company.today())?;
-        ensure!(credits.entries.iter().all(|c|employees.iter().any(|e|e.id==c.employee_id && e.company_id==company.id)),"Leave credits include an unknown employee.");
-        let dated:crate::leave::dated::Context=decode(self.request(Method::POST,"rpc/leave_dated_context")?.json(&json!({})).send()?)?;
-        if dated.company_id!=access.company_id || dated.user_id!=access.user_id || dated.employee_id!=access.employee_id || dated.role!=access.role {return Err(AccessRevoked.into());}
-        dated.validate(&access,company.today())?;
-        ensure!(dated.anchors.iter().all(|a|employees.iter().any(|e|e.id==a.employee_id)) && dated.openings.iter().all(|o|employees.iter().any(|e|e.id==o.employee_id)),"Dated leave includes an unknown employee.");
-        let policy=dated.timeline.policy_on(company.today()).clone();
+        let credits: crate::leave::credits::Context = decode(
+            self.request(Method::POST, "rpc/leave_credit_context")?
+                .json(&json!({}))
+                .send()?,
+        )?;
+        if credits.company_id != access.company_id
+            || credits.user_id != access.user_id
+            || credits.employee_id != access.employee_id
+            || credits.role != access.role
+        {
+            return Err(AccessRevoked.into());
+        }
+        credits.validate(&access, company.today())?;
+        ensure!(
+            credits.entries.iter().all(|c| employees
+                .iter()
+                .any(|e| e.id == c.employee_id && e.company_id == company.id)),
+            "Leave credits include an unknown employee."
+        );
+        let dated: crate::leave::dated::Context = decode(
+            self.request(Method::POST, "rpc/leave_dated_context")?
+                .json(&json!({}))
+                .send()?,
+        )?;
+        if dated.company_id != access.company_id
+            || dated.user_id != access.user_id
+            || dated.employee_id != access.employee_id
+            || dated.role != access.role
+        {
+            return Err(AccessRevoked.into());
+        }
+        dated.validate(&access, company.today())?;
+        ensure!(
+            dated
+                .anchors
+                .iter()
+                .all(|a| employees.iter().any(|e| e.id == a.employee_id))
+                && dated
+                    .openings
+                    .iter()
+                    .all(|o| employees.iter().any(|e| e.id == o.employee_id)),
+            "Dated leave includes an unknown employee."
+        );
+        let policy = dated.timeline.policy_on(company.today()).clone();
         let mut shift_templates: Vec<crate::shifts::ShiftTemplate> =
             self.rows("shift_templates", Some(company.id))?;
         shift_templates.sort_by_key(|t| t.name.to_lowercase());
@@ -1044,16 +1222,44 @@ impl CloudClient {
         notification_reads.validate(access.user_id, company.id)?;
         let lifecycle_notifications: crate::notifications::lifecycle::Inbox = decode(
             self.request(Method::POST, "rpc/lifecycle_notifications")?
-                .json(&json!({"p_surface":"desktop"})).send()?
+                .json(&json!({"p_surface":"desktop"}))
+                .send()?,
         )?;
-        if lifecycle_notifications.company_id!=access.company_id || lifecycle_notifications.user_id!=access.user_id
-            || lifecycle_notifications.employee_id!=access.employee_id || lifecycle_notifications.role!=access.role { return Err(AccessRevoked.into()); }
+        if lifecycle_notifications.company_id != access.company_id
+            || lifecycle_notifications.user_id != access.user_id
+            || lifecycle_notifications.employee_id != access.employee_id
+            || lifecycle_notifications.role != access.role
+        {
+            return Err(AccessRevoked.into());
+        }
         lifecycle_notifications.validate(&access, company.today())?;
-        ensure!(lifecycle_notifications.items.iter().all(|i| employees.iter().any(|e| e.company_id==company.id && e.id==i.employee_id)), "Lifecycle subject is outside the current employee directory.");
-        let approvals:crate::approvals::Context=decode(self.request(Method::POST,if access.staff_contract_version == 1 {"rpc/approval_delegation_staff_context"} else {"rpc/approval_delegation_context"})?.json(&json!({})).send()?)?;
-        if approvals.company_id!=access.company_id||approvals.user_id!=access.user_id||approvals.employee_id!=access.employee_id||approvals.role!=access.role{return Err(AccessRevoked.into());}
-        approvals.validate_access(&access,company.today())?;
-        let snapshot=Snapshot {
+        ensure!(
+            lifecycle_notifications.items.iter().all(|i| employees
+                .iter()
+                .any(|e| e.company_id == company.id && e.id == i.employee_id)),
+            "Lifecycle subject is outside the current employee directory."
+        );
+        let approvals: crate::approvals::Context = decode(
+            self.request(
+                Method::POST,
+                if access.staff_contract_version == 1 {
+                    "rpc/approval_delegation_staff_context"
+                } else {
+                    "rpc/approval_delegation_context"
+                },
+            )?
+            .json(&json!({}))
+            .send()?,
+        )?;
+        if approvals.company_id != access.company_id
+            || approvals.user_id != access.user_id
+            || approvals.employee_id != access.employee_id
+            || approvals.role != access.role
+        {
+            return Err(AccessRevoked.into());
+        }
+        approvals.validate_access(&access, company.today())?;
+        let snapshot = Snapshot {
             approvals: Some(approvals),
             lifecycle_notifications: Some(lifecycle_notifications),
             payroll,
@@ -1229,34 +1435,90 @@ impl CloudClient {
     pub fn execute(&mut self, action: Action, current: &Snapshot) -> Result<Snapshot> {
         current.access.authorize(&action, current)?;
         if let Action::Payroll(action) = &action {
-            let payload=action.payload(current)?;
-            let endpoint=if action.operation.starts_with("amendment_"){ "rpc/manage_payroll_amendment" }else if action.operation.starts_with("wage_"){ "rpc/manage_payroll_wage" }else if action.operation.starts_with("final_"){ "rpc/manage_payroll_final" }else if action.operation.starts_with("receipt_"){ "rpc/manage_payroll_receipt" }else if action.operation.starts_with("tax_"){ "rpc/manage_payroll_tax" }else if action.operation.starts_with("thirteenth_"){ "rpc/manage_payroll_thirteenth" }else if action.operation.starts_with("cutoff_"){ "rpc/manage_payroll_cutoff" }else{ "rpc/manage_payroll" };
-            let saved:Value=decode(self.request(Method::POST,endpoint)?.json(&payload).send()?)?;
-            ensure!(saved["company_id"]==json!(current.company.id)&&saved["id"]==payload["p_record"]["id"],"Payroll response did not match your company and record.");
+            let payload = action.payload(current)?;
+            let endpoint = if action.operation.starts_with("amendment_") {
+                "rpc/manage_payroll_amendment"
+            } else if action.operation.starts_with("wage_") {
+                "rpc/manage_payroll_wage"
+            } else if action.operation.starts_with("final_") {
+                "rpc/manage_payroll_final"
+            } else if action.operation.starts_with("receipt_") {
+                "rpc/manage_payroll_receipt"
+            } else if action.operation.starts_with("tax_") {
+                "rpc/manage_payroll_tax"
+            } else if action.operation.starts_with("thirteenth_") {
+                "rpc/manage_payroll_thirteenth"
+            } else if action.operation.starts_with("cutoff_") {
+                "rpc/manage_payroll_cutoff"
+            } else {
+                "rpc/manage_payroll"
+            };
+            let saved: Value = decode(
+                self.request(Method::POST, endpoint)?
+                    .json(&payload)
+                    .send()?,
+            )?;
+            ensure!(
+                saved["company_id"] == json!(current.company.id)
+                    && saved["id"] == payload["p_record"]["id"],
+                "Payroll response did not match your company and record."
+            );
             return self.snapshot().context("Payroll change saved, but refresh failed. Keep your draft and Refresh before retrying.");
         }
         if let Action::Career(action) = &action {
             let payload = action.payload(current)?;
-            let saved:Value=decode(self.request(Method::POST,"rpc/manage_career")?.json(&payload).send()?)?;
-            ensure!(saved["company_id"]==json!(current.company.id)&&saved["id"]==payload["p_record"]["id"],"Career response did not match your company and record.");
+            let saved: Value = decode(
+                self.request(Method::POST, "rpc/manage_career")?
+                    .json(&payload)
+                    .send()?,
+            )?;
+            ensure!(
+                saved["company_id"] == json!(current.company.id)
+                    && saved["id"] == payload["p_record"]["id"],
+                "Career response did not match your company and record."
+            );
             return self.snapshot().context("Career change saved, but refresh failed. Keep your draft and Refresh before retrying.");
         }
         if let Action::Learning(action) = &action {
-            let payload=action.payload(current)?;
-            let saved:Value=decode(self.request(Method::POST,"rpc/manage_learning")?.json(&payload).send()?)?;
-            ensure!(saved["company_id"]==json!(current.company.id)&&saved["id"]==payload["p_record"]["id"],"Learning response did not match your company and record.");
+            let payload = action.payload(current)?;
+            let saved: Value = decode(
+                self.request(Method::POST, "rpc/manage_learning")?
+                    .json(&payload)
+                    .send()?,
+            )?;
+            ensure!(
+                saved["company_id"] == json!(current.company.id)
+                    && saved["id"] == payload["p_record"]["id"],
+                "Learning response did not match your company and record."
+            );
             return self.snapshot().context("Learning change saved, but refresh failed. Keep your draft and Refresh before retrying.");
         }
         if let Action::Performance(action) = &action {
-            let payload=action.payload(current)?;
-            let saved:Value=decode(self.request(Method::POST,"rpc/manage_performance")?.json(&payload).send()?)?;
-            ensure!(saved["company_id"]==json!(current.company.id)&&saved["id"]==payload["p_record"]["id"],"Performance response did not match your company and record.");
+            let payload = action.payload(current)?;
+            let saved: Value = decode(
+                self.request(Method::POST, "rpc/manage_performance")?
+                    .json(&payload)
+                    .send()?,
+            )?;
+            ensure!(
+                saved["company_id"] == json!(current.company.id)
+                    && saved["id"] == payload["p_record"]["id"],
+                "Performance response did not match your company and record."
+            );
             return self.snapshot().context("Performance change saved, but refresh failed. Keep your draft and Refresh before retrying.");
         }
         if let Action::Exit(action) = &action {
-            let payload=action.payload(current)?;
-            let saved:Value=decode(self.request(Method::POST,"rpc/manage_exit")?.json(&payload).send()?)?;
-            ensure!(saved["company_id"]==json!(current.company.id)&&saved["id"]==payload["p_record"]["id"],"Exit response did not match the current company and record.");
+            let payload = action.payload(current)?;
+            let saved: Value = decode(
+                self.request(Method::POST, "rpc/manage_exit")?
+                    .json(&payload)
+                    .send()?,
+            )?;
+            ensure!(
+                saved["company_id"] == json!(current.company.id)
+                    && saved["id"] == payload["p_record"]["id"],
+                "Exit response did not match the current company and record."
+            );
             return self.snapshot().context("Exit or clearance change saved, but refresh failed. Keep your draft and Refresh before retrying.");
         }
         if let Action::Onboarding(action) = &action {
@@ -1304,44 +1566,111 @@ impl CloudClient {
             );
             return self.snapshot().context("Application saved, but refresh failed. Keep this draft and Refresh; retrying the same new application is safe.");
         }
-        if let Action::ApprovalDelegation(change)=&action {
-            let payload=change.payload(current)?;
+        if let Action::ApprovalDelegation(change) = &action {
+            let payload = change.payload(current)?;
             let saved:Value=decode(self.request(Method::POST,"rpc/save_approval_delegation")?.json(&json!({"p_change":payload})).send().context("Delegation outcome is uncertain. Keep this draft and retry the same request.")?)?;
-            ensure!(saved.as_object().is_some_and(|o|o.len()==2)&&saved["id"]==json!(change.id())&&saved["company_revision"].as_i64()==Some(change.expected_revision()+1),"Delegation response did not match the submitted request.");
+            ensure!(
+                saved.as_object().is_some_and(|o| o.len() == 2)
+                    && saved["id"] == json!(change.id())
+                    && saved["company_revision"].as_i64() == Some(change.expected_revision() + 1),
+                "Delegation response did not match the submitted request."
+            );
             let fresh=self.snapshot().context("Delegation saved, but refresh failed. Keep this draft and Refresh or retry the same request.")?;
-            ensure!(fresh.approvals.as_ref().is_some_and(|c|change.matches_history(c)),"Saved delegation does not match the retained draft. Keep it and Refresh.");
+            ensure!(
+                fresh
+                    .approvals
+                    .as_ref()
+                    .is_some_and(|c| change.matches_history(c)),
+                "Saved delegation does not match the retained draft. Keep it and Refresh."
+            );
             return Ok(fresh);
         }
-        if let Action::LeaveCredit(record)=&action {
+        if let Action::LeaveCredit(record) = &action {
             record.validate(current)?;
-            let saved:serde_json::Value=decode(self.request(Method::POST,"rpc/post_leave_credit")?.json(&json!({"p_record":record})).send().context("Credit outcome is uncertain. Keep this draft and retry the same request.")?)?;
-            ensure!(saved.as_object().is_some_and(|o|o.len()==2) && saved["id"]==json!(record.id)
-                && saved["company_revision"].as_i64()==Some(record.expected_revision+1),"Credit response did not match the submitted request.");
+            let saved: serde_json::Value = decode(
+                self.request(Method::POST, "rpc/post_leave_credit")?
+                    .json(&json!({"p_record":record}))
+                    .send()
+                    .context(
+                        "Credit outcome is uncertain. Keep this draft and retry the same request.",
+                    )?,
+            )?;
+            ensure!(
+                saved.as_object().is_some_and(|o| o.len() == 2)
+                    && saved["id"] == json!(record.id)
+                    && saved["company_revision"].as_i64() == Some(record.expected_revision + 1),
+                "Credit response did not match the submitted request."
+            );
             let fresh=self.snapshot().context("Credit saved, but refresh failed. Keep this draft and Refresh or retry the same request.")?;
-            ensure!(fresh.leave_setup.credits.as_ref().is_some_and(|c|c.entries.iter().any(|e|record.matches_entry(e))),"Saved credit did not match this draft. Keep it and Refresh.");
+            ensure!(
+                fresh
+                    .leave_setup
+                    .credits
+                    .as_ref()
+                    .is_some_and(|c| c.entries.iter().any(|e| record.matches_entry(e))),
+                "Saved credit did not match this draft. Keep it and Refresh."
+            );
             return Ok(fresh);
         }
-        if let Action::DatedLeave(change)=&action {
-            let (endpoint,payload)=change.payload(current)?;
+        if let Action::DatedLeave(change) = &action {
+            let (endpoint, payload) = change.payload(current)?;
             let saved:Value=decode(self.request(Method::POST,endpoint)?.json(&payload).send().context("Leave setup outcome is uncertain. Keep this draft and retry the same request.")?)?;
-            let batch=matches!(change,crate::leave::dated::Change::OpeningBatch(_));
-            ensure!(saved.as_object().is_some_and(|o|o.len()==if batch{3}else{2}) && saved["id"]==json!(change.id()) && saved["company_revision"].as_i64()==Some(change.posted_revision()),"Leave setup response did not match this request.");
-            if let crate::leave::dated::Change::OpeningBatch(p)=change {ensure!(saved["opening_ids"]==json!(p.preview.rows.iter().map(|r|r.record.id).collect::<Vec<_>>()),"Opening import response did not match its complete row inventory.");}
+            let batch = matches!(change, crate::leave::dated::Change::OpeningBatch(_));
+            ensure!(
+                saved
+                    .as_object()
+                    .is_some_and(|o| o.len() == if batch { 3 } else { 2 })
+                    && saved["id"] == json!(change.id())
+                    && saved["company_revision"].as_i64() == Some(change.posted_revision()),
+                "Leave setup response did not match this request."
+            );
+            if let crate::leave::dated::Change::OpeningBatch(p) = change {
+                ensure!(
+                    saved["opening_ids"]
+                        == json!(
+                            p.preview
+                                .rows
+                                .iter()
+                                .map(|r| r.record.id)
+                                .collect::<Vec<_>>()
+                        ),
+                    "Opening import response did not match its complete row inventory."
+                );
+            }
             let fresh=self.snapshot().context("Leave setup saved, but refresh failed. Keep this draft and Refresh or retry the same request.")?;
-            ensure!(fresh.leave_setup.dated.as_ref().is_some_and(|c|change.matches(c)),"Saved leave setup does not match this draft. Keep it and Refresh.");
+            ensure!(
+                fresh
+                    .leave_setup
+                    .dated
+                    .as_ref()
+                    .is_some_and(|c| change.matches(c)),
+                "Saved leave setup does not match this draft. Keep it and Refresh."
+            );
             return Ok(fresh);
         }
         if let Action::NotificationReads(action) = &action {
             let payload = action.payload(current.company.id)?;
             let extended = match action {
-                crate::notifications::ReadAction::Mark { keys, .. } => keys.iter().any(|k| crate::notifications::lifecycle::valid_key(k)),
-                crate::notifications::ReadAction::Reset => current.lifecycle_notifications.as_ref().is_some_and(|s| !s.read_keys.is_empty()),
+                crate::notifications::ReadAction::Mark { keys, .. } => keys
+                    .iter()
+                    .any(|k| crate::notifications::lifecycle::valid_key(k)),
+                crate::notifications::ReadAction::Reset => current
+                    .lifecycle_notifications
+                    .as_ref()
+                    .is_some_and(|s| !s.read_keys.is_empty()),
             };
             let saved: crate::notifications::ReadState = decode(
-                self.request(Method::POST, if extended { "rpc/staff_notification_reads" } else { "rpc/set_notification_reads" })?
-                    .json(&payload)
-                    .send()
-                    .context("Could not update notification history. Refresh before retrying.")?,
+                self.request(
+                    Method::POST,
+                    if extended {
+                        "rpc/staff_notification_reads"
+                    } else {
+                        "rpc/set_notification_reads"
+                    },
+                )?
+                .json(&payload)
+                .send()
+                .context("Could not update notification history. Refresh before retrying.")?,
             )?;
             saved.validate(current.access.user_id, current.company.id)?;
             return self.snapshot().context(
@@ -1351,7 +1680,10 @@ impl CloudClient {
         if let Action::ImportEmployees(preview, reason) = &action {
             let fresh = self.snapshot()?;
             ensure!(
-                fresh.access.allows(crate::staff_roles::Capability::Personnel) && fresh.company.id == preview.company_id,
+                fresh
+                    .access
+                    .allows(crate::staff_roles::Capability::Personnel)
+                    && fresh.company.id == preview.company_id,
                 "Your import access changed. Refresh or sign in again."
             );
             if !fresh.imports.batches.iter().any(|b| b.id == preview.id) {
@@ -1606,27 +1938,54 @@ impl CloudClient {
                 json!({"checked_out_at":Utc::now()}),
             ),
             Action::RequestLeave(draft) => {
-                if current.leave_setup.dated.as_ref().is_some_and(|c|c.enabled) {
-                    let row=crate::leave::prepare(current,&draft)?;
-                    let c=current.leave_setup.dated.as_ref().unwrap();
-                    let e=current.employees.iter().find(|e|e.id==row.employee_id).context("Choose an employee.")?;
-                    let t=crate::leave::dated::policy_on(current,row.starts_on).leave_type(row.type_code()).context("Choose an active type.")?;
-                    let balance=if t.accrual==crate::leave::Accrual::Unlimited{None}else{Some(crate::leave::balance_checked(current,e,t,chrono::Datelike::year(&row.starts_on),row.starts_on,None)?)};
-                    (Method::POST,"rpc/submit_leave_checked",None,json!({"p_employee":row.employee_id,"p_type_code":row.type_code(),"p_starts":row.starts_on,"p_ends":row.ends_on,"p_part":row.policy.day_part,"p_reason":row.reason,
-                        "p_expected":{"setup_revision":c.revision,"credit_revision":current.leave_setup.credits.as_ref().map_or(0,|c|c.revision),"policy_revision":row.policy.policy_revision,"charged_dates":row.policy.charged_dates,"balance":balance}}))
+                if current
+                    .leave_setup
+                    .dated
+                    .as_ref()
+                    .is_some_and(|c| c.enabled)
+                {
+                    let row = crate::leave::prepare(current, &draft)?;
+                    let c = current.leave_setup.dated.as_ref().unwrap();
+                    let e = current
+                        .employees
+                        .iter()
+                        .find(|e| e.id == row.employee_id)
+                        .context("Choose an employee.")?;
+                    let t = crate::leave::dated::policy_on(current, row.starts_on)
+                        .leave_type(row.type_code())
+                        .context("Choose an active type.")?;
+                    let balance = if t.accrual == crate::leave::Accrual::Unlimited {
+                        None
+                    } else {
+                        Some(crate::leave::balance_checked(
+                            current,
+                            e,
+                            t,
+                            chrono::Datelike::year(&row.starts_on),
+                            row.starts_on,
+                            None,
+                        )?)
+                    };
+                    (
+                        Method::POST,
+                        "rpc/submit_leave_checked",
+                        None,
+                        json!({"p_employee":row.employee_id,"p_type_code":row.type_code(),"p_starts":row.starts_on,"p_ends":row.ends_on,"p_part":row.policy.day_part,"p_reason":row.reason,
+                        "p_expected":{"setup_revision":c.revision,"credit_revision":current.leave_setup.credits.as_ref().map_or(0,|c|c.revision),"policy_revision":row.policy.policy_revision,"charged_dates":row.policy.charged_dates,"balance":balance}}),
+                    )
                 } else {
-                let row = draft.request(current.company.id)?;
-                let code = if draft.options.type_code.is_empty() {
-                    row.type_code()
-                } else {
-                    &draft.options.type_code
-                };
-                (
-                    Method::POST,
-                    "rpc/submit_leave",
-                    None,
-                    json!({"p_employee":row.employee_id,"p_type_code":code,"p_starts":row.starts_on,"p_ends":row.ends_on,"p_part":draft.options.day_part,"p_reason":row.reason}),
-                )
+                    let row = draft.request(current.company.id)?;
+                    let code = if draft.options.type_code.is_empty() {
+                        row.type_code()
+                    } else {
+                        &draft.options.type_code
+                    };
+                    (
+                        Method::POST,
+                        "rpc/submit_leave",
+                        None,
+                        json!({"p_employee":row.employee_id,"p_type_code":code,"p_starts":row.starts_on,"p_ends":row.ends_on,"p_part":draft.options.day_part,"p_reason":row.reason}),
+                    )
                 }
             }
             Action::DecideLeave(id, status) => {
@@ -1880,29 +2239,84 @@ pub enum Command {
     LeaveImportHistory,
     PreviewLeaveImport(crate::leave::request_import::Batch),
     PostLeaveImport(Box<crate::leave::request_import::Post>),
-    LeaveImportErrors{source:crate::leave::request_import::Import,preview:Option<crate::leave::request_import::Preview>,destination:std::path::PathBuf},
+    LeaveImportErrors {
+        source: crate::leave::request_import::Import,
+        preview: Option<crate::leave::request_import::Preview>,
+        destination: std::path::PathBuf,
+    },
     AttendanceImportHistory,
     PreviewAttendanceImport(crate::attendance_imports::Batch),
     PostAttendanceImport(Box<crate::attendance_imports::Post>),
     WithdrawAttendanceImport(crate::attendance_imports::Withdraw),
-    AttendanceImportErrors{source:crate::attendance_imports::Import,preview:Option<crate::attendance_imports::Preview>,destination:std::path::PathBuf},
-    OpeningImportErrors {report:crate::leave::opening_import::Import,destination:std::path::PathBuf},
+    AttendanceImportErrors {
+        source: crate::attendance_imports::Import,
+        preview: Option<crate::attendance_imports::Preview>,
+        destination: std::path::PathBuf,
+    },
+    OpeningImportErrors {
+        report: crate::leave::opening_import::Import,
+        destination: std::path::PathBuf,
+    },
     PreviewLeaveOpeningImport(Vec<crate::leave::dated::OpeningRecord>),
     PreviewLeaveOpening(crate::leave::dated::OpeningRecord),
-    GovernmentBirDeclarations {year:i32,source:std::path::PathBuf,expected_hash:Option<String>,destination:Option<std::path::PathBuf>},
-    GovernmentBirIdentities {year:i32,source:std::path::PathBuf,expected_hash:Option<String>,destination:Option<std::path::PathBuf>},
-    GovernmentAnnual {year:i32,destination:Option<std::path::PathBuf>},
-    GovernmentAnnualPay {year:i32,destination:Option<std::path::PathBuf>},
-    GovernmentSssPrepare {filter:crate::payroll_government::Filter},
-    GovernmentBirCheck {source:std::path::PathBuf,expected_hash:Option<String>,destination:Option<std::path::PathBuf>},
+    GovernmentBirDeclarations {
+        year: i32,
+        source: std::path::PathBuf,
+        expected_hash: Option<String>,
+        destination: Option<std::path::PathBuf>,
+    },
+    GovernmentBirIdentities {
+        year: i32,
+        source: std::path::PathBuf,
+        expected_hash: Option<String>,
+        destination: Option<std::path::PathBuf>,
+    },
+    GovernmentAnnual {
+        year: i32,
+        destination: Option<std::path::PathBuf>,
+    },
+    GovernmentAnnualPay {
+        year: i32,
+        destination: Option<std::path::PathBuf>,
+    },
+    GovernmentSssPrepare {
+        filter: crate::payroll_government::Filter,
+    },
+    GovernmentBirCheck {
+        source: std::path::PathBuf,
+        expected_hash: Option<String>,
+        destination: Option<std::path::PathBuf>,
+    },
     GovernmentBirBuild(crate::payroll_government::bir_file::builder::Action),
-    GovernmentSssExport {filter:crate::payroll_government::Filter,request:Box<crate::payroll_government::sss_collection::Request>,destination:std::path::PathBuf},
-    GovernmentPreparation {filter:crate::payroll_government::Filter,destination:std::path::PathBuf},
-    GovernmentRegistration {employee_id:Option<Uuid>,save:Option<crate::payroll_government::registration::Save>},
-    Government {filter:crate::payroll_government::Filter,action:Option<crate::payroll_government::Action>,destination:Option<std::path::PathBuf>},
-    PayrollReport {filter:crate::payroll_reporting::Filter,destination:Option<std::path::PathBuf>},
+    GovernmentSssExport {
+        filter: crate::payroll_government::Filter,
+        request: Box<crate::payroll_government::sss_collection::Request>,
+        destination: std::path::PathBuf,
+    },
+    GovernmentPreparation {
+        filter: crate::payroll_government::Filter,
+        destination: std::path::PathBuf,
+    },
+    GovernmentRegistration {
+        employee_id: Option<Uuid>,
+        save: Option<crate::payroll_government::registration::Save>,
+    },
+    Government {
+        filter: crate::payroll_government::Filter,
+        action: Option<crate::payroll_government::Action>,
+        destination: Option<std::path::PathBuf>,
+    },
+    PayrollReport {
+        filter: crate::payroll_reporting::Filter,
+        destination: Option<std::path::PathBuf>,
+    },
     PayrollExchange(crate::payroll_exchange::Operation),
-    PayrollExport { kind:String, record_id:Option<Uuid>, year:i32, destination:std::path::PathBuf },
+    PayrollExport {
+        kind: String,
+        record_id: Option<Uuid>,
+        year: i32,
+        destination: std::path::PathBuf,
+    },
     ImportErrors {
         preview: crate::imports::Preview,
         destination: std::path::PathBuf,
@@ -1935,25 +2349,25 @@ pub struct Update {
     pub staff_provision_rejection: Option<crate::staff_roles::provision::Rejection>,
     pub staff_role_rejected: bool,
     pub staff_roles: Option<crate::staff_roles::admin::Update>,
-    pub leave_import_history:Option<crate::leave::request_import::History>,
-    pub attendance_import_history:Option<crate::attendance_imports::History>,
-    pub leave_import_preview:Option<crate::leave::request_import::Preview>,
-    pub attendance_import_preview:Option<crate::attendance_imports::Preview>,
-    pub leave_import_receipt:Option<crate::leave::request_import::Receipt>,
-    pub attendance_import_receipt:Option<crate::attendance_imports::Receipt>,
-    pub leave_opening_import_preview:Option<crate::leave::opening_import::BatchPreview>,
-    pub leave_opening_preview:Option<crate::leave::dated::Preview>,
-    pub government_bir_declarations:Option<crate::payroll_government::bir_declarations::Report>,
-    pub government_bir_identities:Option<crate::payroll_government::bir_identity::Report>,
-    pub government_annual:Option<crate::payroll_government::annual::Ledger>,
-    pub government_annual_pay:Option<crate::payroll_government::annual_pay::Report>,
-    pub government_sss:Option<crate::payroll_government::sss_collection::Basis>,
-    pub government_bir:Option<crate::payroll_government::bir_file::Report>,
-    pub government_bir_build:Option<crate::payroll_government::bir_file::builder::Preview>,
-    pub government_registration:Option<crate::payroll_government::registration::Snapshot>,
-    pub government:Option<crate::payroll_government::Reconciliation>,
-    pub payroll_report:Option<crate::payroll_reporting::Report>,
-    pub payroll_exchange:Option<crate::payroll_exchange::Update>,
+    pub leave_import_history: Option<crate::leave::request_import::History>,
+    pub attendance_import_history: Option<crate::attendance_imports::History>,
+    pub leave_import_preview: Option<crate::leave::request_import::Preview>,
+    pub attendance_import_preview: Option<crate::attendance_imports::Preview>,
+    pub leave_import_receipt: Option<crate::leave::request_import::Receipt>,
+    pub attendance_import_receipt: Option<crate::attendance_imports::Receipt>,
+    pub leave_opening_import_preview: Option<crate::leave::opening_import::BatchPreview>,
+    pub leave_opening_preview: Option<crate::leave::dated::Preview>,
+    pub government_bir_declarations: Option<crate::payroll_government::bir_declarations::Report>,
+    pub government_bir_identities: Option<crate::payroll_government::bir_identity::Report>,
+    pub government_annual: Option<crate::payroll_government::annual::Ledger>,
+    pub government_annual_pay: Option<crate::payroll_government::annual_pay::Report>,
+    pub government_sss: Option<crate::payroll_government::sss_collection::Basis>,
+    pub government_bir: Option<crate::payroll_government::bir_file::Report>,
+    pub government_bir_build: Option<crate::payroll_government::bir_file::builder::Preview>,
+    pub government_registration: Option<crate::payroll_government::registration::Snapshot>,
+    pub government: Option<crate::payroll_government::Reconciliation>,
+    pub payroll_report: Option<crate::payroll_reporting::Report>,
+    pub payroll_exchange: Option<crate::payroll_exchange::Update>,
     pub report: Option<crate::reports::Report>,
     pub result: std::result::Result<Snapshot, String>,
     pub message: String,
@@ -1972,8 +2386,8 @@ pub fn worker(
         let mut demo = initial;
         let mut demo_documents = std::collections::HashMap::new();
         let mut demo_resumes = std::collections::HashMap::new();
-        let mut demo_leave_imports=crate::leave::request_import::Demo::default();
-        let mut demo_attendance_imports=crate::attendance_imports::Demo::default();
+        let mut demo_leave_imports = crate::leave::request_import::Demo::default();
+        let mut demo_attendance_imports = crate::attendance_imports::Demo::default();
         let mut demo_account = demo.as_ref().map(|_| AccountProfile::demo());
         let mut cloud: Option<CloudClient> = None;
         let mut current = demo
@@ -1988,14 +2402,14 @@ pub fn worker(
                 Err(mpsc::RecvTimeoutError::Disconnected) => break,
             };
             let mut message = String::new();
-            let mut opening_preview_result=None;
-            let mut leave_import_history_result=None;
-            let mut attendance_import_history_result=None;
-            let mut leave_import_preview_result=None;
-            let mut attendance_import_preview_result=None;
-            let mut leave_import_receipt_result=None;
-            let mut attendance_import_receipt_result=None;
-            let mut opening_import_preview_result=None;
+            let mut opening_preview_result = None;
+            let mut leave_import_history_result = None;
+            let mut attendance_import_history_result = None;
+            let mut leave_import_preview_result = None;
+            let mut attendance_import_preview_result = None;
+            let mut leave_import_receipt_result = None;
+            let mut attendance_import_receipt_result = None;
+            let mut opening_import_preview_result = None;
             let mut staff_roles_result = None;
             let mut staff_provision_result = None;
             let mut report_result = None;
@@ -2007,76 +2421,274 @@ pub fn worker(
             let mut bir_identities_result = None;
             let mut bir_declarations_result = None;
             let mut registration_result = None;
-            let mut sss_result=None;
-            let mut bir_result=None;
-            let mut bir_build_result=None;
+            let mut sss_result = None;
+            let mut bir_result = None;
+            let mut bir_build_result = None;
             let mut update_state = None;
             let mut check_after_sign_in = false;
             let mut result: Result<Snapshot> = match command {
-                Command::PayrollExchange(operation)=>{
-                    let changed=(||{let client=cloud.as_mut().context("Sign in to the configured company to record payroll exchanges.")?;let data=client.snapshot()?;let update=client.payroll_exchange(&data,&operation)?;Ok((data,update))})();
+                Command::PayrollExchange(operation) => {
+                    let changed = (|| {
+                        let client = cloud.as_mut().context(
+                            "Sign in to the configured company to record payroll exchanges.",
+                        )?;
+                        let data = client.snapshot()?;
+                        let update = client.payroll_exchange(&data, &operation)?;
+                        Ok((data, update))
+                    })();
                     changed.map(|(data,update)|{message=if let Some(attempt)=&update.resolved{if attempt.committed{"Retained attempt was already committed; original history is preserved.".into()}else{"No committed attempt found. Its old identity is now closed against delayed requests; review the draft before submitting again.".into()}}else{"Payroll exchange refreshed. No payroll payments changed.".into()};payroll_exchange_result=Some(update);data})
                 }
-                Command::LeaveImportHistory=>{
-                    let changed=match cloud.as_mut(){Some(client)=>client.leave_import_history(),None=>demo.as_ref().context("Sign in to view leave import history.").and_then(|s|demo_leave_imports.history(&s.data).map(|h|(s.data.clone(),h)))};
-                    changed.map(|(data,h)|{leave_import_history_result=Some(h);message="Leave import history refreshed.".into();data})
+                Command::LeaveImportHistory => {
+                    let changed = match cloud.as_mut() {
+                        Some(client) => client.leave_import_history(),
+                        None => demo
+                            .as_ref()
+                            .context("Sign in to view leave import history.")
+                            .and_then(|s| {
+                                demo_leave_imports
+                                    .history(&s.data)
+                                    .map(|h| (s.data.clone(), h))
+                            }),
+                    };
+                    changed.map(|(data, h)| {
+                        leave_import_history_result = Some(h);
+                        message = "Leave import history refreshed.".into();
+                        data
+                    })
                 }
-                Command::PreviewLeaveImport(batch)=>{
-                    let changed=match cloud.as_mut(){Some(client)=>client.leave_import_preview(&batch),None=>demo.as_ref().context("Sign in to preview leave imports.").and_then(|s|crate::leave::request_import::Demo::preview(&s.data,&batch).map(|p|(s.data.clone(),p)))};
-                    changed.map(|(data,p)|{leave_import_preview_result=Some(p);message="Protected leave preview ready. No requests have been created.".into();data})
+                Command::PreviewLeaveImport(batch) => {
+                    let changed = match cloud.as_mut() {
+                        Some(client) => client.leave_import_preview(&batch),
+                        None => demo
+                            .as_ref()
+                            .context("Sign in to preview leave imports.")
+                            .and_then(|s| {
+                                crate::leave::request_import::Demo::preview(&s.data, &batch)
+                                    .map(|p| (s.data.clone(), p))
+                            }),
+                    };
+                    changed.map(|(data, p)| {
+                        leave_import_preview_result = Some(p);
+                        message =
+                            "Protected leave preview ready. No requests have been created.".into();
+                        data
+                    })
                 }
-                Command::PostLeaveImport(post)=>{
-                    let changed=match cloud.as_mut(){Some(client)=>client.post_leave_import(&post),None=>demo.as_mut().context("Sign in to import attendance requests.").and_then(|s|{let r=demo_leave_imports.post(&mut s.data,&post)?;r.validate(&s.data,&post)?;let h=demo_leave_imports.history(&s.data)?;Ok((s.data.clone(),r,h))})};
-                    changed.map(|(data,r,h)|{message=format!("{} leave requests imported with normal charge and approval snapshots.",r.row_count);leave_import_receipt_result=Some(r);leave_import_history_result=Some(h);data})
+                Command::PostLeaveImport(post) => {
+                    let changed = match cloud.as_mut() {
+                        Some(client) => client.post_leave_import(&post),
+                        None => demo
+                            .as_mut()
+                            .context("Sign in to import attendance requests.")
+                            .and_then(|s| {
+                                let r = demo_leave_imports.post(&mut s.data, &post)?;
+                                r.validate(&s.data, &post)?;
+                                let h = demo_leave_imports.history(&s.data)?;
+                                Ok((s.data.clone(), r, h))
+                            }),
+                    };
+                    changed.map(|(data, r, h)| {
+                        message = format!(
+                            "{} leave requests imported with normal charge and approval snapshots.",
+                            r.row_count
+                        );
+                        leave_import_receipt_result = Some(r);
+                        leave_import_history_result = Some(h);
+                        data
+                    })
                 }
-                Command::AttendanceImportHistory=>{
-                    let changed=match cloud.as_mut(){Some(client)=>client.attendance_import_history(),None=>demo.as_ref().context("Sign in to view attendance import history.").and_then(|s|demo_attendance_imports.history(&s.data).map(|h|(s.data.clone(),h)))};
-                    changed.map(|(data,h)|{attendance_import_history_result=Some(h);message="Attendance import history refreshed.".into();data})
+                Command::AttendanceImportHistory => {
+                    let changed = match cloud.as_mut() {
+                        Some(client) => client.attendance_import_history(),
+                        None => demo
+                            .as_ref()
+                            .context("Sign in to view attendance import history.")
+                            .and_then(|s| {
+                                demo_attendance_imports
+                                    .history(&s.data)
+                                    .map(|h| (s.data.clone(), h))
+                            }),
+                    };
+                    changed.map(|(data, h)| {
+                        attendance_import_history_result = Some(h);
+                        message = "Attendance import history refreshed.".into();
+                        data
+                    })
                 }
-                Command::PreviewAttendanceImport(batch)=>{
-                    let changed=match cloud.as_mut(){Some(client)=>client.attendance_import_preview(&batch),None=>demo.as_ref().context("Sign in to preview attendance imports.").and_then(|s|crate::attendance_imports::Demo::preview(&s.data,&batch).map(|p|(s.data.clone(),p)))};
-                    changed.map(|(data,p)|{attendance_import_preview_result=Some(p);message="Protected attendance preview ready. No requests have been created.".into();data})
+                Command::PreviewAttendanceImport(batch) => {
+                    let changed = match cloud.as_mut() {
+                        Some(client) => client.attendance_import_preview(&batch),
+                        None => demo
+                            .as_ref()
+                            .context("Sign in to preview attendance imports.")
+                            .and_then(|s| {
+                                crate::attendance_imports::Demo::preview(&s.data, &batch)
+                                    .map(|p| (s.data.clone(), p))
+                            }),
+                    };
+                    changed.map(|(data, p)| {
+                        attendance_import_preview_result = Some(p);
+                        message =
+                            "Protected attendance preview ready. No requests have been created."
+                                .into();
+                        data
+                    })
                 }
-                Command::PostAttendanceImport(post)=>{
-                    let changed=match cloud.as_mut(){Some(client)=>client.post_attendance_import(&post),None=>demo.as_mut().context("Sign in to import attendance requests.").and_then(|s|{let r=demo_attendance_imports.post(&mut s.data,&post)?;r.validate(&s.data,&post)?;let h=demo_attendance_imports.history(&s.data)?;Ok((s.data.clone(),r,h))})};
+                Command::PostAttendanceImport(post) => {
+                    let changed = match cloud.as_mut() {
+                        Some(client) => client.post_attendance_import(&post),
+                        None => demo
+                            .as_mut()
+                            .context("Sign in to import attendance requests.")
+                            .and_then(|s| {
+                                let r = demo_attendance_imports.post(&mut s.data, &post)?;
+                                r.validate(&s.data, &post)?;
+                                let h = demo_attendance_imports.history(&s.data)?;
+                                Ok((s.data.clone(), r, h))
+                            }),
+                    };
                     changed.map(|(data,r,h)|{message=format!("{} correction requests imported for normal review. Attendance is unchanged until approval.",r.row_count);attendance_import_receipt_result=Some(r);attendance_import_history_result=Some(h);data})
                 }
-                Command::WithdrawAttendanceImport(change)=>{
-                    let changed=match cloud.as_mut(){Some(client)=>client.withdraw_attendance_import(&change),None=>demo.as_mut().context("Sign in to withdraw imported requests.").and_then(|s|{demo_attendance_imports.withdraw(&mut s.data,&change)?;Ok((s.data.clone(),demo_attendance_imports.history(&s.data)?))})};
-                    changed.map(|(data,h)|{attendance_import_history_result=Some(h);message="Pending imported request withdrawn; its audit history remains.".into();data})
-                }
-                Command::LeaveImportErrors{source,preview,destination}=>(||{
-                    ensure!(source.scope==current.access&&current.access.allows(crate::staff_roles::Capability::Personnel),"Import access changed. Reopen the source before exporting private review rows.");
-                    let bytes=source.error_bytes(&destination,preview.as_ref())?;
-                    if let Some(client)=cloud.as_mut(){if client.current_access()?!=current.access{return Err(AccessRevoked.into());}}
-                    crate::reports::save_export(&destination,&bytes)?;message="Leave row review saved to a new file.".into();Ok(current.clone())
-                })(),
-                Command::AttendanceImportErrors{source,preview,destination}=>(||{
-                    ensure!(source.scope==current.access&&current.access.allows(crate::staff_roles::Capability::Personnel),"Import access changed. Reopen the source before exporting private review rows.");
-                    let bytes=source.error_bytes(&destination,preview.as_ref())?;
-                    if let Some(client)=cloud.as_mut(){if client.current_access()?!=current.access{return Err(AccessRevoked.into());}}
-                    crate::reports::save_export(&destination,&bytes)?;message="Attendance row review saved to a new file.".into();Ok(current.clone())
-                })(),
-                Command::OpeningImportErrors{report,destination}=>(||{
-                    let bytes=if crate::tabular::is_xlsx(&destination){report.error_xlsx()?}else{report.error_csv()?};
-                    match cloud.as_mut(){Some(client)=>{let access=client.current_access()?;if access!=current.access{return Err(AccessRevoked.into());}ensure!(access.allows(crate::staff_roles::Capability::Personnel),"HR access is required to export opening review rows.");},None=>ensure!(demo.as_ref().is_some_and(|s|s.data.mode==Mode::Demo&&s.data.access.allows(crate::staff_roles::Capability::Personnel)),"Sign in to HRIS with HR access before exporting opening reviews.")}
-                    crate::reports::save_export(&destination,&bytes)?;message="Opening row review exported.".into();Ok(current.clone())
-                })(),
-                Command::PreviewLeaveOpeningImport(records)=>{
-                    let changed=match cloud.as_mut(){Some(client)=>client.leave_opening_import_preview(&records),None=>demo.as_mut().context("Sign in to preview opening imports.").map(|store|{
-                        if store.data.leave_setup.dated.is_none(){store.data.leave_setup.dated=Some(crate::leave::dated::Context::empty(&store.data));}
-                        (store.data.clone(),crate::leave::opening_import::BatchPreview::demo(&store.data,&records))
-                    })};changed.map(|(data,p)|{opening_import_preview_result=Some(p);message="Opening import preview ready. No rows have been applied.".into();data})
-                }
-                Command::PreviewLeaveOpening(record)=>{
-                    let changed=match cloud.as_mut() {
-                        Some(client)=>client.leave_opening_preview(&record),
-                        None=>demo.as_mut().context("Sign in to preview leave openings.").and_then(|store|{
-                            if store.data.leave_setup.dated.is_none(){store.data.leave_setup.dated=Some(crate::leave::dated::Context::empty(&store.data));}
-                            crate::leave::dated::preview_demo(&store.data,&record).map(|p|(store.data.clone(),p))
-                        }),
+                Command::WithdrawAttendanceImport(change) => {
+                    let changed = match cloud.as_mut() {
+                        Some(client) => client.withdraw_attendance_import(&change),
+                        None => demo
+                            .as_mut()
+                            .context("Sign in to withdraw imported requests.")
+                            .and_then(|s| {
+                                demo_attendance_imports.withdraw(&mut s.data, &change)?;
+                                Ok((s.data.clone(), demo_attendance_imports.history(&s.data)?))
+                            }),
                     };
-                    changed.map(|(data,p)|{opening_preview_result=Some(p);message="Opening preview ready. No balance has been posted.".into();data})
+                    changed.map(|(data, h)| {
+                        attendance_import_history_result = Some(h);
+                        message =
+                            "Pending imported request withdrawn; its audit history remains.".into();
+                        data
+                    })
+                }
+                Command::LeaveImportErrors {
+                    source,
+                    preview,
+                    destination,
+                } => (|| {
+                    ensure!(
+                        source.scope == current.access
+                            && current
+                                .access
+                                .allows(crate::staff_roles::Capability::Personnel),
+                        "Import access changed. Reopen the source before exporting private review rows."
+                    );
+                    let bytes = source.error_bytes(&destination, preview.as_ref())?;
+                    if let Some(client) = cloud.as_mut() {
+                        if client.current_access()? != current.access {
+                            return Err(AccessRevoked.into());
+                        }
+                    }
+                    crate::reports::save_export(&destination, &bytes)?;
+                    message = "Leave row review saved to a new file.".into();
+                    Ok(current.clone())
+                })(),
+                Command::AttendanceImportErrors {
+                    source,
+                    preview,
+                    destination,
+                } => (|| {
+                    ensure!(
+                        source.scope == current.access
+                            && current
+                                .access
+                                .allows(crate::staff_roles::Capability::Personnel),
+                        "Import access changed. Reopen the source before exporting private review rows."
+                    );
+                    let bytes = source.error_bytes(&destination, preview.as_ref())?;
+                    if let Some(client) = cloud.as_mut() {
+                        if client.current_access()? != current.access {
+                            return Err(AccessRevoked.into());
+                        }
+                    }
+                    crate::reports::save_export(&destination, &bytes)?;
+                    message = "Attendance row review saved to a new file.".into();
+                    Ok(current.clone())
+                })(),
+                Command::OpeningImportErrors {
+                    report,
+                    destination,
+                } => (|| {
+                    let bytes = if crate::tabular::is_xlsx(&destination) {
+                        report.error_xlsx()?
+                    } else {
+                        report.error_csv()?
+                    };
+                    match cloud.as_mut() {
+                        Some(client) => {
+                            let access = client.current_access()?;
+                            if access != current.access {
+                                return Err(AccessRevoked.into());
+                            }
+                            ensure!(
+                                access.allows(crate::staff_roles::Capability::Personnel),
+                                "HR access is required to export opening review rows."
+                            );
+                        }
+                        None => ensure!(
+                            demo.as_ref().is_some_and(|s| s.data.mode == Mode::Demo
+                                && s.data
+                                    .access
+                                    .allows(crate::staff_roles::Capability::Personnel)),
+                            "Sign in to HRIS with HR access before exporting opening reviews."
+                        ),
+                    }
+                    crate::reports::save_export(&destination, &bytes)?;
+                    message = "Opening row review exported.".into();
+                    Ok(current.clone())
+                })(),
+                Command::PreviewLeaveOpeningImport(records) => {
+                    let changed = match cloud.as_mut() {
+                        Some(client) => client.leave_opening_import_preview(&records),
+                        None => demo
+                            .as_mut()
+                            .context("Sign in to preview opening imports.")
+                            .map(|store| {
+                                if store.data.leave_setup.dated.is_none() {
+                                    store.data.leave_setup.dated =
+                                        Some(crate::leave::dated::Context::empty(&store.data));
+                                }
+                                (
+                                    store.data.clone(),
+                                    crate::leave::opening_import::BatchPreview::demo(
+                                        &store.data,
+                                        &records,
+                                    ),
+                                )
+                            }),
+                    };
+                    changed.map(|(data, p)| {
+                        opening_import_preview_result = Some(p);
+                        message = "Opening import preview ready. No rows have been applied.".into();
+                        data
+                    })
+                }
+                Command::PreviewLeaveOpening(record) => {
+                    let changed = match cloud.as_mut() {
+                        Some(client) => client.leave_opening_preview(&record),
+                        None => demo
+                            .as_mut()
+                            .context("Sign in to preview leave openings.")
+                            .and_then(|store| {
+                                if store.data.leave_setup.dated.is_none() {
+                                    store.data.leave_setup.dated =
+                                        Some(crate::leave::dated::Context::empty(&store.data));
+                                }
+                                crate::leave::dated::preview_demo(&store.data, &record)
+                                    .map(|p| (store.data.clone(), p))
+                            }),
+                    };
+                    changed.map(|(data, p)| {
+                        opening_preview_result = Some(p);
+                        message = "Opening preview ready. No balance has been posted.".into();
+                        data
+                    })
                 }
                 Command::CheckUpdates => {
                     update_state = Some(match (cloud.as_mut(), UpdateConfig::load()) {
@@ -2175,132 +2787,406 @@ pub fn worker(
                     (|| -> Result<Snapshot> {
                         if let Some(client) = cloud.as_mut() {
                             let access = client.current_access()?;
-                            if !access.allows(crate::staff_roles::Capability::Personnel) || access.company_id != preview.company_id
+                            if !access.allows(crate::staff_roles::Capability::Personnel)
+                                || access.company_id != preview.company_id
                             {
                                 return Err(AccessRevoked.into());
                             }
                         } else {
                             ensure!(
-                                demo.as_ref()
-                                    .is_some_and(|s| s.data.access.allows(crate::staff_roles::Capability::Personnel)
-                                        && s.data.company.id == preview.company_id),
+                                demo.as_ref().is_some_and(|s| s
+                                    .data
+                                    .access
+                                    .allows(crate::staff_roles::Capability::Personnel)
+                                    && s.data.company.id == preview.company_id),
                                 "Only HR or Administrators can export import errors."
                             );
                         }
-                        let bytes=if crate::tabular::is_xlsx(&destination){preview.error_xlsx()?}else{preview.error_csv()?};
-                        if let Some(client)=cloud.as_mut(){if client.current_access()? != current.access {return Err(AccessRevoked.into());}}
+                        let bytes = if crate::tabular::is_xlsx(&destination) {
+                            preview.error_xlsx()?
+                        } else {
+                            preview.error_csv()?
+                        };
+                        if let Some(client) = cloud.as_mut() {
+                            if client.current_access()? != current.access {
+                                return Err(AccessRevoked.into());
+                            }
+                        }
                         crate::reports::save_export(&destination, &bytes)?;
                         Ok(current.clone())
                     })()
                 }
-                Command::GovernmentBirDeclarations{year,source,expected_hash,destination}=>{
-                    (||{let client=cloud.as_mut().context("Sign in to review BIR declarations and sources.")?;let data=client.snapshot()?;
-                        bir_declarations_result=Some(client.government_bir_declarations(&data,year,&source,expected_hash.as_deref(),destination.as_deref())?);
-                        message=if destination.is_some(){"Fresh internal declaration/source worksheet exported. No expected tax or return was calculated.".into()}
-                            else{"Literal BIR declarations and recorded payroll sources loaded separately. Official validation remains unverified.".into()};Ok(data)})()
-                }
-                Command::GovernmentBirIdentities{year,source,expected_hash,destination}=>{
-                    (||{let client=cloud.as_mut().context("Sign in to review current BIR identities.")?;let data=client.snapshot()?;
-                        bir_identities_result=Some(client.government_bir_identities(&data,year,&source,expected_hash.as_deref(),destination.as_deref())?);
-                        message=if destination.is_some(){"Fresh internal identity review exported. No tax return, payroll or registration was changed.".into()}
-                            else{"Current BIR identity pairs reviewed. Historical assignment and expected tax remain unverified.".into()};Ok(data)})()
-                }
-                Command::GovernmentAnnualPay{year,destination}=>{
-                    (||{let client=cloud.as_mut().context("Sign in to review recorded pay details.")?;
-                        let data=client.snapshot()?;
-                        annual_pay_result=Some(client.government_annual_pay_details(&data,year,destination.as_deref())?);
-                        message=if destination.is_some(){"Fresh recorded pay details exported. Review overlapping components and receipt states separately.".into()}
-                            else{"Annual sources and issued pay details refreshed together.".into()};Ok(data)})()
-                }
-                Command::GovernmentAnnual{year,destination}=>{
-                    (||{let client=cloud.as_mut().context("Sign in to generate annual recorded sources.")?;
-                        let data=client.snapshot()?;
-                        annual_result=Some(client.government_annual_ledger(&data,year,destination.as_deref())?);
-                        message=if destination.is_some(){"Fresh internal annual source worksheet exported. No tax return or payroll payment was changed.".into()}
-                            else{"Annual recorded sources refreshed. Review actual receipt dates and excluded records.".into()};
-                        Ok(data)})()
-                }
-                Command::GovernmentSssPrepare{filter}=>{
-                    (||->Result<Snapshot>{
-                        let client=cloud.as_mut().context("Company sign-in is required for SSS drafts.")?;
-                        sss_result=Some(client.sss_collection_prepare(&current,filter)?);
-                        message="SSS draft sources checked against current registration and recorded remittance.".into();Ok(current.clone())
-                    })()
-                }
-                Command::GovernmentBirBuild(action)=>{
-                    (||->Result<Snapshot>{
-                        let client=cloud.as_mut().context("Company sign-in is required for BIR declaration drafts.")?;
-                        bir_build_result=client.government_bir_build(&current,&action)?;
-                        message=match &action {
+                Command::GovernmentBirDeclarations {
+                    year,
+                    source,
+                    expected_hash,
+                    destination,
+                } => (|| {
+                    let client = cloud
+                        .as_mut()
+                        .context("Sign in to review BIR declarations and sources.")?;
+                    let data = client.snapshot()?;
+                    bir_declarations_result = Some(client.government_bir_declarations(
+                        &data,
+                        year,
+                        &source,
+                        expected_hash.as_deref(),
+                        destination.as_deref(),
+                    )?);
+                    message = if destination.is_some() {
+                        "Fresh internal declaration/source worksheet exported. No expected tax or return was calculated.".into()
+                    } else {
+                        "Literal BIR declarations and recorded payroll sources loaded separately. Official validation remains unverified.".into()
+                    };
+                    Ok(data)
+                })(),
+                Command::GovernmentBirIdentities {
+                    year,
+                    source,
+                    expected_hash,
+                    destination,
+                } => (|| {
+                    let client = cloud
+                        .as_mut()
+                        .context("Sign in to review current BIR identities.")?;
+                    let data = client.snapshot()?;
+                    bir_identities_result = Some(client.government_bir_identities(
+                        &data,
+                        year,
+                        &source,
+                        expected_hash.as_deref(),
+                        destination.as_deref(),
+                    )?);
+                    message = if destination.is_some() {
+                        "Fresh internal identity review exported. No tax return, payroll or registration was changed.".into()
+                    } else {
+                        "Current BIR identity pairs reviewed. Historical assignment and expected tax remain unverified.".into()
+                    };
+                    Ok(data)
+                })(),
+                Command::GovernmentAnnualPay { year, destination } => (|| {
+                    let client = cloud
+                        .as_mut()
+                        .context("Sign in to review recorded pay details.")?;
+                    let data = client.snapshot()?;
+                    annual_pay_result = Some(client.government_annual_pay_details(
+                        &data,
+                        year,
+                        destination.as_deref(),
+                    )?);
+                    message = if destination.is_some() {
+                        "Fresh recorded pay details exported. Review overlapping components and receipt states separately.".into()
+                    } else {
+                        "Annual sources and issued pay details refreshed together.".into()
+                    };
+                    Ok(data)
+                })(),
+                Command::GovernmentAnnual { year, destination } => (|| {
+                    let client = cloud
+                        .as_mut()
+                        .context("Sign in to generate annual recorded sources.")?;
+                    let data = client.snapshot()?;
+                    annual_result = Some(client.government_annual_ledger(
+                        &data,
+                        year,
+                        destination.as_deref(),
+                    )?);
+                    message = if destination.is_some() {
+                        "Fresh internal annual source worksheet exported. No tax return or payroll payment was changed.".into()
+                    } else {
+                        "Annual recorded sources refreshed. Review actual receipt dates and excluded records.".into()
+                    };
+                    Ok(data)
+                })(),
+                Command::GovernmentSssPrepare { filter } => (|| -> Result<Snapshot> {
+                    let client = cloud
+                        .as_mut()
+                        .context("Company sign-in is required for SSS drafts.")?;
+                    sss_result = Some(client.sss_collection_prepare(&current, filter)?);
+                    message="SSS draft sources checked against current registration and recorded remittance.".into();
+                    Ok(current.clone())
+                })(),
+                Command::GovernmentBirBuild(action) => (|| -> Result<Snapshot> {
+                    let client = cloud
+                        .as_mut()
+                        .context("Company sign-in is required for BIR declaration drafts.")?;
+                    bir_build_result = client.government_bir_build(&current, &action)?;
+                    message=match &action {
                             crate::payroll_government::bir_file::builder::Action::Template{..}=>"Blank BIR declaration template saved. Enter reviewed values; no payroll or tax classifications were inferred.",
                             crate::payroll_government::bir_file::builder::Action::Prepare{destination:Some(_),..}=>"New BIR plaintext draft saved. Official BIR validation and agency acceptance are still required; nothing was submitted.",
                             _=>"Declaration draft previewed locally. Review the declared values before saving a new DAT file.",
                         }.into();
-                        Ok(current.clone())
-                    })()
-                }
-                Command::GovernmentBirCheck{source,expected_hash,destination}=>{
-                    (||->Result<Snapshot>{
-                        let client=cloud.as_mut().context("Company sign-in is required for BIR file checks.")?;
-                        bir_result=Some(client.government_bir_check(&current,&source,expected_hash.as_deref(),destination.as_deref())?);
-                        message=if destination.is_some(){"Fresh BIR structure findings saved. No source file, payroll or filing was changed."}else{"BIR file structure checked locally. Official validation and payroll comparison are separate."}.into();
-                        Ok(current.clone())
-                    })()
-                }
-                Command::GovernmentSssExport{filter,request,destination}=>{
-                    (||->Result<Snapshot>{
-                        let client=cloud.as_mut().context("Company sign-in is required for SSS drafts.")?;
-                        government_result=Some(client.sss_collection_export(&current,filter,&request,&destination)?);
-                        message="SSS reference draft saved for review. No collection list was submitted and no payment was recorded.".into();Ok(current.clone())
-                    })()
-                }
-                Command::GovernmentPreparation{filter,destination}=>{
-                    (||->Result<Snapshot>{
-                        let client=cloud.as_mut().context("Company sign-in is required for agency preparation exports.")?;
-                        government_result=Some(client.government_preparation(&current,filter,&destination)?);
-                        message="Agency preparation worksheet exported with current registered identifiers. This is an internal HR file, not an agency upload.".into();
-                        Ok(current.clone())
-                    })()
-                }
-                Command::GovernmentRegistration{employee_id,save}=>{
-                    (||->Result<Snapshot>{
-                        let client=cloud.as_mut().context("Company sign-in is required for registration records.")?;
-                        registration_result=Some(client.government_registration(&current,employee_id,save.as_ref())?);
-                        message=if save.is_some(){"Registration saved with retained history. Employment and branding are unchanged.".into()}else{"Current registration records loaded.".into()};
-                        Ok(current.clone())
-                    })()
-                }
-                Command::Government{filter,action,destination}=>{
-                    (||->Result<Snapshot>{
-                        let client=cloud.as_mut().context("Company sign-in is required for government reconciliation.")?;
-                        let report=client.government_reconciliation(&current,filter,action.as_ref(),destination.as_deref())?;
-                        message=if action.is_some(){"Government record saved. Review the current status and audit history.".into()}else if destination.is_some(){"Fresh government review worksheet exported. References and evidence are kept private.".into()}else{"Government reconciliation refreshed from current records.".into()};
-                        government_result=Some(report);Ok(current.clone())
-                    })()
-                }
-                Command::PayrollReport{filter,destination}=>{
-                    (||->Result<Snapshot>{
-                        let report=if let Some(client)=cloud.as_mut(){client.consolidated_payroll_report(&current,&filter,destination.as_deref())?}else{
-                            let d=&demo.as_ref().context("Sign in to generate payroll reports.")?.data;
-                            let report=crate::payroll_reporting::demo(d,&filter,Utc::now())?;
-                            if let Some(path)=destination.as_deref(){crate::reports::save_csv(path,&report.csv()?)?;}
-                            report
-                        };
-                        message=format!("{} {} payroll fact(s). No payment or filing was made.",if destination.is_some(){"Exported"}else{"Generated"},report.wire.rows.len());
-                        payroll_report_result=Some(report);Ok(current.clone())
-                    })()
-                }
-                Command::PayrollExport { kind,record_id,year,destination } => {
+                    Ok(current.clone())
+                })(),
+                Command::GovernmentBirCheck {
+                    source,
+                    expected_hash,
+                    destination,
+                } => (|| -> Result<Snapshot> {
+                    let client = cloud
+                        .as_mut()
+                        .context("Company sign-in is required for BIR file checks.")?;
+                    bir_result = Some(client.government_bir_check(
+                        &current,
+                        &source,
+                        expected_hash.as_deref(),
+                        destination.as_deref(),
+                    )?);
+                    message=if destination.is_some(){"Fresh BIR structure findings saved. No source file, payroll or filing was changed."}else{"BIR file structure checked locally. Official validation and payroll comparison are separate."}.into();
+                    Ok(current.clone())
+                })(),
+                Command::GovernmentSssExport {
+                    filter,
+                    request,
+                    destination,
+                } => (|| -> Result<Snapshot> {
+                    let client = cloud
+                        .as_mut()
+                        .context("Company sign-in is required for SSS drafts.")?;
+                    government_result = Some(client.sss_collection_export(
+                        &current,
+                        filter,
+                        &request,
+                        &destination,
+                    )?);
+                    message="SSS reference draft saved for review. No collection list was submitted and no payment was recorded.".into();
+                    Ok(current.clone())
+                })(),
+                Command::GovernmentPreparation {
+                    filter,
+                    destination,
+                } => (|| -> Result<Snapshot> {
+                    let client = cloud
+                        .as_mut()
+                        .context("Company sign-in is required for agency preparation exports.")?;
+                    government_result =
+                        Some(client.government_preparation(&current, filter, &destination)?);
+                    message="Agency preparation worksheet exported with current registered identifiers. This is an internal HR file, not an agency upload.".into();
+                    Ok(current.clone())
+                })(),
+                Command::GovernmentRegistration { employee_id, save } => {
                     (|| -> Result<Snapshot> {
-                        let data=match cloud.as_mut(){Some(client)=>client.snapshot()?,None=>demo.as_ref().context("Sign in to export payroll.")?.data.clone()};
-                        ensure!(data.access.company_id==current.access.company_id && data.access.user_id==current.access.user_id,"Your account scope changed. Sign in again.");
-                        let bytes=if kind=="amendment_statement_pdf"{let s=data.payroll.amendments.slips.iter().find(|s|Some(s.id)==record_id&&s.company_id==data.company.id&&(data.access.allows(crate::staff_roles::Capability::PayrollReports)||data.access.employee_id==Some(s.employee_id))).context("Only an available own issued amendment may be exported.")?;crate::payroll_pdf::build_amendment(s,crate::payroll_amendments::status(&data,s.id))?}else if kind.starts_with("amendment_"){crate::payroll_amendments::export_csv(&data,&kind,record_id)?}else if kind=="final_statement_pdf"{let s=data.payroll.finals.slips.iter().find(|s|Some(s.id)==record_id&&s.company_id==data.company.id).context("Issued final statement unavailable.")?;ensure!(data.access.allows(crate::staff_roles::Capability::PayrollReports)||data.access.employee_id==Some(s.employee_id),"Only your own final statement is available.");crate::payroll_pdf::build_final(s,crate::payroll_final::status(&data,s.id))?}else if kind.starts_with("final_"){crate::payroll_final::export_csv(&data,&kind,record_id)?}else if kind=="tax_payslip_pdf"{let s=data.payroll.tax.slips.iter().find(|s|Some(s.id)==record_id&&s.company_id==data.company.id).context("Issued tax advice unavailable.")?;ensure!(data.access.allows(crate::staff_roles::Capability::PayrollReports)||data.access.employee_id==Some(s.employee_id),"Only your own tax advice is available.");crate::payroll_pdf::build_tax(s)?}else if kind.starts_with("tax_"){crate::payroll_tax::export_csv(&data,&kind,record_id)?}else if kind=="thirteenth_payslip_pdf"{let s=data.payroll.thirteenth.slips.iter().find(|s|Some(s.id)==record_id&&s.company_id==data.company.id).context("Issued annual benefit slip unavailable.")?;ensure!(data.access.allows(crate::staff_roles::Capability::PayrollReports)||data.access.employee_id==Some(s.employee_id),"Only your own annual benefit slip is available.");crate::payroll_pdf::build_thirteenth(s)?}else if kind.starts_with("thirteenth_"){crate::payroll_thirteenth::export_csv(&data,&kind,record_id)?}else if kind=="cutoff_payslip_pdf"{let s=data.payroll.cutoffs.slips.iter().find(|s|Some(s.base.id)==record_id).context("Issued cutoff payslip unavailable.")?;ensure!(s.base.company_id==data.company.id&&(data.access.allows(crate::staff_roles::Capability::PayrollReports)||data.access.employee_id==Some(s.base.employee_id)),"Only your own cutoff payslip is available.");crate::payroll_pdf::build_cutoff(s)?}else if kind.starts_with("cutoff_"){crate::payroll_cutoffs::export_csv(&data,&kind,record_id)?}else if kind=="payslip_pdf"{let slip=data.payroll.slips.iter().find(|s|Some(s.id)==record_id).context("Approved payslip not available.")?;ensure!(data.access.allows(crate::staff_roles::Capability::PayrollReports)||data.access.employee_id==Some(slip.employee_id),"Only your own payslip is available.");crate::payroll_pdf::build(slip)?}else{crate::payroll::export_csv(&data,&kind,record_id,year)?};
-                        if let Some(client)=cloud.as_mut(){let access=client.current_access()?;if access!=data.access{return Err(AccessRevoked.into());}}
-                        if kind.ends_with("payslip_pdf")||kind=="final_statement_pdf"||kind=="amendment_statement_pdf"{crate::payroll_pdf::save(&destination,&bytes)?;}else{crate::reports::save_csv(&destination,&bytes)?;}
-                        message="Payroll export saved from freshly checked access. No payment or government filing was made.".into();
-                        Ok(data)
+                        let client = cloud
+                            .as_mut()
+                            .context("Company sign-in is required for registration records.")?;
+                        registration_result = Some(client.government_registration(
+                            &current,
+                            employee_id,
+                            save.as_ref(),
+                        )?);
+                        message = if save.is_some() {
+                            "Registration saved with retained history. Employment and branding are unchanged.".into()
+                        } else {
+                            "Current registration records loaded.".into()
+                        };
+                        Ok(current.clone())
                     })()
                 }
+                Command::Government {
+                    filter,
+                    action,
+                    destination,
+                } => (|| -> Result<Snapshot> {
+                    let client = cloud
+                        .as_mut()
+                        .context("Company sign-in is required for government reconciliation.")?;
+                    let report = client.government_reconciliation(
+                        &current,
+                        filter,
+                        action.as_ref(),
+                        destination.as_deref(),
+                    )?;
+                    message = if action.is_some() {
+                        "Government record saved. Review the current status and audit history."
+                            .into()
+                    } else if destination.is_some() {
+                        "Fresh government review worksheet exported. References and evidence are kept private.".into()
+                    } else {
+                        "Government reconciliation refreshed from current records.".into()
+                    };
+                    government_result = Some(report);
+                    Ok(current.clone())
+                })(),
+                Command::PayrollReport {
+                    filter,
+                    destination,
+                } => (|| -> Result<Snapshot> {
+                    let report = if let Some(client) = cloud.as_mut() {
+                        client.consolidated_payroll_report(
+                            &current,
+                            &filter,
+                            destination.as_deref(),
+                        )?
+                    } else {
+                        let d = &demo
+                            .as_ref()
+                            .context("Sign in to generate payroll reports.")?
+                            .data;
+                        let report = crate::payroll_reporting::demo(d, &filter, Utc::now())?;
+                        if let Some(path) = destination.as_deref() {
+                            crate::reports::save_csv(path, &report.csv()?)?;
+                        }
+                        report
+                    };
+                    message = format!(
+                        "{} {} payroll fact(s). No payment or filing was made.",
+                        if destination.is_some() {
+                            "Exported"
+                        } else {
+                            "Generated"
+                        },
+                        report.wire.rows.len()
+                    );
+                    payroll_report_result = Some(report);
+                    Ok(current.clone())
+                })(),
+                Command::PayrollExport {
+                    kind,
+                    record_id,
+                    year,
+                    destination,
+                } => (|| -> Result<Snapshot> {
+                    let data = match cloud.as_mut() {
+                        Some(client) => client.snapshot()?,
+                        None => demo
+                            .as_ref()
+                            .context("Sign in to export payroll.")?
+                            .data
+                            .clone(),
+                    };
+                    ensure!(
+                        data.access.company_id == current.access.company_id
+                            && data.access.user_id == current.access.user_id,
+                        "Your account scope changed. Sign in again."
+                    );
+                    let bytes = if kind == "amendment_statement_pdf" {
+                        let s = data
+                            .payroll
+                            .amendments
+                            .slips
+                            .iter()
+                            .find(|s| {
+                                Some(s.id) == record_id
+                                    && s.company_id == data.company.id
+                                    && (data
+                                        .access
+                                        .allows(crate::staff_roles::Capability::PayrollReports)
+                                        || data.access.employee_id == Some(s.employee_id))
+                            })
+                            .context("Only an available own issued amendment may be exported.")?;
+                        crate::payroll_pdf::build_amendment(
+                            s,
+                            crate::payroll_amendments::status(&data, s.id),
+                        )?
+                    } else if kind.starts_with("amendment_") {
+                        crate::payroll_amendments::export_csv(&data, &kind, record_id)?
+                    } else if kind == "final_statement_pdf" {
+                        let s = data
+                            .payroll
+                            .finals
+                            .slips
+                            .iter()
+                            .find(|s| Some(s.id) == record_id && s.company_id == data.company.id)
+                            .context("Issued final statement unavailable.")?;
+                        ensure!(
+                            data.access
+                                .allows(crate::staff_roles::Capability::PayrollReports)
+                                || data.access.employee_id == Some(s.employee_id),
+                            "Only your own final statement is available."
+                        );
+                        crate::payroll_pdf::build_final(
+                            s,
+                            crate::payroll_final::status(&data, s.id),
+                        )?
+                    } else if kind.starts_with("final_") {
+                        crate::payroll_final::export_csv(&data, &kind, record_id)?
+                    } else if kind == "tax_payslip_pdf" {
+                        let s = data
+                            .payroll
+                            .tax
+                            .slips
+                            .iter()
+                            .find(|s| Some(s.id) == record_id && s.company_id == data.company.id)
+                            .context("Issued tax advice unavailable.")?;
+                        ensure!(
+                            data.access
+                                .allows(crate::staff_roles::Capability::PayrollReports)
+                                || data.access.employee_id == Some(s.employee_id),
+                            "Only your own tax advice is available."
+                        );
+                        crate::payroll_pdf::build_tax(s)?
+                    } else if kind.starts_with("tax_") {
+                        crate::payroll_tax::export_csv(&data, &kind, record_id)?
+                    } else if kind == "thirteenth_payslip_pdf" {
+                        let s = data
+                            .payroll
+                            .thirteenth
+                            .slips
+                            .iter()
+                            .find(|s| Some(s.id) == record_id && s.company_id == data.company.id)
+                            .context("Issued annual benefit slip unavailable.")?;
+                        ensure!(
+                            data.access
+                                .allows(crate::staff_roles::Capability::PayrollReports)
+                                || data.access.employee_id == Some(s.employee_id),
+                            "Only your own annual benefit slip is available."
+                        );
+                        crate::payroll_pdf::build_thirteenth(s)?
+                    } else if kind.starts_with("thirteenth_") {
+                        crate::payroll_thirteenth::export_csv(&data, &kind, record_id)?
+                    } else if kind == "cutoff_payslip_pdf" {
+                        let s = data
+                            .payroll
+                            .cutoffs
+                            .slips
+                            .iter()
+                            .find(|s| Some(s.base.id) == record_id)
+                            .context("Issued cutoff payslip unavailable.")?;
+                        ensure!(
+                            s.base.company_id == data.company.id
+                                && (data
+                                    .access
+                                    .allows(crate::staff_roles::Capability::PayrollReports)
+                                    || data.access.employee_id == Some(s.base.employee_id)),
+                            "Only your own cutoff payslip is available."
+                        );
+                        crate::payroll_pdf::build_cutoff(s)?
+                    } else if kind.starts_with("cutoff_") {
+                        crate::payroll_cutoffs::export_csv(&data, &kind, record_id)?
+                    } else if kind == "payslip_pdf" {
+                        let slip = data
+                            .payroll
+                            .slips
+                            .iter()
+                            .find(|s| Some(s.id) == record_id)
+                            .context("Approved payslip not available.")?;
+                        ensure!(
+                            data.access
+                                .allows(crate::staff_roles::Capability::PayrollReports)
+                                || data.access.employee_id == Some(slip.employee_id),
+                            "Only your own payslip is available."
+                        );
+                        crate::payroll_pdf::build(slip)?
+                    } else {
+                        crate::payroll::export_csv(&data, &kind, record_id, year)?
+                    };
+                    if let Some(client) = cloud.as_mut() {
+                        let access = client.current_access()?;
+                        if access != data.access {
+                            return Err(AccessRevoked.into());
+                        }
+                    }
+                    if kind.ends_with("payslip_pdf")
+                        || kind == "final_statement_pdf"
+                        || kind == "amendment_statement_pdf"
+                    {
+                        crate::payroll_pdf::save(&destination, &bytes)?;
+                    } else {
+                        crate::reports::save_csv(&destination, &bytes)?;
+                    }
+                    message="Payroll export saved from freshly checked access. No payment or government filing was made.".into();
+                    Ok(data)
+                })(),
                 Command::Report {
                     filter,
                     destination,
@@ -2383,9 +3269,11 @@ pub fn worker(
                         current.clone()
                     })
                 }
-                Command::StaffProvision(operation)=>{
-                    let changed=cloud.as_mut().context("Sign in to manage protected staff accounts.")
-                        .and_then(|client|client.execute_staff_provision(operation,&current));
+                Command::StaffProvision(operation) => {
+                    let changed = cloud
+                        .as_mut()
+                        .context("Sign in to manage protected staff accounts.")
+                        .and_then(|client| client.execute_staff_provision(operation, &current));
                     changed.map(|(data,update)|{message=match &update{
                         crate::staff_roles::provision::Update::Completed{..}=>"Employee and staff access saved. Use Send confirmation to deliver account setup.",
                         crate::staff_roles::provision::Update::Cancelled(_)=>"Pending account attempt closed. Its history and any reserved identity are retained.",
@@ -2395,11 +3283,19 @@ pub fn worker(
                     }.into();staff_provision_result=Some(update);data})
                 }
                 Command::StaffRoles(operation) => {
-                    let changed = cloud.as_mut().context("Sign in to manage protected staff assignments.")
+                    let changed = cloud
+                        .as_mut()
+                        .context("Sign in to manage protected staff assignments.")
                         .and_then(|client| client.execute_staff_roles(operation, &current));
-                    changed.map(|(data,update)| {
-                        message = if update.receipt.is_some() {"Staff responsibilities and sign-in access saved."} else {"Staff assignments refreshed."}.into();
-                        staff_roles_result = Some(update); data
+                    changed.map(|(data, update)| {
+                        message = if update.receipt.is_some() {
+                            "Staff responsibilities and sign-in access saved."
+                        } else {
+                            "Staff assignments refreshed."
+                        }
+                        .into();
+                        staff_roles_result = Some(update);
+                        data
                     })
                 }
                 Command::Admin(action) => {
@@ -2438,29 +3334,36 @@ pub fn worker(
             if events
                 .send(Update {
                     staff_provision: staff_provision_result,
-                    staff_provision_rejection: result.as_ref().err().and_then(|e|e.downcast_ref::<crate::staff_roles::provision::Rejection>()).cloned(),
-                    staff_role_rejected: result.as_ref().err().is_some_and(|e|e.is::<staff_roles_adapter::Rejected>()),
+                    staff_provision_rejection: result
+                        .as_ref()
+                        .err()
+                        .and_then(|e| e.downcast_ref::<crate::staff_roles::provision::Rejection>())
+                        .cloned(),
+                    staff_role_rejected: result
+                        .as_ref()
+                        .err()
+                        .is_some_and(|e| e.is::<staff_roles_adapter::Rejected>()),
                     staff_roles: staff_roles_result,
-                    leave_import_history:leave_import_history_result,
-                    attendance_import_history:attendance_import_history_result,
-                    leave_import_preview:leave_import_preview_result,
-                    attendance_import_preview:attendance_import_preview_result,
-                    leave_import_receipt:leave_import_receipt_result,
-                    attendance_import_receipt:attendance_import_receipt_result,
-                    leave_opening_import_preview:opening_import_preview_result,
-                    leave_opening_preview:opening_preview_result,
-                    government_bir_declarations:bir_declarations_result,
-                    government_bir_identities:bir_identities_result,
-                    government_annual:annual_result,
-                    government_annual_pay:annual_pay_result,
-                    government_sss:sss_result,
-                    government_bir:bir_result,
-                    government_bir_build:bir_build_result,
-                    government_registration:registration_result,
-                    government:government_result,
+                    leave_import_history: leave_import_history_result,
+                    attendance_import_history: attendance_import_history_result,
+                    leave_import_preview: leave_import_preview_result,
+                    attendance_import_preview: attendance_import_preview_result,
+                    leave_import_receipt: leave_import_receipt_result,
+                    attendance_import_receipt: attendance_import_receipt_result,
+                    leave_opening_import_preview: opening_import_preview_result,
+                    leave_opening_preview: opening_preview_result,
+                    government_bir_declarations: bir_declarations_result,
+                    government_bir_identities: bir_identities_result,
+                    government_annual: annual_result,
+                    government_annual_pay: annual_pay_result,
+                    government_sss: sss_result,
+                    government_bir: bir_result,
+                    government_bir_build: bir_build_result,
+                    government_registration: registration_result,
+                    government: government_result,
                     report: report_result,
-                    payroll_report:payroll_report_result,
-                    payroll_exchange:payroll_exchange_result,
+                    payroll_report: payroll_report_result,
+                    payroll_exchange: payroll_exchange_result,
                     result: result.map_err(|e| e.to_string()),
                     message,
                     account: cloud
@@ -2487,26 +3390,26 @@ pub fn worker(
                             staff_provision_rejection: None,
                             staff_role_rejected: false,
                             staff_roles: None,
-                            leave_opening_import_preview:None,
-                            leave_import_history:None,
-                            attendance_import_history:None,
-                            leave_import_preview:None,
-                            attendance_import_preview:None,
-                            leave_import_receipt:None,
-                            attendance_import_receipt:None,
-                            leave_opening_preview:None,
-                            government_bir_declarations:None,
-                            government_bir_identities:None,
-                            government_annual:None,
-                            government_annual_pay:None,
-                            government_sss:None,
-                            government_bir:None,
-                            government_bir_build:None,
-                            government_registration:None,
-                            government:None,
+                            leave_opening_import_preview: None,
+                            leave_import_history: None,
+                            attendance_import_history: None,
+                            leave_import_preview: None,
+                            attendance_import_preview: None,
+                            leave_import_receipt: None,
+                            attendance_import_receipt: None,
+                            leave_opening_preview: None,
+                            government_bir_declarations: None,
+                            government_bir_identities: None,
+                            government_annual: None,
+                            government_annual_pay: None,
+                            government_sss: None,
+                            government_bir: None,
+                            government_bir_build: None,
+                            government_registration: None,
+                            government: None,
                             report: None,
-                            payroll_report:None,
-                            payroll_exchange:None,
+                            payroll_report: None,
+                            payroll_exchange: None,
                             result: Ok(current.clone()),
                             message: String::new(),
                             account: None,

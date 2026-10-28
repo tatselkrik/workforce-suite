@@ -16,7 +16,11 @@ pub(super) struct State {
 impl State {
     pub(super) fn bind(&mut self, data: &Snapshot) {
         let scope = Some((data.company.id, data.access.user_id, data.access.role));
-        if self.scope != scope || !data.access.allows(crate::staff_roles::Capability::PayrollReports) {
+        if self.scope != scope
+            || !data
+                .access
+                .allows(crate::staff_roles::Capability::PayrollReports)
+        {
             let year = data.company.today().year();
             *self = Self {
                 scope,
@@ -48,7 +52,9 @@ impl State {
     }
     pub(super) fn accept(&mut self, report: p::Report, data: &Snapshot) {
         self.bind(data);
-        if data.access.allows(crate::staff_roles::Capability::PayrollReports)
+        if data
+            .access
+            .allows(crate::staff_roles::Capability::PayrollReports)
             && report.wire.company_id == data.company.id
             && self.filter().is_ok_and(|f| f == report.wire.filter)
         {
@@ -68,20 +74,28 @@ pub(super) fn kind(k: &str) -> &str {
         _ => "All sources",
     }
 }
-fn entry(ui:&mut Ui,label:&str,value:&str){
-    let width=(ui.available_width()*0.62).clamp(160.0,440.0);
-    ui.horizontal_top(|ui|{
-        ui.allocate_ui_with_layout(egui::vec2(width,0.0),Layout::top_down(Align::Min),|ui|{
-            ui.set_min_width(width);ui.set_max_width(width);ui.add(egui::Label::new(label).wrap());
+fn entry(ui: &mut Ui, label: &str, value: &str) {
+    let width = (ui.available_width() * 0.62).clamp(160.0, 440.0);
+    ui.horizontal_top(|ui| {
+        ui.allocate_ui_with_layout(egui::vec2(width, 0.0), Layout::top_down(Align::Min), |ui| {
+            ui.set_min_width(width);
+            ui.set_max_width(width);
+            ui.add(egui::Label::new(label).wrap());
         });
         ui.label(value);
     });
 }
-fn amount(ui:&mut Ui,label:&str,n:i64){entry(ui,label,&crate::payroll::money(n));}
+fn amount(ui: &mut Ui, label: &str, n: i64) {
+    entry(ui, label, &crate::payroll::money(n));
+}
 impl HrisApp {
     pub(super) fn payroll_reports(&mut self, ui: &mut Ui) {
         self.payroll_state.reports.bind(&self.data);
-        if !self.data.access.allows(crate::staff_roles::Capability::PayrollReports) {
+        if !self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::PayrollReports)
+        {
             return;
         }
         ui.heading("Consolidated payroll reports");
@@ -209,35 +223,45 @@ impl HrisApp {
         ));
         ui.label("Source offsets are included in a combined final settlement and are not another cash payment. Tax advice and settled tax adjustments are shown separately from payroll cash.");
         card(ui, |ui| {
-            ui.vertical(|ui|{
-                    amount(ui, "Recorded payroll cash", t.recorded_cash_cents);
-                    amount(ui,"Outstanding supplemental payouts",t.amendment_outstanding_cents);
-                    if t.overpayment_review_cents!=0{amount(ui,"Overpayment reviews (no automatic recovery)",t.overpayment_review_cents);}
+            ui.vertical(|ui| {
+                amount(ui, "Recorded payroll cash", t.recorded_cash_cents);
+                amount(
+                    ui,
+                    "Outstanding supplemental payouts",
+                    t.amendment_outstanding_cents,
+                );
+                if t.overpayment_review_cents != 0 {
                     amount(
                         ui,
-                        "Source offsets included in final settlement",
-                        t.source_offset_cents,
+                        "Overpayment reviews (no automatic recovery)",
+                        t.overpayment_review_cents,
                     );
-                    amount(
-                        ui,
-                        "Outstanding selected salary / 13th sources",
-                        t.current_source_outstanding_cents,
-                    );
-                    amount(
-                        ui,
-                        "Reserved subset of those sources",
-                        t.current_source_reserved_cents,
-                    );
-                });
+                }
+                amount(
+                    ui,
+                    "Source offsets included in final settlement",
+                    t.source_offset_cents,
+                );
+                amount(
+                    ui,
+                    "Outstanding selected salary / 13th sources",
+                    t.current_source_outstanding_cents,
+                );
+                amount(
+                    ui,
+                    "Reserved subset of those sources",
+                    t.current_source_reserved_cents,
+                );
+            });
         });
         ui.label("Balances reflect current records at generation for the selected sources, rather than a reconstructed historical close. A final statement contains its reserved source balances.");
         if t.missing_receipts > 0 {
             ui.label(RichText::new(format!("{} source(s) marked paid have no individual receipt. Their payment date, cash and outstanding balance remain unconfirmed.",t.missing_receipts)).color(muted(ui)));
         }
-        #[cfg(feature="qa-screenshot")]
-        let figures_open=std::env::var("HRIS_PREVIEW_FORM").is_ok_and(|s|s.ends_with("figures"));
-        #[cfg(not(feature="qa-screenshot"))]
-        let figures_open=false;
+        #[cfg(feature = "qa-screenshot")]
+        let figures_open = std::env::var("HRIS_PREVIEW_FORM").is_ok_and(|s| s.ends_with("figures"));
+        #[cfg(not(feature = "qa-screenshot"))]
+        let figures_open = false;
         egui::CollapsingHeader::new("Issued and reviewed figures by source").default_open(figures_open).show(ui, |ui| {
    ui.vertical(|ui|{
     amount(ui,"Salary / cutoff / 13th issued gross",t.source_gross_cents);amount(ui,"Salary / cutoff / 13th issued net",t.source_net_cents);
@@ -291,43 +315,71 @@ impl HrisApp {
                     "{} through {} · approved {} · {}",
                     r.period_start, r.period_end, r.issued_on, r.department
                 ));
-                ui.label(if r.status==r.payment_state{r.status.replace('_'," ")}else{format!("{} · {}",r.status.replace('_'," "),r.payment_state.replace('_'," "))});
-                ui.vertical(|ui|{
-                        if let Some(net) = r.net_cents {
-                            amount(ui, "Statement net", net);
-                        }
-                        if let Some(id)=r.linked_id{entry(ui,"Linked original",&format!("{} · {id}",r.linked_kind.as_deref().unwrap_or("")));}
-                        if let Some(v)=r.review_amount_cents{amount(ui,"Discrepancy review only",v);}
-                        amount(ui, "Recorded payroll cash", r.cash_cents);
-                        if r.offset_cents > 0 {
-                            amount(
-                                ui,
-                                "Source offset (not another cash payment)",
-                                r.offset_cents,
-                            );
-                        }
-                        if let Some(v) = r.contained_source_net_cents {
-                            amount(ui, "Contained source net", v);
-                        }
-                        if let Some(v) = r.tax_adjustment_cents {
-                            amount(ui, "Tax adjustment: withholding (+) / refund (-)", v);
-                        }
-                        if let Some(v) = r.outstanding_cents {
-                            amount(ui, if r.kind=="amendment"{"Current supplemental outstanding"}else{"Current source outstanding"}, v);
-                        }
-                        if r.payment_state=="reserved" {
-                            amount(ui, "Current reserved subset", r.reserved_cents);
-                        }
-                        if let Some(d) = r.received_on {
-                            entry(ui,"Received / settled on",&d.to_string());
-                        }
-                    });
+                ui.label(if r.status == r.payment_state {
+                    r.status.replace('_', " ")
+                } else {
+                    format!(
+                        "{} · {}",
+                        r.status.replace('_', " "),
+                        r.payment_state.replace('_', " ")
+                    )
+                });
+                ui.vertical(|ui| {
+                    if let Some(net) = r.net_cents {
+                        amount(ui, "Statement net", net);
+                    }
+                    if let Some(id) = r.linked_id {
+                        entry(
+                            ui,
+                            "Linked original",
+                            &format!("{} · {id}", r.linked_kind.as_deref().unwrap_or("")),
+                        );
+                    }
+                    if let Some(v) = r.review_amount_cents {
+                        amount(ui, "Discrepancy review only", v);
+                    }
+                    amount(ui, "Recorded payroll cash", r.cash_cents);
+                    if r.offset_cents > 0 {
+                        amount(
+                            ui,
+                            "Source offset (not another cash payment)",
+                            r.offset_cents,
+                        );
+                    }
+                    if let Some(v) = r.contained_source_net_cents {
+                        amount(ui, "Contained source net", v);
+                    }
+                    if let Some(v) = r.tax_adjustment_cents {
+                        amount(ui, "Tax adjustment: withholding (+) / refund (-)", v);
+                    }
+                    if let Some(v) = r.outstanding_cents {
+                        amount(
+                            ui,
+                            if r.kind == "amendment" {
+                                "Current supplemental outstanding"
+                            } else {
+                                "Current source outstanding"
+                            },
+                            v,
+                        );
+                    }
+                    if r.payment_state == "reserved" {
+                        amount(ui, "Current reserved subset", r.reserved_cents);
+                    }
+                    if let Some(d) = r.received_on {
+                        entry(ui, "Received / settled on", &d.to_string());
+                    }
+                });
             });
         }
     }
     #[cfg(feature = "qa-screenshot")]
     pub(super) fn prepare_consolidated_report_preview(&mut self, form: &str) {
-        if form.contains("amendment"){self.prepare_amendment_preview("payroll-amendment-paid");}else{self.prepare_final_preview("payroll-final-settled");}
+        if form.contains("amendment") {
+            self.prepare_amendment_preview("payroll-amendment-paid");
+        } else {
+            self.prepare_final_preview("payroll-final-settled");
+        }
         self.payroll_state.tab = 4;
         self.payroll_state.reports = State::default();
         self.payroll_state.reports.bind(&self.data);

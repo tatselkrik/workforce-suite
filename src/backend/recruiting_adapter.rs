@@ -44,8 +44,16 @@ impl CloudClient {
     pub(super) fn recruiting_snapshot(&mut self, access: &Access) -> Result<Setup> {
         let company = access.company_id;
         let hr = access.allows(crate::staff_roles::Capability::Recruiting);
-        let interviewers = if access.staff_context.as_ref().is_some_and(|c|c.runtime_ready) {
-            let directory:crate::staff_roles::workflow::Directory=decode(self.request(Method::POST,"rpc/staff_workflow_people")?.json(&json!({})).send()?)?;
+        let interviewers = if access
+            .staff_context
+            .as_ref()
+            .is_some_and(|c| c.runtime_ready)
+        {
+            let directory: crate::staff_roles::workflow::Directory = decode(
+                self.request(Method::POST, "rpc/staff_workflow_people")?
+                    .json(&json!({}))
+                    .send()?,
+            )?;
             directory.validate(access)?;
             directory.people
         } else if hr {
@@ -87,7 +95,9 @@ impl CloudClient {
         current: &Snapshot,
     ) -> Result<(Snapshot, String)> {
         ensure!(
-            current.access.allows(crate::staff_roles::Capability::Recruiting),
+            current
+                .access
+                .allows(crate::staff_roles::Capability::Recruiting),
             "Only HR and Administrators can manage application attachments."
         );
         let message = match action {

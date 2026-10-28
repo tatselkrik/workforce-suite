@@ -511,41 +511,178 @@ fn temporary_post_save_refresh_failure_preserves_the_pending_retry() {
     assert_eq!(handle.join().unwrap().len(), 5);
 }
 
-
 #[test]
 fn snapshot_end_rechecks_role_sets_even_when_the_legacy_membership_role_is_unchanged() {
-    for changed in [false,true] {
-        let mut d=data(Role::Employee);
-        d.access.staff_contract_version=1;
-        let expected:StaffContext=serde_json::from_value(wire(&d,StaffRole::HrGeneralist,true)).unwrap();
+    for changed in [false, true] {
+        let mut d = data(Role::Employee);
+        d.access.staff_contract_version = 1;
+        let expected: StaffContext =
+            serde_json::from_value(wire(&d, StaffRole::HrGeneralist, true)).unwrap();
         d.access.bind_staff_context(expected).unwrap();
-        let mut raw=access_json(&d.access);raw["staff_contract_version"]=json!(1);
-        let mut roles=wire(&d,if changed{StaffRole::PayrollOfficer}else{StaffRole::HrGeneralist},true);
-        if changed{roles["revision"]=json!(2);}
-        let (url,handle)=server(vec![
-            ("/rest/v1/rpc/my_hris_access",200,raw),
-            ("/rest/v1/rpc/staff_role_context",200,roles),
+        let mut raw = access_json(&d.access);
+        raw["staff_contract_version"] = json!(1);
+        let mut roles = wire(
+            &d,
+            if changed {
+                StaffRole::PayrollOfficer
+            } else {
+                StaffRole::HrGeneralist
+            },
+            true,
+        );
+        if changed {
+            roles["revision"] = json!(2);
+        }
+        let (url, handle) = server(vec![
+            ("/rest/v1/rpc/my_hris_access", 200, raw),
+            ("/rest/v1/rpc/staff_role_context", 200, roles),
         ]);
-        let result=client(url,&d).verify_snapshot_staff_scope(&d.access);
-        if changed{assert!(result.err().unwrap().is::<AccessRevoked>());}else{result.unwrap();}
-        assert_eq!(handle.join().unwrap().len(),2);
+        let result = client(url, &d).verify_snapshot_staff_scope(&d.access);
+        if changed {
+            assert!(result.err().unwrap().is::<AccessRevoked>());
+        } else {
+            result.unwrap();
+        }
+        assert_eq!(handle.join().unwrap().len(), 2);
     }
 }
 
 #[test]
-fn account_history_http_is_bound_to_selected_source_and_rechecks_actor(){
- use crate::staff_roles::admin::Operation;
- let mut d=data(Role::Administrator);d.access.staff_contract_version=1;
- d.access.bind_staff_context(serde_json::from_value(wire(&d,StaffRole::Administrator,true)).unwrap()).unwrap();
- let c=admin_wire(&d);let target=&c["accounts"][1];let user:Uuid=serde_json::from_value(target["user_id"].clone()).unwrap();
- let history=json!({"schema_version":1,"company_id":d.company.id,"actor_id":d.access.user_id,"user_id":target["user_id"],"employee_id":target["employee_id"],"employee_code":target["employee_code"],"full_name":target["full_name"],"revision":target["revision"],"current_roles":target["roles"],"active":target["active"],"member_updated_at":target["member_updated_at"],"role_event_count":0,"access_event_count":0,"role_events":[],"access_events":[]});
- for case in 0..3 {
-  let mut h=history.clone();if case==1{h["user_id"]=json!(Uuid::from_u128(999));}
-  let mut replies=vec![("/rest/v1/rpc/my_hris_access",200,base_wire(&d)),("/rest/v1/rpc/staff_role_context",200,wire(&d,StaffRole::Administrator,true)),("/rest/v1/rpc/staff_role_admin_context",200,c.clone()),("/rest/v1/rpc/my_hris_access",200,base_wire(&d)),("/rest/v1/rpc/staff_role_context",200,wire(&d,StaffRole::Administrator,true)),("/rest/v1/rpc/staff_account_history",200,h)];
-  if case==0 {replies.extend([("/rest/v1/rpc/my_hris_access",200,base_wire(&d)),("/rest/v1/rpc/staff_role_context",200,wire(&d,StaffRole::Administrator,true))]);}
-  if case==2 {replies.push(("/rest/v1/rpc/my_hris_access",403,json!({"message":"revoked"})));}
-  let(url,handle)=server(replies);let result=client(url,&d).execute_staff_roles(Operation::History {user_id:user},&d);
-  if case==0 {let(_,update)=result.unwrap();assert_eq!(update.history.unwrap().user_id,user);assert!(update.receipt.is_none());}else{assert!(result.err().unwrap().is::<AccessRevoked>());}
-  let calls=handle.join().unwrap();assert_eq!(calls[5].1,json!({"p_user_id":user}));
- }
+fn account_history_http_is_bound_to_selected_source_and_rechecks_actor() {
+    use crate::staff_roles::admin::Operation;
+    let mut d = data(Role::Administrator);
+    d.access.staff_contract_version = 1;
+    d.access
+        .bind_staff_context(
+            serde_json::from_value(wire(&d, StaffRole::Administrator, true)).unwrap(),
+        )
+        .unwrap();
+    let c = admin_wire(&d);
+    let target = &c["accounts"][1];
+    let user: Uuid = serde_json::from_value(target["user_id"].clone()).unwrap();
+    let history = json!({"schema_version":1,"company_id":d.company.id,"actor_id":d.access.user_id,"user_id":target["user_id"],"employee_id":target["employee_id"],"employee_code":target["employee_code"],"full_name":target["full_name"],"revision":target["revision"],"current_roles":target["roles"],"active":target["active"],"member_updated_at":target["member_updated_at"],"role_event_count":0,"access_event_count":0,"role_events":[],"access_events":[]});
+    for case in 0..3 {
+        let mut h = history.clone();
+        if case == 1 {
+            h["user_id"] = json!(Uuid::from_u128(999));
+        }
+        let mut replies = vec![
+            ("/rest/v1/rpc/my_hris_access", 200, base_wire(&d)),
+            (
+                "/rest/v1/rpc/staff_role_context",
+                200,
+                wire(&d, StaffRole::Administrator, true),
+            ),
+            ("/rest/v1/rpc/staff_role_admin_context", 200, c.clone()),
+            ("/rest/v1/rpc/my_hris_access", 200, base_wire(&d)),
+            (
+                "/rest/v1/rpc/staff_role_context",
+                200,
+                wire(&d, StaffRole::Administrator, true),
+            ),
+            ("/rest/v1/rpc/staff_account_history", 200, h),
+        ];
+        if case == 0 {
+            replies.extend([
+                ("/rest/v1/rpc/my_hris_access", 200, base_wire(&d)),
+                (
+                    "/rest/v1/rpc/staff_role_context",
+                    200,
+                    wire(&d, StaffRole::Administrator, true),
+                ),
+            ]);
+        }
+        if case == 2 {
+            replies.push((
+                "/rest/v1/rpc/my_hris_access",
+                403,
+                json!({"message":"revoked"}),
+            ));
+        }
+        let (url, handle) = server(replies);
+        let result = client(url, &d).execute_staff_roles(Operation::History { user_id: user }, &d);
+        if case == 0 {
+            let (_, update) = result.unwrap();
+            assert_eq!(update.history.unwrap().user_id, user);
+            assert!(update.receipt.is_none());
+        } else {
+            assert!(result.err().unwrap().is::<AccessRevoked>());
+        }
+        let calls = handle.join().unwrap();
+        assert_eq!(calls[5].1, json!({"p_user_id":user}));
+    }
+}
+
+// Opt-in managed-Auth QA. Session is passed only in child environment; evidence is counts.
+#[test]
+#[ignore = "requires synthetic hosted session and the exact authorized installation"]
+fn hosted_complete_staff_snapshot() {
+    use crate::staff_roles::Capability;
+    let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let guard =
+        std::fs::read_to_string(root.join("deployment-private/SQL-AUTHORIZATION.md")).unwrap();
+    let target = std::fs::read_to_string(root.join("supabase/.temp/project-ref")).unwrap();
+    let target = target.trim();
+    assert!(guard.contains(&format!("{}{}{}", char::from(96), target, char::from(96))));
+    let profile = std::path::PathBuf::from(std::env::var("LOCALAPPDATA").unwrap())
+        .join("Programs/HRIS Desktop/hris-connection.json");
+    let config = ConnectionConfig::load_profile(&profile, true).unwrap();
+    assert_eq!(
+        config.url.trim_end_matches('/'),
+        format!("https://{target}.supabase.co")
+    );
+    let raw = std::env::var("HRIS_STAFF_AUTH_SESSION").expect("synthetic session required");
+    let session: AuthSession = serde_json::from_str(&raw).unwrap();
+    let email = session.user.email.as_str();
+    assert!(email.starts_with("qa-gov042-") && email.ends_with("@example.invalid"));
+    let expected: StaffRoles =
+        serde_json::from_str(&std::env::var("HRIS_STAFF_EXPECTED_ROLES").unwrap()).unwrap();
+    let label = std::env::var("HRIS_STAFF_CASE").unwrap();
+    assert!(
+        !label.is_empty()
+            && label.len() <= 32
+            && label
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'-')
+    );
+    let seed = data(Role::Administrator);
+    let mut cloud = client(config.url.clone(), &seed);
+    cloud.config = config;
+    cloud.session = session;
+    cloud.http = Client::builder()
+        .timeout(Duration::from_secs(30))
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .unwrap();
+    let result = cloud.snapshot();
+    let proof = if expected == StaffRoles::new(vec![StaffRole::Employee]).unwrap() {
+        assert!(result.err().unwrap().is::<PortalAccount>());
+        json!({"employee_desktop_denied":true})
+    } else {
+        let snapshot = result.unwrap();
+        assert_eq!(snapshot.access.staff_roles().unwrap(), expected);
+        assert_eq!(snapshot.company.id, snapshot.access.company_id);
+        if !snapshot.access.allows(Capability::AccountAdministration) {
+            assert!(snapshot.accounts.is_empty());
+            assert!(snapshot.access_events.is_empty());
+        }
+        if !snapshot.access.allows(Capability::Personnel) {
+            assert!(snapshot.employment_history.is_empty());
+        }
+        if !snapshot.access.allows(Capability::PersonnelDocuments) {
+            assert!(snapshot.documents.is_empty());
+            assert!(snapshot.document_events.is_empty());
+        }
+        if !snapshot.access.allows(Capability::PayrollPreparation) {
+            assert!(snapshot.payroll.profiles.is_empty());
+            assert!(snapshot.payroll.runs.is_empty());
+            assert!(snapshot.payroll.items.is_empty());
+        }
+        json!({"full_native_snapshot":true,"employees":snapshot.employees.len(),"accounts":snapshot.accounts.len(),"documents":snapshot.documents.len()})
+    };
+    std::fs::write(
+        root.join(format!("work/account063-live-{label}.json")),
+        serde_json::to_vec_pretty(&proof).unwrap(),
+    )
+    .unwrap();
 }

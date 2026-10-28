@@ -251,47 +251,116 @@ fn directory_visibility_does_not_create_operational_attendance_or_contact_access
     assert!(!data.access.can_read_operational_employee(target));
 }
 
-
 #[test]
 fn changed_staff_responsibilities_invalidate_report_scope_without_changing_base_role() {
-    let before=scoped(StaffRoles::new(vec![StaffRole::HrGeneralist]).unwrap());
-    let after=scoped(StaffRoles::new(vec![StaffRole::PayrollOfficer]).unwrap());
-    assert_eq!(before.access.role,after.access.role);
-    assert!(!crate::reports::same_scope(&before.access,&after.access));
+    let before = scoped(StaffRoles::new(vec![StaffRole::HrGeneralist]).unwrap());
+    let after = scoped(StaffRoles::new(vec![StaffRole::PayrollOfficer]).unwrap());
+    assert_eq!(before.access.role, after.access.role);
+    assert!(!crate::reports::same_scope(&before.access, &after.access));
     assert!(before.access.can_manage_reports());
     assert!(!after.access.can_manage_reports());
 }
 
 #[test]
 fn specialized_payroll_creates_and_source_selection_work_without_broad_hr() {
-    #[derive(Deserialize)] struct Case {roles:StaffRoles,capabilities:Vec<String>}
-    let cases:Vec<Case>=serde_json::from_str(include_str!("../../tests/fixtures/staff_role_capabilities.json")).unwrap();
+    #[derive(Deserialize)]
+    struct Case {
+        roles: StaffRoles,
+        capabilities: Vec<String>,
+    }
+    let cases: Vec<Case> = serde_json::from_str(include_str!(
+        "../../tests/fixtures/staff_role_capabilities.json"
+    ))
+    .unwrap();
     for case in cases {
-        let data=scoped(case.roles.clone());let employee=data.employees[1].id;
-        let allowed=case.capabilities.iter().any(|c|c=="payroll_preparation");
-        let actions=[
-            PayrollAction::new("final_create",json!({"id":Uuid::new_v4(),"employee_id":employee,"service_end":"2026-10-01","cash_date":"2026-10-28","title":"Fictional final review","reason":"Fictional documented preparation"})),
-            PayrollAction::new("tax_create",json!({"id":Uuid::new_v4(),"employee_id":employee,"year":2026,"kind":"termination","as_of":"2026-10-28","service_end":"2026-10-01","title":"Fictional annual review","reason":"Fictional documented preparation"})),
-            PayrollAction::new("thirteenth_run_create",json!({"id":Uuid::new_v4(),"year":2026,"as_of":"2026-10-01","pay_date":"2026-10-28","title":"Fictional benefit review","reason":"Fictional documented preparation"})),
-            PayrollAction::new("cutoff_run_create",json!({"id":Uuid::new_v4(),"month":"2026-10-01","part":2,"pay_date":"2026-10-31","title":"Fictional cutoff","reason":"Fictional documented preparation"})),
+        let data = scoped(case.roles.clone());
+        let employee = data.employees[1].id;
+        let allowed = case.capabilities.iter().any(|c| c == "payroll_preparation");
+        let actions = [
+            PayrollAction::new(
+                "final_create",
+                json!({"id":Uuid::new_v4(),"employee_id":employee,"service_end":"2026-10-01","cash_date":"2026-10-28","title":"Fictional final review","reason":"Fictional documented preparation"}),
+            ),
+            PayrollAction::new(
+                "tax_create",
+                json!({"id":Uuid::new_v4(),"employee_id":employee,"year":2026,"kind":"termination","as_of":"2026-10-28","service_end":"2026-10-01","title":"Fictional annual review","reason":"Fictional documented preparation"}),
+            ),
+            PayrollAction::new(
+                "thirteenth_run_create",
+                json!({"id":Uuid::new_v4(),"year":2026,"as_of":"2026-10-01","pay_date":"2026-10-28","title":"Fictional benefit review","reason":"Fictional documented preparation"}),
+            ),
+            PayrollAction::new(
+                "cutoff_run_create",
+                json!({"id":Uuid::new_v4(),"month":"2026-10-01","part":2,"pay_date":"2026-10-31","title":"Fictional cutoff","reason":"Fictional documented preparation"}),
+            ),
         ];
-        for action in actions {let result=action.payload(&data);assert_eq!(result.is_ok(),allowed,"{:?}: {} => {:?}",case.roles,action.operation,result.err());}
-        assert_eq!(crate::payroll_amendments::targets(&data).is_ok(),allowed,"{:?}",case.roles);
+        for action in actions {
+            let result = action.payload(&data);
+            assert_eq!(
+                result.is_ok(),
+                allowed,
+                "{:?}: {} => {:?}",
+                case.roles,
+                action.operation,
+                result.err()
+            );
+        }
+        assert_eq!(
+            crate::payroll_amendments::targets(&data).is_ok(),
+            allowed,
+            "{:?}",
+            case.roles
+        );
     }
 }
 #[test]
-fn final_statement_export_respects_payroll_or_own_scope_for_all_roles(){
-    #[derive(Deserialize)]struct Case {roles:StaffRoles,capabilities:Vec<String>}
-    let cases:Vec<Case>=serde_json::from_str(include_str!("../../tests/fixtures/staff_role_capabilities.json")).unwrap();
+fn final_statement_export_respects_payroll_or_own_scope_for_all_roles() {
+    #[derive(Deserialize)]
+    struct Case {
+        roles: StaffRoles,
+        capabilities: Vec<String>,
+    }
+    let cases: Vec<Case> = serde_json::from_str(include_str!(
+        "../../tests/fixtures/staff_role_capabilities.json"
+    ))
+    .unwrap();
     for case in cases {
-        let mut data=scoped(case.roles.clone());let employee=data.employees[1].id;let id=Uuid::new_v4();let day=chrono::NaiveDate::from_ymd_opt(2026,10,28).unwrap();
-        data.payroll.finals.slips.push(crate::payroll_final::Slip {id,company_id:data.company.id,employee_id:employee,employment_start:day,service_end:day,cash_date:day,
-            company_name:"Fictional company".into(),employee_name:"Fictional former staff".into(),employee_code:"FICTIONAL".into(),department:"Fictional department".into(),
-            totals:Default::default(),sources:json!([]),components:json!([]),approved_by:Uuid::new_v4(),approved_at:chrono::Utc::now(),rule_version:"Fictional projection".into()});
-        let allowed=case.capabilities.iter().any(|c|c=="payroll_preparation");
-        let result=crate::payroll_final::export_csv(&data,"final_statement",Some(id));
-        assert_eq!(result.is_ok(),allowed,"{:?} => {:?}",case.roles,result.err());
-        data.payroll.finals.slips[0].employee_id=data.access.employee_id.unwrap();
-        assert!(crate::payroll_final::export_csv(&data,"final_statement",Some(id)).is_ok(),"Own immutable advice remains exportable {:?}",case.roles);
+        let mut data = scoped(case.roles.clone());
+        let employee = data.employees[1].id;
+        let id = Uuid::new_v4();
+        let day = chrono::NaiveDate::from_ymd_opt(2026, 10, 28).unwrap();
+        data.payroll.finals.slips.push(crate::payroll_final::Slip {
+            id,
+            company_id: data.company.id,
+            employee_id: employee,
+            employment_start: day,
+            service_end: day,
+            cash_date: day,
+            company_name: "Fictional company".into(),
+            employee_name: "Fictional former staff".into(),
+            employee_code: "FICTIONAL".into(),
+            department: "Fictional department".into(),
+            totals: Default::default(),
+            sources: json!([]),
+            components: json!([]),
+            approved_by: Uuid::new_v4(),
+            approved_at: chrono::Utc::now(),
+            rule_version: "Fictional projection".into(),
+        });
+        let allowed = case.capabilities.iter().any(|c| c == "payroll_preparation");
+        let result = crate::payroll_final::export_csv(&data, "final_statement", Some(id));
+        assert_eq!(
+            result.is_ok(),
+            allowed,
+            "{:?} => {:?}",
+            case.roles,
+            result.err()
+        );
+        data.payroll.finals.slips[0].employee_id = data.access.employee_id.unwrap();
+        assert!(
+            crate::payroll_final::export_csv(&data, "final_statement", Some(id)).is_ok(),
+            "Own immutable advice remains exportable {:?}",
+            case.roles
+        );
     }
 }

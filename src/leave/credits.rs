@@ -95,7 +95,8 @@ impl Context {
             ensure!(
                 access.allows(crate::staff_roles::Capability::LeaveAdministration)
                     || access.employee_id == Some(e.employee_id)
-                    || (access.allows(crate::staff_roles::Capability::TeamReview) && access.direct_reports.contains(&e.employee_id)),
+                    || (access.allows(crate::staff_roles::Capability::TeamReview)
+                        && access.direct_reports.contains(&e.employee_id)),
                 "Leave credit is outside current reporting scope."
             );
             if let Some(id) = e.reverses_id {
@@ -223,7 +224,7 @@ impl Record {
             .iter()
             .find(|e| e.id == self.employee_id)
             .ok_or_else(|| anyhow::anyhow!("Choose an employee."))?;
-        let kind = super::dated::policy_on(data,self.effective_on)
+        let kind = super::dated::policy_on(data, self.effective_on)
             .leave_type(&self.type_code)
             .ok_or_else(|| anyhow::anyhow!("Choose a leave type."))?;
         ensure!(
@@ -334,13 +335,15 @@ pub fn apply_demo(data: &mut crate::domain::Snapshot, record: &Record) -> Result
             .iter()
             .find(|e| e.id == record.employee_id)
             .unwrap();
-        let kind = super::dated::policy_on(&proposed,record.effective_on)
+        let kind = super::dated::policy_on(&proposed, record.effective_on)
             .leave_type(&record.type_code)
             .unwrap();
         let mut day = record.effective_on;
         while day.year() == record.effective_on.year() {
             ensure!(
-                super::balance_checked(&proposed, person, kind, day.year(), day, None)?.available_units >= 0,
+                super::balance_checked(&proposed, person, kind, day.year(), day, None)?
+                    .available_units
+                    >= 0,
                 "This reduction would exceed available leave or existing reservations."
             );
             let Some(next) = day.succ_opt() else { break };

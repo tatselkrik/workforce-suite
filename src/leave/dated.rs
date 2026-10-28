@@ -65,7 +65,8 @@ fn clean(s: &str, min: usize, max: usize) -> bool {
 fn in_scope(access: &Access, id: Uuid) -> bool {
     access.allows(crate::staff_roles::Capability::LeaveAdministration)
         || access.employee_id == Some(id)
-        || (access.allows(crate::staff_roles::Capability::TeamReview) && access.direct_reports.contains(&id))
+        || (access.allows(crate::staff_roles::Capability::TeamReview)
+            && access.direct_reports.contains(&id))
 }
 impl Context {
     pub fn empty(data: &Snapshot) -> Self {
@@ -411,7 +412,8 @@ pub struct OpeningRecord {
 impl OpeningRecord {
     pub fn validate(&self, data: &Snapshot) -> Result<()> {
         ensure!(
-            data.access.allows(crate::staff_roles::Capability::LeaveAdministration),
+            data.access
+                .allows(crate::staff_roles::Capability::LeaveAdministration),
             "HR access is required to preview opening balances."
         );
         let c = data

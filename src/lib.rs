@@ -1,6 +1,6 @@
 pub mod access;
-pub mod approvals;
 pub mod account;
+pub mod approvals;
 pub mod attendance;
 pub mod attendance_imports;
 pub mod backend;
@@ -18,9 +18,9 @@ pub mod imports;
 pub mod leave;
 pub mod notifications;
 pub mod onboarding;
-pub mod performance;
 pub mod organization;
 pub mod overtime;
+pub mod performance;
 pub mod recruiting;
 pub mod report_views;
 pub mod reports;
@@ -40,18 +40,18 @@ pub mod career;
 
 pub mod payroll;
 pub mod payroll_cutoffs;
-pub mod payroll_thirteenth;
-pub mod payroll_tax;
 pub mod payroll_final;
 pub mod payroll_payments;
+pub mod payroll_tax;
+pub mod payroll_thirteenth;
 
 pub mod payroll_pdf;
 
 pub mod payroll_wages;
 
-pub mod payroll_reporting;
-pub mod payroll_exchange;
 pub mod payroll_amendments;
+pub mod payroll_exchange;
 pub mod payroll_government;
+pub mod payroll_reporting;
 
 pub mod staff_roles;

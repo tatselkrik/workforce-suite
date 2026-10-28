@@ -141,7 +141,9 @@ impl Inbox {
             );
             ensure!(
                 i.kind != "appraisal-publish"
-                    || (access.allows(crate::staff_roles::Capability::DevelopmentAdministration) && !own && page == "appraisal"),
+                    || (access.allows(crate::staff_roles::Capability::DevelopmentAdministration)
+                        && !own
+                        && page == "appraisal"),
                 "Publication task is outside HR scope."
             );
             ensure!(
@@ -157,7 +159,9 @@ impl Inbox {
                 "Certificate destination is invalid."
             );
             ensure!(
-                own || access.allows(crate::staff_roles::Capability::DevelopmentAdministration) || (access.allows(crate::staff_roles::Capability::TeamReview) && access.direct_reports.contains(&i.employee_id)),
+                own || access.allows(crate::staff_roles::Capability::DevelopmentAdministration)
+                    || (access.allows(crate::staff_roles::Capability::TeamReview)
+                        && access.direct_reports.contains(&i.employee_id)),
                 "Notice is outside your current reporting scope."
             );
         }
@@ -264,7 +268,14 @@ pub(crate) fn preview(data: &crate::domain::Snapshot, now: DateTime<Utc>) -> Inb
         .into_iter()
         .enumerate()
         .filter(|(_, v)| {
-            v.4 == own || data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration) || (data.access.allows(crate::staff_roles::Capability::TeamReview) && data.access.direct_reports.contains(&v.4))
+            v.4 == own
+                || data
+                    .access
+                    .allows(crate::staff_roles::Capability::DevelopmentAdministration)
+                || (data
+                    .access
+                    .allows(crate::staff_roles::Capability::TeamReview)
+                    && data.access.direct_reports.contains(&v.4))
         })
         .map(
             |(i, (kind, title, detail, page, employee, days, urgent, phase))| {

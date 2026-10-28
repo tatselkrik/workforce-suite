@@ -56,7 +56,7 @@ impl ShiftPlan {
     pub fn working(&self, data: &Snapshot, date: NaiveDate) -> bool {
         self.days.contains(&date.weekday().number_from_monday())
             && (self.works_on_holidays
-                || !crate::leave::dated::policy_on(data,date)
+                || !crate::leave::dated::policy_on(data, date)
                     .holidays
                     .iter()
                     .any(|h| h.date == date))
@@ -233,7 +233,8 @@ impl From<&ShiftTemplate> for ShiftTemplateDraft {
 impl ShiftTemplateDraft {
     pub fn template(&self, data: &Snapshot) -> Result<ShiftTemplate> {
         ensure!(
-            data.access.allows(crate::staff_roles::Capability::AttendanceAdministration),
+            data.access
+                .allows(crate::staff_roles::Capability::AttendanceAdministration),
             "Only HR and Administrators can manage shifts."
         );
         let name = self.name.trim();
@@ -345,7 +346,8 @@ impl ShiftAssignmentDraft {
     }
     pub fn assignment(&self, data: &Snapshot) -> Result<ShiftAssignment> {
         ensure!(
-            data.access.allows(crate::staff_roles::Capability::AttendanceAdministration),
+            data.access
+                .allows(crate::staff_roles::Capability::AttendanceAdministration),
             "Only HR and Administrators can assign shifts."
         );
         let person = data

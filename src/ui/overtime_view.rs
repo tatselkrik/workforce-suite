@@ -366,7 +366,9 @@ impl HrisApp {
             .iter()
             .filter(|r| match queue {
                 Queue::Mine => r.submitted_by == access.user_id,
-                Queue::Review => r.status == Status::Pending && overtime::can_review_in(&self.data, r),
+                Queue::Review => {
+                    r.status == Status::Pending && overtime::can_review_in(&self.data, r)
+                }
                 Queue::History => r.status != Status::Pending,
             })
             .filter(|r| {
@@ -448,7 +450,7 @@ impl HrisApp {
             return;
         };
         let current = overtime::matches_current(&self.data, &r);
-        self.delegated_review_history(ui,crate::approvals::Scope::Overtime,id);
+        self.delegated_review_history(ui, crate::approvals::Scope::Overtime, id);
         card(ui, |ui| {
             ui.heading(&r.employee_name);
             ui.horizontal_wrapped(|ui| {

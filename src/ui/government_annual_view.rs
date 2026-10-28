@@ -17,7 +17,9 @@ pub(super) struct State {
 }
 impl State {
     pub(super) fn accept(&mut self, report: Ledger, data: &Snapshot) {
-        if data.access.allows(crate::staff_roles::Capability::GovernmentPreparation)
+        if data
+            .access
+            .allows(crate::staff_roles::Capability::GovernmentPreparation)
             && report.wire.company_id == data.company.id
             && report.wire.year == self.year
         {
@@ -26,9 +28,17 @@ impl State {
             self.pending = false;
         }
     }
-    pub(super) fn accept_pay(&mut self, report: crate::payroll_government::annual_pay::Report, data: &Snapshot) {
-        if data.access.allows(crate::staff_roles::Capability::GovernmentPreparation) && report.ledger.wire.company_id == data.company.id
-            && report.ledger.wire.year == self.year {
+    pub(super) fn accept_pay(
+        &mut self,
+        report: crate::payroll_government::annual_pay::Report,
+        data: &Snapshot,
+    ) {
+        if data
+            .access
+            .allows(crate::staff_roles::Capability::GovernmentPreparation)
+            && report.ledger.wire.company_id == data.company.id
+            && report.ledger.wire.year == self.year
+        {
             self.report = Some(report.ledger.clone());
             self.pay = Some(report);
             self.pending = false;
@@ -54,10 +64,16 @@ impl State {
         let mut report = Ledger::from_wire(wire, Uuid::from_u128(1), 2026).unwrap();
         let pay = if name.contains("details") {
             let mut r = crate::payroll_government::annual_pay::fixture();
-            if name.contains("unknown") {r.details[0].values.insert("basic".into(),None);r.details[0].source_found=false;
-                r.details[0].values.values_mut().for_each(|n|*n=None);}
-            report=r.ledger.clone();Some(r)
-        }else{None};
+            if name.contains("unknown") {
+                r.details[0].values.insert("basic".into(), None);
+                r.details[0].source_found = false;
+                r.details[0].values.values_mut().for_each(|n| *n = None);
+            }
+            report = r.ledger.clone();
+            Some(r)
+        } else {
+            None
+        };
         Self {
             year: 2026,
             report: Some(report),
@@ -124,10 +140,16 @@ impl HrisApp {
                     egui::Button::new("Export fresh annual worksheet"),
                 )
                 .clicked();
-            export_pay = ui.add_enabled(!self.busy && connected && state.pay.is_some(),
-                egui::Button::new("Export fresh pay details")).clicked();
+            export_pay = ui
+                .add_enabled(
+                    !self.busy && connected && state.pay.is_some(),
+                    egui::Button::new("Export fresh pay details"),
+                )
+                .clicked();
         });
-        if state.pay.is_some() {ui.add(egui::Label::new(crate::payroll_government::annual_pay::NOTE).wrap());}
+        if state.pay.is_some() {
+            ui.add(egui::Label::new(crate::payroll_government::annual_pay::NOTE).wrap());
+        }
         if let Some(report) = &state.report {
             let w = &report.wire;
             let s = &report.summary;
@@ -278,9 +300,18 @@ impl HrisApp {
         let year = state.year;
         if export_pay {
             let extension = if state.excel { "xlsx" } else { "csv" };
-            match crate::reports::choose_export(&format!("HRIS-recorded-pay-details-{year}.{extension}")) {
-                Ok(Some(path))=>{state.pending=true;self.send(Command::GovernmentAnnualPay{year,destination:Some(path)});}
-                Ok(None)=>{},Err(e)=>self.notice=Some((e.to_string(),true)),
+            match crate::reports::choose_export(&format!(
+                "HRIS-recorded-pay-details-{year}.{extension}"
+            )) {
+                Ok(Some(path)) => {
+                    state.pending = true;
+                    self.send(Command::GovernmentAnnualPay {
+                        year,
+                        destination: Some(path),
+                    });
+                }
+                Ok(None) => {}
+                Err(e) => self.notice = Some((e.to_string(), true)),
             }
         } else if export {
             let extension = if state.excel { "xlsx" } else { "csv" };
@@ -334,12 +365,27 @@ mod tests {
     }
     #[test]
     fn pay_and_parent_are_accepted_and_cleared_as_one_scope() {
-        let mut data=DemoStore::new().data;let r=crate::payroll_government::annual_pay::fixture();
-        let mut state=State{year:2026,..Default::default()};
-        data.access.role=Role::Manager;state.accept_pay(r.clone(),&data);assert!(state.pay.is_none());
-        data.access.role=Role::Administrator;state.accept_pay(r.clone(),&data);assert!(state.pay.is_some()&&state.report.is_some());
-        state.accept(annual::fixture(),&data);assert!(state.pay.is_none());
-        state.year=2025;state.accept_pay(r.clone(),&data);assert!(state.pay.is_none());
-        state.year=2026;state.accept_pay(r,&data);state.pending=true;state.failed();assert!(state.pay.is_none()&&state.report.is_none());
+        let mut data = DemoStore::new().data;
+        let r = crate::payroll_government::annual_pay::fixture();
+        let mut state = State {
+            year: 2026,
+            ..Default::default()
+        };
+        data.access.role = Role::Manager;
+        state.accept_pay(r.clone(), &data);
+        assert!(state.pay.is_none());
+        data.access.role = Role::Administrator;
+        state.accept_pay(r.clone(), &data);
+        assert!(state.pay.is_some() && state.report.is_some());
+        state.accept(annual::fixture(), &data);
+        assert!(state.pay.is_none());
+        state.year = 2025;
+        state.accept_pay(r.clone(), &data);
+        assert!(state.pay.is_none());
+        state.year = 2026;
+        state.accept_pay(r, &data);
+        state.pending = true;
+        state.failed();
+        assert!(state.pay.is_none() && state.report.is_none());
     }
 }

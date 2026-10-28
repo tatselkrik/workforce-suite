@@ -32,8 +32,19 @@ pub(super) struct State {
     cycles_closed: bool,
 }
 impl State {
-    pub(super) fn open_notice(&mut self,id:Uuid){self.tab=Tab::Appraisals;self.review_id=Some(id);self.employee=None;self.search.clear();}
-    pub(super) fn open_learning_notice(&mut self,certificate:bool){self.tab=if certificate{Tab::Certifications}else{Tab::Training};}
+    pub(super) fn open_notice(&mut self, id: Uuid) {
+        self.tab = Tab::Appraisals;
+        self.review_id = Some(id);
+        self.employee = None;
+        self.search.clear();
+    }
+    pub(super) fn open_learning_notice(&mut self, certificate: bool) {
+        self.tab = if certificate {
+            Tab::Certifications
+        } else {
+            Tab::Training
+        };
+    }
     pub fn editing(&self) -> bool {
         self.goal_form.is_some()
             || self.cycle_form.is_some()
@@ -89,7 +100,9 @@ pub(super) fn employee_choice(
             ui.selectable_value(selected, None, "Choose an employee");
             for e in data.active().filter(|e| {
                 if review {
-                    data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration) && Some(e.id) != data.access.employee_id
+                    data.access
+                        .allows(crate::staff_roles::Capability::DevelopmentAdministration)
+                        && Some(e.id) != data.access.employee_id
                 } else {
                     performance::manages_goal(data, e.id)
                 }
@@ -132,13 +145,27 @@ impl HrisApp {
         self.performance_state.pending = Some(a.clone());
         self.send(Command::Change(Action::Performance(a)));
     }
-    #[cfg(feature="qa-screenshot")]
-    pub(super) fn select_learning_tab(&mut self,certificates:bool){self.performance_state.tab=if certificates{Tab::Certifications}else{Tab::Training};}
-    #[cfg(feature="qa-screenshot")]
-    pub(super) fn select_career_tab(&mut self){self.performance_state.tab=Tab::Career;}
+    #[cfg(feature = "qa-screenshot")]
+    pub(super) fn select_learning_tab(&mut self, certificates: bool) {
+        self.performance_state.tab = if certificates {
+            Tab::Certifications
+        } else {
+            Tab::Training
+        };
+    }
+    #[cfg(feature = "qa-screenshot")]
+    pub(super) fn select_career_tab(&mut self) {
+        self.performance_state.tab = Tab::Career;
+    }
     pub(super) fn performance(&mut self, ui: &mut Ui) {
-        if self.career_state.editing(){self.career(ui);return;}
-        if self.learning_state.editing(){self.learning(ui,self.learning_state.certificates);return;}
+        if self.career_state.editing() {
+            self.career(ui);
+            return;
+        }
+        if self.learning_state.editing() {
+            self.learning(ui, self.learning_state.certificates);
+            return;
+        }
         if self.performance_decision(ui) {
             return;
         }
@@ -162,7 +189,10 @@ impl HrisApp {
             self.performance_note_form(ui);
             return;
         }
-        let hr = self.data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration);
+        let hr = self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::DevelopmentAdministration);
         if !hr && self.performance_state.tab == Tab::Cycles {
             self.performance_state.tab = Tab::Goals;
         }
@@ -175,8 +205,12 @@ impl HrisApp {
                 "Appraisals",
             );
             ui.selectable_value(&mut self.performance_state.tab, Tab::Training, "Training");
-            ui.selectable_value(&mut self.performance_state.tab, Tab::Certifications, "Certifications");
-            ui.selectable_value(&mut self.performance_state.tab,Tab::Career,"Career plans");
+            ui.selectable_value(
+                &mut self.performance_state.tab,
+                Tab::Certifications,
+                "Certifications",
+            );
+            ui.selectable_value(&mut self.performance_state.tab, Tab::Career, "Career plans");
             if hr {
                 ui.selectable_value(
                     &mut self.performance_state.tab,
@@ -196,8 +230,8 @@ impl HrisApp {
             Tab::Goals => self.performance_goals(ui),
             Tab::Appraisals => self.performance_reviews(ui),
             Tab::Cycles => self.performance_cycles(ui),
-            Tab::Training => self.learning(ui,false),
-            Tab::Certifications => self.learning(ui,true),
+            Tab::Training => self.learning(ui, false),
+            Tab::Certifications => self.learning(ui, true),
             Tab::Career => self.career(ui),
         }
     }
@@ -326,7 +360,11 @@ impl HrisApp {
                 );
             });
             self.performance_filter(ui);
-            if !self.data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration) {
+            if !self
+                .data
+                .access
+                .allows(crate::staff_roles::Capability::DevelopmentAdministration)
+            {
                 ui.label("Your Manager or HR assigns goals. You can record your own progress; current reporting Managers manage their team goals.");
             }
         });
@@ -445,7 +483,12 @@ impl HrisApp {
         }
         card(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
-                if self.data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration) && ui.button("Assign appraisal").clicked() {
+                if self
+                    .data
+                    .access
+                    .allows(crate::staff_roles::Capability::DevelopmentAdministration)
+                    && ui.button("Assign appraisal").clicked()
+                {
                     let person = self
                         .performance_state
                         .employee
@@ -459,7 +502,11 @@ impl HrisApp {
                 );
             });
             self.performance_filter(ui);
-            if !self.data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration) {
+            if !self
+                .data
+                .access
+                .allows(crate::staff_roles::Capability::DevelopmentAdministration)
+            {
                 ui.label("Review your assigned current reports and read your own published appraisals. Drafts and private HR notes remain restricted.");
             }
         });
@@ -509,7 +556,10 @@ impl HrisApp {
         }
     }
     fn performance_review_detail(&mut self, ui: &mut Ui, r: &performance::Review) {
-        let hr = self.data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration);
+        let hr = self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::DevelopmentAdministration);
         card(ui, |ui| {
             if ui.button("< All appraisals").clicked() {
                 self.performance_state.review_id = None;
@@ -631,7 +681,11 @@ impl HrisApp {
                 }
             }
         });
-        if self.data.access.allows(crate::staff_roles::Capability::PrivateHrNotes) {
+        if self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::PrivateHrNotes)
+        {
             ui.add_space(10.0);
             let note = self
                 .data
@@ -684,7 +738,11 @@ impl HrisApp {
         });
     }
     fn performance_cycles(&mut self, ui: &mut Ui) {
-        if !self.data.access.allows(crate::staff_roles::Capability::DevelopmentAdministration) {
+        if !self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::DevelopmentAdministration)
+        {
             return;
         }
         card(ui, |ui| {
@@ -1370,7 +1428,11 @@ impl HrisApp {
             }
             _ => {}
         }
-        if !self.data.access.allows(crate::staff_roles::Capability::PrivateHrNotes) {
+        if !self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::PrivateHrNotes)
+        {
             self.data.performance.notes.clear();
             let ids: Vec<_> = performance::visible_events(&self.data)
                 .into_iter()

@@ -51,9 +51,23 @@ pub struct Import {
 }
 impl Import {
     pub fn load(data: &Snapshot, path: &Path) -> Result<Self> {
-        if path.extension().is_some_and(|s| s.eq_ignore_ascii_case("xlsx")) {
+        if path
+            .extension()
+            .is_some_and(|s| s.eq_ignore_ascii_case("xlsx"))
+        {
             let rows = crate::tabular::load_xlsx(path, 100, HEADERS.len())?;
-            return Self::from_rows(data, path.file_name().and_then(|s|s.to_str()).unwrap_or("opening.xlsx"), rows.into_iter().map(|r| crate::imports::CsvRow { line:r.number, cells:r.cells }).collect());
+            return Self::from_rows(
+                data,
+                path.file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("opening.xlsx"),
+                rows.into_iter()
+                    .map(|r| crate::imports::CsvRow {
+                        line: r.number,
+                        cells: r.cells,
+                    })
+                    .collect(),
+            );
         }
         ensure!(
             path.extension()
@@ -76,9 +90,14 @@ impl Import {
     pub fn parse(data: &Snapshot, filename: &str, text: &str) -> Result<Self> {
         Self::from_rows(data, filename, crate::imports::parse(text)?)
     }
-    fn from_rows(data: &Snapshot, filename: &str, rows: Vec<crate::imports::CsvRow>) -> Result<Self> {
+    fn from_rows(
+        data: &Snapshot,
+        filename: &str,
+        rows: Vec<crate::imports::CsvRow>,
+    ) -> Result<Self> {
         ensure!(
-            data.access.allows(crate::staff_roles::Capability::LeaveAdministration),
+            data.access
+                .allows(crate::staff_roles::Capability::LeaveAdministration),
             "HR access is required for opening imports."
         );
         let c = data
@@ -229,12 +248,16 @@ impl Import {
         let mut headers = vec!["source_row"];
         headers.extend(HEADERS);
         headers.push("errors");
-        let rows = self.rows.iter().map(|r| {
-            let mut cells = vec![r.line.to_string()];
-            cells.extend((0..6).map(|i| r.cells.get(i).cloned().unwrap_or_default()));
-            cells.push(r.errors.join("; "));
-            cells
-        }).collect::<Vec<_>>();
+        let rows = self
+            .rows
+            .iter()
+            .map(|r| {
+                let mut cells = vec![r.line.to_string()];
+                cells.extend((0..6).map(|i| r.cells.get(i).cloned().unwrap_or_default()));
+                cells.push(r.errors.join("; "));
+                cells
+            })
+            .collect::<Vec<_>>();
         crate::tabular::text_xlsx(&headers, &rows)
     }
 }
@@ -264,7 +287,8 @@ pub struct BatchPreview {
 impl BatchPreview {
     pub fn validate(&self, data: &Snapshot, records: &[OpeningRecord]) -> Result<()> {
         ensure!(
-            data.access.allows(crate::staff_roles::Capability::LeaveAdministration)
+            data.access
+                .allows(crate::staff_roles::Capability::LeaveAdministration)
                 && self.version == "leave-opening-batch-preview-v1"
                 && self.company_id == data.company.id
                 && self.user_id == data.access.user_id

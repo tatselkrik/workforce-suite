@@ -110,7 +110,12 @@ impl HrisApp {
     }
     fn shift_templates(&mut self, ui: &mut Ui) {
         ui.horizontal_wrapped(|ui| {
-            if self.data.access.allows(crate::staff_roles::Capability::AttendanceAdministration) && primary(ui, "+ Add shift") {
+            if self
+                .data
+                .access
+                .allows(crate::staff_roles::Capability::AttendanceAdministration)
+                && primary(ui, "+ Add shift")
+            {
                 self.shift_state.template = Some(Default::default());
             }
             ui.checkbox(&mut self.shift_state.show_inactive, "Show inactive shifts");
@@ -146,7 +151,11 @@ impl HrisApp {
                     } else {
                         "Company holidays are days off"
                     });
-                    if self.data.access.allows(crate::staff_roles::Capability::AttendanceAdministration) {
+                    if self
+                        .data
+                        .access
+                        .allows(crate::staff_roles::Capability::AttendanceAdministration)
+                    {
                         if ui.button("Edit shift").clicked() {
                             self.shift_state.template = Some(ShiftTemplateDraft::from(&t));
                         }
@@ -283,7 +292,11 @@ impl HrisApp {
                             .color(muted(ui)),
                         );
                     }
-                    if self.data.access.allows(crate::staff_roles::Capability::AttendanceAdministration) && ui.button("Assign / change").clicked()
+                    if self
+                        .data
+                        .access
+                        .allows(crate::staff_roles::Capability::AttendanceAdministration)
+                        && ui.button("Assign / change").clicked()
                     {
                         self.shift_state.assignment = Some(ShiftAssignmentDraft::new(
                             &self.data,

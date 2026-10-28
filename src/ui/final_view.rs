@@ -55,7 +55,12 @@ struct Decision {
     handling: String,
 }
 impl State {
-    pub(super) fn open_notice(&mut self,id:Uuid){self.selected=None;self.slips=true;self.search.clear();self.slip=Some(id);}
+    pub(super) fn open_notice(&mut self, id: Uuid) {
+        self.selected = None;
+        self.slips = true;
+        self.search.clear();
+        self.slip = Some(id);
+    }
     pub(super) fn editing(&self) -> bool {
         self.form.is_some()
     }
@@ -191,7 +196,10 @@ fn units(ui: &mut Ui, label: &str, n: &mut u32) {
 }
 impl HrisApp {
     pub(super) fn payroll_final(&mut self, ui: &mut Ui) {
-        let hr = self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation);
+        let hr = self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::PayrollPreparation);
         if !hr {
             self.payroll_state.finals.slips = true;
             self.payroll_state.finals.form = None;
@@ -379,7 +387,11 @@ impl HrisApp {
         }));
     }
     pub(super) fn payroll_final_forms(&mut self, ui: &mut Ui) {
-        if !self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation) {
+        if !self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::PayrollPreparation)
+        {
             self.payroll_state.finals.form = None;
             return;
         }
@@ -557,11 +569,21 @@ impl HrisApp {
         };
         if f.record.service_end.year() != f.record.cash_date.year() {
             card(ui, |ui| {
-                ui.strong(format!("Delayed final pay · {} payment year", f.record.cash_date.year()));
+                ui.strong(format!(
+                    "Delayed final pay · {} payment year",
+                    f.record.cash_date.year()
+                ));
                 ui.label("Employment ended in an earlier year. Only income actually or constructively received in this payment year belongs in this tax review. Earlier-year income and withholding stay in their original year. No current-year service days are invented.");
                 ui.add_enabled_ui(editable, |ui| {
-                    ui.checkbox(&mut f.w.cash_year_reviewed, "Receipt year, earlier certificates, and other employment reviewed");
-                    note(ui, "Actual/constructive receipt and cash-year evidence (HR private)", &mut f.w.cash_year_note);
+                    ui.checkbox(
+                        &mut f.w.cash_year_reviewed,
+                        "Receipt year, earlier certificates, and other employment reviewed",
+                    );
+                    note(
+                        ui,
+                        "Actual/constructive receipt and cash-year evidence (HR private)",
+                        &mut f.w.cash_year_note,
+                    );
                 });
             });
         }
@@ -663,7 +685,10 @@ impl HrisApp {
         }
     }
     fn final_slips(&mut self, ui: &mut Ui) {
-        let hr = self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation);
+        let hr = self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::PayrollPreparation);
         let slips = self
             .data
             .payroll
@@ -769,7 +794,10 @@ impl HrisApp {
 #[cfg(feature = "qa-screenshot")]
 impl HrisApp {
     pub(super) fn prepare_final_preview(&mut self, form: &str) {
-        if form.contains("cross-year"){self.prepare_cross_year_final_preview(form);return;}
+        if form.contains("cross-year") {
+            self.prepare_cross_year_final_preview(form);
+            return;
+        }
         self.prepare_payment_preview("payroll-payment");
         let mut store = DemoStore::new();
         store.data = self.data.clone();
@@ -909,15 +937,101 @@ impl HrisApp {
         }
     }
 }
-#[cfg(feature="qa-screenshot")]
-impl HrisApp{
- fn prepare_cross_year_final_preview(&mut self,form:&str){
-  self.prepare_payment_preview("payroll-payment");let mut store=DemoStore::new();store.data=self.data.clone();store.data.payroll=Default::default();let eid=store.data.employees[1].id;store.data.employees[1].joined_on=Some("2020-01-01".parse().unwrap());let admin=store.data.access.user_id;let hr=Uuid::from_u128(99500);let id=Uuid::from_u128(99501);let today=store.data.company.today();store.data.access.role=Role::HrGeneralist;store.data.access.user_id=hr;
-  let apply=|s:&mut DemoStore,op:&str,v:serde_json::Value|{s.execute(Action::Payroll(Change::new(op,v))).expect("Fictional delayed final-pay preview");};
-  apply(&mut store,"final_create",json!({"id":id,"employee_id":eid,"service_end":"2025-12-31","cash_date":today,"title":"Delayed final pay · prior-year separation","reason":"Fictional actual receipt year"}));let mut r=store.data.payroll.finals.records[0].clone();let mut w=r.worksheet.clone();w.cash_year_reviewed=true;w.cash_year_note="Fictional evidence: amount was not made available or received in 2025. The 2026 receipt and other employment reviewed.".into();w.entitlements_reviewed=true;w.source_scope_reviewed=true;w.contributions_reviewed=true;w.review_note="Fictional owed prior service, no automatic clearance or access blocker".into();w.contribution_note="Fictional original-month contributions reconciled, no extra charge".into();w.lines=vec![final_pay::Line{label:"Delayed earned salary".into(),kind:"taxable".into(),amount_cents:30000000,reference:"Fictional reviewed unpaid obligation".into()}];w.tax.final_compensation_reviewed=true;w.tax.previous_employers_reviewed=true;w.tax.benefits_reviewed=true;w.tax.review_note="Fictional payment-year income and no other employer reviewed".into();w.tax.settlement_note="Fictional combined cash and statutory withholding reviewed".into();apply(&mut store,"final_save",json!({"id":id,"expected_revision":r.revision,"worksheet":w,"reason":"Fictional cross-year worksheet"}));r=store.data.payroll.finals.records[0].clone();
-  if form.ends_with("paid"){apply(&mut store,"final_submit",json!({"id":id,"expected_revision":r.revision,"reason":"Fictional delayed final submit"}));r=store.data.payroll.finals.records[0].clone();store.data.access.role=Role::Administrator;store.data.access.user_id=admin;apply(&mut store,"final_approve",json!({"id":id,"expected_revision":r.revision,"reason":"Fictional independent approval"}));r=store.data.payroll.finals.records[0].clone();apply(&mut store,"final_settle",json!({"id":id,"expected_revision":r.revision,"settled_on":today,"payment_reference":"Fictional delayed cash","handling_reference":"","cash_received_confirmed":true,"employer_handling_confirmed":true,"reason":"Fictional delayed final cash only"}));}
-  store.data.access.role=Role::Administrator;store.data.access.user_id=admin;self.data=store.data;self.payroll_state.tab=10;self.payroll_state.finals=State::default();self.payroll_state.finals.selected=Some(id);
-  if form.ends_with("paid"){self.payroll_state.finals.slips=true;self.payroll_state.finals.slip=Some(id);}else{self.payroll_state.finals.form=Some(Form::Worksheet(Box::new(worksheet(self.data.payroll.finals.records[0].clone()))));}
-  if let Ok(path)=std::env::var("HRIS_PREVIEW_FINAL_PDF"){if let Some(s)=self.data.payroll.finals.slips.first(){crate::payroll_pdf::save(std::path::Path::new(&path),&crate::payroll_pdf::build_final(s,final_pay::status(&self.data,id)).unwrap()).unwrap();}}
- }
+#[cfg(feature = "qa-screenshot")]
+impl HrisApp {
+    fn prepare_cross_year_final_preview(&mut self, form: &str) {
+        self.prepare_payment_preview("payroll-payment");
+        let mut store = DemoStore::new();
+        store.data = self.data.clone();
+        store.data.payroll = Default::default();
+        let eid = store.data.employees[1].id;
+        store.data.employees[1].joined_on = Some("2020-01-01".parse().unwrap());
+        let admin = store.data.access.user_id;
+        let hr = Uuid::from_u128(99500);
+        let id = Uuid::from_u128(99501);
+        let today = store.data.company.today();
+        store.data.access.role = Role::HrGeneralist;
+        store.data.access.user_id = hr;
+        let apply = |s: &mut DemoStore, op: &str, v: serde_json::Value| {
+            s.execute(Action::Payroll(Change::new(op, v)))
+                .expect("Fictional delayed final-pay preview");
+        };
+        apply(
+            &mut store,
+            "final_create",
+            json!({"id":id,"employee_id":eid,"service_end":"2025-12-31","cash_date":today,"title":"Delayed final pay · prior-year separation","reason":"Fictional actual receipt year"}),
+        );
+        let mut r = store.data.payroll.finals.records[0].clone();
+        let mut w = r.worksheet.clone();
+        w.cash_year_reviewed = true;
+        w.cash_year_note="Fictional evidence: amount was not made available or received in 2025. The 2026 receipt and other employment reviewed.".into();
+        w.entitlements_reviewed = true;
+        w.source_scope_reviewed = true;
+        w.contributions_reviewed = true;
+        w.review_note =
+            "Fictional owed prior service, no automatic clearance or access blocker".into();
+        w.contribution_note =
+            "Fictional original-month contributions reconciled, no extra charge".into();
+        w.lines = vec![final_pay::Line {
+            label: "Delayed earned salary".into(),
+            kind: "taxable".into(),
+            amount_cents: 30000000,
+            reference: "Fictional reviewed unpaid obligation".into(),
+        }];
+        w.tax.final_compensation_reviewed = true;
+        w.tax.previous_employers_reviewed = true;
+        w.tax.benefits_reviewed = true;
+        w.tax.review_note = "Fictional payment-year income and no other employer reviewed".into();
+        w.tax.settlement_note = "Fictional combined cash and statutory withholding reviewed".into();
+        apply(
+            &mut store,
+            "final_save",
+            json!({"id":id,"expected_revision":r.revision,"worksheet":w,"reason":"Fictional cross-year worksheet"}),
+        );
+        r = store.data.payroll.finals.records[0].clone();
+        if form.ends_with("paid") {
+            apply(
+                &mut store,
+                "final_submit",
+                json!({"id":id,"expected_revision":r.revision,"reason":"Fictional delayed final submit"}),
+            );
+            r = store.data.payroll.finals.records[0].clone();
+            store.data.access.role = Role::Administrator;
+            store.data.access.user_id = admin;
+            apply(
+                &mut store,
+                "final_approve",
+                json!({"id":id,"expected_revision":r.revision,"reason":"Fictional independent approval"}),
+            );
+            r = store.data.payroll.finals.records[0].clone();
+            apply(
+                &mut store,
+                "final_settle",
+                json!({"id":id,"expected_revision":r.revision,"settled_on":today,"payment_reference":"Fictional delayed cash","handling_reference":"","cash_received_confirmed":true,"employer_handling_confirmed":true,"reason":"Fictional delayed final cash only"}),
+            );
+        }
+        store.data.access.role = Role::Administrator;
+        store.data.access.user_id = admin;
+        self.data = store.data;
+        self.payroll_state.tab = 10;
+        self.payroll_state.finals = State::default();
+        self.payroll_state.finals.selected = Some(id);
+        if form.ends_with("paid") {
+            self.payroll_state.finals.slips = true;
+            self.payroll_state.finals.slip = Some(id);
+        } else {
+            self.payroll_state.finals.form = Some(Form::Worksheet(Box::new(worksheet(
+                self.data.payroll.finals.records[0].clone(),
+            ))));
+        }
+        if let Ok(path) = std::env::var("HRIS_PREVIEW_FINAL_PDF") {
+            if let Some(s) = self.data.payroll.finals.slips.first() {
+                crate::payroll_pdf::save(
+                    std::path::Path::new(&path),
+                    &crate::payroll_pdf::build_final(s, final_pay::status(&self.data, id)).unwrap(),
+                )
+                .unwrap();
+            }
+        }
+    }
 }

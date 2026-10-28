@@ -259,7 +259,10 @@ impl HrisApp {
             }
         });
         ui.horizontal_wrapped(|ui| {
-            if self.data.access.allows(crate::staff_roles::Capability::GeneralHrReports)
+            if self
+                .data
+                .access
+                .allows(crate::staff_roles::Capability::GeneralHrReports)
                 && ui
                     .selectable_label(self.import_state.open, "Employee import")
                     .clicked()
@@ -268,7 +271,10 @@ impl HrisApp {
                 self.attendance_import_state.open = false;
                 self.leave_request_import_state.open = false;
             }
-            if self.data.access.allows(crate::staff_roles::Capability::GeneralHrReports)
+            if self
+                .data
+                .access
+                .allows(crate::staff_roles::Capability::GeneralHrReports)
                 && ui
                     .selectable_label(self.attendance_import_state.open, "Attendance import")
                     .clicked()
@@ -277,7 +283,10 @@ impl HrisApp {
                 self.attendance_import_state.open = true;
                 self.leave_request_import_state.open = false;
             }
-            if self.data.access.allows(crate::staff_roles::Capability::GeneralHrReports)
+            if self
+                .data
+                .access
+                .allows(crate::staff_roles::Capability::GeneralHrReports)
                 && ui
                     .selectable_label(self.leave_request_import_state.open, "Leave import")
                     .clicked()
@@ -295,7 +304,12 @@ impl HrisApp {
             self.attendance_import(ui);
             return;
         }
-        if self.import_state.open && self.data.access.allows(crate::staff_roles::Capability::GeneralHrReports) {
+        if self.import_state.open
+            && self
+                .data
+                .access
+                .allows(crate::staff_roles::Capability::GeneralHrReports)
+        {
             self.employee_import(ui);
             return;
         }

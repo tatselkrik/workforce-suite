@@ -128,10 +128,19 @@ impl State {
     pub fn accept(&mut self, actor: &Access, update: Update) -> Result<()> {
         update.context.validate(actor)?;
         if let Some(history) = &update.history {
-            ensure!(update.receipt.is_none(),"History cannot replace a role-save receipt.");
-            let source=update.context.accounts.iter().find(|a|a.user_id==history.user_id)
-                .ok_or_else(||anyhow::anyhow!("The history account is no longer in the current view."))?;
-            history.validate(actor,source)?;
+            ensure!(
+                update.receipt.is_none(),
+                "History cannot replace a role-save receipt."
+            );
+            let source = update
+                .context
+                .accounts
+                .iter()
+                .find(|a| a.user_id == history.user_id)
+                .ok_or_else(|| {
+                    anyhow::anyhow!("The history account is no longer in the current view.")
+                })?;
+            history.validate(actor, source)?;
         }
         if let Some(receipt) = update.receipt {
             let pending = self.pending.as_ref().ok_or_else(|| {
@@ -145,9 +154,19 @@ impl State {
             self.pending = None;
             self.draft = None;
         }
-        if let Some(history)=update.history {self.history=Some(history);}
-        if self.history.as_ref().is_some_and(|h|update.context.accounts.iter().find(|a|a.user_id==h.user_id)
-            .is_none_or(|a|h.validate(actor,a).is_err())) {self.history=None;}
+        if let Some(history) = update.history {
+            self.history = Some(history);
+        }
+        if self.history.as_ref().is_some_and(|h| {
+            update
+                .context
+                .accounts
+                .iter()
+                .find(|a| a.user_id == h.user_id)
+                .is_none_or(|a| h.validate(actor, a).is_err())
+        }) {
+            self.history = None;
+        }
         self.context = Some(update.context);
         Ok(())
     }
@@ -236,7 +255,7 @@ mod tests {
             &a,
             Update {
                 history: None,
-                    context: c,
+                context: c,
                 receipt: None,
             },
         )
@@ -288,7 +307,7 @@ mod tests {
             &a,
             Update {
                 history: None,
-                    context: current,
+                context: current,
                 receipt: Some(receipt),
             },
         )

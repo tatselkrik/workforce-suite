@@ -99,7 +99,12 @@ fn native_demo_protects_independent_approval_own_receipts_and_new_review_on_sour
             .unwrap()
             .starts_with(b"%PDF-")
     );
-    assert!(String::from_utf8_lossy(&hris_desktop::payroll_pdf::build_tax(&s.data.payroll.tax.slips[0]).unwrap()).contains("ANNUAL TAX ADVICE"));
+    assert!(
+        String::from_utf8_lossy(
+            &hris_desktop::payroll_pdf::build_tax(&s.data.payroll.tax.slips[0]).unwrap()
+        )
+        .contains("ANNUAL TAX ADVICE")
+    );
     s.data.access.role = Role::Manager;
     s.data.access.employee_id = Some(eid);
     assert!(t::export_csv(&s.data, "tax_payslip", Some(id)).is_ok());

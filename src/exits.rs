@@ -246,7 +246,8 @@ pub enum ExitAction {
 }
 pub fn case(data: &Snapshot, id: Uuid) -> Result<&Case> {
     ensure!(
-        data.access.allows(crate::staff_roles::Capability::Personnel),
+        data.access
+            .allows(crate::staff_roles::Capability::Personnel),
         "Only HR and Administrators can see private exit records."
     );
     data.exits
@@ -263,7 +264,8 @@ fn task(data: &Snapshot, id: Uuid) -> Result<&Task> {
         .find(|t| t.id == id && t.company_id == data.company.id)
         .context("Clearance task not found. Refresh.")?;
     ensure!(
-        data.access.allows(crate::staff_roles::Capability::Personnel)
+        data.access
+            .allows(crate::staff_roles::Capability::Personnel)
             || (data.access.uses_desktop()
                 && t.assigned_employee_id.is_some()
                 && t.assigned_employee_id == data.access.employee_id),
@@ -291,7 +293,8 @@ impl ExitAction {
         let (op, p) = match self {
             Self::CaseSave(d) => {
                 ensure!(
-                    data.access.allows(crate::staff_roles::Capability::Personnel),
+                    data.access
+                        .allows(crate::staff_roles::Capability::Personnel),
                     "Only HR manages exit details."
                 );
                 let employee = d.employee_id.context("Choose an active employee.")?;
@@ -337,7 +340,8 @@ impl ExitAction {
             }
             Self::TaskSave(d) => {
                 ensure!(
-                    data.access.allows(crate::staff_roles::Capability::Personnel),
+                    data.access
+                        .allows(crate::staff_roles::Capability::Personnel),
                     "Only HR assigns clearance tasks."
                 );
                 ensure!(
@@ -382,7 +386,9 @@ impl ExitAction {
                     "This task changed, or the action is unavailable. Refresh."
                 );
                 ensure!(
-                    data.access.allows(crate::staff_roles::Capability::Personnel) || (status != "waived" && t.status != "waived"),
+                    data.access
+                        .allows(crate::staff_roles::Capability::Personnel)
+                        || (status != "waived" && t.status != "waived"),
                     "HR handles clearance waivers."
                 );
                 (
@@ -494,8 +500,11 @@ pub const DEFAULT_TASKS: [&str; 5] = [
     "Record payroll and final-pay review",
 ];
 pub fn readiness(data: &Snapshot, id: Uuid) -> Option<Readiness> {
-    let today=data.company.today();
-    if !data.access.allows(crate::staff_roles::Capability::Personnel) {
+    let today = data.company.today();
+    if !data
+        .access
+        .allows(crate::staff_roles::Capability::Personnel)
+    {
         return None;
     }
     if data.mode != Mode::Demo {
@@ -566,9 +575,15 @@ pub fn readiness(data: &Snapshot, id: Uuid) -> Option<Readiness> {
                     })
             })
             .count() as u64,
-        named_leave_policies: std::iter::once(crate::leave::dated::policy_on(data,today))
-            .chain(data.leave_setup.dated.as_ref().into_iter().flat_map(|c|c.timeline.versions.iter().filter(|v|!v.withdrawn&&v.effective_on>today).map(|v|&v.policy)))
-            .flat_map(|p|p.types.iter())
+        named_leave_policies: std::iter::once(crate::leave::dated::policy_on(data, today))
+            .chain(data.leave_setup.dated.as_ref().into_iter().flat_map(|c| {
+                c.timeline
+                    .versions
+                    .iter()
+                    .filter(|v| !v.withdrawn && v.effective_on > today)
+                    .map(|v| &v.policy)
+            }))
+            .flat_map(|p| p.types.iter())
             .filter(|t| {
                 t.active
                     && t.approval_chain.iter().any(|s| {

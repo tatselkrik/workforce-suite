@@ -642,7 +642,7 @@ mod tests {
             Foundation::CloseHandle,
             System::Threading::{OpenProcess, PROCESS_TERMINATE, TerminateProcess},
         };
-        let setup_path=std::env::var_os("HRIS_TEST_UPDATE_SETUP").expect("Update setup required");
+        let setup_path = std::env::var_os("HRIS_TEST_UPDATE_SETUP").expect("Update setup required");
         // Check the real compiled artifact, so stale setup resources fail before any installation.
         {
             use std::os::windows::process::CommandExt;
@@ -652,11 +652,14 @@ mod tests {
                 .env("HRIS_INSTALLER_VERSION_PATH",&setup_path)
                 .creation_flags(0x08000000)
                 .output().unwrap();
-            assert!(metadata.status.success(),"Installer metadata query failed");
-            assert_eq!(String::from_utf8(metadata.stdout).unwrap().trim(),VERSION,
-                "Installer resources must match the bundled application version");
+            assert!(metadata.status.success(), "Installer metadata query failed");
+            assert_eq!(
+                String::from_utf8(metadata.stdout).unwrap().trim(),
+                VERSION,
+                "Installer resources must match the bundled application version"
+            );
         }
-        let setup=fs::read(setup_path).unwrap();
+        let setup = fs::read(setup_path).unwrap();
         let new_exe =
             fs::read(std::env::var_os("HRIS_TEST_NEW_EXE").expect("New executable required"))
                 .unwrap();
@@ -772,7 +775,11 @@ mod tests {
                 for line in sums.lines() {
                     let (expected, name) = line.split_once("  ").expect("Payload checksum entry");
                     assert!(!name.is_empty() && !name.contains(['/', '\\']) && name != "..");
-                    assert_eq!(file_hash(&installed.join(name)).unwrap(), expected, "Missing or stale installed payload: {name}");
+                    assert_eq!(
+                        file_hash(&installed.join(name)).unwrap(),
+                        expected,
+                        "Missing or stale installed payload: {name}"
+                    );
                 }
             }
             let evidence: serde_json::Value =

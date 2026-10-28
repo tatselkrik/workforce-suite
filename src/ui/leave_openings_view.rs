@@ -135,7 +135,10 @@ impl HrisApp {
             return;
         };
         let context = context.clone();
-        let hr = self.data.access.allows(crate::staff_roles::Capability::LeaveAdministration);
+        let hr = self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::LeaveAdministration);
         let admin = self.data.access.role.manages_accounts();
         if state.posted {
             ui.colored_label(accent(ui),"Opening posted. Its original basis is retained; later corrections use Credit adjustments.");
@@ -451,14 +454,27 @@ impl HrisApp {
                         }
                     }
                     if ui.button("Save opening Excel template").clicked() {
-                        match crate::reports::choose_export("hris-opening-balances.xlsx").and_then(|p|p.map(|p|leave::opening_import::template_xlsx().and_then(|b|crate::reports::save_xlsx(&p,&b))).transpose()) {
-                            Ok(Some(()))=>self.notice=Some(("Opening Excel template saved.".into(),false)),
-                            Err(e)=>state.error=Some(e.to_string()), _=>{}
+                        match crate::reports::choose_export("hris-opening-balances.xlsx").and_then(
+                            |p| {
+                                p.map(|p| {
+                                    leave::opening_import::template_xlsx()
+                                        .and_then(|b| crate::reports::save_xlsx(&p, &b))
+                                })
+                                .transpose()
+                            },
+                        ) {
+                            Ok(Some(())) => {
+                                self.notice = Some(("Opening Excel template saved.".into(), false))
+                            }
+                            Err(e) => state.error = Some(e.to_string()),
+                            _ => {}
                         }
                     }
                     if ui.button("Choose opening CSV / Excel").clicked() {
-                        match crate::imports::choose_tabular_source("Preview opening balances CSV or Excel")
-                            .and_then(|p| p.map(|p| Import::load(&self.data, &p)).transpose())
+                        match crate::imports::choose_tabular_source(
+                            "Preview opening balances CSV or Excel",
+                        )
+                        .and_then(|p| p.map(|p| Import::load(&self.data, &p)).transpose())
                         {
                             Ok(Some(source)) => {
                                 state.import = Some(source);

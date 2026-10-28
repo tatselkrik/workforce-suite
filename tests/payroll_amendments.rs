@@ -105,7 +105,8 @@ fn invalid_cash_year_overclaim_and_missing_reviews_are_denied() {
 }
 #[test]
 fn postgres_centavo_vectors_agree_with_rust() {
-    let rows: serde_json::Value = serde_json::from_str(include_str!("fixtures/amendment-rule-vectors.json")).unwrap();
+    let rows: serde_json::Value =
+        serde_json::from_str(include_str!("fixtures/amendment-rule-vectors.json")).unwrap();
     assert!(rows.as_array().unwrap().len() >= 14);
     for v in rows.as_array().unwrap() {
         let s: p::Source = serde_json::from_value(v["source"].clone()).unwrap();

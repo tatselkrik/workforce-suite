@@ -39,7 +39,12 @@ struct Edit {
     reason: String,
 }
 impl State {
-    pub(super) fn open_notice(&mut self,id:Uuid){self.selected=None;self.issued=true;self.search.clear();self.slip=Some(id);}
+    pub(super) fn open_notice(&mut self, id: Uuid) {
+        self.selected = None;
+        self.issued = true;
+        self.search.clear();
+        self.slip = Some(id);
+    }
     pub(super) fn editing(&self) -> bool {
         self.form.is_some()
     }
@@ -290,7 +295,10 @@ fn original_export(app: &mut HrisApp, ui: &mut Ui, kind: &str, id: Uuid) {
 }
 impl HrisApp {
     pub(super) fn payroll_amendments(&mut self, ui: &mut Ui) {
-        let hr = self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation);
+        let hr = self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::PayrollPreparation);
         if !hr {
             self.payroll_state.amendments.issued = true;
             self.payroll_state.amendments.form = None;
@@ -473,7 +481,10 @@ impl HrisApp {
         }
     }
     fn amendment_slips(&mut self, ui: &mut Ui) {
-        let hr = self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation);
+        let hr = self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::PayrollPreparation);
         let rows = self
             .data
             .payroll
@@ -579,7 +590,11 @@ impl HrisApp {
         }
     }
     pub(super) fn payroll_amendment_forms(&mut self, ui: &mut Ui) {
-        if !self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation) {
+        if !self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::PayrollPreparation)
+        {
             self.payroll_state.amendments.form = None;
             return;
         }

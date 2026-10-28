@@ -117,7 +117,14 @@ pub fn capture(data: &Snapshot, a: &Attendance) -> Option<Basis> {
     })
 }
 pub fn matches_current(data: &Snapshot, r: &Request) -> bool {
-    if let Some(current)=crate::approvals::delegated_source(data,crate::approvals::Scope::Overtime,r.id,r.revision){return current;}
+    if let Some(current) = crate::approvals::delegated_source(
+        data,
+        crate::approvals::Scope::Overtime,
+        r.id,
+        r.revision,
+    ) {
+        return current;
+    }
     data.attendance
         .iter()
         .find(|a| a.id == r.attendance_id)
@@ -135,8 +142,16 @@ pub fn effective_minutes(data: &Snapshot, r: &Request) -> Option<u32> {
 pub fn can_review(access: &Access, r: &Request) -> bool {
     r.submitted_by != access.user_id && access.can_review(r.employee_id)
 }
-pub fn can_review_in(data:&Snapshot,r:&Request)->bool {
-    can_review(&data.access,r)||(r.submitted_by!=data.access.user_id&&Some(r.employee_id)!=data.access.employee_id&&crate::approvals::permitted(data,crate::approvals::Scope::Overtime,r.id,r.revision))
+pub fn can_review_in(data: &Snapshot, r: &Request) -> bool {
+    can_review(&data.access, r)
+        || (r.submitted_by != data.access.user_id
+            && Some(r.employee_id) != data.access.employee_id
+            && crate::approvals::permitted(
+                data,
+                crate::approvals::Scope::Overtime,
+                r.id,
+                r.revision,
+            ))
 }
 pub fn allowed(access: &Access, action: &OvertimeAction, data: &Snapshot) -> bool {
     match action {
@@ -153,9 +168,15 @@ pub fn allowed(access: &Access, action: &OvertimeAction, data: &Snapshot) -> boo
                         && access.employee_id == Some(r.employee_id)
                 }
                 Status::Approved | Status::Rejected => {
-                    r.status == Status::Pending && (can_review(access,r)||(access==&data.access&&can_review_in(data,r)))
+                    r.status == Status::Pending
+                        && (can_review(access, r)
+                            || (access == &data.access && can_review_in(data, r)))
                 }
-                Status::Revoked => r.status == Status::Approved && (can_review(access,r)||(access==&data.access&&can_review_in(data,r))),
+                Status::Revoked => {
+                    r.status == Status::Approved
+                        && (can_review(access, r)
+                            || (access == &data.access && can_review_in(data, r)))
+                }
                 Status::Pending => false,
             }),
     }

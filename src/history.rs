@@ -153,7 +153,10 @@ impl EmploymentEvent {
 }
 
 pub fn timeline(data: &Snapshot, employee: Uuid) -> Vec<&EmploymentEvent> {
-    if !data.access.allows(crate::staff_roles::Capability::Personnel) {
+    if !data
+        .access
+        .allows(crate::staff_roles::Capability::Personnel)
+    {
         return Vec::new();
     }
     let mut events: Vec<_> = data

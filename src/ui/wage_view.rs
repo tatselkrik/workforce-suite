@@ -45,7 +45,11 @@ struct Decision {
 impl State {
     pub(super) fn bind(&mut self, data: &Snapshot) {
         let scope = Some((data.company.id, data.access.user_id));
-        if !data.access.allows(crate::staff_roles::Capability::PayrollPreparation) || self.scope != scope {
+        if !data
+            .access
+            .allows(crate::staff_roles::Capability::PayrollPreparation)
+            || self.scope != scope
+        {
             *self = Self {
                 scope,
                 ..Default::default()
@@ -109,7 +113,11 @@ fn result(ui: &mut Ui, a: &w::Assessment) {
 impl HrisApp {
     pub(super) fn payroll_wages(&mut self, ui: &mut Ui) {
         self.payroll_state.wages.bind(&self.data);
-        if !self.data.access.allows(crate::staff_roles::Capability::PayrollPreparation) {
+        if !self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::PayrollPreparation)
+        {
             ui.label("HR/Admin wage reviews only.");
             return;
         }
@@ -517,7 +525,14 @@ impl HrisApp {
                     ui.label("Wage review unavailable. Refresh.");
                     return;
                 };
-                ui.heading(format!("{} wage classification", match f.operation.as_str() { "approve" => "Approve", "retire" => "Retire", _ => "Cancel" }));
+                ui.heading(format!(
+                    "{} wage classification",
+                    match f.operation.as_str() {
+                        "approve" => "Approve",
+                        "retire" => "Retire",
+                        _ => "Cancel",
+                    }
+                ));
                 ui.label(format!(
                     "{} · {} through {}",
                     self.data.employee_name(c.employee_id),

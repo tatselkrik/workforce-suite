@@ -165,7 +165,8 @@ fn demo_linked_correction_preserves_original_and_exports_own_aggregate() {
 }
 #[test]
 fn version_two_postgres_rows_preserve_cash_links_and_review_boundaries() {
-    let rows: Vec<reports::Wire> = serde_json::from_str(include_str!("fixtures/amendment-report-vectors.json")).unwrap();
+    let rows: Vec<reports::Wire> =
+        serde_json::from_str(include_str!("fixtures/amendment-report-vectors.json")).unwrap();
     assert!(rows.len() >= 5);
     for w in rows {
         let f = w.filter.clone();

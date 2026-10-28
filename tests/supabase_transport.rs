@@ -32,7 +32,7 @@ fn auth_fixture(
     let server = thread::spawn(move || {
         let deadline = Instant::now() + Duration::from_secs(15);
         let mut count = 0;
-        let mut complete=false;
+        let mut complete = false;
         while !complete && count < 100 && Instant::now() < deadline {
             let (mut stream, _) = match listener.accept() {
                 Ok(s) => s,
@@ -118,12 +118,19 @@ fn auth_fixture(
             } else {
                 ("200 OK", "[]".into())
             };
-            complete=if assigned {first.starts_with("GET /auth/v1/user ")} else {first.starts_with("POST /rest/v1/rpc/my_hris_access ")};
+            complete = if assigned {
+                first.starts_with("GET /auth/v1/user ")
+            } else {
+                first.starts_with("POST /rest/v1/rpc/my_hris_access ")
+            };
             observed.lock().unwrap().push(request);
             write!(stream,"HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body).unwrap();
             count += 1;
         }
-        assert!(complete,"The Auth and HR snapshot request sequence must complete");
+        assert!(
+            complete,
+            "The Auth and HR snapshot request sequence must complete"
+        );
     });
     let config = ConnectionConfig {
         url: format!("http://{address}"),
