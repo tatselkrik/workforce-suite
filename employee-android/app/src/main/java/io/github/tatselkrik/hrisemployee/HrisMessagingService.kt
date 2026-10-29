@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.google.firebase.messaging.FirebaseMessaging
 
 /** Data-only FCM messages carry no employee, salary, leave or case content.
  * Supabase remains authoritative after the employee opens and authenticates.
@@ -15,7 +16,20 @@ import com.google.firebase.messaging.RemoteMessage
 class HrisMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         // Never display sender-supplied text or private identifiers.
-        if (BuildConfig.PUSH_BACKEND_ENABLED) DeviceAlertNotifications.show(this)
+        if (BuildConfig.PUSH_BACKEND_ENABLED && DeviceAlertPreferences.enabled(this) && message.data["hris_hint"]=="inbox") DeviceAlertNotifications.show(this)
+    }
+    override fun onNewToken(token: String) {
+        // No stored HRIS session: a refreshed address binds only after live sign-in.
+        EmployeeProcess.activity.get()?.runOnUiThread { EmployeeProcess.view?.evaluateJavascript("window.deviceAlertsSignedIn?.()",null) }
+    }
+}
+internal object DeviceAlertPreferences {
+    fun enabled(context: Context): Boolean=context.getSharedPreferences("device-alerts",Context.MODE_PRIVATE).getBoolean("enabled",false)
+    fun setEnabled(context: Context,value: Boolean) {context.getSharedPreferences("device-alerts",Context.MODE_PRIVATE).edit().putBoolean("enabled",value).apply()}
+    fun disable(context: Context) {
+        setEnabled(context,false);FirebaseMessaging.getInstance().isAutoInitEnabled=false
+        FirebaseMessaging.getInstance().deleteToken()
+        context.getSystemService(NotificationManager::class.java).cancel(1042)
     }
 }
 internal object DeviceAlertNotifications {

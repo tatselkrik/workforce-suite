@@ -11,6 +11,7 @@ id = "io.github.tatselkrik.hrisportal"
 
 [features]
 default = ["desktop-tls"]
+android-push = []
 desktop-tls = ["reqwest/native-tls"]
 android-tls = ["reqwest/rustls-no-provider", "dep:rustls", "dep:webpki-roots"]
 

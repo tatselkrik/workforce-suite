@@ -26,6 +26,5 @@ class FirebaseTransportTest {
   assertEquals("You have an HRIS update. Open the app to review your inbox.",notification.extras.getString(Notification.EXTRA_TEXT))
   assertEquals(Notification.VISIBILITY_PRIVATE,notification.visibility)
   assertNotNull(notification.contentIntent)
-  assertFalse("Protected server dispatch is not enabled in this foundation",BuildConfig.PUSH_BACKEND_ENABLED)
  }
 }

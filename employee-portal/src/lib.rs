@@ -2,6 +2,7 @@
 mod services;
 mod account_security;
 mod notifications;
+mod device_alerts;
 mod pictures;
 mod requests;
 mod self_service;
@@ -369,6 +370,7 @@ impl Portal {
             .merge(requests::routes())
             .merge(services::routes())
             .merge(notifications::routes())
+            .merge(device_alerts::routes())
             .merge(pictures::routes())
             .merge(account_security::routes())
             .route("/services.js", get(services_script))

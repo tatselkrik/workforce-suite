@@ -779,3 +779,17 @@ Kirk declined the optional external accounting/payroll product integration and a
 The Android employee core0.1.0 is privately packaged from frozen6f5db64449565cb41b91c3faa8fbb47b5b81b62a and verified in the emulator; see docs/ANDROID-EMPLOYEE-0.1.0-DELIVERY.md for exact evidence/limits. Preserve the APK, private signing identity and original loopback portal018. Actual phone/photo-upload/CSV-PDF-save/email-confirmation/background-push checks remain partial. Firebase is installed; its local authenticated project access remains unresolved. Kirk reports being signed in on the website; do not mistake that for CLI/MCP authorization or ask him to paste credentials. Complete the separate supported local OAuth connection before project operations. Keep Spark/no-charge limits and existing Supabase; no Firebase paid functions, billing upgrade or public hosting.
 
 Payroll0.1.1 is installed/verified from the same source. The declined Data exchange navigation entry is removed, with old compatibility/audit data and ordinary reports/exports retained. Existing100 rollback, HRIS069, portal018 and schema92 remain intact. Do not repeat these completed delivery operations. No reset scheduler was recreated; the current continuation is only the authorized Android/push task.
+
+
+## Android push provider and pipeline —29October2026
+
+Firebase local authentication, dedicated free project/app/configuration and the
+FCM-only sender are now resolved. Earlier authentication-blocked notes are
+superseded; consult the exact private Firebase guard without repeating OAuth or
+project creation. Supabase remains Auth/storage. Follow docs/ANDROID-PUSH.md for
+protected own-device enrollment, generic payloads, grant lifetime and free caps.
+Migration93 and the sender are deployed; actual delivery/release state is in this
+task's checkpoint. A deployed sender or successful SDK token is not proof of
+background reception. Preserve the immutable Android001 release and mark011 as a
+candidate until its actual reception and delivery gates pass. Keep credentials
+server-only/DPAPI-protected and preserve the existing browser portal sessions.

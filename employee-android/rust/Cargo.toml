@@ -8,7 +8,7 @@ publish = false
 [lib]
 crate-type = ["cdylib", "rlib"]
 [dependencies]
-hris-employee-portal = { path = "../../employee-portal", default-features = false, features = ["android-tls"] }
+hris-employee-portal = { path = "../../employee-portal", default-features = false, features = ["android-tls", "android-push"] }
 anyhow = "=1.0.102"
 axum = { version = "=0.8.9", default-features = false, features = ["http1", "json", "tokio", "query"] }
 tokio = { version = "=1.54.1", features = ["rt-multi-thread", "net", "sync", "time"] }

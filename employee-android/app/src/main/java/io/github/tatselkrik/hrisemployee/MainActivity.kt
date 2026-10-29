@@ -1,5 +1,9 @@
 package io.github.tatselkrik.hrisemployee
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import com.google.firebase.messaging.FirebaseMessaging
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Intent
@@ -47,11 +51,21 @@ internal object EmployeeProcess {
     var origin: String? = null
     var view: WebView? = null
     var activity = WeakReference<MainActivity>(null)
+    var pushNonce: String? = null
+    var pushEnrollNonce: String? = null
+    var openInbox = false
 }
 
 class MainActivity : ComponentActivity() {
     internal var browser: WebView? = null
     internal var origin: String? = null
+    private var permissionNonce: String? = null
+    private val alertsPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { allowed ->
+        val nonce=permissionNonce;permissionNonce=null
+        if (nonce!=null && EmployeeProcess.pushNonce==nonce) {
+            if (allowed) pushToken(nonce, true) else pushReply(nonce, JSONObject().put("error","Allow notifications in Android settings before enabling alerts."))
+        }
+    }
     private var pendingPhoto: ValueCallback<Array<Uri>>? = null
     private var exportBytes: ByteArray? = null
     private val photoPicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -68,6 +82,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         if (!BuildConfig.DEBUG) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         EmployeeProcess.activity = WeakReference(this)
+        if (intent.getBooleanExtra("hris_open_inbox",false)) EmployeeProcess.openInbox=true
         var serviceOrigin by mutableStateOf(EmployeeProcess.origin)
         var failure by mutableStateOf<String?>(null)
         setContent {
@@ -151,6 +166,7 @@ class MainActivity : ComponentActivity() {
             }
             override fun onPageFinished(v: WebView, url: String) {
                 if (sameOrigin(Uri.parse(url), local)) v.evaluateJavascript("window.print=()=>window.HrisAndroid?.postMessage(JSON.stringify({type:'print'}));", null)
+                EmployeeProcess.activity.get()?.deliverInbox()
             }
         }
         view.webChromeClient = object : WebChromeClient() {
@@ -175,6 +191,11 @@ class MainActivity : ComponentActivity() {
                 if (body.length > 2_000_000) return@addWebMessageListener
                 val value = JSONObject(body)
                 when (value.optString("type")) {
+                    "push-state", "push-enable" -> activity.pushRequest(value.optString("type"), value.optString("nonce"))
+                    "push-disable" -> { EmployeeProcess.pushNonce=null;EmployeeProcess.pushEnrollNonce=null;DeviceAlertPreferences.disable(applicationContext) }
+                    "push-commit" -> if (value.optString("nonce")==EmployeeProcess.pushEnrollNonce && EmployeeProcess.pushEnrollNonce!=null && BuildConfig.PUSH_BACKEND_ENABLED && activity.alertsAllowed()) {
+                        DeviceAlertPreferences.setEnabled(applicationContext,true);FirebaseMessaging.getInstance().isAutoInitEnabled=true;EmployeeProcess.pushEnrollNonce=null
+                    }
                     "print" -> if (sameOrigin(Uri.parse(v.url ?: ""), local)) {
                         (activity.getSystemService(PRINT_SERVICE) as PrintManager).print("HRIS payslip", v.createPrintDocumentAdapter("HRIS payslip"), null)
                     }
@@ -196,12 +217,40 @@ class MainActivity : ComponentActivity() {
         return view
     }
     private fun notifications() {
-        // Do not ask for an OS permission before a company push connection exists.
-        message("Your in-app inbox is available. Background device alerts are not connected yet.")
+        browser?.evaluateJavascript("window.deviceAlertsOpen?.()",null)
     }
+    private fun alertsAllowed(): Boolean = Build.VERSION.SDK_INT < 33 || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED
+    private fun pushRequest(kind: String, nonce: String) {
+        if (!Regex("[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}").matches(nonce)) return
+        EmployeeProcess.pushNonce=nonce
+        if (!BuildConfig.PUSH_BACKEND_ENABLED) {pushReply(nonce,JSONObject().put("error","The company device-alert connection is not ready yet."));return}
+        if (kind=="push-enable") {
+            EmployeeProcess.pushEnrollNonce=nonce
+            if (!alertsAllowed() && Build.VERSION.SDK_INT>=33) {permissionNonce=nonce;alertsPermission.launch(Manifest.permission.POST_NOTIFICATIONS);return}
+            pushToken(nonce,true)
+        } else if (DeviceAlertPreferences.enabled(this) && alertsAllowed()) pushToken(nonce,false)
+        else {if(DeviceAlertPreferences.enabled(this))DeviceAlertPreferences.disable(this);pushReply(nonce,JSONObject().put("enabled",false))}
+    }
+    private fun pushToken(nonce: String, enabling: Boolean) {
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            val activity=EmployeeProcess.activity.get() ?: return@addOnCompleteListener
+            if (EmployeeProcess.pushNonce!=nonce) return@addOnCompleteListener
+            if (task.isSuccessful && task.result!=null) activity.pushReply(nonce,JSONObject().put("token",task.result).put("enabled",!enabling))
+            else activity.pushReply(nonce,JSONObject().put("error","This device could not connect to free notifications. Check your connection and try again."))
+        }
+    }
+    private fun pushReply(nonce: String, data: JSONObject) {
+        if (EmployeeProcess.pushNonce!=nonce || isFinishing) return
+        data.put("nonce",nonce)
+        browser?.evaluateJavascript("window.deviceAlertsNativeReply?.("+data.toString()+")",null)
+    }
+    private fun deliverInbox() {
+        if (EmployeeProcess.openInbox) browser?.evaluateJavascript("typeof window.deviceAlertsOpenInbox==='function'?(window.deviceAlertsOpenInbox(),true):false") { delivered -> if(delivered=="true")EmployeeProcess.openInbox=false }
+    }
+    override fun onNewIntent(intent: Intent) {super.onNewIntent(intent);setIntent(intent);if(intent.getBooleanExtra("hris_open_inbox",false)){EmployeeProcess.openInbox=true;deliverInbox()}}
     private fun message(text: String) { if (!isFinishing) AlertDialog.Builder(this).setMessage(text).setPositiveButton("OK", null).show() }
     override fun onPause() { browser?.onPause(); super.onPause() }
-    override fun onResume() { super.onResume(); browser?.onResume() }
+    override fun onResume() { super.onResume(); browser?.onResume(); browser?.evaluateJavascript("window.deviceAlertsSignedIn?.()",null);deliverInbox() }
     override fun onDestroy() {
         pendingPhoto?.onReceiveValue(null); pendingPhoto = null; exportBytes = null
         if (isFinishing) {
