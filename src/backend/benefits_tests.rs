@@ -189,7 +189,8 @@ fn hosted_native_benefits_context_and_save() {
     let session: AuthSession =
         serde_json::from_str(&std::env::var("HRIS_BENEFITS_SESSION").unwrap()).unwrap();
     assert!(
-        session.user.email.starts_with("qa-gov042-benefits068-")
+        (session.user.email.starts_with("qa-gov042-benefits068-")
+            || session.user.email.starts_with("qa-gov042-acceptance069-"))
             && session.user.email.ends_with("@example.invalid")
     );
     let roles: crate::staff_roles::StaffRoles =

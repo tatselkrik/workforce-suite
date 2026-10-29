@@ -151,7 +151,8 @@ fn hosted_native_relations_context_and_save() {
     let session: AuthSession =
         serde_json::from_str(&std::env::var("HRIS_RELATIONS_SESSION").unwrap()).unwrap();
     assert!(
-        session.user.email.starts_with("qa-gov042-relations066-")
+        (session.user.email.starts_with("qa-gov042-relations066-")
+            || session.user.email.starts_with("qa-gov042-acceptance069-"))
             && session.user.email.ends_with("@example.invalid")
     );
     let roles: crate::staff_roles::StaffRoles =

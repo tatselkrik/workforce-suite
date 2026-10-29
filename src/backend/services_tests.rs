@@ -204,7 +204,8 @@ fn hosted_native_services_context_and_save() {
     let session: AuthSession =
         serde_json::from_str(&std::env::var("HRIS_SERVICES_SESSION").unwrap()).unwrap();
     assert!(
-        session.user.email.starts_with("qa-gov042-services067-")
+        (session.user.email.starts_with("qa-gov042-services067-")
+            || session.user.email.starts_with("qa-gov042-acceptance069-"))
             && session.user.email.ends_with("@example.invalid")
     );
     let roles: crate::staff_roles::StaffRoles =
@@ -238,10 +239,9 @@ fn hosted_native_services_context_and_save() {
             assert_eq!(rows.len(), 1);
             assert_eq!(rows[0]["id"], json!(employee));
             assert!(
-                rows[0]["employee_code"]
-                    .as_str()
-                    .unwrap()
-                    .starts_with("QA-SR067-")
+                rows[0]["employee_code"].as_str().is_some_and(
+                    |code| code.starts_with("QA-SR067-") || code.starts_with("QA-AT069-")
+                )
             );
             let mut d = Snapshot::signed_out();
             d.company.id = access.company_id;
@@ -255,12 +255,9 @@ fn hosted_native_services_context_and_save() {
                     let response=client.request(Method::GET,&format!("employees?id=eq.{employee_id}&company_id=eq.{}&select=id,company_id,employee_code",d.company.id)).unwrap().send().unwrap();
                     let rows: Vec<Value> = decode(response).unwrap();
                     assert_eq!(rows.len(), 1);
-                    assert!(
-                        rows[0]["employee_code"]
-                            .as_str()
-                            .unwrap()
-                            .starts_with("QA-SR067-")
-                    );
+                    assert!(rows[0]["employee_code"].as_str().is_some_and(|code| {
+                        code.starts_with("QA-SR067-") || code.starts_with("QA-AT069-")
+                    }));
                 }
                 let first = client
                     .execute_service(&d, Operation::Save(Box::new(r.clone())))

@@ -169,7 +169,8 @@ fn hosted_native_leadership_projection() {
     let session: AuthSession =
         serde_json::from_str(&std::env::var("HRIS_LEADERSHIP_SESSION").unwrap()).unwrap();
     assert!(
-        session.user.email.starts_with("qa-gov042-leadership069-")
+        (session.user.email.starts_with("qa-gov042-leadership069-")
+            || session.user.email.starts_with("qa-gov042-acceptance069-"))
             && session.user.email.ends_with("@example.invalid")
     );
     let roles: crate::staff_roles::StaffRoles =

@@ -1,5 +1,7 @@
 # Remaining HRIS roadmap â€” agreed order
 
+**Acceptance pass complete —29October2026:** the four authorized non-UI workflow stages passed on HRIS0.1.69 / Payroll0.1.0 / local portal0.1.8. See [results, retained synthetic fixtures and verification limits](ACCEPTANCE-2026-10-29.md). The bounded acceptance scheduler was deleted on completion. GUI clicks/layout and the previously deferred agency/provider/paid/hardware scope remain unverified or held; no further automatic work is queued.
+
 **Latest completion —29October2026:** HR leadership reporting is installed/private-published in0.1.69. [Delivery](HR-LEADERSHIP-0.1.69-DELIVERY.md) · [What to check](HR-LEADERSHIP-0.1.69-CHECKLIST.md). The authorized Payroll/relations/services/benefits/leadership queue is complete. Its usage-reset continuation automation was deleted on completion; earlier active-scheduler notes below are historical. Deferred agency/vendor/paid/hardware items remain on hold. No further automatic work is queued.
 
 **Latest delivery —29October2026:** benefits administration is installed/private-published
