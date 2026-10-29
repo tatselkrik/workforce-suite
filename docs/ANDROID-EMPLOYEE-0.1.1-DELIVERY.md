@@ -34,4 +34,9 @@ The retained signer matches0.1.0. APKv2 signature, non-debuggable manifest, ZIP 
 2. Open **Device alerts → Enable alerts**, allow notifications, then **Send test alert**.
 3. Close/background the app, open an alert and sign in to review the inbox. Sign out and confirm alerts disable.
 
-Physical-phone/OEM battery behavior and an actual system-tray tap remain unverified. Actual email confirmation remains deferred. Full authenticated GUI evidence remains debug-instrumented; the exact signed FCM/startup/private-HTTP evidence is separate. Actual selected image upload and CSV/PDF saves are the next existing Android emulator checks, not completed claims.
+Physical-phone/OEM battery behavior remains unverified. Actual system-tray tap is subsequently verified on the owned emulator (see acceptance below). Actual email confirmation remains deferred. Full authenticated GUI evidence remains debug-instrumented; the exact signed FCM/startup/private-HTTP evidence is separate. Selected image upload and chosen CSV/PDF saves were subsequently verified; see acceptance below.
+
+
+## Subsequent emulator file acceptance —30October2026
+
+The actual photo-picker/upload/reload/removal, chosen CSV save and Android Print/save-PDF checks now pass, including settled photo and rendered one-page PDF visual inspection.137prior record sets are preserved and signed011 was restored. No production change/new APK was required. See [acceptance and testing checklist](ANDROID-EMPLOYEE-EMULATOR-ACCEPTANCE-2026-10-30.md). Earlier pending-file statements above describe the initial delivery; the later actual tray-to-own-inbox and sign-out checks also pass. The independent Android queue and SAME scheduler are now paused on completion; physical-phone/email checks remain deferred.
