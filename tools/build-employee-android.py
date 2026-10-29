@@ -45,8 +45,18 @@ def main():
     revision = subprocess.check_output(git + ["rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     clean = not subprocess.check_output(git + ["status", "--porcelain"], cwd=ROOT, text=True).strip()
     if args.release and not args.candidate and not clean: raise RuntimeError("Commit release-affecting inputs before the verified release build")
+    connected = False
+    acceptance = ROOT / "work/android-employee/push-acceptance-results.json"
+    rollout = ROOT / "work/android-employee/push-rollout-verified.json"
+    if acceptance.exists() and rollout.exists():
+        qa = json.loads(acceptance.read_text(encoding="utf-8")); delivery = json.loads(rollout.read_text(encoding="utf-8"))
+        connected = qa.get("all_passed") is True and qa.get("proof", {}).get("actual_background_fcm_received") is True and delivery.get("all_passed") is True and delivery.get("dispatch_enabled") is True
+        for evidence in ["direct-tick-probe-results.json", "push-visual-results.json"]:
+            path = ROOT / "work/android-employee" / evidence
+            connected = connected and path.exists() and json.loads(path.read_text(encoding="utf-8")).get("all_passed") is True
+    if args.release and not args.candidate and not connected: raise RuntimeError("Finish verified background delivery and the protected rollout before the release")
     assets = APP / "app/src/main/assets";
-    (assets / "BUILD.json").write_text(json.dumps({"application_id":"io.github.tatselkrik.hrisemployee","version":"0.1.1","source_commit":revision,"source_worktree_clean":clean,"channel":"private local prototype","background_push_connected":False,"physical_phone_verified":False},indent=2)+"\n",encoding="utf-8")
+    (assets / "BUILD.json").write_text(json.dumps({"application_id":"io.github.tatselkrik.hrisemployee","version":"0.1.1","source_commit":revision,"source_worktree_clean":clean,"channel":"private local prototype","background_push_connected":connected,"physical_phone_verified":False},indent=2)+"\n",encoding="utf-8")
     source = Path(os.environ["LOCALAPPDATA"]) / "Programs/HRIS Desktop/hris-connection.json"
     profile = json.loads(source.read_text(encoding="utf-8-sig")); reference = (ROOT / "supabase/.temp/project-ref").read_text(encoding="utf-8").strip()
     if set(profile) != {"url", "publishable_key"} or not profile["publishable_key"].startswith("sb_publishable_") or profile["url"].rstrip("/") != "https://" + reference + ".supabase.co": raise RuntimeError("Company deployment identity mismatch")

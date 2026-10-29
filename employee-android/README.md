@@ -1,11 +1,11 @@
 # HRIS Employee for Android
 
-Separate private employee app0.1.0, application identifier `io.github.tatselkrik.hrisemployee`.
+Separate private employee app0.1.1, application identifier `io.github.tatselkrik.hrisemployee`.
 It connects directly to the packaged company's Supabase using a publishable key and the signed-in person's protected own-record APIs. It does not require the PC browser portal to run. Administrators also see only their own employee records in this app.
 
 The native Android shell embeds the existing Rust employee service and bundled interface on an ephemeral device-loopback socket. Existing attendance, leave, requests, payslips, inbox, contact/emergency details, profile pictures and account-security flows are reused. Kotlin/Compose supplies lifecycle, image/document pickers and Android printing. No staff administration/payroll preparation is exposed. No offline employee-data cache or saved password is provided; reopen after process death requires sign-in.
 
-Background push is **not connected** until a free company Firebase project/configuration and protected sender are resolved. The in-app inbox works independently. No external email provider, paid service, store publication or public/LAN PC portal is configured. The existing browser portal remains available and unchanged.
+After signing in, open **Device alerts** and choose **Enable alerts**. Allow the Android notification permission, then use **Send test alert**. The dedicated free Firebase connection transports only a generic inbox hint; names, pay and HR details are fetched after current sign-in. New personal inbox items are checked every15minutes, within the free sending caps. Test alerts send immediately when capacity is available. Closing the app keeps alerts enabled; **Sign out** and **Disable alerts** switch them off. A grant expires after30days without authenticated confirmation. Android notification/power settings can delay delivery. The in-app inbox remains available independently. No external email provider, paid service, store publication or public/LAN PC portal is configured. The existing browser portal remains available and unchanged.
 
 ## Build
 
