@@ -1,5 +1,9 @@
 # Remaining HRIS roadmap â€” agreed order
 
+**Latest delivery —29October2026:** benefits administration is installed/private-published
+in0.1.68. [Evidence](BENEFITS-0.1.68-DELIVERY.md). HR leadership reporting is the
+remaining active HR-workspace milestone; SAME scheduler ACTIVE.
+
 **Latest delivery —29October2026:** employee services is delivered in installed/private-published
 HRIS0.1.67 and separately packaged local portal0.1.8. [Evidence](EMPLOYEE-SERVICES-0.1.67-DELIVERY.md).
 Next: expanded benefits administration, then HR leadership reporting. SAME scheduler ACTIVE.

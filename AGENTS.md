@@ -752,3 +752,8 @@ Follow docs/BENEFITS-ADMINISTRATION.md. Benefits administration requires current
 ## Windows source text encoding
 
 When editing UTF-8 source or docs with Python, specify encoding="utf-8" for every read and write. The Windows default code page can corrupt Unicode UI strings while leaving most code compilable. Preserve the original source encoding and compare unrelated text when a scripted edit changes a large file.
+
+
+## Benefits delivered; leadership next —29October2026
+
+HRIS0.1.68 is installed/private-published from frozen62c7191cc50d7fe78042a8f498f7a985c0f2467d. Migration91 is deployed; never repeat these operations. See docs/BENEFITS-0.1.68-DELIVERY.md. Payroll100/local portal018 are unchanged. Continue only the remaining authorized HR leadership reporting milestone with the SAME active scheduler; preserve free/private/role/financial and deferred external boundaries. Pause the scheduler after the authorized queue is complete or a newer human pause.
