@@ -793,3 +793,8 @@ task's checkpoint. A deployed sender or successful SDK token is not proof of
 background reception. Preserve the immutable Android001 release and mark011 as a
 candidate until its actual reception and delivery gates pass. Keep credentials
 server-only/DPAPI-protected and preserve the existing browser portal sessions.
+
+
+## Android011 delivered; remaining emulator parity —30October2026
+
+Signed Android0.1.1 is privately packaged and installed/verified on the owned emulator from frozen0e228231fb022c9031d58f0b900449c6f89f0017. See docs/ANDROID-EMPLOYEE-0.1.1-DELIVERY.md. Migrations93–97/provider/sender/direct scheduled call and actual cold signed-APK FCM verification are complete; do not repeat them. Preserve001rollback, signer, HRIS069/Payroll011/PCportal018 and company/history. Kirk explicitly requested continued useful work to the actual usage limit and after reset; SAME resume-hris-android-after-usage-reset heartbeat is active for remaining existing Android emulator checks (chosen image upload/CSV/PDF saves), with current checkpoint/recovery protocol. No unrelated module or paid/hardware/email scope is resumed. Use only exact synthetic fixtures/new output files; preserve existing photos/data and restore the latest signed app after debug testing. Physical-phone and actual email/tray-tap limits remain explicit.
