@@ -50,14 +50,23 @@ fn date(
         });
     });
 }
-fn grid_row(ui: &mut Ui, label: &str, value: impl ToString) {
-    let width = (ui.available_width() - 115.0).clamp(160.0, 650.0);
-    ui.vertical(|ui| {
-        ui.set_width(width);
-        ui.add(egui::Label::new(label).wrap());
-    });
-    ui.label(RichText::new(value.to_string()).strong());
-    ui.end_row();
+fn metric_row(ui: &mut Ui, label: &str, value: impl ToString) -> (egui::Rect, egui::Rect) {
+    let width = (ui.available_width() - 115.0).clamp(130.0, 650.0);
+    let pair = ui
+        .horizontal_top(|ui| {
+            let left = ui
+                .vertical(|ui| {
+                    ui.set_width(width);
+                    ui.add(egui::Label::new(label).wrap());
+                })
+                .response
+                .rect;
+            let right = ui.label(RichText::new(value.to_string()).strong()).rect;
+            (left, right)
+        })
+        .inner;
+    ui.add_space(8.0);
+    pair
 }
 fn cell(ui: &mut Ui, text: impl ToString, width: f32) {
     ui.vertical(|ui| {
@@ -197,30 +206,31 @@ impl HrisApp {
             ));
             let w = &report.workforce;
             ui.add_space(8.0);
-            egui::Grid::new("leadership-workforce")
-                .num_columns(2)
-                .spacing([16.0, 8.0])
-                .show(ui, |ui| {
-                    for (label, n) in [
-                        ("Active employee records", w.active),
-                        ("Archived employee records", w.archived),
-                        (
-                            "Recorded joining dates in selected period",
-                            w.joined_in_period,
-                        ),
-                        (
-                            "Finalized exit cases in selected period",
-                            w.finalized_exits_in_period,
-                        ),
-                    ] {
-                        grid_row(ui, label, n);
-                    }
-                });
+            ui.vertical(|ui| {
+                for (label, n) in [
+                    ("Active employee records", w.active),
+                    ("Archived employee records", w.archived),
+                    (
+                        "Recorded joining dates in selected period",
+                        w.joined_in_period,
+                    ),
+                    (
+                        "Finalized exit cases in selected period",
+                        w.finalized_exits_in_period,
+                    ),
+                ] {
+                    metric_row(ui, label, n);
+                }
+            });
             ui.small("Current recorded status includes future joining dates. Joining dates are current recorded fields; exits use finalized cases and their last-working dates. Archiving alone is not a separation. Historical headcount and turnover are not reconstructed.");
         });
         ui.add_space(10.0);
         card(ui, |ui| {
             ui.label(RichText::new("Current workforce breakdown").strong());
+            #[cfg(feature = "qa-screenshot")]
+            if std::env::var("HRIS_PREVIEW_SCROLL").as_deref() == Ok("leadership-groups") {
+                ui.scroll_to_cursor(Some(Align::TOP));
+            }
             ui.horizontal_wrapped(|ui| {
                 for by in GroupBy::ALL {
                     ui.selectable_value(&mut self.leadership_state.group, by, by.label());
@@ -251,6 +261,10 @@ impl HrisApp {
         ui.add_space(10.0);
         card(ui, |ui| {
             ui.label(RichText::new("Selected-period observations").strong());
+            #[cfg(feature = "qa-screenshot")]
+            if std::env::var("HRIS_PREVIEW_SCROLL").as_deref() == Ok("leadership-months") {
+                ui.scroll_to_cursor(Some(Align::TOP));
+            }
             ui.small("Saved work dates and leave charges, with current decision states. Half-day = 0.5 day. Missing attendance is not absence.");
             egui::ScrollArea::horizontal()
                 .id_salt("leadership-month-scroll")
@@ -300,15 +314,18 @@ impl HrisApp {
             ui.add_space(10.0);
             card(ui, |ui| {
                 ui.label(RichText::new(section).strong());
+                #[cfg(feature = "qa-screenshot")]
+                if section == "Hiring & transitions"
+                    && std::env::var("HRIS_PREVIEW_SCROLL").as_deref() == Ok("leadership-hiring")
+                {
+                    ui.scroll_to_cursor(Some(Align::TOP));
+                }
                 ui.small("Current saved workflow counts across retained records, including archived employment. Overdue uses company today; only the training completion count uses the selected period.");
-                egui::Grid::new(("leadership-workload", section))
-                    .num_columns(2)
-                    .spacing([16.0, 8.0])
-                    .show(ui, |ui| {
-                        for m in Metric::ALL.into_iter().filter(|m| m.section() == section) {
-                            grid_row(ui, m.label(), report.workload[&m]);
-                        }
-                    });
+                ui.vertical(|ui| {
+                    for m in Metric::ALL.into_iter().filter(|m| m.section() == section) {
+                        metric_row(ui, m.label(), report.workload[&m]);
+                    }
+                });
                 if section == "Learning & Performance" {
                     ui.small("Completion is recorded by HR. Certificate expiry counts exclude archived/revoked and future-issued records. No scores, private notes or competency conclusions are shown.");
                 }
@@ -318,30 +335,27 @@ impl HrisApp {
         card(ui, |ui| {
             ui.label(RichText::new("Record completeness").strong());
             let w = &report.workforce;
-            egui::Grid::new("leadership-quality")
-                .num_columns(2)
-                .spacing([16.0, 8.0])
-                .show(ui, |ui| {
-                    for (label, n) in [
-                        ("Unknown joining dates (all records)", w.unknown_join),
-                        ("Future joining dates (all records)", w.future_join),
-                        (
-                            "Active records without department",
-                            w.active_without_department,
-                        ),
-                        ("Active records without location", w.active_without_location),
-                        (
-                            "Active records without employment type",
-                            w.active_without_type,
-                        ),
-                        (
-                            "Active records without a reporting manager",
-                            w.active_without_manager,
-                        ),
-                    ] {
-                        grid_row(ui, label, n);
-                    }
-                });
+            ui.vertical(|ui| {
+                for (label, n) in [
+                    ("Unknown joining dates (all records)", w.unknown_join),
+                    ("Future joining dates (all records)", w.future_join),
+                    (
+                        "Active records without department",
+                        w.active_without_department,
+                    ),
+                    ("Active records without location", w.active_without_location),
+                    (
+                        "Active records without employment type",
+                        w.active_without_type,
+                    ),
+                    (
+                        "Active records without a reporting manager",
+                        w.active_without_manager,
+                    ),
+                ] {
+                    metric_row(ui, label, n);
+                }
+            });
             ui.small("A missing manager may be intentional. Unknown dates are not assigned estimated hire or separation dates. Exports retain metric definitions and time bases.");
         });
     }
@@ -390,5 +404,28 @@ mod tests {
         assert!(s.accept(r.clone(), &foreign).is_err());
         s.filter.starts_on += Duration::days(1);
         assert!(s.accept(r, &d).is_err());
+    }
+}
+
+#[cfg(test)]
+mod layout_tests {
+    use super::*;
+    #[test]
+    fn long_metric_labels_and_values_align_without_horizontal_overflow() {
+        for width in [320.0, 520.0, 1100.0] {
+            for scale in [1.0, 1.25, 1.5] {
+                let ctx = egui::Context::default();
+                ctx.set_pixels_per_point(scale);
+                for _ in 0..3 {
+                    let mut output=ctx.run_ui(egui::RawInput{screen_rect:Some(egui::Rect::from_min_size(egui::Pos2::ZERO,egui::vec2(width,600.0))),..Default::default()},|ctx|{
+    egui::CentralPanel::default().show(ctx,|ui|{
+     let bounds=ui.max_rect();let(left,right)=metric_row(ui,"Active records without an employment type or a reporting manager",50_000);
+     assert!((left.top()-right.top()).abs()<2.0);assert!(left.right()<=right.left());assert!(right.right()<=bounds.right()+1.0);
+    });
+   });
+                    output.textures_delta.clear();
+                }
+            }
+        }
     }
 }
