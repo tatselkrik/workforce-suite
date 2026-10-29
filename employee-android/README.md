@@ -9,7 +9,7 @@ After signing in, open **Device alerts** and choose **Enable alerts**. Allow the
 
 ## Build
 
-Pinned stable inputs are in Gradle files/locks, the Gradle wrapper and rust/Cargo.lock. Use `tools/build-employee-android.py` from the HRIS root on the configured Windows workstation. It builds arm64-v8a and x86_64 Rust libraries, verifies the company publishable profile, retains the private signing identity and collects dependency notices. `--release` requires committed clean inputs; `--candidate` is explicitly not a verified release. Private assets, signing files and build output must remain ignored.
+Pinned stable inputs are in Gradle files/locks, the Gradle wrapper and rust/Cargo.lock. Use `tools/build-employee-android.py` from the HRIS root on the configured Windows workstation. It builds arm64-v8a and x86_64 Rust libraries, verifies the company publishable profile, retains the private signing identity and collects dependency notices. `--release` requires committed clean inputs; `--candidate` is explicitly not a verified release. Private assets, signing files and build output must remain ignored. Builds consume the pinned dependency locks; use `--refresh-locks` only for an intentional dependency update, then commit the reviewed lock changes. Final releases check that source stays clean after assembly.
 
 ## Phone review
 

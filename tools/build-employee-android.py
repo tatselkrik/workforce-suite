@@ -32,7 +32,7 @@ def signing(env):
         command([JAVA / "bin/keytool.exe", "-genkeypair", "-noprompt", "-keystore", key, "-storetype", "PKCS12", "-alias", "hris-employee", "-keyalg", "RSA", "-keysize", "3072", "-validity", "10000", "-dname", "CN=HRIS Employee Prototype,O=Private prototype", "-storepass:env", "HRIS_ANDROID_SIGNING_PASSWORD", "-keypass:env", "HRIS_ANDROID_SIGNING_PASSWORD"], env)
     env["HRIS_ANDROID_SIGNING_PASSWORD"] = password; env["HRIS_ANDROID_KEYSTORE"] = str(key)
 def main():
-    parser = argparse.ArgumentParser(); parser.add_argument("--skip-native", action="store_true"); parser.add_argument("--instrumentation", action="store_true"); parser.add_argument("--release", action="store_true"); parser.add_argument("--candidate", action="store_true"); args = parser.parse_args()
+    parser = argparse.ArgumentParser(); parser.add_argument("--skip-native", action="store_true"); parser.add_argument("--instrumentation", action="store_true"); parser.add_argument("--release", action="store_true"); parser.add_argument("--candidate", action="store_true"); parser.add_argument("--refresh-locks", action="store_true"); args = parser.parse_args()
     env = os.environ.copy(); env.update(JAVA_HOME=str(JAVA), GRADLE_USER_HOME=str(ROOT / "work/android-gradle-cache"), CARGO_TARGET_DIR=str(ROOT / "work/android-rust-target"), CARGO_INCREMENTAL="0", CARGO_PROFILE_DEV_DEBUG="0", CARGO_PROFILE_TEST_DEBUG="0")
     bin = SDK / "ndk/30.0.16248370/toolchains/llvm/prebuilt/windows-x86_64/bin"
     for target, abi in [("aarch64-linux-android", "arm64-v8a"), ("x86_64-linux-android", "x86_64")]:
@@ -68,10 +68,11 @@ def main():
     firebase_guard = (PRIVATE / "FIREBASE-AUTHORIZATION.md").read_text(encoding="utf-8")
     if "`" + firebase["project_info"]["project_id"] + "`" not in firebase_guard or firebase["client"][0]["client_info"]["android_client_info"]["package_name"] != "io.github.tatselkrik.hrisemployee": raise RuntimeError("Firebase deployment target mismatch")
     signing(env)
-    command([ROOT / "work/android-tools/gradle-9.8.2/bin/gradle.bat", "-p", APP, ":app:dependencies", "--configuration", "releaseRuntimeClasspath" if args.release else "debugRuntimeClasspath", "--write-locks", "--no-daemon"], env)
+    command([ROOT / "work/android-tools/gradle-9.8.2/bin/gradle.bat", "-p", APP, ":app:dependencies", "--configuration", "releaseRuntimeClasspath" if args.release else "debugRuntimeClasspath", *(["--write-locks"] if args.refresh_locks else []), "--no-daemon"], env)
     command([os.sys.executable, ROOT / "tools/android-employee-notices.py"], env)
     tasks = [":app:assembleRelease", ":app:lintRelease"] if args.release else [":app:assembleDebug", ":app:testDebugUnitTest", ":app:lintDebug"]
     if args.instrumentation: tasks.append(":app:assembleDebugAndroidTest")
-    command([ROOT / "work/android-tools/gradle-9.8.2/bin/gradle.bat", "-p", APP, *tasks, "--write-locks", "--no-daemon"], env)
+    command([ROOT / "work/android-tools/gradle-9.8.2/bin/gradle.bat", "-p", APP, *tasks, *(["--write-locks"] if args.refresh_locks else []), "--no-daemon"], env)
+    if args.release and not args.candidate and subprocess.check_output(git + ["status", "--porcelain"], cwd=ROOT, text=True).strip(): raise RuntimeError("Release inputs changed during the build; commit and rebuild before delivery")
     print("Private Android build completed; deployment and signing credentials were not logged")
 if __name__ == "__main__": main()
