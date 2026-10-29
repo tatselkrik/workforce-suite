@@ -96,9 +96,10 @@ mod tests {
     use super::*;
     #[test]
     fn selected_payroll_section_and_settings_stay_visible_in_short_and_tall_sidebars() {
+        assert!(!crate::desktop::PAYROLL_TABS.contains(&"Data exchange"));
         for dark in [false, true] {
             for height in [90.0, 180.0, 420.0, 600.0] {
-                for tab in 0..16 {
+                for tab in 0..=crate::desktop::PAYROLL_TABS.len() {
                     let ctx = egui::Context::default();
                     configure_theme(&ctx);
                     ctx.set_theme(if dark {
@@ -118,7 +119,7 @@ mod tests {
                             |ui| {
                                 let (_, rect, viewport) = show(
                                     ui,
-                                    if tab == 15 {
+                                    if tab == crate::desktop::PAYROLL_TABS.len() {
                                         Page::Settings
                                     } else {
                                         Page::Payroll

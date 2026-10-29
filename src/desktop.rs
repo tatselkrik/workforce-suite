@@ -364,7 +364,6 @@ pub const PAYROLL_TABS: &[&str] = &[
     "Wage compliance",
     "Amendments",
     "Government",
-    "Data exchange",
 ];
 
 #[cfg(test)]

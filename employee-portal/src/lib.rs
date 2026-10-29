@@ -326,12 +326,23 @@ const TOTAL_FIELDS: &[&str] = &[
 impl Portal {
     pub fn new(config: Config) -> Result<Self> {
         let branding = Arc::new(Mutex::new(config.branding.clone()));
+        let client = Client::builder()
+            .timeout(Duration::from_secs(20))
+            .redirect(reqwest::redirect::Policy::none());
+        #[cfg(feature = "android-tls")]
+        let client = {
+            // Android uses reviewed Mozilla roots without a Java trust-manager bridge.
+            // Certificate and hostname verification remain enabled.
+            let roots = rustls::RootCertStore { roots: webpki_roots::TLS_SERVER_ROOTS.to_vec() };
+            let tls = rustls::ClientConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider()))
+                .with_safe_default_protocol_versions()?
+                .with_root_certificates(roots)
+                .with_no_client_auth();
+            client.use_preconfigured_tls(tls)
+        };
         Ok(Self {
             config: Arc::new(config),
-            client: Client::builder()
-                .timeout(Duration::from_secs(20))
-                .redirect(reqwest::redirect::Policy::none())
-                .build()?,
+            client: client.build()?,
             sessions: Default::default(),
             attempts: Default::default(),
             auth_slots: Arc::new(Semaphore::new(8)),

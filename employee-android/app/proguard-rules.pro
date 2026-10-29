@@ -1,0 +1,2 @@
+-keep class io.github.tatselkrik.hrisemployee.RustPortal { *; }
+-keepclasseswithmembernames class * { native <methods>; }

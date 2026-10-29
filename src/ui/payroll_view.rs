@@ -526,6 +526,11 @@ impl HrisApp {
             self.payroll_forms(ui);
             return;
         }
+        // External accounting/payroll integration was declined for this deployment.
+        // Retain its audit data and compatibility code without an active workspace.
+        if self.payroll_state.tab >= crate::desktop::PAYROLL_TABS.len() {
+            self.payroll_state.tab = 0;
+        }
         let hr = self.payroll_administration();
         if !hr && ![3, 6, 7, 8, 10, 12].contains(&self.payroll_state.tab) {
             self.payroll_state.tab = 3;
