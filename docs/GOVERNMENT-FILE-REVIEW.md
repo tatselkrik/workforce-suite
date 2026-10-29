@@ -154,3 +154,10 @@ reference draft. Preserve issued figures and reviewed earned/received periods;
 reject missing/ambiguous inputs. Never fabricate identifiers, classifications,
 shares or certificates. Current employer portal credentials, employee-data
 uploads, actual filing/payment and challenge bypass remain outside this task.
+
+
+## Public-route refresh —29October2026
+
+Kirk resumed public-source research. The official [2026 SSS Citizen's Charter](https://www.sss.gov.ph/wp-content/uploads/2026/07/2026-SSS-Citizens-Charter-1st-Edition-External-Services.pdf) documents registered Employer My.SSS PRN/e-CCL steps on PDF pages22–24. It does not establish a bulk-upload contract. Earlier2023 AMS editor instructions remain historical; the public downloads page still lists R3 File Generator2023.
+
+BIR Downloadables still lists Alphalist; supplied local7.4 files remain prepared and unexecuted. PhilHealth's current employer page still directs reporting through EPRS without supplying a verified current upload-column contract in this review. Both known Pag-IBIG MCRF/eSRS guide URLs again returned browser/reCAPTCHA challenges; none was bypassed. No employer login/template, official-runtime acceptance, real filing or payment occurred. See [all verified links, free email/push limits and local emulator capability](FREE-PROTOTYPE-OPTIONS-2026-10-29.md). These bounded findings do not complete the deferred agency milestone.
