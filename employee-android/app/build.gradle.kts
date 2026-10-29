@@ -1,4 +1,4 @@
-plugins { id("com.android.application"); id("org.jetbrains.kotlin.plugin.compose") }
+plugins { id("com.android.application"); id("org.jetbrains.kotlin.plugin.compose"); id("com.google.gms.google-services") }
 android {
     namespace = "io.github.tatselkrik.hrisemployee"
     compileSdk = 37
@@ -8,7 +8,8 @@ android {
     defaultConfig {
         applicationId = "io.github.tatselkrik.hrisemployee"
         minSdk = 26; targetSdk = 37
-        versionCode = 1; versionName = "0.1.0"
+        versionCode = 2; versionName = "0.1.1"
+        buildConfigField("boolean", "PUSH_BACKEND_ENABLED", "false")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
@@ -30,6 +31,8 @@ android {
 }
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:35.1.0"))
+    implementation("com.google.firebase:firebase-messaging")
     val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     implementation("androidx.activity:activity-compose:1.13.0")
@@ -37,6 +40,7 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.webkit:webkit:1.18.0")
     implementation("androidx.lifecycle:lifecycle-runtime:2.11.0")
+    implementation("androidx.fragment:fragment:1.9.1")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")

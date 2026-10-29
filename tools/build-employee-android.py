@@ -46,15 +46,20 @@ def main():
     clean = not subprocess.check_output(git + ["status", "--porcelain"], cwd=ROOT, text=True).strip()
     if args.release and not args.candidate and not clean: raise RuntimeError("Commit release-affecting inputs before the verified release build")
     assets = APP / "app/src/main/assets";
-    (assets / "BUILD.json").write_text(json.dumps({"application_id":"io.github.tatselkrik.hrisemployee","version":"0.1.0","source_commit":revision,"source_worktree_clean":clean,"channel":"private local prototype","background_push_connected":False,"physical_phone_verified":False},indent=2)+"\n",encoding="utf-8")
+    (assets / "BUILD.json").write_text(json.dumps({"application_id":"io.github.tatselkrik.hrisemployee","version":"0.1.1","source_commit":revision,"source_worktree_clean":clean,"channel":"private local prototype","background_push_connected":False,"physical_phone_verified":False},indent=2)+"\n",encoding="utf-8")
     source = Path(os.environ["LOCALAPPDATA"]) / "Programs/HRIS Desktop/hris-connection.json"
     profile = json.loads(source.read_text(encoding="utf-8-sig")); reference = (ROOT / "supabase/.temp/project-ref").read_text(encoding="utf-8").strip()
     if set(profile) != {"url", "publishable_key"} or not profile["publishable_key"].startswith("sb_publishable_") or profile["url"].rstrip("/") != "https://" + reference + ".supabase.co": raise RuntimeError("Company deployment identity mismatch")
     shutil.copyfile(source, assets / "hris-connection.json")
     branding = ROOT / "work/portal-deployment-0.1.8/HRIS-Employee-Portal/hris-branding.json"
     if branding.exists(): shutil.copyfile(branding, assets / "hris-branding.json")
-    command([os.sys.executable, ROOT / "tools/android-employee-notices.py"], env)
+    if not (APP / "app/google-services.json").exists(): raise RuntimeError("Prepare the authorized Firebase Android configuration first")
+    firebase = json.loads((APP / "app/google-services.json").read_text(encoding="utf-8"))
+    firebase_guard = (PRIVATE / "FIREBASE-AUTHORIZATION.md").read_text(encoding="utf-8")
+    if "`" + firebase["project_info"]["project_id"] + "`" not in firebase_guard or firebase["client"][0]["client_info"]["android_client_info"]["package_name"] != "io.github.tatselkrik.hrisemployee": raise RuntimeError("Firebase deployment target mismatch")
     signing(env)
+    command([ROOT / "work/android-tools/gradle-9.8.2/bin/gradle.bat", "-p", APP, ":app:dependencies", "--configuration", "releaseRuntimeClasspath" if args.release else "debugRuntimeClasspath", "--write-locks", "--no-daemon"], env)
+    command([os.sys.executable, ROOT / "tools/android-employee-notices.py"], env)
     tasks = [":app:assembleRelease", ":app:lintRelease"] if args.release else [":app:assembleDebug", ":app:testDebugUnitTest", ":app:lintDebug"]
     if args.instrumentation: tasks.append(":app:assembleDebugAndroidTest")
     command([ROOT / "work/android-tools/gradle-9.8.2/bin/gradle.bat", "-p", APP, *tasks, "--write-locks", "--no-daemon"], env)
