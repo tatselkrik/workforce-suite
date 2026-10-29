@@ -808,3 +808,8 @@ Remaining actual photo-picker/upload/reload/removal, chosen CSV save, Android Pr
 ## HRIS visual refresh authorized —30October2026
 
 Kirk approved comparison D Teal hybrid light and C Focused charcoal dark for HRIS Desktop first, with continuous in-scope work and reset continuation. Follow docs/HRIS-DESIGN-REFRESH.md. Preserve separate Payroll/Android/portal, current role/data/workflow/draft boundaries and immutable deliveries. This resumes only the native HRIS visual refresh, not the completed Android work or deferred modules. Reuse resume-hris-android-after-usage-reset (renamed HRIS design) with current checkpoint/recovery protocol; pause on verified completed delivery. Fictional concept metrics are not source data; no fake dashboard facts. Install each verified authorized HRIS release under existing exact-channel rules.
+
+
+## HRIS visual refresh delivered —30October2026
+
+HRIS0.1.70 is installed and privately published from frozen7a63a85bfa42439c68966a4db120e803a6000545. See docs/HRIS-0.1.70-DELIVERY.md and its review checklist.872default native checks,23actually reviewed fictional native views, exact installer/recovery, existing-key signature, actual installation and private hash/access/feed verification pass. No schema/rate/backend change; Payroll011/Android011/portal018 stay intact. Account Manager visual is its protected-fetch demo state; installed signed-in clicks and subjective monitor review remain explicitly unverified. The approved HRIS-only refresh is complete; pause SAME resume-hris-android-after-usage-reset heartbeat. Never repeat070delivery or resume another product/deferred module from older active-queue notes. Await Kirk's next scoped instruction.
