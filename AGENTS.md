@@ -757,3 +757,8 @@ When editing UTF-8 source or docs with Python, specify encoding="utf-8" for ever
 ## Benefits delivered; leadership next —29October2026
 
 HRIS0.1.68 is installed/private-published from frozen62c7191cc50d7fe78042a8f498f7a985c0f2467d. Migration91 is deployed; never repeat these operations. See docs/BENEFITS-0.1.68-DELIVERY.md. Payroll100/local portal018 are unchanged. Continue only the remaining authorized HR leadership reporting milestone with the SAME active scheduler; preserve free/private/role/financial and deferred external boundaries. Pause the scheduler after the authorized queue is complete or a newer human pause.
+
+
+## HR leadership reporting contract
+
+Follow docs/HR-LEADERSHIP.md. Leadership aggregates require current protected Administrator access and active employment, separate from HR/team operational reports. Keep the stable aggregate projection outside Snapshot, Payroll and the portal; never include private cases/services/benefits or financial/person-level facts. Current group labels and saved workflow states are not historical headcount or turnover. Joining dates, finalized exit dates, saved attendance and leave charges retain their explicit bases and unknowns. Generate/export fresh, recheck authority before file IO, preserve new-file guards and reject budgets/inconsistent saved charges without truncated totals. This candidate is not delivered until verification, guarded deployment, installation and authorized publication finish.

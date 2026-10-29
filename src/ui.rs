@@ -1,3 +1,4 @@
+mod leadership_view;
 mod benefits_view;
 mod services_view;
 mod relations_view;
@@ -107,6 +108,7 @@ pub struct HrisApp {
     services_state: services_view::State,
     relations_state: relations_view::State,
     benefits_state: benefits_view::State,
+    leadership_state: leadership_view::State,
     desktop: crate::desktop::Application,
     data: Snapshot,
     page: Page,
@@ -381,6 +383,7 @@ impl HrisApp {
             calculation_state: calculations_view::State::default(),
             request_state: requests_view::State::default(),
             overtime_state: overtime_view::State::default(),
+            leadership_state: leadership_view::State::new(report_state.filter.ends_on),
             report_state,
             import_state: imports_view::State::default(),
             attendance_import_state: attendance_import_view::State::default(),
@@ -1068,6 +1071,8 @@ impl HrisApp {
         app.prepare_services_preview();
         #[cfg(feature="qa-screenshot")]
         app.prepare_benefits_preview();
+        #[cfg(feature="qa-screenshot")]
+        app.prepare_leadership_preview();
         if app.data.mode != Mode::SignedOut {
             desktop.product.project(&mut app.data);
             if desktop.product == crate::desktop::Product::Payroll {
@@ -1134,6 +1139,7 @@ impl HrisApp {
                 continue;
             }
             self.busy = false;
+            if update.leadership_clear { self.leadership_state.report=None; }
             if update.services_clear { self.services_state.clear_context(); }
             if update.services_rejected { self.services_state.reject(); }
             if update.benefits_clear { self.benefits_state.clear_context(); }
@@ -1160,6 +1166,7 @@ impl HrisApp {
                         self.services_state = Default::default();
                         clear_edit_history(ctx, &["services-title", "services-body", "services-due"]);
                         self.benefits_state=Default::default();benefits_view::clear_undo(ctx);
+                        self.leadership_state=leadership_view::State::new(data.company.today());
                         self.relations_state = Default::default();
                         clear_edit_history(ctx, &["relations-title", "relations-body"]);
                         self.organization = organization_view::State::default();
@@ -1201,6 +1208,7 @@ impl HrisApp {
                         self.services_state = Default::default();
                         clear_edit_history(ctx, &["services-title", "services-body", "services-due"]);
                         self.benefits_state=Default::default();benefits_view::clear_undo(ctx);
+                        self.leadership_state=leadership_view::State::new(data.company.today());
                         self.relations_state = Default::default();
                         clear_edit_history(ctx, &["relations-title", "relations-body"]);
                         self.organization = organization_view::State::default();
@@ -1292,10 +1300,12 @@ impl HrisApp {
                             Err(e) => { self.services_state = Default::default(); clear_edit_history(ctx, &["services-title", "services-body", "services-due"]); self.notice = Some((e.to_string(),true)); },
                         }
                     }
+                    if let Some(report)=update.leadership { if let Err(e)=self.leadership_state.accept(report,&data) { self.leadership_state.report=None;self.notice=Some((e.to_string(),true)); } }
                     if let Some(response)=update.benefits {
                         match self.benefits_state.accept(response,&data){
                             Ok(true)=>benefits_view::clear_undo(ctx),Ok(false)=>{},
-                            Err(e)=>{self.benefits_state=Default::default();benefits_view::clear_undo(ctx);self.notice=Some((e.to_string(),true));},
+                            Err(e)=>{self.benefits_state=Default::default();benefits_view::clear_undo(ctx);
+                        self.leadership_state=leadership_view::State::new(data.company.today());self.notice=Some((e.to_string(),true));},
                         }
                     }
                     if let Some(response) = update.relations {

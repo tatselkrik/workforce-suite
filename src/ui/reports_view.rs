@@ -239,6 +239,7 @@ impl HrisApp {
                         !self.import_state.open
                             && !self.attendance_import_state.open
                             && !self.leave_request_import_state.open
+                            && !self.leadership_state.open
                             && self.report_state.filter.kind == kind,
                         kind.label(),
                     )
@@ -247,6 +248,7 @@ impl HrisApp {
                     if self.report_state.filter.kind != kind {
                         self.report_state.filter.columns = None;
                     }
+                    self.leadership_state.open=false;
                     self.report_state.filter.kind = kind;
                     if kind == Kind::Headcount {
                         self.report_state.filter.starts_on = self.data.company.today();
@@ -258,6 +260,11 @@ impl HrisApp {
                 }
             }
         });
+        if crate::leadership::eligible(&self.data.access) {
+            if ui.selectable_label(self.leadership_state.open,"Leadership").clicked() {
+                self.leadership_state.open=true;self.import_state.open=false;self.attendance_import_state.open=false;self.leave_request_import_state.open=false;
+            }
+        } else { self.leadership_state.open=false;self.leadership_state.report=None; }
         ui.horizontal_wrapped(|ui| {
             if self
                 .data
@@ -267,6 +274,7 @@ impl HrisApp {
                     .selectable_label(self.import_state.open, "Employee import")
                     .clicked()
             {
+                self.leadership_state.open=false;
                 self.import_state.open = true;
                 self.attendance_import_state.open = false;
                 self.leave_request_import_state.open = false;
@@ -280,6 +288,7 @@ impl HrisApp {
                     .clicked()
             {
                 self.import_state.open = false;
+                self.leadership_state.open=false;
                 self.attendance_import_state.open = true;
                 self.leave_request_import_state.open = false;
             }
@@ -293,9 +302,11 @@ impl HrisApp {
             {
                 self.import_state.open = false;
                 self.attendance_import_state.open = false;
+                self.leadership_state.open=false;
                 self.leave_request_import_state.open = true;
             }
         });
+        if self.leadership_state.open { self.leadership(ui);return; }
         if self.leave_request_import_state.open {
             self.leave_request_import(ui);
             return;

@@ -13,4 +13,4 @@ id = "io.github.tatselkrik.payrolldesktop"
 qa-screenshot = ["hris-desktop/qa-screenshot"]
 
 [dependencies]
-hris-desktop = { path = "..", version = "=0.1.68" }
+hris-desktop = { path = "..", version = "=0.1.69" }

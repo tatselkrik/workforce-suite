@@ -1,3 +1,6 @@
+mod leadership_adapter;
+#[cfg(test)]
+mod leadership_tests;
 mod benefits_adapter;
 #[cfg(test)]
 mod benefits_tests;
@@ -2388,6 +2391,7 @@ pub enum Command {
         preview: crate::imports::Preview,
         destination: std::path::PathBuf,
     },
+    Leadership { filter: crate::leadership::Filter, destination: Option<std::path::PathBuf> },
     Report {
         filter: crate::reports::Filter,
         destination: Option<std::path::PathBuf>,
@@ -2412,6 +2416,8 @@ pub enum Command {
 }
 
 pub struct Update {
+    pub leadership: Option<crate::leadership::Report>,
+    pub leadership_clear: bool,
     pub benefits: Option<crate::benefits::Response>,
     pub benefits_clear: bool,
     pub benefits_rejected: bool,
@@ -2524,6 +2530,8 @@ fn worker_in(
             let mut staff_roles_result = None;
             let mut workspace_receipt_result = None;
             let mut staff_provision_result = None;
+            let leadership_requested = matches!(&command,Command::Leadership {..});
+            let mut leadership_result = None;
             let mut report_result = None;
             let mut payroll_report_result = None;
             let mut payroll_exchange_result = None;
@@ -3304,6 +3312,12 @@ fn worker_in(
                     message="Payroll export saved from freshly checked access. No payment or government filing was made.".into();
                     Ok(data)
                 })(),
+                Command::Leadership { filter, destination } => (|| {
+                    ensure!(product != Some(crate::desktop::Product::Payroll), "Leadership reporting belongs in HRIS.");
+                    let report=cloud.as_mut().context("Sign in to the configured company to generate leadership reports.")?.leadership_report(&current,&filter,destination.as_deref())?;
+                    message=if destination.is_some(){"Leadership export saved from freshly checked Administrator access."}else{"Current leadership report generated from protected aggregate facts."}.into();
+                    leadership_result=Some(report);Ok(current.clone())
+                })(),
                 Command::Report {
                     filter,
                     destination,
@@ -3593,6 +3607,8 @@ fn worker_in(
             }
             if events
                 .send(Update {
+                    leadership: if result.is_ok() { leadership_result } else { None },
+                    leadership_clear: !leadership_requested || result.is_err(),
                     services: services_result,
                     services_clear,
                     services_rejected,
@@ -3661,6 +3677,8 @@ fn worker_in(
                             services: None,
                             services_clear: false,
                             services_rejected: false,
+                            leadership: None,
+                            leadership_clear: true,
                             benefits: None,
                             benefits_clear: false,
                             benefits_rejected: false,
