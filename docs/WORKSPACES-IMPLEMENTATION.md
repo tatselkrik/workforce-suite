@@ -1,5 +1,7 @@
 # HRIS workspaces and Payroll implementation â€” approved27October2026
 
+**Latest completion —29October2026:** HR leadership reporting is installed/private-published in0.1.69. [Delivery](HR-LEADERSHIP-0.1.69-DELIVERY.md) · [What to check](HR-LEADERSHIP-0.1.69-CHECKLIST.md). The authorized Payroll/relations/services/benefits/leadership queue is complete. Its usage-reset continuation automation was deleted on completion; earlier active-scheduler notes below are historical. Deferred agency/vendor/paid/hardware items remain on hold. No further automatic work is queued.
+
 **Latest delivery —29October2026:** benefits administration is installed/private-published
 in0.1.68. [Evidence](BENEFITS-0.1.68-DELIVERY.md). Continue HR leadership reporting;
 the SAME scheduler remains ACTIVE. Earlier entries are historical.
@@ -82,11 +84,12 @@ prototype for small companies and larger employers, including BPOs.
 - [x] ~~Employee-service requests with ownership, routing, status and retained history.~~
   Delivered/installed/private-published0.1.67, separate local portal0.1.8 packaged;
   see [evidence](EMPLOYEE-SERVICES-0.1.67-DELIVERY.md).
-- [x] ~~Expanded benefits administration for eligibility, enrollment and dependents;~~
+- [x] ~~Expanded benefits administration for eligibility, enrollment and dependents;~~~~
   Delivered/installed/private-published0.1.68; see [evidence](BENEFITS-0.1.68-DELIVERY.md).
   approved monetary effects remain explicit payroll inputs, never automatic pay
   or deduction changes from an unreviewed benefits edit.
-- [ ] Expanded HR leadership reporting using defined, supportable historical facts.
+- [x] ~~Expanded HR leadership reporting using defined, supportable historical facts.~~
+  Delivered/installed/private-published0.1.69; see [evidence](HR-LEADERSHIP-0.1.69-DELIVERY.md).
   Keep unknown turnover/service dates explicit; no invented staffing forecasts.
 
 Cross out only implemented, proportionately verified and delivered scope. Record

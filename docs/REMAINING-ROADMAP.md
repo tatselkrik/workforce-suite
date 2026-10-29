@@ -1,5 +1,7 @@
 # Remaining HRIS roadmap â€” agreed order
 
+**Latest completion —29October2026:** HR leadership reporting is installed/private-published in0.1.69. [Delivery](HR-LEADERSHIP-0.1.69-DELIVERY.md) · [What to check](HR-LEADERSHIP-0.1.69-CHECKLIST.md). The authorized Payroll/relations/services/benefits/leadership queue is complete. Its usage-reset continuation automation was deleted on completion; earlier active-scheduler notes below are historical. Deferred agency/vendor/paid/hardware items remain on hold. No further automatic work is queued.
+
 **Latest delivery —29October2026:** benefits administration is installed/private-published
 in0.1.68. [Evidence](BENEFITS-0.1.68-DELIVERY.md). HR leadership reporting is the
 remaining active HR-workspace milestone; SAME scheduler ACTIVE.
