@@ -1,3 +1,4 @@
+mod design;
 mod leadership_view;
 mod benefits_view;
 mod services_view;
@@ -198,7 +199,7 @@ pub struct HrisApp {
     qa_started: std::time::Instant,
 }
 
-pub fn configure_theme(ctx: &egui::Context) {
+fn configure_base_theme(ctx: &egui::Context) {
     ctx.set_theme(egui::Theme::Light);
     for theme in [egui::Theme::Light, egui::Theme::Dark] {
         ctx.style_mut_of(theme, |style| {
@@ -283,10 +284,19 @@ pub fn configure_theme(ctx: &egui::Context) {
     }
 }
 
+pub fn configure_theme(ctx: &egui::Context) {
+    configure_theme_for(ctx, crate::desktop::Product::Hris);
+}
+fn configure_theme_for(ctx: &egui::Context, product: crate::desktop::Product) {
+    configure_base_theme(ctx);
+    design::apply(ctx, product);
+}
+
 fn muted(ui: &Ui) -> Color32 {
     ui.visuals().weak_text_color()
 }
 fn accent(ui: &Ui) -> Color32 {
+    if design::enabled(ui.ctx()) { return design::palette(ui).accent; }
     if ui.visuals().dark_mode {
         Color32::from_rgb(102, 224, 201)
     } else {
@@ -302,7 +312,7 @@ impl HrisApp {
         Self::new_for(cc, crate::desktop::Application::hris())
     }
     pub fn new_for(cc: &eframe::CreationContext<'_>, desktop: crate::desktop::Application) -> Self {
-        configure_theme(&cc.egui_ctx);
+        configure_theme_for(&cc.egui_ctx, desktop.product);
         let (connection, deployment_error) = match ConnectionConfig::load_for(desktop.product) {
             Ok(config) if config.url.is_empty() => (None, None),
             Ok(config) => (Some(config), None),
@@ -1944,14 +1954,14 @@ impl HrisApp {
                 ui,
                 self.company_logo.as_ref(),
                 &self.data.company.name,
-                if compact { 54.0 } else { 72.0 },
+                if design::enabled(ui.ctx()) {if compact {40.0}else{52.0}} else if compact {54.0}else{72.0},
             );
             ui.add_space(if compact { 6.0 } else { 10.0 });
             ui.add(
                 egui::Label::new(
                     RichText::new(&self.data.company.name)
-                        .color(Color32::WHITE)
-                        .size(18.0)
+                        .color(if design::enabled(ui.ctx()) { design::palette(ui).text } else { Color32::WHITE })
+                        .size(if design::enabled(ui.ctx()) {if compact {15.0}else{17.0}}else{18.0})
                         .strong(),
                 )
                 .wrap(),
@@ -1960,11 +1970,11 @@ impl HrisApp {
         ui.vertical_centered(|ui| {
             ui.label(
                 RichText::new(self.desktop.product.name())
-                    .color(Color32::from_rgb(175, 193, 207))
+                    .color(if design::enabled(ui.ctx()) { design::palette(ui).secondary } else { Color32::from_rgb(175, 193, 207) })
                     .size(12.0),
             );
         });
-        ui.add_space(if compact { 14.0 } else { 28.0 });
+        ui.add_space(if design::enabled(ui.ctx()) {if compact {10.0}else{18.0}}else if compact {14.0}else{28.0});
         let nav_height = (ui.available_height() - 112.0).max(70.0);
         if self.desktop.product == crate::desktop::Product::Payroll {
             let follow = self.sidebar_last_page != Some(self.page)
@@ -2059,23 +2069,13 @@ impl HrisApp {
                                     },
                                 )
                                 .size(10.0)
-                                .color(Color32::from_rgb(140, 160, 179))
+                                .color(design::palette(ui).secondary)
                                 .strong(),
                             );
                         }
                     }
                     let selected = self.page == entry.page;
-                    let label = RichText::new(entry.label).size(14.0).color(if selected {
-                        Color32::WHITE
-                    } else {
-                        Color32::from_rgb(175, 193, 207)
-                    });
-                    let button = egui::Button::new(label)
-                        .fill(if selected { TEAL } else { Color32::TRANSPARENT })
-                        .stroke(Stroke::NONE)
-                        .corner_radius(8);
-                    let response = ui.add_sized([ui.available_width(), button_height], button);
-                    if response.clicked() {
+                    if design::nav_item(ui, entry.page, entry.label, selected, button_height) {
                         self.navigate(entry.page, ui.ctx());
                     }
                 }
@@ -2089,7 +2089,7 @@ impl HrisApp {
                 } else {
                     "CONNECTED"
                 })
-                .color(Color32::from_rgb(115, 214, 197))
+                .color(if design::enabled(ui.ctx()) { accent(ui) } else { Color32::from_rgb(115, 214, 197) })
                 .size(11.0)
                 .strong(),
             );
@@ -2124,6 +2124,9 @@ impl HrisApp {
             ui.label(RichText::new("An Administrator hid this section. Finish or cancel your current changes; existing records are retained.").color(ui.visuals().warn_fg_color));
             ui.add_space(8.0);
         }
+        if self.desktop.product == crate::desktop::Product::Hris {
+            self.design_toolbar(ui);
+        } else {
         ui.horizontal(|ui| {
             ui.label(
                 RichText::new(
@@ -2167,31 +2170,13 @@ impl HrisApp {
                 );
             });
         });
+        }
         ui.add_space(14.0);
         self.update_banner(ui);
-        if self.desktop.product == crate::desktop::Product::Hris
-            && self
-                .data
-                .access
-                .allows(crate::staff_roles::Capability::PayrollPreparation)
-        {
-            if ui
-                .add_enabled(
-                    !self.busy && !self.has_unsaved_edits(),
-                    egui::Button::new("Open Payroll Desktop"),
-                )
-                .clicked()
-            {
-                if let Err(error) = crate::desktop::open_payroll() {
-                    self.notice = Some((error.to_string(), true));
-                }
-            }
-            ui.add_space(8.0);
-        }
         let (title, subtitle) = match self.page {
             Page::Overview => (
-                "Your people, at a glance",
-                "A clear view of your team and today's HR activity.",
+                "Overview",
+                "People and work, at a glance.",
             ),
             Page::Employees => (
                 if self.employee_form.is_some() {
@@ -2329,7 +2314,9 @@ impl HrisApp {
         }
         if let Some((message, error)) = self.notice.clone() {
             Frame::new()
-                .fill(if error {
+                .fill(if design::enabled(ui.ctx()) {
+                    let p=design::palette(ui);if error {p.error_soft}else{p.positive_soft}
+                } else if error {
                     Color32::from_rgb(255, 235, 231)
                 } else {
                     Color32::from_rgb(229, 244, 238)
@@ -2338,7 +2325,9 @@ impl HrisApp {
                 .inner_margin(10)
                 .show(ui, |ui| {
                     ui.horizontal_wrapped(|ui| {
-                        ui.label(RichText::new(message).color(if error {
+                        ui.label(RichText::new(message).color(if design::enabled(ui.ctx()) {
+                            let p=design::palette(ui);if error {p.error}else{p.positive}
+                        } else if error {
                             Color32::from_rgb(160, 52, 38)
                         } else {
                             TEAL
@@ -2500,126 +2489,34 @@ impl HrisApp {
                 r.status == LeaveStatus::Approved && r.charges().iter().any(|d| d.date == today)
             })
             .count();
-        ui.columns(4, |columns| {
-            for (ui, (label, value, caption)) in columns.iter_mut().zip([
-                (
-                    "ACTIVE EMPLOYEES",
-                    active,
-                    "Your attendance and leave scope",
-                ),
-                ("CHECKED IN TODAY", attendance, "Daily attendance records"),
-                ("AWAITING REVIEW", pending, "Pending leave requests"),
-                ("ON LEAVE TODAY", away, "Approved time away"),
-            ]) {
-                card(ui, |ui| {
-                    ui.label(RichText::new(label).color(muted(ui)).size(10.0).strong());
-                    ui.label(RichText::new(value.to_string()).size(34.0).strong());
-                    ui.label(RichText::new(caption).color(muted(ui)).size(11.0));
-                });
-            }
-        });
-        ui.add_space(14.0);
-        card(ui, |ui| {
-            ui.horizontal(|ui| {
-                ui.label(RichText::new("Today's attendance").size(18.0).strong());
-                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    if ui.button("View attendance").clicked() {
-                        self.page = Page::Attendance;
-                    }
-                });
+        let metrics = [
+            (Page::Employees, "Active employees", active, "Your attendance and leave scope"),
+            (Page::Attendance, "Checked in today", attendance, "Daily attendance records"),
+            (Page::Leave, "Awaiting review", pending, "Pending leave requests"),
+            (Page::Leave, "On leave today", away, "Approved time away"),
+        ];
+        let columns=if ui.available_width() >= 720.0 {4}else{2};
+        for row in metrics.chunks(columns) {
+            ui.columns(columns, |cols| {
+                for (column,(page,label,value,caption)) in cols.iter_mut().zip(row.iter()) {
+                    design::metric(column,*page,label,*value,caption);
+                }
             });
-            ui.label(
-                RichText::new(format!(
-                    "{} · {}",
-                    today.format("%A, %B %d"),
-                    self.data.company.timezone
-                ))
-                .color(muted(ui))
-                .size(12.0),
-            );
-            ui.add_space(8.0);
-            egui::Grid::new("overview_attendance")
-                .striped(true)
-                .min_col_width(160.0)
-                .spacing([24.0, 12.0])
-                .show(ui, |ui| {
-                    headers(ui, &["EMPLOYEE", "DEPARTMENT", "CHECK-IN", "STATUS"]);
-                    for record in self
-                        .data
-                        .attendance
-                        .iter()
-                        .filter(|a| a.work_date == today)
-                        .take(5)
-                    {
-                        ui.label(self.data.employee_name(record.employee_id));
-                        ui.label(
-                            self.data
-                                .employees
-                                .iter()
-                                .find(|e| e.id == record.employee_id)
-                                .map(|e| e.department.as_str())
-                                .unwrap_or("—"),
-                        );
-                        ui.label(
-                            record
-                                .checked_in_at
-                                .with_timezone(&self.data.company.tz())
-                                .format(self.time_format())
-                                .to_string(),
-                        );
-                        badge(
-                            ui,
-                            if record.checked_out_at.is_none() {
-                                "Checked in"
-                            } else {
-                                "Completed"
-                            },
-                            true,
-                        );
-                        ui.end_row();
-                    }
-                });
-            if attendance == 0 {
-                empty(ui, "No check-ins yet today.");
-            }
-        });
-        ui.add_space(14.0);
-        card(ui, |ui| {
-            ui.horizontal(|ui| {
-                ui.label(RichText::new("Pending leave requests").size(18.0).strong());
-                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    if ui.button("Open leave").clicked() {
-                        self.page = Page::Leave;
-                        self.leave_filter = Some(LeaveStatus::Pending);
-                    }
-                });
+            ui.add_space(12.0);
+        }
+        if ui.available_width() >= 940.0 {
+            let left=(ui.available_width()-16.0)*0.61;
+            let right=ui.available_width()-left-16.0;
+            ui.horizontal_top(|ui| {
+                ui.spacing_mut().item_spacing.x=16.0;
+                ui.allocate_ui_with_layout(Vec2::new(left,0.0),Layout::top_down(Align::Min),|ui|self.overview_attendance_card(ui,today,attendance));
+                ui.allocate_ui_with_layout(Vec2::new(right,0.0),Layout::top_down(Align::Min),|ui|self.overview_leave_card(ui,pending));
             });
-            for row in self
-                .data
-                .leave
-                .iter()
-                .filter(|r| r.status == LeaveStatus::Pending)
-                .take(3)
-            {
-                ui.separator();
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new(self.data.employee_name(row.employee_id)).strong());
-                    ui.label(
-                        RichText::new(format!(
-                            "{} · {} · {} workday(s)",
-                            row.kind.label(),
-                            row.starts_on,
-                            weekdays(row.starts_on, row.ends_on)
-                        ))
-                        .color(muted(ui)),
-                    );
-                    badge(ui, "Pending", false);
-                });
-            }
-            if pending == 0 {
-                empty(ui, "You're all caught up. No pending requests.");
-            }
-        });
+        } else {
+            self.overview_attendance_card(ui,today,attendance);
+            ui.add_space(14.0);
+            self.overview_leave_card(ui,pending);
+        }
         ui.add_space(10.0);
         ui.horizontal(|ui| {
             if self
@@ -4540,7 +4437,30 @@ impl eframe::App for HrisApp {
                 .map(|a| a.display.theme)
                 .unwrap_or_default()
         };
+        #[cfg(feature = "qa-screenshot")]
+        let theme = if self.data.mode == Mode::Demo && std::env::var("HRIS_SCREENSHOT_TO").is_ok() {
+            // Keep an explicitly requested fictional visual stable across demo worker replies.
+            // Configured production sessions always use their real saved preference.
+            match std::env::var("HRIS_PREVIEW_THEME").as_deref() {
+                Ok("dark") => account::ThemeChoice::Dark,
+                Ok("light") => account::ThemeChoice::Light,
+                _ => theme,
+            }
+        } else { theme };
         ctx.set_theme(theme.preference());
+        #[cfg(feature = "qa-screenshot")]
+        if std::env::var("HRIS_SCREENSHOT_TO").is_ok()
+            && (self.data.mode == Mode::Demo
+                || (self.data.mode == Mode::SignedOut
+                    && std::env::var("HRIS_PREVIEW_PAGE").as_deref() == Ok("sign-in")))
+        {
+            // Explicit fictional captures must retain the requested zoom after demo replies.
+            if let Ok(scale) = std::env::var("HRIS_PREVIEW_SCALE") {
+                if let Ok(scale @ 100..=125) = scale.parse::<u16>() {
+                    ctx.set_zoom_factor(scale as f32 / 100.0);
+                }
+            }
+        }
         self.reconcile_workspaces(&ctx);
         if self.data.mode == Mode::SignedOut {
             egui::CentralPanel::default()
@@ -4558,8 +4478,8 @@ impl eframe::App for HrisApp {
                 || self.update_confirmation;
             egui::Panel::left("sidebar")
                 .resizable(false)
-                .exact_size(220.0)
-                .frame(Frame::new().fill(NAVY).inner_margin(20))
+                .exact_size(if self.desktop.product == crate::desktop::Product::Hris { if ui.available_width()<1100.0 {212.0}else{224.0} } else { 220.0 })
+                .frame(Frame::new().fill(if self.desktop.product == crate::desktop::Product::Hris { design::palette(ui).sidebar } else { NAVY }).inner_margin(if self.desktop.product == crate::desktop::Product::Hris { 16 } else { 20 }))
                 .show(ui, |ui| {
                     ui.add_enabled_ui(
                         !self.busy
@@ -4649,7 +4569,19 @@ impl eframe::App for HrisApp {
                 && self.qa_started.elapsed() >= std::time::Duration::from_millis(400)
             {
                 if let Ok(path) = std::env::var("HRIS_SCREENSHOT_TO") {
+                    let visual_evidence = serde_json::json!({
+                        "version": crate::updater::VERSION,
+                        "dark_mode": ui.visuals().dark_mode,
+                        "zoom_factor": ctx.zoom_factor(),
+                        "viewport_points": [ctx.viewport_rect().width(), ctx.viewport_rect().height()],
+                        "fictional_capture": true,
+                    });
                     ctx.request_screenshot(move |pixels| {
+                        let metadata_path = std::path::Path::new(&path).with_extension("json");
+                        if let Err(error) = std::fs::write(metadata_path, serde_json::to_vec_pretty(&visual_evidence).unwrap()) {
+                            eprintln!("Screenshot metadata failed: {error}");
+                            std::process::exit(1);
+                        }
                         let result = image::save_buffer(
                             &path,
                             pixels.as_raw(),
@@ -4715,7 +4647,7 @@ fn company_fields_equal(a: &Company, b: &Company) -> bool {
 fn company_logo(ui: &mut Ui, texture: Option<&egui::TextureHandle>, name: &str, size: f32) {
     let (rect, _) = ui.allocate_exact_size(Vec2::splat(size), egui::Sense::hover());
     ui.painter()
-        .circle_stroke(rect.center(), size / 2.0 - 2.0, Stroke::new(1.5, TEAL));
+        .circle_stroke(rect.center(), size / 2.0 - 2.0, Stroke::new(1.5, if design::enabled(ui.ctx()) { accent(ui) } else { TEAL }));
     if let Some(texture) = texture {
         ui.painter().image(
             texture.id(),
@@ -5232,7 +5164,10 @@ fn login_controls(ui: &mut Ui, email: &mut String, password: &mut String, enable
                     || password_response.has_focus()
                     || password_response.lost_focus());
             ui.add_space(8.0);
-            primary(ui, "Sign in") || enter
+            let clicked = if design::enabled(ui.ctx()) {
+                ui.add_sized([ui.available_width(),36.0],egui::Button::new(RichText::new("Sign in").font(design::semibold(14.0)).color(Color32::WHITE)).fill(Color32::from_rgb(0,116,124)).stroke(Stroke::NONE).corner_radius(7)).clicked()
+            } else { primary(ui,"Sign in") };
+            clicked || enter
         })
         .inner;
     enabled && submitted
@@ -5253,7 +5188,10 @@ fn profile_link(
     ui.painter().rect_filled(
         rect,
         8,
-        if selected {
+        if design::enabled(ui.ctx()) {
+            let p=design::palette(ui);
+            if selected {p.selected} else if response.hovered() {p.hover} else {p.surface}
+        } else if selected {
             TEAL
         } else if response.hovered() {
             Color32::from_rgb(45, 65, 81)
@@ -5265,7 +5203,7 @@ fn profile_link(
         ui.painter().rect_stroke(
             rect,
             8,
-            Stroke::new(1.5, Color32::WHITE),
+            Stroke::new(1.5, if design::enabled(ui.ctx()) { accent(ui) } else { Color32::WHITE }),
             egui::StrokeKind::Inside,
         );
     }
@@ -5280,7 +5218,7 @@ fn profile_link(
             ui.add(
                 egui::Label::new(
                     RichText::new(name)
-                        .color(Color32::WHITE)
+                        .color(if design::enabled(ui.ctx()) { ui.visuals().text_color() } else { Color32::WHITE })
                         .strong()
                         .size(13.0),
                 )
@@ -5289,7 +5227,7 @@ fn profile_link(
             ui.add(
                 egui::Label::new(
                     RichText::new(role)
-                        .color(Color32::from_rgb(175, 206, 208))
+                        .color(if design::enabled(ui.ctx()) { muted(ui) } else { Color32::from_rgb(175, 206, 208) })
                         .size(11.0),
                 )
                 .truncate(),
@@ -5305,7 +5243,7 @@ fn profile_link(
 fn avatar(ui: &mut Ui, texture: Option<&egui::TextureHandle>, name: &str, size: f32) {
     let (rect, _) = ui.allocate_exact_size(Vec2::splat(size), egui::Sense::hover());
     ui.painter()
-        .circle_filled(rect.center(), size / 2.0, Color32::from_rgb(222, 242, 237));
+        .circle_filled(rect.center(), size / 2.0, if design::enabled(ui.ctx()) { design::palette(ui).selected } else { Color32::from_rgb(222, 242, 237) });
     if let Some(texture) = texture {
         ui.painter().image(
             texture.id(),
@@ -5319,9 +5257,13 @@ fn avatar(ui: &mut Ui, texture: Option<&egui::TextureHandle>, name: &str, size: 
             egui::Align2::CENTER_CENTER,
             branding::initials(name),
             FontId::proportional(size * 0.34),
-            TEAL,
+            if design::enabled(ui.ctx()) {accent(ui)}else{TEAL},
         );
     }
+    if design::enabled(ui.ctx()) {
+        ui.painter().circle_stroke(rect.center(),size/2.0-0.5,Stroke::new(0.9,accent(ui)));
+    }
+
 }
 
 fn profile_field(ui: &mut Ui, label: &str, id: &str, value: &mut String, hint: &str) {
@@ -5676,7 +5618,7 @@ fn card<R>(ui: &mut Ui, contents: impl FnOnce(&mut Ui) -> R) -> R {
 fn primary(ui: &mut Ui, label: &str) -> bool {
     ui.add(
         egui::Button::new(RichText::new(label).color(Color32::WHITE).strong())
-            .fill(TEAL)
+            .fill(if design::enabled(ui.ctx()) {Color32::from_rgb(0,116,124)}else{TEAL})
             .stroke(Stroke::NONE)
             .corner_radius(7),
     )
@@ -5693,14 +5635,14 @@ fn field(ui: &mut Ui, label: &str, value: &mut String, hint: &str) {
 
 fn headers(ui: &mut Ui, labels: &[&str]) {
     for label in labels {
-        ui.label(RichText::new(*label).color(muted(ui)).size(10.0).strong());
+        ui.label(RichText::new(*label).color(muted(ui)).size(if design::enabled(ui.ctx()) { 11.0 } else { 10.0 }).strong());
     }
     ui.end_row();
 }
 
 fn badge(ui: &mut Ui, label: &str, positive: bool) {
     Frame::new()
-        .fill(if positive {
+        .fill(if design::enabled(ui.ctx()) { let p=design::palette(ui);if positive {p.positive_soft}else{p.warning_soft} } else if positive {
             Color32::from_rgb(229, 244, 238)
         } else {
             Color32::from_rgb(252, 243, 219)
@@ -5710,7 +5652,7 @@ fn badge(ui: &mut Ui, label: &str, positive: bool) {
         .show(ui, |ui| {
             ui.label(
                 RichText::new(label)
-                    .color(if positive {
+                    .color(if design::enabled(ui.ctx()) { let p=design::palette(ui);if positive {p.positive}else{p.warning} } else if positive {
                         TEAL
                     } else {
                         Color32::from_rgb(140, 104, 31)
@@ -5757,7 +5699,7 @@ mod identity_ui_tests {
         ] {
             for size in [Vec2::new(1000.0, 720.0), Vec2::new(800.0, 576.0)] {
                 let ctx = egui::Context::default();
-                configure_theme(&ctx);
+                configure_theme_for(&ctx, app.product);
                 let mut email = String::new();
                 let mut password = String::new();
                 for _ in 0..2 {

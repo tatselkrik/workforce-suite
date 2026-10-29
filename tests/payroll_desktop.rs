@@ -127,7 +127,8 @@ fn two_products_keep_distinct_identities_and_payroll_requires_real_protected_res
 }
 #[test]
 fn worker_product_gate_keeps_all_financial_families_and_own_advice_but_denies_hr_writes() {
-    assert_eq!(PAYROLL_TABS.len(), 15);
+    assert_eq!(PAYROLL_TABS.len(), 14);
+    assert!(!PAYROLL_TABS.contains(&"Data exchange"));
     for tab in [
         "Salaries & benefits",
         "Cutoffs",
@@ -138,7 +139,6 @@ fn worker_product_gate_keeps_all_financial_families_and_own_advice_but_denies_hr
         "Wage compliance",
         "Amendments",
         "Government",
-        "Data exchange",
     ] {
         assert!(PAYROLL_TABS.contains(&tab));
     }

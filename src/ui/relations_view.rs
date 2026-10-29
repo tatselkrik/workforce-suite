@@ -149,7 +149,7 @@ impl State {
                 "Administrators oversee all cases. HR Generalists see only their assigned cases.",
             )
             .small()
-            .color(MUTED),
+            .color(muted(ui)),
         );
         let mut output = None;
         ui.horizontal_wrapped(|ui| {

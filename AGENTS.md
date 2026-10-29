@@ -803,3 +803,8 @@ Signed Android0.1.1 is privately packaged and installed/verified on the owned em
 ## Android independent emulator acceptance complete —30October2026
 
 Remaining actual photo-picker/upload/reload/removal, chosen CSV save, Android Print/save-PDF and real system-tray-to-own-inbox/signout checks pass. See docs/ANDROID-EMPLOYEE-EMULATOR-ACCEPTANCE-2026-10-30.md.137prior sets and enabled dispatch are preserved; all3managed actors are disabled/archived/session-free and exact signed011 is restored/normal-launched. Only test/documentation source changed; no new APK or repeated011 delivery is required. Preserve the frozen011 release,001 fallback, keys and PCportal018 sessions. The SAME resume-hris-android-after-usage-reset follow-up is paused on completion, superseding the active-remaining-checks note above. No independent free Android work remains queued. Physical phone/OEM and actual email confirmation remain deferred; do not revive unrelated modules, paid services, hardware or external publishing.
+
+
+## HRIS visual refresh authorized —30October2026
+
+Kirk approved comparison D Teal hybrid light and C Focused charcoal dark for HRIS Desktop first, with continuous in-scope work and reset continuation. Follow docs/HRIS-DESIGN-REFRESH.md. Preserve separate Payroll/Android/portal, current role/data/workflow/draft boundaries and immutable deliveries. This resumes only the native HRIS visual refresh, not the completed Android work or deferred modules. Reuse resume-hris-android-after-usage-reset (renamed HRIS design) with current checkpoint/recovery protocol; pause on verified completed delivery. Fictional concept metrics are not source data; no fake dashboard facts. Install each verified authorized HRIS release under existing exact-channel rules.

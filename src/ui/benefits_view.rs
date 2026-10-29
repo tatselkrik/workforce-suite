@@ -276,7 +276,7 @@ impl State {
         Ok(false)
     }
     fn show(&mut self, ui: &mut Ui, data: &Snapshot, busy: bool) -> Option<Operation> {
-        ui.label(RichText::new("HR-reviewed plans, eligibility, enrollments and dependents. Monetary effects are reviewed separately in Payroll.").small().color(MUTED));
+        ui.label(RichText::new("HR-reviewed plans, eligibility, enrollments and dependents. Monetary effects are reviewed separately in Payroll.").small().color(muted(ui)));
         let mut out = None;
         let editing = self.form.is_some();
         ui.horizontal_wrapped(|ui| {
