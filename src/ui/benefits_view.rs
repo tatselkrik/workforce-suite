@@ -359,10 +359,7 @@ impl State {
                     ui.colored_label(Color32::from_rgb(190,70,55),"The save was rejected. Review the current saved fields below before preparing another attempt.");
                     current_view(ui, c, matches!(&f.draft, Draft::Plan(_)), f.id);
                     if ui
-                        .add_enabled(
-                            !busy,
-                            egui::Button::new("Review latest saved details"),
-                        )
+                        .add_enabled(!busy, egui::Button::new("Review latest saved details"))
                         .clicked()
                     {
                         match f.review_current(c) {
@@ -393,7 +390,7 @@ impl State {
                     }
                 });
                 if let Some(pending) = &f.pending {
-                    ui.label("This exact save is retained until a matching receipt arrives. An interrupted response may already have saved.");
+                    ui.label(if f.rejected { "This attempt was rejected. Review the latest saved details above or discard the draft." } else { "This exact save is retained until a matching receipt arrives. An interrupted response may already have saved." });
                     if !f.rejected
                         && ui
                             .add_enabled(!busy, egui::Button::new("Retry same save"))
@@ -586,9 +583,7 @@ impl State {
                 }
             }
         } else {
-            ui.label(
-                "Load benefits to view company plans and enrollment records.",
-            );
+            ui.label("Load benefits to view company plans and enrollment records.");
             if let Some(f) = &self.form {
                 if let Some(pending) = &f.pending {
                     if !f.rejected
@@ -920,10 +915,7 @@ fn fields(ui: &mut Ui, f: &mut Form, c: &Context) {
                     }));
                     f.reviewed = false;
                 }
-                if ui
-                    .button("Refresh plan and employment details")
-                    .clicked()
-                {
+                if ui.button("Refresh plan and employment details").clicked() {
                     if let (Ok(p), Some(person)) = (
                         c.plan(e.plan_id),
                         c.employees.iter().find(|p| p.id == e.employee_source.id),
