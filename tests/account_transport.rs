@@ -4185,9 +4185,7 @@ fn agency_preparation_uses_one_fresh_rpc_and_revocation_prevents_file_creation()
             "synthetic passphrase".into(),
         )
         .unwrap();
-        let path = std::env::current_dir()
-            .unwrap()
-            .join("work")
+        let path = std::env::temp_dir()
             .join(format!("preparation-{}.csv", uuid::Uuid::new_v4()));
         let result = client.government_preparation(
             &data,
@@ -4482,9 +4480,7 @@ fn sss_collection_export_refetches_and_rejects_stale_or_revoked_inputs_before_io
             "synthetic passphrase".into(),
         )
         .unwrap();
-        let path = std::env::current_dir()
-            .unwrap()
-            .join("work")
+        let path = std::env::temp_dir()
             .join(format!("sss-reference-{}.txt", uuid::Uuid::new_v4()));
         let result = client.sss_collection_export(&data, filter, &request, &path);
         assert_eq!(result.is_ok(), case == "success");
