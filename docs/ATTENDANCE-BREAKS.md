@@ -29,7 +29,7 @@ Neither figure is approved payable time.
 Desktop staff can use **Start break** and **End break now** for their own open
 attendance. These operations use server time and the saved rule's classification.
 They cannot operate another employee's routine break controls. Ordinary Employee
-accounts still cannot sign into the desktop; their future portal can use the
+accounts still cannot sign into the desktop; Workforce Employee uses the
 same protected service contract.
 
 HR/Admin can **Record break with reason** for an open or completed attendance

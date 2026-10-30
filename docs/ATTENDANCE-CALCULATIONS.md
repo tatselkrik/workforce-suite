@@ -69,9 +69,9 @@ history cannot be directly edited by clients. Only Administrators change
 company rules; HR/Admin apply them to records and read audit reasons. Managers
 can read the company rule summary and scoped attendance but not HR history.
 Disabled/unassigned/anonymous clients have no access. Ordinary Employees remain
-portal-only; their future own-record scope is protected in PostgreSQL.
+Android-only; own-record scope is protected in PostgreSQL.
 
 File recovery does not remove the new database schema. Old clients can still
 read their supported modules and new records receive server-owned snapshots.
 Employee correction requests are available separately; see [request approvals](ATTENDANCE-REQUESTS.md).
-Overtime approvals are available separately; see [overtime approvals](OVERTIME-APPROVALS.md). Payroll remains a subsequent module. The employee portal stays separate; biometric integration stays disabled.
+Overtime approvals are available separately; see [overtime approvals](OVERTIME-APPROVALS.md). Financial administration uses Workforce Payroll. Biometric integration stays disabled.

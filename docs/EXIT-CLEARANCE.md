@@ -37,10 +37,9 @@ history without changing employment or sign-in. Reopen a cleared case before
 editing tasks or exit details. A new case may follow a cancelled case while the
 employee remains active. Restoration/rehire is separate from exit finalization.
 
-The company-specific legal, document and payroll requirements still need a
-human checklist. This prototype does not send external notifications, calculate
-final pay, delete Auth accounts or automatically revoke unrelated application
-credentials. General named-approver delegation is not implemented; filed leave
-plans remain immutable. Readiness is a set of recorded checks, not a complete
-compliance assessment. Local tests cover late-audit rollback; hosted Auth/RLS and
-native previews are verified separately from signed-in native button automation.
+Company-specific legal, document and payroll requirements need an appropriate
+clearance checklist. Exit readiness describes recorded checks rather than a full
+compliance assessment. Final pay is handled separately in Workforce Payroll;
+clearance does not transfer money or delete Auth identities. Filed leave approval
+plans remain immutable, and operational substitutes use the protected delegation
+workflow.

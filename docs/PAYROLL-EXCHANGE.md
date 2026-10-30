@@ -1,8 +1,8 @@
 # Local payroll data exchange
 
-This is a free file-exchange foundation, not a connected accounting service,
-bank instruction or agency file adapter. Actual vendor connections remain
-deferred until a company selects its software and approves the target.
+Local payroll exchange provides versioned CSV column profiles, source-bound
+exports and manual acknowledgment tracking. The files describe recorded payroll
+facts; they are not bank instructions or agency returns.
 
 Administrators maintain append-only versions of CSV column profiles. Each profile
 selects and renames whitelisted report fields; it cannot contain SQL, expressions,
@@ -12,11 +12,11 @@ prefixes in text are escaped visibly with an apostrophe; unknown amounts remain
 blank. Cash, source offsets, source net, contained final-pay net and tax advice
 retain separate meanings. There is no all-purpose total-pay column.
 
-Current active HR/Admin can preview and prepare a frozen export from the protected
+Current active Payroll Officers and Administrators can preview and prepare a frozen export from the protected
 payroll-report-v2 projection. Preparation rechecks the profile version and source
 fingerprint. Its immutable snapshot, profile, exact UTF-8 CSV bytes and SHA-256
 digest survive later payroll payments, profile edits and membership changes.
-Historical downloads are labeled historical and recheck current HR/Admin access
+Historical downloads are labeled historical and recheck current Payroll Officers and Administrators access
 before writing a new local file. An export is not proof of delivery or acceptance.
 Prepared exports never change payroll, receipts, salaries or tax calculations.
 Legacy sources missing their saved employee labels fail with a review message;
@@ -49,17 +49,12 @@ never enter own/team projections. Limits fail explicitly without truncating tota
 1,000 rows/export; 100 exports/company; 50 profiles, 100 versions/profile;
 1,000 rows/acknowledgement; bounded CSV/payload sizes and reconciliation history.
 The new exchange history has an additional conservative32MiB company budget.
-It fails explicitly instead of removing history or initiating a paid upgrade.
+Capacity overflow fails explicitly without removing history.
 512KiB is reserved within that budget for closing unused retry identities, so
 recovery remains available when ordinary history is full. Protected historical
 downloads remain available while a write outcome is unresolved.
 
-Native UI: Payroll > Data exchange. Admins edit profiles; HR/Admin preview, prepare,
+Native UI: Payroll > Data exchange. Admins edit profiles; Payroll Officers and Administrators preview, prepare,
 save the exact frozen file, download a reconciliation template, import reviewed
 acknowledgements and inspect original export/history. The direct connection control
 stays unavailable with a target-required explanation. No external send occurs.
-
-Implemented, verified, installed and privately published in desktop 0.1.53.
-See [the testing guide](PAYROLL-EXCHANGE-0.1.53-CHECKLIST.md) and
-[delivery evidence](PAYROLL-EXCHANGE-0.1.53-VERIFICATION.md). Actual vendor
-connections and acceptance remain separate, unresolved scope.

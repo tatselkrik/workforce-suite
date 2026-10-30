@@ -1,9 +1,5 @@
 # Effective-date policies and opening balances
 
-Implementation for the next desktop increment. **Not delivered until the release
-verification/install record confirms it.** This document does not grant deployment
-authority or replace the private target guards.
-
 ## Native workflow
 
 Leave now has **Opening balances** alongside Requests, Leave policies, Credit
@@ -50,7 +46,7 @@ protected batch and posts all rows in one transaction. Stale fingerprints, a
 revoked role or any invalid row leave no partial openings. Exact actor-bound batch
 retries return the original complete row inventory. Error/review exports use the
 existing spreadsheet-formula-safe CSV writer and preserve existing destination
-files. Native XLSX/attendance/leave imports are the next separate roadmap item.
+files. See [native Excel](NATIVE-EXCEL.md), [attendance imports](ATTENDANCE-IMPORTS.md) and [leave imports](LEAVE-REQUEST-IMPORTS.md) for related file workflows.
 
 ## Dated company policies
 
@@ -126,12 +122,3 @@ After enablement the legacy native submit route is blocked even with a forged
 new-client header. Older installed clients can still sign in, read history and
 update. Delegated reviews retain the existing original-authority wrapper and
 immutable decision receipts; they gain no personnel or policy-edit permission.
-
-The existing portal receives the same own-only five-field balance/type contract.
-It selects the dated start policy. Since older portal builds show one calendar,
-cross-version spans require split requests rather than a misleading preview.
-No running portal process is restarted as part of this desktop increment.
-
-No paid scheduler or provider is needed: effective versions are selected by company
-date during protected requests. No public portal exposure, external notification,
-payroll change, filing, payment, hardware or new service is introduced.

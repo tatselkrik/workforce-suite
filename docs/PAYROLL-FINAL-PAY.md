@@ -1,6 +1,6 @@
 # Final pay — native worksheet and protected settlement
 
-The0.1.38 source added **Payroll → Final pay**. Source0.1.41 extends it through the [amendment and receipt-year rules](PAYROLL-AMENDMENTS.md). Hosted deployment, packaging and installation must be established by versioned release evidence. The separate portal is authorized for local use only. This module records reviewed obligations and settlements; it does not transfer money, file returns or issue an official2316.
+Open **Final pay** in Workforce Payroll. See [amendments and receipt-year rules](PAYROLL-AMENDMENTS.md) for corrections and cross-year treatment. This module records reviewed obligations and settlements; it does not transfer money, file returns or issue an official2316.
 
 ## Reviewed scope and dates
 
@@ -28,13 +28,13 @@ The **combined final cash** is the actual employee cash amount. Source-net recei
 
 ## Approval, freshness and history
 
-HR/Admin prepare, save, refresh and submit. An Administrator distinct from the creator, most recent worksheet preparer and submitter approves. Protected writers recheck current membership/revision under the company payroll lock7 and verify the saved source. A coworker's payment can advance a batch revision without invalidating this person's immutable facts. A changed own payment, income, employment fact or earlier tax close requires fresh review.
+Payroll Officers and Administrators prepare, save, refresh and submit. An Administrator distinct from the creator, most recent worksheet preparer and submitter approves. Protected writers recheck current membership/revision under the company payroll lock7 and verify the saved source. A coworker's payment can advance a batch revision without invalidating this person's immutable facts. A changed own payment, income, employment fact or earlier tax close requires fresh review.
 
 Approval issues an immutable aggregate own statement. Reserved source slips cannot be recorded through a separate individual or legacy batch payment while that statement awaits settlement. Another annual tax close cannot duplicate its pending adjustment. An Administrator may withdraw an **unpaid** statement with explicit confirmation; the original statement and own withdrawal status remain immutable, and a new review can use fresh facts. Recorded settlements cannot be reversed or edited in this increment; amendments and receipt reversals are separate future work.
 
 Settlement atomically records the full combined cash/tax-handling attestations, discharges only included source balances, updates affected batch summaries, appends aggregate own settlement status and retains private audit evidence. A failed receipt/status/audit write rolls the transaction back. Exact actor-bound creation, settlement and withdrawal retries are safe. A later legacy batch action records only remaining coworkers. Overlapping employment cannot receive a second issued final settlement.
 
-Cases, private payment references, birth details and raw evidence are HR/Admin-only. Other staff read/export only their own immutable statements and aggregate settled/withdrawn status. Ordinary Employee accounts still cannot sign into the desktop. PrintablePDF and UTF-8CSV exclude HR notes/evidence, and HR registers use current access. Private drafts and published statements have separate lifecycles.
+Cases, private payment references, birth details and raw evidence are protected Payroll preparation. Other staff read/export only their own immutable statements and aggregate settled/withdrawn status. Ordinary Employee accounts still cannot sign into the desktop. PrintablePDF and UTF-8CSV exclude HR notes/evidence, and HR registers use current access. Private drafts and published statements have separate lifecycles.
 
 ## Official sources checked24October2026
 

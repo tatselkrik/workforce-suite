@@ -4,7 +4,7 @@ Payroll → Reports combines immutable monthly, cutoff,13th-month, annual-tax,
 final and linked amendment statements. Source0.1.41 uses report-v2 for supplemental
 cash, original links, signed statutory adjustments and review-only discrepancies;
 the prior endpoint remains available to older installations. See
-[amendment boundaries](PAYROLL-AMENDMENTS.md). Only current HR/Admin may generate or export company reports.
+[amendment boundaries](PAYROLL-AMENDMENTS.md). Only current Payroll Officers and Administrators may generate or export company reports.
 Managers retain their own slips but do not receive this report destination/API.
 
 Filter up to366inclusive days by actual approval date or actual recorded
@@ -41,4 +41,4 @@ person's later batch date. Balances are current at generation for selected
 records, not reconstructed historical closing balances. The report does not
 automatically recalculate payroll, create arrears, remit contributions, transfer
 funds, file returns or generate an official2316. CSV uses exact centavos and safe
-spreadsheet escaping. The separate portal is authorized for local use only.
+spreadsheet escaping. Workforce Employee retains own-only pay information.

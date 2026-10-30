@@ -1,5 +1,4 @@
-# Payroll review checklist — 0.1.33
-
+# Payroll review checklist
 Open **Payroll** after updating. Administrators and HR see the full workspace;
 Managers see **My payslips**, containing only their own approved records.
 
@@ -22,7 +21,7 @@ Managers see **My payslips**, containing only their own approved records.
    issued slips should retain their original facts and values.
 6. **Approval:** verify included and omitted employees, then submit. A different
    Administrator approves; the submitter cannot approve their own register.
-   HR can submit for an Administrator, or a second authorized Administrator can
+   A Payroll Officer can submit for an Administrator, or a second authorized Administrator can
    review. Returned registers can be corrected and resubmitted with history.
 7. **Payslips:** open an approved slip, export PDF and CSV, and compare totals to
    the worksheet. Private HR review notes and deduction consent references should

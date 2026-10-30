@@ -6,7 +6,7 @@ expected tax calculation, certificate, return or evidence of agency acceptance.
 It adds no payroll or registration facts and changes no rates.
 
 `government_annual_pay_details(year)` wraps the existing protected annual ledger
-and a minimal component projection in one statement. It is current HR/Admin only,
+and a minimal component projection in one statement. It is current Payroll Officers and Administrators only,
 uses invoker RLS, and binds each detail to the same company, employee, kind and
 source ID. The existing annual RPC and 18-column export remain compatible.
 Missing historical fields stay unknown; an absent source cannot become zero.

@@ -1,6 +1,5 @@
-# Hiring workflows — 0.1.27
-
-**Hiring** gives Administrators and HR Generalists private applicant records, résumés, offers and onboarding cases. Managers see their assigned interviews, their own interview feedback and assigned onboarding tasks. Portal-only Employee accounts cannot sign into this desktop. Managers never load applicant HR notes, attachments or pay/offer terms.
+# Hiring workflows
+**Hiring** gives Administrators and HR Generalists private applicant records, résumés, offers and onboarding cases. Managers see their assigned interviews, their own interview feedback and assigned onboarding tasks. Android-only Employee accounts cannot sign into this desktop. Managers never load applicant HR notes, attachments or pay/offer terms.
 
 Add an applicant, then click their name to open one record. Keep full name,
 position applied for, application date, optional email/phone/source and private
@@ -90,8 +89,7 @@ and disabled membership immediately restrict fresh task/history reads.
 
 Each task and case retains protected actor, reason, server time and before/after
 history. Task instructions are visible to assigned staff; keep private HR/pay
-notes in the applicant or offer instead. Employee-facing portal, applicant
-portal, job-board posting, calendar/email invitations, signed offers and
+notes in the applicant or offer instead. Applicant self-service, job-board posting, calendar/email invitations, signed offers and
 exit/clearance remain subsequent modules.
 
 ## Persistence and concurrency

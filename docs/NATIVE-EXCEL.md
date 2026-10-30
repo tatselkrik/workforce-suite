@@ -1,9 +1,6 @@
 # Native Excel exchange
 
-Delivered0.1.50 adds local `.xlsx` support using pinned free Rust libraries. It
-requires no Microsoft Office installation, subscription or external conversion
-service. CSV remains supported. No schema change is needed beyond installed
-schema66, and existing protected transactions remain authoritative.
+Native `.xlsx` support uses pinned Rust libraries to read and write files locally. Microsoft Office is not required. CSV remains supported, and existing protected transactions remain authoritative.
 
 ## Supported screens
 
@@ -17,6 +14,10 @@ schema66, and existing protected transactions remain authoritative.
 - Opening balances: CSV/Excel source/template and row-review/error report. The
   same protected previews, declarations, actor-bound retries and atomic batch
   posting from0.1.49 apply. A workbook is not an authorization or a direct grant.
+- Attendance and leave imports: reviewed correction or leave requests using the
+  same file validation and protected approval workflows. See
+  [attendance imports](ATTENDANCE-IMPORTS.md) and
+  [leave imports](LEAVE-REQUEST-IMPORTS.md) for their row and date limits.
 
 ## File boundaries
 
@@ -43,11 +44,3 @@ check, then write a new file. Existing files remain unchanged. Failure to repres
 a source quantity/date safely blocks the export. Report exports are limited to
 50,000rows,64columns and2million cells. Government upload adapters retain their
 separate format contracts; an Excel report is not an agency return.
-
-## Still queued in roadmap6
-
-Attendance/leave request imports are not supplied by this Excel increment. Their
-templates, source/time rules, normal approvals, protected previews, immutable
-batch history and atomic posting still require implementation and verification.
-Keep the full roadmap item open. Accounting/external-payroll exchange foundations
-follow; no unresolved external connection or paid service is enabled here.

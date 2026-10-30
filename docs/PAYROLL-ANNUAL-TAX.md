@@ -1,6 +1,6 @@
 # Annual compensation tax reconciliation
 
-Open **Payroll → Annual tax**. HR/Admin can prepare a per-person year-end or termination close, review its paid sources, add evidenced current-employer openings and successive prior-employer certificates, submit it and have another Administrator approve immutable tax advice. Managers receive only their own issued advice. An Administrator records the actual settlement separately. See versioned release evidence for hosted/install state.
+Open **Payroll → Annual tax**. Payroll Officers and Administrators can prepare a per-person year-end or termination close, review its paid sources, add evidenced current-employer openings and successive prior-employer certificates, submit it and have another Administrator approve immutable tax advice. Managers receive only their own issued advice. An Administrator records the actual settlement separately.
 
 ## Calculation and dates
 

@@ -1,12 +1,9 @@
 # Goals and appraisals
 
-Implemented in version 0.1.29 with migration `20261022231643`.
-
 The entry is Employees > Development, with Goals and Appraisals.
 HR/Admin assign company cycles and reviewers. Managers assign goals to current
 direct reports, report their own progress and assess only assigned current
-reports. Ordinary Employee accounts remain portal-only; database own-goal and
-own-published-review reads prepare for that separate application. They cannot
+reports. Ordinary Employee accounts remain Android-only; own-goal and published-review reads use the employee app's own-only projection. They cannot
 invoke the desktop staff mutation RPC.
 
 HR notes and their events are separate from published review data. Reassignment
@@ -30,11 +27,5 @@ An exit-readiness projection adds unfinished reviews about/assigned to a
 leaving employee. A protected late guard also rejects finalization for older
 clients, rolling back membership deactivation and employee archiving together.
 The deployed exit migration is unchanged; its replacement readiness function
-and new trigger live in this performance migration. Performance inbox messages,
-360 feedback and career records remain separate work. Training/certifications
+and new trigger live in this performance migration. See [lifecycle notices](LIFECYCLE-NOTIFICATIONS.md) and [career development](CAREER-DEVELOPMENT.md) for related workflows. Appraisals use assigned reviews rather than a 360-degree feedback process. Training/certifications
 are available through the separate [learning module](LEARNING.md).
-
-Verification evidence is recorded in VERIFICATION.md and the separate versioned
-release report. Local PostgreSQL tests simulate Auth; actual Auth/RLS checks and
-native screenshots are verified separately. Performance inbox messages, 360
-feedback and career records remain future modules.

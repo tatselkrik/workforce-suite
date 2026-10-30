@@ -1,7 +1,6 @@
 # Leave request CSV and Excel imports
 
-Desktop0.1.52implements the remaining request-import portion of roadmap6. Its
-versioned verification/checklist records delivery status and testing boundaries.
+Import CSV or Excel rows as leave requests using protected previews and the configured approval chain.
 
 HR/Admin prepare1–100rows with employee_code, leave_type_code, starts_on, ends_on,
 day_part (full, am, pm), reason and optional private reference. Use supported
@@ -40,5 +39,4 @@ History has explicit500batch/5,000item limits without silent truncation.
 Native drafts participate in unsaved-work protection, retain exact uncertain
 submissions and clear when protected access changes. Error CSV/Excel exports
 preserve literal source text, source row numbers and existing destination files,
-and recheck current HR access after rendering. No Office subscription, file upload,
-paid service, public portal or device connection is involved.
+and recheck current HR access after rendering. The file is parsed locally; posting uses the existing protected request workflow.

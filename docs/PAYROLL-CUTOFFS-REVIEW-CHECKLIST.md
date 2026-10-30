@@ -9,6 +9,6 @@
 7. Try overlapping issued monthly-register pay for the same employee/month: both directions must reject it. Issued slips must stay unchanged after later salary/source edits.
 8. Record an actual payment date/reference only for a synthetic demonstration or an independently verified payment. Recording moves no money and does not file returns.
 
-This prototype uses fixed semi-monthly halves and a stated second-cutoff contribution policy. Actual company pay schedules and any other policy need review. The paused employee portal has not added cutoff slips. Monthly-register annual exports exclude cutoff pay; use the explicitly labeled cutoff reconciliation for those records. Actual 13th-month payouts, annual tax adjustment/prior-employer opening balances and final pay remain next milestones.
+This prototype uses fixed semi-monthly halves and a stated second-cutoff contribution policy. Actual company pay schedules and any other policy need review. Workforce Employee shows own issued cutoff slips. Monthly-register annual exports exclude cutoff pay; use the explicitly labeled cutoff reconciliation for those records. Use the dedicated 13th-month, annual-tax and final-pay workflows for those records.
 
 Release evidence distinguishes local automated calculations/access tests, actual hosted Auth/Rust workflows, fictional native previews, normal configured startup and exact-installer checks. No claim is made that a signed-in native form was operated automatically or that public CI or Authenticode signing ran.

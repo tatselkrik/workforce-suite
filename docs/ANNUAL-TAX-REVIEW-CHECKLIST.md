@@ -8,4 +8,4 @@
 6. Check issued advice and PDF/CSV. Former-employer labels, evidence and private notes must stay out of the receipt. A Manager should see only their own advice.
 7. Record an actual settlement date/reference. This records history and must not imply money was transferred. A later amendment must credit the settled adjustment; old receipts remain unchanged.
 
-Year-end drafts cannot issue before completed31December facts. No official2316 filing, transfer, remittance or automatic last-pay deduction is included. Automated local/native/Auth proof results belong to the versioned verification report; this list is for Kirk's final workflow/appearance check.
+Year-end drafts cannot issue before completed31December facts. No official2316 filing, transfer, remittance or automatic last-pay deduction is included. Use this checklist to review the calculation sources and the visible workflow.

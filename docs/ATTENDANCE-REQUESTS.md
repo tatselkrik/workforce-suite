@@ -2,7 +2,7 @@
 
 Open **Attendance > Correction requests**. Staff can submit their own missing
 or incorrect check-in/check-out for a selected work date. Ordinary Employee
-accounts remain reserved for the separate future portal; its database request
+accounts use Workforce Employee for Android; its protected request
 scope is ready, but its mobile UI is not built here.
 
 ## Submit and follow your request

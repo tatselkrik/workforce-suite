@@ -1,10 +1,9 @@
-# Final-pay review checklist — 0.1.38
-
+# Final-pay review checklist
 Use Payroll → Final pay after installing the private update and signing in.
 Use fictional employees for new reviews. Recording settlement records an actual
 payment already made; it does not transfer money.
 
-- [ ] The Final pay tab shows reviews for HR/Admin and only own published
+- [ ] The Final pay tab shows reviews for Payroll Officers and Administrators and only own published
   statements for Managers. Search finds employee names/codes and status labels remain clear.
 - [ ] New review lets HR select an employee, last working day and planned cash
   date. Archived employees remain payable. A missing exit case or clearance
@@ -29,9 +28,3 @@ payment already made; it does not transfer money.
   and enlarged display scale.
 - [ ] Your installed version appears at the top right; the new-version banner
   persists after sign-in until the update is installed.
-
-The first pack supports same-year2026 separation/payment from6January2026.
-Cross-year settlements, settled-case amendments, special retirement coverage,
-bank transfers, government filing and official2316 generation are separate work.
-The portal and automatic continuation are paused. No further roadmap item starts
-after this milestone. See PAYROLL-FINAL-PAY.md for policy and official sources.

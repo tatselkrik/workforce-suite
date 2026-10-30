@@ -14,12 +14,10 @@ Hiring and Development cards count current saved workflow states across retained
 
 ## Privacy and freshness
 
-The server reads one stable statement snapshot after checking current active Administrator membership and active employment. The dedicated typed projection contains counts and current group labels only, apart from its company/actor binding. No employee/applicant names, codes or IDs, contacts, private notes, confidential cases, service requests, benefit/dependent records, salary, tax or payment facts enter the report. It stays outside the shared Snapshot, Payroll and portal.
+The server reads one stable statement snapshot after checking current active Administrator membership and active employment. The dedicated typed projection contains counts and current group labels only, apart from its company/actor binding. No employee/applicant names, codes or IDs, contacts, private notes, confidential cases, service requests, benefit/dependent records, salary, tax or payment facts enter the report. It stays outside the shared Snapshot, Payroll and Workforce Employee.
 
 Each generation/export obtains fresh facts; the client rechecks protected access before and after the request and immediately before writing. Revocation, failed requests, changed filters and other data refreshes clear the cached preview. Exports are new local CSV or native XLSX files; existing files are preserved. Exported rows include dates, generation time, time zone, scope and metric definitions, with no actor/company IDs. CSV formula prefixes are neutralized and Excel group labels stay literal text.
 
 ## Bounds
 
 Each source is limited to 50,000 selected records, saved leave charges to 50,000 dates and groups to 600. Invalid saved charge shapes, duplicate dates, dates outside the filed request or inconsistent charged totals fail explicitly. Exceeding limits rejects the report instead of silently truncating totals. No financial rules, canonical records, workflow decisions or immutable history are changed.
-
-Local or hosted tests do not establish agency acceptance, historical completeness or public release CI. This milestone uses no paid service, new provider or hardware.

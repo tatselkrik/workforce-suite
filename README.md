@@ -55,7 +55,7 @@ Access is enforced through protected server permissions. Confidential cases, pay
 
 ## Application tour
 
-These are actual app renders with **fictional demonstration data**. Desktop previews use the native screenshot harness; employee previews use the owned Android emulator. They do not show company records or prove authenticated production acceptance. [Screenshot sources and scope](docs/screenshots/workforce-beta1/README.md).
+These app previews use **fictional demonstration data**. [View the screenshot gallery](docs/screenshots/workforce-beta1/README.md).
 
 ### Workforce HR
 
@@ -95,7 +95,7 @@ A separate desktop keeps financial administration focused while retaining the sa
 
 ### Workforce Employee
 
-The Android app connects directly to the company's backend. It does not depend on a PC browser server. Staff accounts receive the same own-record view when using it.
+The Android app connects directly to the company's backend. Staff accounts receive the same own-record view when using it.
 
 <p align="center">
   <img src="docs/screenshots/workforce-beta1/employee-home.png" alt="Employee home with attendance and employment summary" width="240">
@@ -112,22 +112,21 @@ The Android app connects directly to the company's backend. It does not depend o
 
 </details>
 
-## Current app family
+## A consistent experience
 
-- **A coordinated suite:** Workforce HR, Workforce Payroll and Workforce Employee now have clear names and independent release tags in one repository.
+- **Focused applications:** HR operations, payroll administration and employee self-service each have their own app.
 - **Consistent appearance:** teal light and charcoal dark themes across the three applications.
-- **Compatible upgrades:** existing application IDs, signing identities, company connections, installation/data paths and original records are retained.
-- **Prerelease ordering:** desktop version comparison recognizes beta versions and a later stable `1.0.0` correctly.
+- **Shared company records:** the three apps use the same company deployment, with permissions enforced for each workflow.
 
-Workforce HR and Payroll are at `1.0.0-beta.1`; Workforce Employee is at `1.0.0-beta.2`. Android is the employee-facing app. The former standalone browser portal is retired; its shared Rust service remains part of Android.
+Workforce HR and Payroll are at `1.0.0-beta.1`; Workforce Employee is at `1.0.0-beta.2`.
 
 ## Installation and updates
 
-The public releases contain **source snapshots**, not a connection to the maintainer's company backend. To use the suite, a deployment operator creates a separate company Supabase project, applies the matching migrations/functions, and packages its own publishable configuration. Android also uses that company's Firebase configuration and signing identity. Start with [configuration examples](config-examples/README.md).
+The public releases contain **source snapshots**. Each deployment uses its own Supabase project, matching migrations and functions, and packaged client configuration. Android also uses the company's Firebase configuration and signing identity. Start with the [deployment configuration guide](config-examples/README.md).
 
-Company-configured installers and signed APKs are distributed by the deployment operator and stay outside this repository. Install over the matching existing app after saving work. Existing application IDs, signing identities and legacy installation/data paths are retained across the Workforce rename. The current Android version code is **5**.
+Company-configured Windows installers and signed Android APKs are distributed by the deployment operator. Save your work before installing an update, and use a package supplied for your company. See the [user guide](docs/USER-GUIDE.md) for setup and everyday workflows.
 
-The employee application is Android-only; there is no standalone PC browser server to run or maintain. Users sign in to their packaged company account without an in-app database chooser. Product updates, backend deployment and source publication are separate operations.
+Users sign in to their company account without an in-app database chooser.
 
 ## How the suite fits together
 
@@ -139,7 +138,7 @@ flowchart LR
     Alerts["Firebase Cloud Messaging<br/>Generic device alerts"] --> Employee
 ```
 
-Desktop financial screens use shared Rust code rather than separate calculation implementations. Android embeds the own-record service behind a private device-loopback interface. There is no standalone browser application; `employee-portal/` retains its historical name as the shared Android employee-service library.
+The desktop apps share Rust domain and financial code. Workforce Employee embeds its own-record Rust service inside the Android app.
 
 ## Developer setup
 
@@ -154,7 +153,7 @@ workforce-suite/
 ├── supabase/            Versioned migrations and protected functions
 ├── tests/               Workflow, transport and release checks
 ├── tools/               Build, packaging and verification utilities
-└── docs/                Contracts, delivery evidence and screenshots
+└── docs/                User guides, feature references and screenshots
 ```
 
 On a configured Windows development workstation with Rust/MSVC:
@@ -168,20 +167,20 @@ The outputs retain the compatible names `hris-desktop.exe` and `payroll-desktop.
 
 The workflow checks public source, employee-service behaviour, native builds and database contracts on standard public GitHub-hosted runners. It does not upload configured packages, use deployment secrets or apply hosted migrations. Local company packaging is separate from CI.
 
-## Prototype boundaries
+## Records and access
 
 - **Private by design:** credentials, signing keys, company records, deployment profiles, database dumps and build caches are excluded from source. Client packages contain publishable configuration; server keys must never enter an app.
 - **Recorded transactions:** payroll payment and remittance records do not transfer money or file government returns. Agency file preparation is distinct from official validator acceptance.
-- **Verification scope:** current releases have local/emulator evidence. Physical-phone/OEM behavior, actual email confirmation and subjective monitor review remain separately documented.
-- **Deferred connections:** biometric integration stays visible and disabled while no hardware is selected. Paid services and declined external accounting/payroll integrations are outside the active prototype scope.
+- **Biometric devices:** the device connection control is visible and disabled.
 
 ## Documentation
 
-| Start here | Reference |
+| Documentation | Reference |
 | --- | --- |
-| Releases, tags and compatibility | [Release/version policy](docs/WORKFORCE-RELEASES.md) |
-| Company packaging inputs | [Configuration examples](config-examples/README.md) |
-| Remaining and deferred work | [Roadmap](docs/REMAINING-ROADMAP.md) |
+| All guides and feature references | [Documentation index](docs/README.md) |
+| Everyday workflows across the three apps | [User guide · Markdown](docs/USER-GUIDE.md) · [Download Word guide](docs/Workforce-Suite-User-Guide.docx) |
+| Releases, tags and compatibility | [Versioning and packaging](docs/WORKFORCE-RELEASES.md) |
+| Company packaging inputs | [Deployment configuration](config-examples/README.md) |
 | Payroll architecture | [Separate Payroll Desktop](docs/PAYROLL-DESKTOP.md) |
 | Android build and operation | [Employee app guide](employee-android/README.md) |
 | Android notifications | [Protected push pipeline](docs/ANDROID-PUSH.md) |

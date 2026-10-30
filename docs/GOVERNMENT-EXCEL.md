@@ -1,8 +1,5 @@
 # Government review Excel exports
 
-Delivered, installed and privately published in0.1.54; see
-[verification](GOVERNMENT-0.1.54-VERIFICATION.md).
-
 In **Payroll → Government → Reconciliation**, generate the agency/month, choose
 **Excel (.xlsx)** and use **Export fresh review** or **Export agency preparation**.
 CSV remains available from the same format selector. Both controls load a new
@@ -19,7 +16,7 @@ The preparation worksheet adds only the selected agency's registered identifiers
 legal names and registration revisions. It retains missing-registration flags;
 it never guesses identifiers or name components. Other agencies' identifiers,
 private payment references/evidence, registration notes, actor IDs and history
-are excluded. Both exports are limited to current HR/Admin access.
+are excluded. Both exports are limited to current Payroll Officers and Administrators access.
 
 CSV and Excel share one unescaped source-row pipeline. CSV retains its existing
 UTF-8 BOM, CRLF, quoting and formula protection. Excel writes literal text cells,
@@ -38,5 +35,5 @@ These are **internal review worksheets**, not BIR/SSS/EPRS/Pag-IBIG upload files
 agency validation results, returns, payment instructions or evidence of filing.
 The SSS reference draft retains its separate `.txt` contract. Exact agency
 adapters/validator acceptance remain tracked in [the format review](GOVERNMENT-FILE-REVIEW.md).
-No Office subscription, new dependency, paid conversion service or database
+The local Excel writer requires no Microsoft Office installation. No database
 migration is needed. Delivery is established separately by the versioned evidence.

@@ -1,25 +1,19 @@
-# Government registration records — 0.1.43
+# Government registration records
 
-This increment is installed and verified locally. See the
-[release evidence](GOVERNMENT-0.1.43-VERIFICATION.md) and
-[review checklist](GOVERNMENT-0.1.43-CHECKLIST.md). Registration storage does not
-complete the government-file milestone.
-
-HR/Admin opens **Payroll → Government → Registration details**, then the single
+Payroll Officers and Administrators open **Payroll → Government → Registration details**, then the single
 company record or a selected employee. Legal name parts, registered address and
 assigned identifiers are recorded explicitly from supporting documents. They
 never rename employment records, change company branding, create payroll
 coverage, rewrite a payslip or confirm registration with an agency. Archived
 employees retain their records. Managers and ordinary Employees cannot read
-these private records, including through their own-record portal permissions.
+these private records, including through their own-record employee-app permissions.
 
 Unknown fields remain blank. Spaces/dashes in identifiers are normalized while
 leading zeros are retained. Shape checks cover BIR TIN/branch/RDO/region, SSS,
 PhilHealth and employee Pag-IBIG MID. These are neither agency lookup nor checksum
 validation. A main-branch code0000 must be entered explicitly; it is not a default
 TIN. Unassigned all-zero identifiers are rejected. The employer Pag-IBIG number
-currently permits1–20digits because the current primary form remains browser
-challenged; its exact agency format is not certified. No challenge was bypassed.
+accepts 1–20 digits as an internal identifier shape check. This is not certification of the agency upload format.
 Birth dates must be valid and no later than the company-local date. The agency
 sex code and employer category describe the supporting document; the category
 does not switch this prototype's private-sector payroll rule pack.

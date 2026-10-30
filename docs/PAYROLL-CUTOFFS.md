@@ -33,8 +33,7 @@ Withholding uses the applicable **semi-monthly** table in
 [BIR RR11-2018 AnnexE, effective2023 onwards](https://bir-cdn.bir.gov.ph/local/pdf/Annex%20E%20RR%2011-2018.pdf).
 It is computed separately for each cutoff's taxable compensation and mandatory
 employee deductions. Its rounding/thresholds can differ from one monthly
-withholding calculation. Year-end annualization and prior-employer adjustments
-remain separate roadmap work. Contribution references remain in [payroll](PAYROLL.md).
+withholding calculation. See [annual tax review](PAYROLL-ANNUAL-TAX.md) for year-end annualization and prior-employer evidence. Contribution references remain in [payroll](PAYROLL.md).
 
 An existing employee needs an issued first cutoff before the second can be
 submitted. A person hired after the15th may have only the second. Refreshing a
@@ -44,7 +43,7 @@ accrual memo reconciles the two halves' rounding; it is not an actual payout.
 
 ## Workflow and access
 
-1. HR/Admin create the period/title/planned pay date and add employee worksheets.
+1. Payroll Officers and Administrators create the period/title/planned pay date and add employee worksheets.
 2. Review actual days or use an attendance proposal limited to this cutoff.
    Review leave/holiday classifications, current OT approvals and documented
    exceptions, coverage, proration and deductions. Save the worksheet.
@@ -58,23 +57,15 @@ must be corrected before approval. Planned dates are bounded from period end to
 16days afterward; employers must still review the actual legal/contractual pay
 schedule. Approval requires a completed cutoff and a supported2026 rule pack.
 
-HR/Admin see drafts and registers. Other staff receive only their own issued
-cutoff payslips; ordinary Employee desktop admission stays prohibited. The paused
-employee portal has not yet added cutoff-payslip access. Slips exclude raw source
+Payroll Officers and Administrators see drafts and registers. Other staff receive only their own issued
+cutoff payslips; ordinary Employee desktop admission stays prohibited. Workforce Employee displays the signed-in person's issued cutoff payslips. Slips exclude raw source
 bundles, HR reviews/coverage notes and component evidence references. Monthly and
 cutoff records have separate tables and are compatible with older installations.
 
-## Reports and checks
+## Reports
 
 Cutoff detail offers a register CSV and an issued monthly-cutoff reconciliation
 CSV. The latter identifies the included halves and incomplete months; it does
 not fill missing pay or produce a filed government return. Issued slips have CSV
 and printable PDF exports with their exact period and planned pay date. The
 older Reports annual export is explicitly limited to monthly registers.
-
-Local PostgreSQL tests exercise source/revision guards, both overlap directions,
-own/HR scopes, independent approval, proration, audit rollback, disabled access,
-monthly contribution/cap reconciliation and preserved earlier records. Rust
-tests compare the SQL centavo vectors and verify scope/export/redaction behavior.
-Mocked Auth is distinct from actual hosted Auth; release verification records
-identify the latter and visual/installation checks when they are completed.

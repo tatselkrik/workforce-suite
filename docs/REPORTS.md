@@ -52,7 +52,7 @@ contact/emergency details are excluded from all report exports.
 
 Administrators and HR Generalists use their company scope. Managers use only
 their own and current direct reports' records. Ordinary Employees remain
-portal-only. The worker reloads RLS-protected data and checks membership scope
+Android-only. The worker reloads RLS-protected data and checks membership scope
 again before writing any file. Changed/revoked access blocks export and clears
 the desktop session. A report filtered to an unavailable employee is rejected.
 
@@ -95,7 +95,7 @@ views are copied during deployment. A legacy view saved before this app's
 first database preference save is also offered if no database row exists.
 An existing empty row does not revive deleted legacy views. Update all clients
 before editing saved views; older versions use their preserved legacy list.
-Shared views and scheduled delivery remain future modules.
+Saved views are personal to the current account.
 
 Expand **Columns** to show/hide available fields and move selected fields Up
 or Down. Preview and CSV retain the chosen order; CSV always includes company,
@@ -105,7 +105,4 @@ its type and column order. Older saved filters default to all columns. Private
 contact fields cannot be added. See [workforce analysis](WORKFORCE-ANALYSIS.md)
 for current headcount and dated attendance/leave trends.
 
-Create-only employee CSV imports with previews/error reports are available to
-HR/Admin; see [employee imports](EMPLOYEE-IMPORTS.md). Custom report definitions,
-XLSX formatting and broader workforce analysis remain subsequent work. A CSV
-export is not an import template or payroll instruction.
+See [employee imports](EMPLOYEE-IMPORTS.md) for create-only record imports and [native Excel](NATIVE-EXCEL.md) for typed workbooks. A report export is not an import template or payroll instruction.

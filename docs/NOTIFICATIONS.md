@@ -34,7 +34,7 @@ Managers receive eligible team reviews, explicitly assigned leave approval
 steps and their personal updates. A named leave reviewer can see a protected
 receipt even when the requester is outside their employee-directory scope.
 Private digital201 file reminders are HR/Admin-only even when the employee
-reports to that Manager. Ordinary Employee accounts remain portal-only.
+reports to that Manager. Ordinary Employee accounts remain Android-only.
 
 ## Private read history
 

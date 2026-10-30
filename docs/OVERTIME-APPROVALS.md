@@ -48,8 +48,8 @@ rules. Required break rules do not invent actual break deductions.
 Protected memberships, row-level security, server-owned identity/actor data,
 company/attendance locking and optimistic revisions enforce these rules.
 Client roles can read only their permitted records and cannot write request
-or event tables directly. Ordinary Employee accounts remain portal-only;
-their protected operations are prepared for the separate future portal.
+or event tables directly. Ordinary Employee accounts remain Android-only;
+their protected own operations use Workforce Employee for Android.
 
 Migration `20261022082855_overtime_approvals.sql` adds the request/history
 tables and guarded RPC. It does not backfill approved time or alter existing

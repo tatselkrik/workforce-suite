@@ -1,35 +1,42 @@
-# Workforce Suite source and local deployment releases
+# Versioning and packaging
 
-The single `workforce-suite` repository is public source for Workforce HR,
-Workforce Payroll and Workforce Employee. The native desktops share Rust code;
-Android embeds the own-record library under the historical employee-portal path.
-The standalone browser app is retired.
+Workforce Suite contains three independently versioned applications:
 
-Apps advance independently with `hr-v…`, `payroll-v…` and `employee-v…` source tags.
-Preserve application IDs, signing keys, installation/data paths and original pay,
-receipt and personnel records. Windows numeric file versions differ from display
-prereleases; Android versionCode must increase for every installed update.
+| Application | Source tag prefix | Package identifier |
+| --- | --- | --- |
+| Workforce HR | `hr-v` | `io.github.tatselkrik.hrisdesktop` |
+| Workforce Payroll | `payroll-v` | `io.github.tatselkrik.payrolldesktop` |
+| Workforce Employee | `employee-v` | `io.github.tatselkrik.hrisemployee` |
 
-Public releases provide generic source snapshots only. Company connection and
-Firebase profiles, private keys, company files and configured installers/APKs stay
-local in ignored deployment folders. Existing configured GitHub release files are
-archived and hash-verified locally before being removed for the public transition;
-source tags and history remain intact after review. Do not create a private remote.
+Each public release provides the generic source snapshot at its tag. Company
+installers and signed APKs are packaged by a deployment operator using that
+company's configuration and signing identity. See
+[Deployment configuration](../config-examples/README.md).
 
-Review current source, reachable history, screenshots and remote assets before
-public publication. Use literal example configuration; never embed the operator's
-backend or reuse another company's signing/provider configuration. Subsequent
-verified source changes are committed/pushed to this same public repository.
+## Compatibility
 
-CI uses standard no-charge public runners with read-only permissions, pinned
-workflow actions and no artifact/cache uploads or deployment secrets. Private
-events skip jobs. A local build, source tag, public release, CI result and actual
-company installation are distinct facts and must be reported accurately.
+Preserve application identifiers, signing identities and compatible installation
+and data paths across updates. Windows numeric file versions are distinct from
+display prereleases. Android versionCode increases for each installable update.
+The applications can advance independently when only one product changes.
 
-Preserve locally installed originals and backups. New changed company packages
-are built/signed/verified/installed locally; never relabel an old binary. The HR
-stable updater catalog remains independently configured by its operator. There is
-no new public auto-update channel, hosted employee portal or automatic SQL deploy.
+Original personnel history, approvals, issued statements and receipts remain
+immutable. A package update is separate from a database migration or data change.
+Database changes use versioned migrations and deployment-specific review.
 
-README is a product introduction and app tour with reviewed fictional screenshots.
-Keep detailed vulnerability findings in ignored local evidence, not in README.
+## Source and package verification
+
+Public source uses pinned dependency locks and standard GitHub Actions runners.
+The workflow checks source/history, the employee service, native code and database
+contracts without deployment credentials or configured artifact uploads. Check the
+result for the exact commit rather than assuming a tag or local build passed CI.
+
+Company packaging verifies the source revision, manifest, signing identity, hashes,
+required configuration, install behavior and recovery. Retain the evidence with
+that deployment. Never label an existing binary as a newly built version.
+
+## Update channels
+
+Each desktop product has its own package and update identity. An HR update must
+never be installed into Payroll. Android updates must match the existing package
+identifier and signing certificate. Save current work before installing updates.

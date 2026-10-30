@@ -43,7 +43,7 @@ unverified. Do not derive current rates or assignment codes from old bundled tab
 
 ## Native workflow and permissions
 
-HR/Admin selects BIR under **Payroll → Government → Reconciliation**, then
+Payroll Officers and Administrators selects BIR under **Payroll → Government → Reconciliation**, then
 **Check BIR 1604C file**. The file is read locally and never uploaded. Current
 protected company registration is loaded to compare only its BIR TIN/branch.
 Missing registration stays unverified; a different header is flagged against the
@@ -82,5 +82,5 @@ before new-file IO. Changed sources require rechecking; existing files survive.
   Raw employee rows, identifiers and compensation amounts are omitted. Diagnostic
   caps remain explicit and cannot convert further errors into a passing result.
 
-No new database migration, rate pack, paid service, Office installation, official
+This file check does not change database records or rate packs, or establish official
 filing, employer registration edit or money movement is part of this increment.

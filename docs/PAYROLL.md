@@ -24,9 +24,9 @@ for an employee/month.
 
 ## Boundaries and controls
 
-Payroll profiles, drafts and audit history are HR/Admin-private. Managers have no
+Payroll profiles, drafts and audit history are Payroll Officers and Administrators-private. Managers have no
 access to team salaries and may read only their own approved payslips. Ordinary
-employees remain reserved for the separate portal. All hosted values are computed
+employees remain reserved for Workforce Employee. All hosted values are computed
 again on the server with integer centavos and explicit rounding.
 
 Payroll holidays are classified separately from the existing leave calendar,

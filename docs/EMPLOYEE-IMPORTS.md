@@ -68,5 +68,4 @@ files, using the same safe CSV quoting/formula-prefix handling as reports.
 Migration `20261022095123_employee_csv_imports.sql` is additive and does not
 rewrite existing employees. Batch import reversal is not an automatic delete:
 archive synthetic or departed employees through the existing history-preserving
-workflow. Bulk updates, account provisioning, attendance/leave imports and
-XLSX mapping remain future modules.
+workflow. Employee imports create employee records rather than sign-in accounts or bulk updates. See [attendance imports](ATTENDANCE-IMPORTS.md), [leave imports](LEAVE-REQUEST-IMPORTS.md) and [native Excel](NATIVE-EXCEL.md) for their separate workflows.

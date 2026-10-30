@@ -6,11 +6,6 @@ Configure leave, attendance corrections and overtime separately. HR/Admin see
 configuration history; Managers see only assignments involving themselves.
 Reasons/references and configuration actors remain HR/Admin-private.
 
-Delivered in0.1.48, installed and privately published. The migration, native
-application, hosted Auth/workflows and exact installer/recovery checks pass.
-See [verification](APPROVAL-DELEGATION-0.1.48-VERIFICATION.md) and the
-[review checklist](APPROVAL-DELEGATION-0.1.48-CHECKLIST.md).
-
 Delegation adds a substitute; the original approver retains original authority.
 It does not transfer an account role, reporting line, personnel-file access,
 account-management permission, salary approval or other financial authority.
@@ -59,16 +54,14 @@ network failures. Refresh to discover the outcome; retry the same retained draft
 without creating a duplicate. Concurrent configuration changes require reviewing
 the updated settings before submitting again.
 
-The separate portal retains its existing own-record contracts. This module adds
-no external messages, paid service, device connection or public deployment.
+Workforce Employee retains its own-record permissions. Delegation changes operational review authority only.
 
-## Specialist-role update, local implementation only
+## Specialist responsibilities
 
-The pending Account Manager release binds each grant to both complete protected
+Each grant is bound to both complete protected
 role sets. A specialty change suspends its use even when the compatible base role
 stays Employee or Manager. Existing grants retain their saved legacy mapping and
 history. Staff without HR/team authority can cover only a specifically named
 leave approval; every action must still prove the original principal's exact
 request/step authority. The native version2 projection displays complete staff
-roles without adding Account Manager access to substitutes. This is verified
-locally; installed0.1.62 and hosted specialist activation remain unchanged.
+roles without adding Account Manager access to substitutes.

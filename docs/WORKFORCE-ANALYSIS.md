@@ -3,7 +3,7 @@
 Reports includes **Workforce headcount** and **Attendance & leave trends**.
 Both use the existing fresh-data/report export worker. Administrators and HR
 use company scope; Managers see only their own/current direct-report records.
-Employee portal accounts cannot sign into the desktop. Saved views and custom
+Ordinary Employee accounts cannot sign into the desktop. Saved views and custom
 columns do not grant additional record access.
 
 ## Current workforce snapshot

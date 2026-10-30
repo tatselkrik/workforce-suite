@@ -1,9 +1,9 @@
-# SSS reference draft — 0.1.45 increment
+# SSS reference draft
 
-The native HR/Admin control is **Payroll → Government → Prepare SSS R3 reference
+In Workforce Payroll, select **Payroll → Government → Prepare SSS R3 reference
 draft** after generating an SSS month. It uses the existing protected preparation
 projection; no new schema, contribution rates or issued payroll values change.
-See the [review checklist](GOVERNMENT-0.1.45-CHECKLIST.md).
+
 
 Preparation requires complete reconciled contributions, known employer/EC shares,
 legal/assigned SSS registrations, and one active full-month receipt matching the
@@ -35,5 +35,5 @@ match inspected DTO/string methods of the currently downloadable official R3
 package. Current My.SSS acceptance, reserved-slot semantics, broader encoding,
 quarterly/split-payment cases and no-earnings declarations remain unverified.
 No legacy rate validator, agency login, submission or money transfer is invoked.
-The full government-export milestone remains partial; see
+For the distinction between internal preparation and agency acceptance, see
 [format review](GOVERNMENT-FILE-REVIEW.md).

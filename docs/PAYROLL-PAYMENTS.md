@@ -1,6 +1,6 @@
 # Individual payroll payment records
 
-Open **Payroll → Payments**. HR/Admin see outstanding or all issued monthly, cutoff and13th-month payslips and can search employee names/codes, including departed employees. Only an active Administrator records an actual full-slip payment with a date, private reference, reason and confirmation. The server derives the exact issued net amount; partial cash installments are not included in this increment. This records a payment already made and never transfers money.
+Open **Payroll → Payments**. Payroll Officers and Administrators see outstanding or all issued monthly, cutoff and13th-month payslips and can search employee names/codes, including departed employees. Only an active Administrator records an actual full-slip payment with a date, private reference, reason and confirmation. The server derives the exact issued net amount; partial cash installments are not included in this increment. This records a payment already made and never transfers money.
 
 A receipt belongs to exactly one issued payslip, employee and company. It remains immutable. The same actor can retry the identical creation request after a failed refresh; changed requests, duplicate receipts, stale run revisions and changed memberships are rejected. An audit failure rolls the entire operation back. HR-only references/reasons and the source view are unavailable to Managers and employees.
 

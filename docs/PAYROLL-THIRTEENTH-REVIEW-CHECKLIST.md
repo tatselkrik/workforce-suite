@@ -9,4 +9,4 @@
 7. Export the register and own benefit slip CSV/PDF. Check exact year/as-of/pay date, amounts and privacy. A Manager sees only their own issued slip. Archived employee eligibility stays separate from account sign-in access.
 8. Record a synthetic or independently verified actual paid date/reference. No money moves; issued slips and earlier history remain unchanged.
 
-Review December24 timing and any employer-funded advance. The paused portal has no new benefit-slip view. This module does not file returns, transfer money, confirm remittances or automatically annualize tax.
+Review December24 timing and any employer-funded advance. Workforce Employee displays own issued benefit slips. This module does not file returns, transfer money, confirm remittances or automatically annualize tax.

@@ -1,9 +1,22 @@
-# HRIS Employee for Android
+# Workforce Employee for Android
 
-Read ../AGENTS.md and ../memory.md. Kirk authorized this separate Android employee application on29October2026. Preserve identifier io.github.tatselkrik.hrisemployee. Keep the existing loopback desktop portal and its drafts/sessions until Android feature parity is verified; do not publicly host it.
+Read the root AGENTS.md and local operator instructions if present. Preserve
+`io.github.tatselkrik.hrisemployee`, pinned dependency inputs, signing identity
+and its independent package version and lifecycle.
 
-Reuse the existing Rust own-record portal service embedded in the app, accessed only through a private device-loopback origin and bundled WebView UI. The phone connects to the dedicated company Supabase directly; it must not depend on the PC portal process. Kotlin/Compose supplies the Android lifecycle, protected WebView, file picker/export/printing and notification integration. Package only the current company publishable profile/branding. No chooser, secret/service key, credentials, Auth tokens or automatic employee-data cache on disk. Disable backups, external navigation, mixed content, arbitrary bridges and WebView debugging. Preserve Origin/Host/CSRF, current protected membership, own-only staff/employee scopes, safe errors and memory-only Auth.
+Reuse the shared Rust own-record service embedded in the app through the exact
+private device-loopback origin and bundled WebView UI. Kotlin and Compose own
+lifecycle, protected WebView, pickers, exports, printing and notification integration.
+Company configuration is supplied at packaging time; there is no in-app chooser.
 
-Build inputs are pinned stable versions verified at creation; retain one compact Cargo target/cache per app. Two supported ABIs initially: arm64-v8a and x86_64 emulator. Signed private APK delivery and emulator evidence must be distinguished from physical-phone testing. No public store upload, billing or paid provider. Actual Firebase delivery needs a resolved free project/configuration and verified sender; never fake a working push connection or ship its service credential. Keep payloads generic and fetch private records only after current authentication. No external email setup or hardware work is authorized by this app change. Biometrics stays visible/disabled in staff desktop.
+Do not package secrets, server keys, credentials or Auth tokens. Keep authentication
+in memory and never automatically cache employee records on disk. Preserve backups
+disabled, external navigation blocked, strict Host/Origin/CSP/CSRF, no mixed content,
+release debugging disabled, bounded messages and current own-only membership checks.
+Staff duties never widen Android own-record scope. Shutdown must cancel held peers.
 
-Do not remove existing external-exchange history or repurpose payroll transactions. Kirk declined external accounting/payroll integration; update its active UI/plan separately while retaining compatible audit history and ordinary reports/exports.
+Keep one compact Rust target per ABI purpose. Preserve arm64-v8a and x86_64 support.
+Distinguish signed-package, emulator and physical-device evidence. Device alerts
+transport generic hints; private details require current authentication. Never ship
+the sender credential. External providers, publishing destinations and backend writes
+require their own resolved authority; consult local operator guards when applicable.

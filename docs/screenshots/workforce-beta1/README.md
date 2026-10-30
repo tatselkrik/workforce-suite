@@ -14,4 +14,3 @@ The HR overview, employee directory, Payroll monthly register/settings, employee
 home/pay/profile and sign-in screens were inspected before being copied here.
 CAPTURES.json records hashes of the unmodified, reviewed PNGs. Fictional names,
 amounts, dates and company branding are interface examples, not business claims.
-The retained PC browser portal has its own lifecycle and is not pictured here.

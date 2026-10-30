@@ -3,7 +3,7 @@
 Open **Leave > Leave policies**. Administrators choose **Edit policies and
 approval chains**; Settings also links to this page. HR and Managers can read
 the company's policy summary. Ordinary Employee accounts remain reserved for
-the separate portal and cannot sign in to the desktop.
+Workforce Employee and cannot sign in to the desktop.
 
 ## Calendar and leave types
 
@@ -47,8 +47,7 @@ can therefore change current availability; already filed charge dates stay
 unchanged. Entitlements retain the established grant/accrual calculation. Dated
 base-credit adjustments now have a separate immutable ledger under Leave >
 Credit adjustments; see [audited credits](LEAVE-CREDITS.md). Imported opening
-balances, policy effective dates and cash conversion remain separate future
-features. Never enter a total remaining balance as a credit delta.
+balances and policy effective dates use the [dated policy and opening-balance workflow](LEAVE-OPENINGS.md). Leave cash conversion is separate from balance administration. Never enter a total remaining balance as a credit delta.
 
 The request preview shows the balance projected through the requested start
 date, including month-end credits earned by then. Pending requests reserve their
@@ -79,8 +78,7 @@ Approvers outside the reporting team receive the request identity and history,
 without access to the employee's personnel record or private contacts. They
 retain a receipt after their decision. Disabling their staff account removes
 that access. Missing/disabled assigned reviewers block their step: HR can cancel
-the request and submit a replacement under a corrected chain. Delegation,
-automatic escalation and notifications are separate future modules.
+the request and submit a replacement under a corrected chain. See [approval delegation](APPROVAL-DELEGATION.md) for temporary substitutes and [notifications](NOTIFICATIONS.md) for current reminders. There is no automatic approval escalation.
 
 ## Cancellation and corrections
 

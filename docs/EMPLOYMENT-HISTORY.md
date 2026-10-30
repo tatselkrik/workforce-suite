@@ -6,7 +6,7 @@ Tracked fields are employee code, full name, department, job title, date joined,
 
 Existing employees receive a **Starting snapshot** when this feature is deployed. This does not claim when they were hired or reconstruct earlier changes. New employees, including automatic staff-account identities, receive **Employee created**. Later employment edits receive **Employment updated**. Updating only contacts, photos, credentials or staff permissions creates no employment event. An unchanged save creates none.
 
-History is read-only. Correct a mistake in the Employment fields and save again; the original entry remains. Archiving retains the timeline. Manager and ordinary Employee scopes cannot read this HR-only history, including their own; it does not appear in Profile. The employee portal remains a separate future application.
+History is read-only. Correct a mistake in the Employment fields and save again; the original entry remains. Archiving retains the timeline. Manager and ordinary Employee scopes cannot read this HR-only history, including their own; it does not appear in Profile. Workforce Employee does not expose HR-only employment history.
 
 Events retain the employment values and manager/type/location names used at that save. Later related renames cannot rewrite old snapshots or actor names. Renaming a company choice alone creates no employee event. Multiple employment changes in one save form one event. A database sequence orders events even if times coincide. Concurrent employee saves retain both committed before/after states; this module does not add optimistic conflict prevention to the employee editor.
 

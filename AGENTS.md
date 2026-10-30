@@ -16,9 +16,9 @@ historical notes. Keep short task checkpoints under ignored `work/` when enabled
 
 - HR and Payroll are separate native Rust desktop applications sharing reviewed
   financial/domain code. Do not add a web frontend or embedded database to them.
-- Android is the employee-facing application. `employee-portal/` is a historical
-  directory/package name for its shared own-record Rust library, not a supported
-  standalone browser app. Keep `autobins = false`; do not restore a server launcher.
+- Android is the employee-facing application. `employee-portal/` contains its
+  shared own-record Rust library. Keep `autobins = false` and expose no standalone
+  server launcher.
 - Preserve deployed application IDs, signing identities, legacy install/data
   paths and protected membership/RLS contracts. Company profiles are supplied by
   the operator, never selected by an employee inside an app.
@@ -30,7 +30,8 @@ historical notes. Keep short task checkpoints under ignored `work/` when enabled
   confidential cases, scoped attachments and immutable history. Consult the
   relevant feature contract in `docs/` before changing behavior.
 - Keep tokens/passwords/session state in memory. Android serves bundled content
-  from the exact bound device-loopback origin; no LAN/public browser hosting.
+  from the exact bound device-loopback origin; never expose that service to a LAN
+  or public host.
 
 ## Changes and verification
 
@@ -52,7 +53,10 @@ committed and pushed there. Run `node tools/public-source-check.mjs --history`
 before publication; review screenshots and relevant history as well as current
 files. Profiles, Firebase configuration, secrets, signing keys, company files,
 configured installers/APKs and detailed vulnerability reports stay ignored/local.
-Keep product documentation in README; do not place a security findings report in it.
+Keep README and docs focused on product use, configuration and developer reference.
+Keep personal requests, approvals, chat acknowledgments, work logs, rollout plans,
+historical delivery evidence and detailed vulnerability findings in ignored local
+operator records. User guides belong in docs in matching Markdown and Word formats.
 
 Preserve source history/tags. Public releases contain generic source only.
 Company-specific packages are built, verified and installed locally; never relabel

@@ -1,6 +1,5 @@
-# Agency preparation exports — 0.1.44
+# Agency preparation exports
 
-This increment is installed and verified; see [delivery evidence](GOVERNMENT-0.1.44-VERIFICATION.md).
 In **Payroll → Government**, generate the agency/month and choose **Export agency
 preparation CSV**. This internal worksheet contains the chosen agency's registered
 identifiers/name fields, revisions and immutable payroll sources. It is not an
@@ -15,16 +14,15 @@ remains free of registered identifiers. Classifications, salary bases, certifica
 and filing declarations are not guessed. Earned contribution months and individual
 BIR receipt dates retain their meanings; no source record is changed by exporting.
 
-The server supplies one HR/Admin-only stable projection. Native validation checks
+The server supplies one stable projection restricted to Payroll preparation responsibility. Native validation checks
 company/person/source scope, canonical identifiers, duplicates and unexpected
 fields. After rendering, it rechecks protected access before local file creation;
 revocation prevents the write. CSV uses UTF-8/BOM, CRLF, quoted cells and formula
 protection. Manager/ordinary Employee own-record access grants no exception.
 Identifier leading zeros remain in the CSV bytes; import identifier columns as
-text when using a spreadsheet. Native typed Excel files remain a later milestone.
+text when using a spreadsheet. See [government Excel](GOVERNMENT-EXCEL.md) for native typed workbooks.
 
-In0.1.44 the separate SSS reference encoder had no product download control.
-The [0.1.45 increment](SSS-REFERENCE-DRAFT.md) adds a bounded HR-review draft
+The [SSS reference draft](SSS-REFERENCE-DRAFT.md) provides a bounded internal review file
 with current-source/readiness and explicit declaration checks. Twelve
 fictional monthly vectors match inspected DTO/string methods from the currently
 downloadable R3 package, whose base/update writer classes are identical. No SSS
@@ -32,4 +30,4 @@ installer, GUI, network helper or old rate-table validator was launched. Integer
 cents, bounded widths, explicit declarations and retained namesakes are checked;
 no silent truncation/transliteration occurs. Current agency semantics, reserved
 slots, encoding and acceptance remain integration gates. See
-[format review](GOVERNMENT-FILE-REVIEW.md). The government milestone stays partial.
+[format review](GOVERNMENT-FILE-REVIEW.md). These preparation records do not establish official upload acceptance.

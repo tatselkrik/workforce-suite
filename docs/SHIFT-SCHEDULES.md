@@ -3,7 +3,7 @@
 Open **Attendance > Shift schedules** to create a named shift. Administrators
 and HR Generalists manage shifts and assignments. Managers can read schedules
 for themselves and their current direct reports; they cannot assign or edit them.
-Ordinary Employee accounts remain reserved for the future employee portal.
+Ordinary Employee accounts use Workforce Employee for Android.
 
 Choose working days, start/end times in 24-hour format, and whether company
 holidays are scheduled workdays. An end before the start finishes the next day;
@@ -69,4 +69,3 @@ remove the new database schema or undo schedule-aware overnight attribution.
 
 Biometric integration remains visible and disabled until a device is selected
 and integration is implemented and verified against that hardware.
-

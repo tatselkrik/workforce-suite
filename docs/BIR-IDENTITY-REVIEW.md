@@ -1,6 +1,6 @@
 # Current BIR file identity review
 
-This local HR/Admin review matches a structurally consistent standalone 1604C
+This local Payroll Officers and Administrators review matches a structurally consistent standalone 1604C
 Schedule 1 or 2 file to **current registered TIN/branch pairs**. It does not match
 by names, certify historical identity/agency assignment, compute expected tax,
 compare 2316 certificates, establish required file coverage or validate filing.
@@ -16,7 +16,7 @@ fields. Other agencies, legal/contact fields, references, notes and registration
 history are omitted. Unknown/unassigned fields remain blank.
 
 Both new wrappers are security invoker with an empty search path. The existing
-annual source guard requires current active HR/Admin membership; existing
+annual source guard requires current active Payroll Officers and Administrators membership; existing
 employee/registration SELECT grants and RLS remain intact. No new table, broad
 permission or security-definer function is introduced. Reject more than 20,000
 roster records without truncation. Native decoding independently checks the
@@ -53,21 +53,9 @@ raw tax identifiers, file-declared names, compensation and HR evidence. Literal
 Excel text and existing CSV formula-prefix protection preserve codes/Unicode.
 The original minimal BIR diagnostic export retains its separate privacy contract.
 
-## Verification and deployment limits
+## Validation scope
 
-The current prototype employer registration is incomplete. Hosted native tests
-verify the real protected projection and that missing setup prevents exports;
-they do not seed or alter employer facts to obtain a positive. Full configured-
-company file matching remains a manual/live verification limit. Fictional model,
-real local HTTP and independent native Excel cases cover positive matching,
-namesakes, ambiguity, absent sources, incomplete registration and MWE review.
-
-Hosted QA uses only a short-lived synthetic session against the installed
-profile, pinned to the exact private project authorization and linked target.
-Reject redirects. Use a fixed project-local evidence folder and persist only
-aggregate proof, never hosted identity snapshots. Environment variables must not
-select an arbitrary network destination or output directory.
-
-Actual official-module/filing acceptance remains unverified. The supplied BIR7.4
-module/readable-method conflicts and published PERA controls retain their existing
-status in [BIR-FILE-PREFLIGHT.md](BIR-FILE-PREFLIGHT.md).
+Matching requires complete current employer registration and exact evidenced
+employee identities. Missing setup blocks export rather than supplying fictional
+defaults. A positive internal match is not official-module or filing acceptance.
+See [File preflight](BIR-FILE-PREFLIGHT.md) for structural and declaration limits.

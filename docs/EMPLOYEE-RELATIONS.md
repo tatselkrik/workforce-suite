@@ -24,14 +24,10 @@ events. Cases/follow-ups are retained; no delete control is provided. Exceeding
 bounded context/history budgets must fail explicitly rather than silently omit data.
 
 The native workspace loads its separate confidential context on demand; never put
-it into shared Snapshot, portal payloads, Payroll, general reports, notifications,
+it into shared Snapshot, employee-app payloads, Payroll, general reports, notifications,
 Auth metadata or local files. Once loaded, refresh it during normal protected
 refreshes. Revoked assignment/access clears cached case contents and affected
 drafts. Preserve ordinary drafts through non-authority failures and uncertain
 saves: retry the exact frozen request; definitive rejection requires explicit review.
 Attachments, automatic disciplinary decisions, employee self-service cases, external
 communications and statutory case-handling advice are outside this increment.
-
-Implementation/SQL/local checks alone are not delivery. Verify current-role and
-assignment denial/revocation, source preservation, native layouts and exact private
-release/actual installation before crossing the milestone out.

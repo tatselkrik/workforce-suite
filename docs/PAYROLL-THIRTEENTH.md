@@ -2,7 +2,7 @@
 
 The native **Payroll → 13th-month pay** increment adds earned-coverage runs,
 employee worksheets, independent approval, immutable own benefit slips and
-recorded payments. Consult versioned verification for deployment/package state.
+recorded payments.
 
 ## Entitlement and coverage
 
@@ -47,7 +47,7 @@ does not prove statutory compliance or transfer funds.
 
 ## Workflow and permissions
 
-HR/Admin create the year/as-of/title/pay-date run, add employees and review
+Payroll Officers and Administrators create the year/as-of/title/pay-date run, add employees and review
 openings, actual coverage, earlier benefits and adjustments. Save the worksheet,
 review included/omitted employees and submit. Another Administrator reviews the
 saved source/evidence worksheet and approves. Changes retain reasons/events;
@@ -65,8 +65,7 @@ Clients have SELECT-only grants/RLS on three separate tables; protected writers
 check current memberships and revisions under the company payroll lock. Managers
 and Employees can read only their own issued slips, never drafts or team pay.
 Ordinary Employees still cannot sign in to the native desktop. Slips exclude raw
-source bundles, HR notes and opening evidence references. The employee portal
-remains paused and has not added this benefit-slip view.
+source bundles, HR notes and opening evidence references. Workforce Employee displays only the signed-in person's issued benefit slips.
 
 ## Official references checked23October2026
 

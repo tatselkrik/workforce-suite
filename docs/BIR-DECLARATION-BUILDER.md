@@ -1,11 +1,6 @@
-# BIR declaration file builder — implementation in progress
+# BIR declaration file builder
 
-This is the next free government-file adapter increment after desktop0.1.61.
-It is not delivered until its verification, packaging, installation and private
-publication records pass. No official acceptance or automatic payroll-to-return
-mapping is claimed. The existing installed release stays unchanged during work.
-
-HR/Admin prepare explicit declaration values in a schedule-specific CSV/native
+Payroll Officers and Administrators prepare explicit declaration values in a schedule-specific CSV/native
 Excel template. Its columns correspond to published detail columns7 onward;
 HRIS supplies only employer/form/period, deterministic row-order sequences and
 exact monetary controls. It never guesses tax, income classes, eligibility,

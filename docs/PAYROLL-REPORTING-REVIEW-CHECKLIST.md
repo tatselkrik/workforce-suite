@@ -1,5 +1,4 @@
-# Payroll reporting review checklist — 0.1.40
-
+# Payroll reporting review checklist
 - Open Payroll → Reports and Generate / refresh report.
 - Switch between Approval date and Payment / settlement date; compare an earlier
   issued slip paid in a later month. The report should follow the actual date.

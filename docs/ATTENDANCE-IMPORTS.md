@@ -1,8 +1,6 @@
 # Attendance correction request imports
 
-Desktop0.1.51implements the attendance part of roadmap6. Its versioned review
-checklist records the behavior and verification boundaries. Native Excel is
-delivered in0.1.50; leave-request batch imports follow.
+Import CSV or Excel rows as attendance correction requests, with protected preview, row validation and the normal approval history. See [leave request imports](LEAVE-REQUEST-IMPORTS.md) for leave batches.
 
 HR/Admin can prepare1–100CSV/Excel rows using employee_code, work_date,
 checked_in_at, checked_out_at, reason and reference. Work dates use ISO dates
@@ -39,5 +37,4 @@ by their existing own/team/delegated scopes, never private batch metadata.
 History has explicit500batch/5,000item limits with no silent truncation. CSV/XLSX
 review exports recheck protected access after rendering and preserve existing
 files. Native drafts retain exact uncertain submissions/withdrawals, clear on
-scope change and participate in unsaved-work protection. No paid service, account
-creation, external/device connection, portal restart or public hosting is added.
+scope change and participate in unsaved-work protection. Importing attendance never creates a sign-in account or connects to an attendance device.

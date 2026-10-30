@@ -1,18 +1,56 @@
 # Workforce Employee for Android
 
-Android employee app 1.0.0-beta.2, built from public source with private company configuration, application identifier `io.github.tatselkrik.hrisemployee`.
-It connects directly to the packaged company's Supabase using a publishable key and the signed-in person's protected own-record APIs. It does not require the PC browser portal to run. Administrators also see only their own employee records in this app.
+Workforce Employee provides attendance, leave, correction and overtime requests,
+published payslips, Services, Inbox and personal profile controls.
+The current release is `1.0.0-beta.2`, with application identifier
+`io.github.tatselkrik.hrisemployee` and Android versionCode 5.
 
-The native Android shell embeds the existing Rust employee service and bundled interface on an ephemeral device-loopback socket. Existing attendance, leave, requests, payslips, inbox, contact/emergency details, profile pictures and account-security flows are reused. Kotlin/Compose supplies lifecycle, image/document pickers and Android printing. No staff administration/payroll preparation is exposed. No offline employee-data cache or saved password is provided; reopen after process death requires sign-in.
+The app connects to its packaged company's Supabase configuration. Every account,
+including an Administrator, receives only its own employee information. Staff
+administration and payroll preparation use the desktop applications.
 
-After signing in, open **Device alerts** and choose **Enable alerts**. Allow the Android notification permission, then use **Send test alert**. The dedicated free Firebase connection transports only a generic inbox hint; names, pay and HR details are fetched after current sign-in. New personal inbox items are checked every15minutes, within the free sending caps. Test alerts send immediately when capacity is available. Closing the app keeps alerts enabled; **Sign out** and **Disable alerts** switch them off. A grant expires after30days without authenticated confirmation. Android notification/power settings can delay delivery. The in-app inbox remains available independently. No external email provider, paid service, store publication or public/LAN PC portal is configured. The standalone PC browser portal is retired.
+## Using the app
 
-The interface matches HRIS and Payroll: teal light and charcoal dark appearances follow Android, with rounded cards, circular branding/profile photos and illustrated bottom navigation. The shared employee-service folder retains its historical name but no longer provides a standalone server binary.
+Install the signed company APK on Android 8 or later and sign in with your company
+account. The app keeps authentication in memory. Closing or process termination
+requires sign-in again; employee records and passwords are not cached for offline use.
+Android light and dark appearance carries through the app.
 
-## Build
+Use Android's document chooser for exports and image selection, and its print
+framework for PDF. See the [suite user guide](../docs/USER-GUIDE.md) for workflows
+and [the Word edition](../docs/Workforce-Suite-User-Guide.docx) for a downloadable copy.
 
-Pinned stable inputs are in Gradle files/locks, the Gradle wrapper and rust/Cargo.lock. Use `tools/build-employee-android.py` from the HRIS root on the configured Windows workstation. It builds arm64-v8a and x86_64 Rust libraries, verifies the company publishable profile, retains the private signing identity and collects dependency notices. `--release` requires committed clean inputs; `--candidate` is explicitly not a verified release. Private assets, signing files and build output must remain ignored. Builds consume the pinned dependency locks; use `--refresh-locks` only for an intentional dependency update, then commit the reviewed lock changes. Final releases check that source stays clean after assembly.
+## Device alerts
 
-## Phone review
+After signing in, open **Device alerts** and select **Enable alerts**. Allow the
+Android notification permission, then use **Send test alert**. Firebase Cloud
+Messaging carries only a generic inbox hint; private details are fetched after
+current sign-in. The in-app Inbox remains available independently.
 
-Install only the privately supplied signed APK on a compatible Android device (Android8/API26 or newer; arm64). Sign in with your existing company account. Review Home, Attendance, Leave, Payslips, Services, Inbox and My profile. Check image selection, CSV saving, Print/savePDF and draft behavior when switching apps. Android emulator evidence is separate from physical-phone verification. Never install the instrumentation test APK on an employee phone.
+Personal inbox items are checked every 15 minutes within configured sending caps.
+Closing the app retains enabled alerts; **Sign out** and **Disable alerts** turn
+them off. Grants expire after 30 days without authenticated confirmation. Android
+notification and power settings can delay reception. See
+[Device alert reference](../docs/ANDROID-PUSH.md).
+
+## Architecture
+
+Kotlin and Compose manage lifecycle, protected WebView, pickers, printing and
+notifications. The bundled interface uses an embedded Rust own-record service on
+an ephemeral device-loopback origin. That service is part of the Android app.
+See [Runtime and access boundaries](../docs/ANDROID-EMPLOYEE.md).
+
+## Build and packaging
+
+Pinned inputs are in the Gradle files and locks, wrapper and `rust/Cargo.lock`.
+Use `tools/build-employee-android.py` from the repository root on a configured
+Windows workstation. It builds arm64-v8a and x86_64 libraries, verifies the company
+publishable profile, retains the signing identity and collects dependency notices.
+
+`--release` requires committed clean inputs; `--candidate` produces an explicitly
+unverified candidate. Use `--refresh-locks` only for an intentional dependency
+update. Final packaging checks that source remains clean after assembly.
+
+Supply deployment profiles, Firebase configuration and signing keys locally using
+the [configuration guide](../config-examples/README.md). Keep them and configured
+APKs outside Git. Updates must retain the package ID and signing certificate.

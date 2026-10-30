@@ -1,15 +1,42 @@
-# Android employee app contract
+# Workforce Employee architecture
 
-Authorized29October2026. See employee-android/README.md and its nested AGENTS.md. Identifier io.github.tatselkrik.hrisemployee; separate lifecycle from HRIS/Payroll/Desktop portal. Existing dedicated company backend and immutable facts are retained, with no new schema for the Android wrapper.
+Workforce Employee is the Android employee application, with identifier
+`io.github.tatselkrik.hrisemployee`. It connects to the packaged company Supabase
+deployment through protected own-record APIs. Every account, including a staff
+or Administrator account, receives only its own employee information.
 
-Rust owns Auth tokens, own-record requests and server-session state in memory. The bundled WebView holds only the opaque HttpOnly session cookie and page-memory CSRF/drafts. A held ephemeral127.0.0.1 listener prevents bind races; foreign Host/Origin, external navigation, mixed content, file access, arbitrary JS interfaces, backups and release WebView debugging are disabled. Android cleartext is permitted only for device127.0.0.1; upstream Supabase remains certificate-verified HTTPS. No service key is shipped.
+## Runtime and interface
 
-The process retains an Application-context WebView across Activity recreation without serializing private pages to disk. Application context is intentional; Activity access is weak and refreshed. Close clears browser/session state. Process death requires a fresh sign-in. Profile image selection uses the user-selected Android content URI; CSV uses the Android create-document chooser; printing uses Android's print framework. No implicit file overwrite or silent photo-library access is added.
+The Kotlin and Compose shell embeds the shared Rust employee service and bundled
+WebView interface. The service binds an ephemeral device-loopback address; its
+configured origin must match the actual literal IP and port. Strict Host, Origin,
+CSP, CSRF and no-store checks protect requests. The service is not exposed outside
+the device. Its Rust library lives in `employee-portal/`.
 
-The origin-scoped main-frame message listener accepts only bounded CSV payloads with a fixed payslip filename shape and print actions. Existing browser CSV behavior is retained. Missing required WebView capabilities fail visibly; renderer failure requires reopening/reviewing saved state before retry. Native colors follow system dark/light appearance.
+The application supports attendance, leave, correction and overtime requests,
+published pay information, Services, Inbox, profile pictures,
+contact and emergency details, account security and device alerts. Staff
+administration and payroll preparation belong to the desktop applications.
 
-Push is not connected. Do not request notification permission before a real free company connection exists. Later FCM must use a trusted protected sender, generic payloads and current own identity; no sender key belongs in the APK. Existing inbox notices continue. Preserve existing Auth confirmation rules; real email confirmation remains a separate unresolved verification.
+An application-context WebView survives Activity recreation without serializing
+private pages or drafts to disk. Activity access is weak and refreshed. Closing
+clears the app session; process death requires a new sign-in. The service cancels
+held or incomplete connections during shutdown and bounds token cleanup.
 
-## Verification status
+## Files and privacy
 
-Rust own-record regressions, JNI listener/security lifecycle, two ABI builds, Gradle compilation/lint and headless emulator acceptance have separate evidence under ignored work/android-employee. Release delivery records must identify actual passed checks, failed/replaced tests, installed APK hash/signature, source revision and unverified physical-device/PDF-save/push boundaries. Compilation and a declared callback do not prove delivery.
+Profile images use an explicit Android content selection. CSV uses the Android
+create-document chooser and PDF uses Android's print framework. These are deliberate
+exports; there is no automatic employee-record cache or saved password. Backups,
+WebView debugging, external navigation, mixed content and arbitrary bridges are
+disabled in release packages.
+
+The origin-scoped main-frame listener accepts only bounded CSV payloads with
+permitted filename shapes and print actions. Missing WebView capabilities fail
+visibly. Renderer failure requires reopening and reviewing saved server state
+before retrying an uncertain action.
+
+Light and dark appearance follows Android settings. AndroidX handles back
+navigation, document selection and notifications. See the
+[Android build guide](../employee-android/README.md) and
+[device alert contract](ANDROID-PUSH.md).

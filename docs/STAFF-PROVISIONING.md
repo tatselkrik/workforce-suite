@@ -1,10 +1,7 @@
-# Protected staff provisioning â€” staged Account Manager contract
+# Protected staff provisioning
 
-Delivered and enabled in0.1.63on28October2026. See
-[delivery evidence](ACCOUNT-MANAGER-0.1.63-DELIVERY.md). Earlier staged evidence
-below is historical; hosted provisioning and exact retry/no-mail checks passed.
-All migrations are additive; the installed desktop and existing Auth route stay
-compatible. No role comes from user-editable metadata.
+Administrator account setup preserves one employee identity, exact retry receipts
+and immutable access history across the database and Auth services.
 
 ## Atomic business commit and recoverable Auth identity
 
@@ -51,22 +48,8 @@ explicit30-open-attempt quota, with bounded complete views and no silent truncat
 Private tables have RLS and no API/service-role table grants. Only the checked RPC
 entry points are granted to authenticated; internal helpers remain ungranted. These
 functions require fresh protected Administrator membership, not a decoded role claim.
-The separate ordinary Employee portal keeps its existing own-record scope.
+Workforce Employee retains its own-record scope.
 
-## Historical verification and rollout boundary
-
-The local PostgreSQL fixture applies the actual migration chain with fictional
-Auth/Storage. It verifies complete business-record preservation, disabled-gate and
-role denial, idempotency, source changes, linked recovery, cancellation, revocation,
-immutable history, atomic audit-failure rollback and bounded pending capacity.
-The dependency-free handler tests verify the fixed Auth UUID, caller/server key
-separation, no deletion/password-reset/mail on retry, strict receipt identity and
-least-privilege compatible roles. Legacy handler tests remain unchanged.
-
-Native provisioning/editor integration and complete specialist read/write boundaries
-must still pass before hosted deployment, activation or a new installed release.
-Kirk's current instruction is to finish Account Manager provisioning and permissions,
-deliver it, then pause work and the same scheduler before later roadmap milestones.
 ## Native integration and existing sign-in identities
 
 The gated native form now supports new employees and adding access to an existing
@@ -83,19 +66,9 @@ recreates a deleted pre-existing identity. This also recovers an unconfirmed ide
 after a cancelled attempt without adding a separate employee-linking setup step.
 The operator sees that an existing sign-in identity keeps its original password.
 
-Latest local evidence:744normal Rust checks passed,28explicit opt-ins ignored;
-11,282PostgreSQL workflow/preservation assertions plus fresh75migration replay,
-129role-foundation,76role-transaction and88provisioning assertions pass. Edge67tests
-pass. Headless form checks cover four sections, three widths, light/dark and locked/
-editable states. None of these establishes hosted or installed-screen verification.
-The rollout gate remains FALSE; no staged migration/Edge function/new app release
-has been delivered to the live prototype yet. Complete the specialist native/server/
-storage/portal/updater permission pass before activation and final delivery.
-## Legacy creation and uncertain delivery safeguards
-
-Local migration85and the handler update require a protected rollout preflight
+The handler requires a protected compatibility preflight
 before an old create operation can contact privileged Auth. Ready installations
 require the new credential-free-intent contract. Failed or uncertain old saves
 retain the Auth identity for reviewed recovery; no compensating Auth deletion is
 performed. Original business ownership/employee identity guards remain. These
-changes are locally verified and remain staged pending the full role rollout.
+guards preserve prior account identities and immutable history during compatible upgrades.

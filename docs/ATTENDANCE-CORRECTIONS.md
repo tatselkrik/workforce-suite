@@ -4,7 +4,7 @@ Daily attendance follows the company's time zone. Choose a work date from the ca
 
 ## Routine attendance
 
-**Check in** and **Check out now** use the current database server time. Check-in creates today's record. An overnight shift is checked out from its original work date. Administrators and HR can record these manual exceptions for employees; Managers can record their own routine attendance. Ordinary employees will use the separate planned portal.
+**Check in** and **Check out now** use the current database server time. Check-in creates today's record. An overnight shift is checked out from its original work date. Administrators and HR can record these manual exceptions for employees; Managers can record their own routine attendance. Ordinary employees use Workforce Employee for Android.
 
 ## Record a missing entry
 
@@ -26,7 +26,7 @@ Archiving preserves the employee and all attendance/leave history. It blocks new
 
 ## Deployment
 
-Apply every checked-in migration, including `20261021111354_attendance_corrections.sql` and `20261021113409_attendance_conflict_response.sql`, before deploying version 0.1.9. The additive migration keeps legacy server-timed client grants. Custom timestamps are written only by a guarded HR RPC; direct custom-time/revision/history writes are denied. A private, transaction-scoped context authorizes that one write, and the change and audit commit together. Revision checks prevent overwriting another correction or a live check-out. PostgreSQL's exclusion constraint prevents overlapping shifts even with concurrent writers. No desktop server key is required.
+Apply every checked-in migration, including `20261021111354_attendance_corrections.sql` and `20261021113409_attendance_conflict_response.sql`, before using the correction workflow. The additive migration keeps legacy server-timed client grants. Custom timestamps are written only by a guarded HR RPC; direct custom-time/revision/history writes are denied. A private, transaction-scoped context authorizes that one write, and the change and audit commit together. Revision checks prevent overwriting another correction or a live check-out. PostgreSQL's exclusion constraint prevents overlapping shifts even with concurrent writers. No desktop server key is required.
 
 The public RPC translates stale revisions to HTTP 409 (`PT409`). Do not expose an explicit retryable `40001` through PostgREST: it can retry indefinitely in PostgREST 14. See [Supabase troubleshooting](https://supabase.com/docs/guides/troubleshooting/high-cpu-and-infinite-transaction-retries-when-using-custom-error-codes-in-rpc-functions-77326b).
 

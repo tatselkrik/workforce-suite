@@ -1,12 +1,10 @@
 # Benefits administration
 
-This is the next authorized HRIS increment after delivered employee services.
-It is an HR/Admin workspace under Employees. Employee, Manager, Recruiter,
+Benefits administration is an HR Generalist and Administrator workspace under Employees. Employee, Manager, Recruiter,
 Learning & Performance Officer and Payroll Officer alone have no benefits-admin
 access. Use protected current Personnel capability, never Auth metadata, navigation
 visibility or payroll permissions. Keep the context outside Snapshot, Payroll,
-portal payloads, notifications and general reports. No provider/subscription is
-required. Employees can already raise an own benefits question through Services.
+employee-app payloads, notifications and general reports. Benefit records are managed within the suite. Employees can already raise an own benefits question through Services.
 
 HR maintains benefit plans with a unique code, category, description, eligibility
 guidance, dependent limit and availability. Eligibility is an explicit recorded
@@ -41,7 +39,4 @@ confirmed rejection requires fresh review; role loss clears content and edit und
 This records company-reviewed administration only. Benefits changes never create
 salary, allowance, deduction, remittance, payment, tax or payslip changes. Monetary
 effects remain explicit separately reviewed Payroll inputs under existing controls.
-No external insurer/vendor messaging, enrollment API, paid service, filing or transfer.
-
-Do not mark the milestone complete until models/adapters/private SQL/UI, permissions,
-source preservation, layouts, exact release and actual installation are verified.
+An enrollment record does not contact an insurer, submit a filing or transfer money.

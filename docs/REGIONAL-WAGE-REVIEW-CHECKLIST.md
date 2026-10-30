@@ -1,5 +1,4 @@
-# Regional wage review checklist — 0.1.39
-
+# Regional wage review checklist
 - Open Payroll → Wage compliance → Employee checks. Pick dates and search a person.
   Confirm below-floor, missing classification and unsupported dates are distinct.
 - Open Classifications. Create a dated review with the actual establishment area,

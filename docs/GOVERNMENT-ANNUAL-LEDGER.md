@@ -1,6 +1,6 @@
 # Annual recorded BIR sources
 
-This internal HR/Admin ledger reports withholding recorded on individual payroll
+This internal Payroll Officers and Administrators ledger reports withholding recorded on individual payroll
 receipts in a selected year. It does not compute tax, produce an expected 1604C
 amount, certify a 2316, reconcile prior employers or establish agency acceptance.
 The independent local BIR file check retains its minimal diagnostic contract.
@@ -10,7 +10,7 @@ The independent local BIR file check retains its minimal diagnostic contract.
 `government_annual_ledger(p_year)` is a read-only, single-statement projection.
 Both new functions use security invoker with an empty search path and explicit
 authenticated execution grants. The existing protected monthly source function
-checks current active HR/Admin membership; Auth metadata grants no authority.
+checks current active Payroll Officers and Administrators membership; Auth metadata grants no authority.
 Employee labels use existing company RLS, including archived source employees.
 
 Years begin in 2025. For the current year, query only January through the company
@@ -66,13 +66,4 @@ Unicode and signed amounts; CSV follows the existing formula-prefix protection.
 Empty exports retain year/as-of context and say no sources were observed.
 
 This does not relax the separate BIR diagnostic export's promise to omit raw
-employee identifiers, names and amounts. Actual file comparison and canonical
-TIN/branch matching remain subsequent work with their own reviewed contract.
-
-## Verification boundary
-
-Deliver only after native model/adapter/UI checks, PostgreSQL authorization and
-duplicate/conflict/budget cases, fresh migration replay, guarded hosted deployment,
-exact release installation and private-channel verification pass. A fictional
-fixture or successful internal ledger does not demonstrate official BIR-module
-execution or acceptance. See the versioned verification report for actual results.
+employee identifiers, names and amounts. See [declaration comparison](BIR-DECLARATION-REVIEW.md) and [identity matching](BIR-IDENTITY-REVIEW.md) for those separate contracts.

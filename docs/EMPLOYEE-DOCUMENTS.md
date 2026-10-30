@@ -1,6 +1,6 @@
 # Employee documents and digital 201 files
 
-Open **Employees → saved employee → Documents**. Administrators and HR Generalists can upload, label, search, download and archive files. New employees must be saved first. Account Manager uses the same employee editor. Managers and ordinary Employee accounts cannot access these files or their history; the future employee portal needs its own explicitly scoped document access.
+Open **Employees → saved employee → Documents**. Administrators and HR Generalists can upload, label, search, download and archive files. New employees must be saved first. Account Manager uses the same employee editor. Managers and ordinary Employee accounts cannot access these files or their history; private 201 files are not exposed through employee self-service.
 
 **Upload document** accepts PDF, DOCX, PNG and JPEG, up to 10 MiB per file. Choose a title and category: Employment contract, Identification, Certificate, HR form, Acknowledgment or Other. Notes and issue/expiry dates are optional. Contracts can also have start/end dates. Dates describe the document; uploading a contract does not change employment fields or schedule an employment action.
 

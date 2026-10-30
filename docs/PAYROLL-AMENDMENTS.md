@@ -1,10 +1,10 @@
 # Linked payroll amendments and delayed final pay
 
-Source 0.1.41 adds **Payroll → Amendments** and extends **Final pay** to a prior-year separation with a reviewed 2026 payment date. Hosted deployment, release and installation are established separately by versioned evidence. This module records reviewed obligations and payments; it makes no transfer or filing.
+Open **Amendments** in Workforce Payroll for linked corrections. **Final pay** also supports a prior-year separation with a reviewed 2026 payment date. This module records reviewed obligations and payments; it makes no transfer or filing.
 
 ## Original records and supplemental corrections
 
-Select an actually paid monthly, cutoff or13th-month payslip, or a settled final statement. Its original figures and receipt remain immutable. HR/Admin create a linked supplemental worksheet, review the corrected difference, save and submit it. An Administrator distinct from the creator, most recent preparer and submitter issues its immutable statement. One approved supplemental payout per employee may await payment; settle or withdraw earlier pending tax advice/final pay first.
+Select an actually paid monthly, cutoff or13th-month payslip, or a settled final statement. Its original figures and receipt remain immutable. Payroll Officers and Administrators create a linked supplemental worksheet, review the corrected difference, save and submit it. An Administrator distinct from the creator, most recent preparer and submitter issues its immutable statement. One approved supplemental payout per employee may await payment; settle or withdraw earlier pending tax advice/final pay first.
 
 Enter **additional amounts owed**, rather than replacement totals. Additional basic is part of regular taxable earnings, and only salary/cutoff originals accept a basic correction. Qualifying 13th-month/other benefits share the annual PHP 90,000 exclusion. Known issued benefits and evidenced outside benefits set protected floors; later annual/13th worksheets retain them without inventing duplicate income. Additional earned basic increases the original period's 13th-month basis once, without adding overlapping service dates. An additional 13th-month payment counts as an earlier payout in the same entitlement review; evidence must explain the corrected entitlement or more favorable policy.
 
@@ -28,7 +28,7 @@ The default final-pay deadline remains30days from separation, or an earlier more
 
 ## Privacy, statements and reporting
 
-Private worksheets, source evidence, payment references and audit records are HR/Admin-only. Other staff receive only their own issued aggregate amendment, original link and aggregate paid/withdrawn status. Ordinary Employee accounts still use the separate portal and cannot sign into the desktop. UTF-8CSV and printablePDF omit private evidence and references. Export reloads current scope and rechecks access before creating a local file.
+Private worksheets, source evidence, payment references and audit records require Payroll preparation responsibility. Other staff receive only their own issued aggregate amendment, original link and aggregate paid/withdrawn status. Ordinary Employee accounts still use Workforce Employee and cannot sign into the desktop. UTF-8CSV and printablePDF omit private evidence and references. Export reloads current scope and rechecks access before creating a local file.
 
 The new report-v2 endpoint adds linked amendments while retaining the earlier report endpoint for older installations. Supplemental cash appears once, separately from original source receipts and combined final cash. Signed statutory adjustments and review-only discrepancies remain distinct. Withdrawn statements retain issue history and create no cash/outstanding amount. An overpayment review is never added to payroll cash or collectible balances. Reports retain their366-day/5000-row bounds and fail rather than truncate totals. Older clients keep the legacy worksheet shape and source reports. Consolidated reports affected by amendments, and cross-year annual-tax reports, require an app update instead of returning incomplete figures.
 

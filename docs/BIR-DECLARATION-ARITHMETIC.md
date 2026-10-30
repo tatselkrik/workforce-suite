@@ -70,9 +70,7 @@ compensation amounts, source rows or HR evidence. Preserve the existing findings
 columns/scope and the separate literal declaration worksheet. A declaration
 reader is still a literal review, even when this arithmetic finds a discrepancy.
 
-Reuse the current HR/Admin-only adapter, fresh protected registration/access
+Reuse the current protected Payroll preparation adapter, fresh protected registration/access
 checks, source-hash binding, source reread and final access check before new-file
 IO. No source is uploaded, no export overwrites a file, and no registration,
-payroll, receipt or Auth fact is changed. No SQL/rate pack/dependency change is
-required. Delivery/installation and proportionate verification are recorded
-separately; local source implementation alone is not a delivered release.
+payroll, receipt or Auth fact is changed.
