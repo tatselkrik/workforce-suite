@@ -1,5 +1,8 @@
 # Remaining HRIS roadmap â€” agreed order
 
+**Current authorized work —30 October 2026:** package the three named Workforce Suite apps as independent1.0.0-beta.1 private releases and preserve/publish the reviewed existing Git history. See [release policy](WORKFORCE-RELEASES.md). No new HR module is resumed. The same reset follow-up is active for this release task only; previous completed-design pauses below are historical.
+
+
 **Visual refresh complete —30 October 2026:** HRIS 0.1.70, Payroll 0.1.2 and signed Android 0.1.2 share the approved teal-light/charcoal-dark design. [Android delivery and review checklist](ANDROID-EMPLOYEE-0.1.2-DELIVERY.md). The exact Android APK is installed/verified on the owned emulator; its GUI tests use fictional debug state. The PC browser portal remains unchanged. Android 0.1.1 workflow acceptance below remains historical evidence; physical-phone/email checks are still deferred. The same design scheduler is paused on completed scope; no new module is queued.
 
 

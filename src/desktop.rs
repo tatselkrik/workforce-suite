@@ -24,6 +24,13 @@ impl Product {
     }
     pub const fn name(self) -> &'static str {
         match self {
+            Self::Hris => "Workforce HR",
+            Self::Payroll => "Workforce Payroll",
+        }
+    }
+    /// Keep deployed folders independent of presentation names and future branding.
+    pub const fn installation_folder(self) -> &'static str {
+        match self {
             Self::Hris => "HRIS Desktop",
             Self::Payroll => "Payroll Desktop",
         }
@@ -42,9 +49,9 @@ impl Product {
     }
     pub const fn sign_in_message(self) -> &'static str {
         match self {
-            Self::Hris => "Use your HRIS account to access company records.",
+            Self::Hris => "Use your company account to access HR records.",
             Self::Payroll => {
-                "Use your HRIS account. Payroll Officer or Administrator access is required."
+                "Use your company account. Payroll Officer or Administrator access is required."
             }
         }
     }
@@ -160,7 +167,7 @@ impl Product {
                 .context("Application installation folder unavailable.")?,
         )
         .join("Programs")
-        .join(self.name()))
+        .join(self.installation_folder()))
     }
     pub fn project(self, data: &mut Snapshot) {
         if self == Self::Payroll {
@@ -309,12 +316,12 @@ pub fn run(app: Application) -> AppResult {
 }
 /// Launch only the separately verified local product. Never execute a path from company data.
 pub fn open_payroll() -> Result<()> {
-    let folder = Product::Payroll.installation()?.canonicalize().context("Payroll Desktop is not installed yet. Install your company's Payroll Desktop package first.")?;
+    let folder = Product::Payroll.installation()?.canonicalize().context("Workforce Payroll is not installed yet. Install your company's Workforce Payroll package first.")?;
     verify_payroll_installation(&folder)?;
     std::process::Command::new(folder.join(Product::Payroll.executable()))
         .current_dir(folder)
         .spawn()
-        .context("Could not open Payroll Desktop.")?;
+        .context("Could not open Workforce Payroll.")?;
     Ok(())
 }
 fn verify_payroll_installation(folder: &Path) -> Result<()> {
@@ -369,6 +376,17 @@ pub const PAYROLL_TABS: &[&str] = &[
 #[cfg(test)]
 mod installation_tests {
     use super::*;
+    #[test]
+    fn workforce_display_names_preserve_deployed_namespaces() {
+        assert_eq!(Product::Hris.name(), "Workforce HR");
+        assert_eq!(Product::Payroll.name(), "Workforce Payroll");
+        assert_eq!(Product::Hris.installation_folder(), "HRIS Desktop");
+        assert_eq!(Product::Payroll.installation_folder(), "Payroll Desktop");
+        assert_eq!(Product::Hris.executable(), "HRIS-Desktop.exe");
+        assert_eq!(Product::Payroll.executable(), "Payroll-Desktop.exe");
+        assert_eq!(Product::Hris.id(), "io.github.tatselkrik.hrisdesktop");
+        assert_eq!(Product::Payroll.id(), "io.github.tatselkrik.payrolldesktop");
+    }
     #[test]
     fn launcher_verifies_separate_product_marker_and_exact_binary_without_running_unknown_files() {
         let folder = std::env::temp_dir().join(format!("payroll-launch-{}", uuid::Uuid::new_v4()));

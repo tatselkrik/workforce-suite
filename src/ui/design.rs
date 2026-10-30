@@ -638,7 +638,7 @@ impl HrisApp {
             && ui
                 .add_enabled(
                     !self.busy && !self.has_unsaved_edits(),
-                    egui::Button::new(RichText::new("Open Payroll Desktop").size(12.0)),
+                    egui::Button::new(RichText::new("Open Workforce Payroll").size(12.0)),
                 )
                 .clicked()
         {

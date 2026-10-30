@@ -42,7 +42,7 @@ impl Module {
             Self::Hiring => "Applicants, interviews, offers and onboarding tasks.",
             Self::ExitClearance => "Separation and assigned clearance tasks.",
             Self::Payroll => {
-                "Personal published advice in HRIS. Payroll Desktop is a separate application."
+                "Personal published advice in HRIS. Workforce Payroll is a separate application."
             }
             Self::Reports => "Attendance, leave and workforce reports.",
         }

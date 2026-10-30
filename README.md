@@ -1,169 +1,43 @@
-# HRIS Desktop
+# Workforce Suite
 
-A native Windows HRIS prototype written in Rust. Each company installation automatically uses its preconfigured, dedicated Supabase database. Users sign in to **HRIS**; they do not enter database URLs, keys, or select a company. A separate unconfigured source build opens a clearly labeled **in-memory demo workspace** with fictional employees.
+A private prototype for one company's HR team, payroll staff and employees. Three applications share reviewed Rust code and the same dedicated Supabase deployment. The initial named release is **1.0.0-beta.1**; later versions can advance independently.
 
-Application identifier: `io.github.tatselkrik.hrisdesktop`.
+| Application | Platform | Purpose |
+| --- | --- | --- |
+| **Workforce HR** | Native Rust desktop, Windows distribution | Employee records, hiring, attendance/leave, learning/performance, confidential cases, employee services, benefits and leadership reporting |
+| **Workforce Payroll** | Separate native Rust desktop, Windows distribution | Payroll preparation, independent approval, payslips, payment records and government review/reporting |
+| **Workforce Employee** | Private Android app | The signed-in person's own attendance, leave, payslips, service requests, profile and generic notifications |
 
-## What works
+The company connection is packaged by the deployment operator. There is no database/company chooser in the apps. Employee accounts use the employee app; staff access is enforced by protected memberships and server permissions. Payroll uses its own responsibilities and independent financial approvals.
 
-- **BIR declaration sums:** the local1604C file check includes a separate review
-  of supported compensation subtotal relationships, exact one-cent differences
-  and private CSV/Excel findings. This does not calculate expected tax or establish
-  official acceptance. See [the0.1.61 checklist](docs/BIR-0.1.61-CHECKLIST.md).
+## Repository layout
 
-- **Government reconciliation:** **Payroll → Government** reviews SSS, PhilHealth, Pag-IBIG and BIR sources by month. Evidenced contribution allocations retain the issued employee deduction and need an independent Administrator. Administrator remittance records, voids and linked corrections retain history; fresh CSV worksheets omit private evidence. Agency upload files remain a separate increment. See [workflow rules](docs/PAYROLL-GOVERNMENT.md) and the [0.1.42 checklist](docs/GOVERNMENT-0.1.42-CHECKLIST.md).
+- `src/`: Workforce HR executable and shared Rust implementation.
+- `payroll-desktop/`: Workforce Payroll executable over that shared implementation.
+- `employee-android/`: Android shell and embedded Rust bridge.
+- `employee-portal/`: Shared own-record service/interface; the retained PC browser portal remains separate and loopback-only.
+- `supabase/`: Versioned database migrations and protected functions.
+- `tests/`, `tools/`, `docs/`: Verification, packaging and documented contracts.
 
-- **Linked payroll amendments:** **Payroll → Amendments** retains paid originals while issuing independently approved supplements, reviewed same-year statutory refunds and separate overpayment discrepancies without automatic recovery. Own PDF/CSV statements and consolidated report-v2 show supplemental cash once. Final pay also supports prior-year separation with evidenced2026 receipt dates. See [amendment rules](docs/PAYROLL-AMENDMENTS.md) and the [0.1.41 review checklist](docs/AMENDMENTS-0.1.41-CHECKLIST.md).
+Existing package/application identifiers and deployment/data paths are deliberately retained across the display-name change. Old releases remain immutable. See [release/version policy](docs/WORKFORCE-RELEASES.md) and [current roadmap and deferred work](docs/REMAINING-ROADMAP.md).
 
-- **Separate employee portal:** the first local portal milestone provides own employment/contact details, server-timed attendance and approved payslips with CSV/browser printing. It has a separate Rust server and responsive browser interface; it does not change desktop Employee restrictions. Public hosting and additional request flows remain later increments. See [employee portal](docs/EMPLOYEE-PORTAL.md).
+## Build and check
 
-- **Payroll and benefits:** open **Payroll** for effective salary profiles, reviewed monthly worksheets, Philippine overtime/holiday/night premiums, allowances, deductions and employer benefit memos. Another Administrator approves a submitted register; approved payslips are retained and export to PDF/CSV. Contribution and withholding worksheets support local reconciliation. Payment recording does not move money or file government returns. See [payroll rules and limits](docs/PAYROLL.md).
-- **Payroll cutoffs:** **Payroll → Cutoffs** provides 1st–15th / 16th–month-end runs, planned pay dates, reviewed worksheets, second-cutoff contribution reconciliation, semi-monthly withholding, independent approval and private PDF/CSV payslips. Issued monthly registers and cutoffs cannot overlap for the same employee/month. See [cutoff policy and workflow](docs/PAYROLL-CUTOFFS.md).
-- **13th-month pay:** **Payroll → 13th-month pay** combines actual issued basic with reviewed opening intervals, earlier installments and the shared annual benefit exemption. Independent approval produces immutable private PDF/CSV slips. Withholding and contribution adjustments require explicit HR review; annual reconciliation is described below. See [13th-month workflow](docs/PAYROLL-THIRTEENTH.md).
-- **Annual compensation tax:** **Payroll → Annual tax** reconciles actual recorded payments, evidenced openings and successive prior-employer2316 figures, including the shared annual benefit exclusion. Independent approval issues private aggregate PDF/CSV advice with additional withholding/refund and earlier-settlement credits; settlement recording moves no money. See [annual tax workflow and limits](docs/PAYROLL-ANNUAL-TAX.md).
-- **Individual payments:** **Payroll → Payments** records one employee's actual full monthly/cutoff/13th payslip payment, retains private evidence and keeps coworkers outstanding. Earlier batch actions record only remaining recipients; annual tax uses each person's actual receipt date. See [payment records](docs/PAYROLL-PAYMENTS.md). Final-pay entitlements and settlement are described below.
-
-- **Final pay:** **Payroll → Final pay** reviews outstanding issued salary/13th-month balances, vacation conversion, separation/retirement awards, other amounts and prospective annual tax. Independent approval issues a private aggregate PDF/CSV statement; an Administrator records combined settlement or withdraws an unpaid statement with retained history. Original slips remain unchanged. The first pack supports same-year2026 cases; see [final-pay rules](docs/PAYROLL-FINAL-PAY.md) and [review checklist](docs/FINAL-PAY-REVIEW-CHECKLIST.md).
-
-- **Consolidated payroll reports:** **Payroll → Reports** filters issued/received dates across monthly, cutoff,13th-month, annual-tax and final records, with current outstanding/reserved balances and safe CSV. Final offsets and tax advice stay separate from actual combined payroll cash. See [report definitions](docs/PAYROLL-REPORTING.md).
-
-- **Regional wage compliance:** **Payroll → Wage compliance** compares basic rates with a dated official regional catalog. HR records workplace/category evidence; a different Administrator approves effective intervals. Advisory snapshots are automatic; optional Administrator enforcement also protects older monthly/cutoff clients. Unsupported dates remain unresolved. See [wage reviews](docs/REGIONAL-WAGES.md) and [review checklist](docs/REGIONAL-WAGE-REVIEW-CHECKLIST.md).
-
-- **Career development:** Employees > Development > Career plans holds shared aspirations, skills and required/optional milestones. Independent staff review completion, HR can waive, and closure retains milestone/context facts without changing employment or source learning records. See [career plans](docs/CAREER-DEVELOPMENT.md).
-
-- **Training and certifications:** Employees > Development holds assigned training, scoped progress, HR-recorded completion/outcomes/minutes, certificate expiry/revocation/archive and private links to existing employee 201 files. Managers receive team details and progress controls; private file bindings stay HR-only. See [learning records](docs/LEARNING.md).
-
-- **Goals and appraisals:** Employees > Development holds goals/progress, review cycles, assigned reviewer assessments and HR publication with immutable submitted goal facts. Private HR notes stay separate; reassignment removes former Manager access and resets unfinished feedback. See [performance](docs/PERFORMANCE.md).
-
-- **Hiring and onboarding:** private HR/Admin applicant records, résumé/application files, interview scheduling and assessments, Administrator-approved offers and accepted-offer employee creation. Required onboarding tasks have responsible staff, due dates, completion/waiver history and guarded case closure. Managers see only assigned interviews, their own assessments and assigned tasks. See [hiring workflows](docs/HIRING.md).
-- **Notifications:** a private in-app inbox for eligible approvals, personal request decisions, upcoming leave, unfinished check-outs and HR document-expiry reminders. Read/unread markers persist across sign-ins; see [notifications](docs/NOTIFICATIONS.md).
-- **Reports:** date-filtered attendance detail, filed leave charges and employee summaries with role-scoped CSV exports and selectable ordered columns. Current headcount by department/location/type and daily/weekly/monthly attendance/leave charts are also available; see [workforce analysis](docs/WORKFORCE-ANALYSIS.md). Save up to 20 personal views with fixed dates or rolling 7-day, 30-day and month-to-date periods; apply, edit or delete them across sign-ins. See [reports](docs/REPORTS.md). HR/Admin can also preview and atomically import new employee/contact records from CSV, with row errors and retained batch history; see [employee imports](docs/EMPLOYEE-IMPORTS.md).
-- **Overview:** active headcount, today's attendance, pending requests, and approved time away.
-- **Employee records:** click a name or Edit to open one record with Employment, Contact details and Emergency contact tabs. Save changes writes these together. Manage reporting relationships, optional hire dates, allowances and archived records. Assign company-defined employment types/work locations and filter/search employees by them. Unset and inactive assignments remain distinguishable. HR/Admin History shows saved employment changes, actor/time and before/after values, with an explicit starting snapshot for existing employees. See [employment setup](docs/EMPLOYMENT-SETUP.md) and [employment history](docs/EMPLOYMENT-HISTORY.md).
-- **Organization chart:** switch from Directory to Organization chart inside Employees. Explore expandable reporting teams, search/filter by department or work location, retain reporting context above matches, and click a card to open the employee record. HR/Admin see company records; Managers see their own record and active direct reports. Archived records are optional for HR. See [organization chart](docs/ORGANIZATION-CHART.md).
-- **Private contacts:** personal phone, personal email, home address and an emergency contact with primary/alternate phones. Administrators and HR manage these records; each active staff member can edit their own contacts through Profile. See [contact permissions](docs/EMPLOYEE-CONTACTS.md).
-- **Employee documents / 201 files:** Administrators and HR open Documents inside a saved employee record to upload private PDF, DOCX, PNG or JPEG files up to 10 MiB. Keep contracts, IDs, certificates and HR forms with optional dates/notes, search/filter, download checked original files, and archive/restore without erasing history. Metadata edits preserve the original file; incomplete uploads can be retried or discarded. See [employee documents](docs/EMPLOYEE-DOCUMENTS.md).
-- **Attendance:** record check-in/check-out, choose a historical day from a month/year calendar, review recorded check-ins, approved leave and employees with no check-in; reject duplicate daily check-ins and multiple open shifts. Live timestamps come from the database server and use the company time zone. HR and Administrators can record past entries or correct times with a required reason and immutable before/after history. Concurrent stale edits and overlapping shifts are rejected. Staff can submit their own correction requests; Managers review current direct reports and HR/Admin review company requests, with no self-approval and retained decisions. See [attendance corrections](docs/ATTENDANCE-CORRECTIONS.md) and [request approvals](docs/ATTENDANCE-REQUESTS.md).
-- **Leave policies and approvals:** configurable holidays/workweeks/types, full or morning/afternoon leave, annual/monthly entitlement, capped expiring carryover, pending reservations and retained cancellation history. Administrators configure 1–5 ordered steps per type; authorized reviewers see their current queue and decision receipts without gaining broader personnel access. Saved charges and plans survive later policy edits. See [leave policies](docs/LEAVE-POLICIES.md).
-- **Account Manager:** administrators manage employees with staff roles, sign-in access and access history. Add staff employee opens the same employee form; save employment, contacts and role together. Existing employees receive staff access from their Staff role & sign-in tab. Disabled accounts are hidden unless Show disabled is selected. Other roles cannot open Account Manager. See [account permissions](docs/ACCOUNT-MANAGER.md).
-- **Settings:** company defaults with shared logo upload/removal in the right column, Administrator-managed employment types/work locations, account display scale, 12/24-hour time and Light/Dark/System themes. Database configuration is handled during deployment.
-- **App updates:** the top right shows the installed version. Signed private updates are checked automatically only after successful sign-in; an available-update banner persists until restart or sign-out and offers Update now. Settings also provides a manual check. See [update deployment](docs/UPDATES.md).
-- **Profile:** read-only Employment matching the employee record; edit your contact and emergency details; upload/change/remove a private photo; verified and pending account email; password and email changes after current-password verification; and sign-out controls for this device, other devices or everywhere.
-- **Company sidebar:** a circular transparent company logo above the company name, also shown on sign-in, followed by Overview, Employees, Attendance, Leave, Payroll, Reports, role-scoped Hiring, administrator-only Account Manager and Settings. Managers use Payroll only for their own approved payslips. The circular photo or initials at the bottom left opens the full Profile page in the main content area.
-- **CI:** checked-in GitHub Actions workflow tests Rust behavior and database access rules and builds a Windows executable. It does not deploy a database or publish a release.
-
-The interface uses `egui`/`eframe`. The domain rules and Supabase Auth/REST adapter are also Rust. There is no browser UI, local web server, or SQLite database in the application. A Supabase Edge Function provisions accounts without exposing a server key to the desktop. Node.js runs the separate PostgreSQL and provisioning-handler tests.
-
-## Try it
-
-The private Windows setup installs the packaged version for the current user in `%LOCALAPPDATA%\Programs\HRIS Desktop`, creates **HRIS Desktop** shortcuts on the desktop and Start menu, and registers an uninstaller in Windows Apps. Administrator rights are not required. Keep the company-specific setup private; it includes the deployment's public connection and update-verification profiles, but no account password or session. Exact release and installation evidence belongs to the versioned verification report.
-
-Open **HRIS Desktop** and sign in with an assigned Administrator, HR Generalist or Manager account. Ordinary Employee accounts are reserved for a future mobile-friendly portal and cannot sign into this desktop app. Its company database is already selected by the installation. Account login remains necessary to access HR records; database setup is not part of that login.
-
-Press **Enter** in the email or password field to sign in, or use the Sign in button. Submission is disabled while a sign-in is already running. Click the circular account photo/initials at the bottom left to open **Profile**. **Employment**, **Contact details**, **Emergency contact**, **Account & security** and **Sessions** provide its account controls. Employment is managed through Employees; Profile edits only your contact and emergency information. Use **Sessions → Sign out of this device** to clear the session.
-
-An unconfigured source build can run demo mode without an account. Sample changes reset when the application closes. To try the employee workflows in either workspace:
-
-Suggested walkthrough:
-
-1. Open **Employees**, click an employee or add one, edit employment/contact details, and choose **Save changes**. Set **Reports to** here.
-2. Open **Attendance**, use **Choose date** to pick a day in the calendar or **Today**, and review who has a check-in, no check-in or approved leave. **Check in** records the current server time. HR can use **Record past attendance**, a row's **Record** button or **Correct** to enter verified times and a required reason. **History** retains each correction; **Check out now** always uses the current server time, including an overnight open shift. The company calendar and saved full/half-day leave are shown; missing check-ins do not establish absence without individual shift rules.
-3. Open **Leave > Leave policies** to review or configure the company calendar, types and approval chain. Submit a scheduled-workday request for that employee, then complete its ordered reviews.
-4. Return to **Employees** to see the updated annual balance.
-
-## Build from source
-
-On Windows, install Rust with the MSVC build tools. The repository pins Rust 1.95.0 and direct dependencies; keep `Cargo.lock` checked in.
+The existing toolchains and dependency lockfiles are pinned. On the configured Windows workstation with Rust/MSVC:
 
 ```powershell
-cargo test --locked
-cargo build --release --locked
+cargo test --workspace --locked
+cargo build --workspace --release --locked
 ```
 
-The executable is `target/release/hris-desktop.exe`. Run `cargo run --locked` during development. The current executable was built for Windows x64; other platforms have not been verified.
+The desktop outputs retain their compatible executable names: `hris-desktop.exe` and `payroll-desktop.exe`. Android's pinned SDK/JDK/Gradle requirements and private packaging command are described in [its guide](employee-android/README.md). The signing key, company profile and Firebase configuration stay outside Git. Never publish an instrumentation APK or substitute a renamed old binary for a release build.
 
-For a prepared private Windows distribution bundle, build the per-user setup with NSIS 3.11:
+GitHub Actions is manual while this project must remain free. Confirm no-charge capacity before dispatching jobs; no automatic database deployment or paid runner is configured. Local checks and exact source/artifact/install evidence are recorded separately from unrun remote CI.
 
-```powershell
-makensis /DAPP_BUNDLE=C:\absolute\bundle /DSETUP_OUTPUT=C:\absolute\HRIS-Desktop-Setup.exe tools/windows/installer.nsi
-```
+## Deployment and privacy
 
-The installer refuses an unfamiliar existing installation directory or shortcuts. It uses the application's fixed identifier for its uninstall registration. Its uninstaller targets only the named installed files and retains unknown files. Installation, file integrity, shortcuts, normal launch and an uninstall/reinstall cycle were tested locally. The uninstaller removed its own files, shortcuts and registration while preserving a synthetic unknown file in the installation folder; reinstallation restored the verified app.
+This repository and beta downloads are private. Deployment profiles, credentials, signing keys, company records, database dumps, caches and generated installers/APKs are excluded from source. Builds use publishable client configuration and current-user authorization; server credentials must never enter an app. Keep each company's Supabase and deployment settings separate from core source.
 
-For company branding, an Administrator uses **Settings → Company defaults → Upload company logo** or **Remove logo**. Choose PNG/JPEG up to 5 MiB and 2048 × 2048 pixels. Uploads are normalized to a PNG no larger than 512 × 512 and 2 MiB, preserving transparency; the entire logo fits the circular sidebar space. The private `company-branding` bucket stores only the company's fixed `<company-id>/logo.png`; active members can read it, and only Administrators can change it. A revision in the company record refreshes the in-memory image cache. Missing/unavailable logos use initials and Settings explains load failures. Signed-in installations use this shared image. The last successfully synced company name and logo are cached for sign-in, sign-out, restart and offline display, scoped to the packaged connection. This cache contains only branding, never employee records or authentication. Removing a logo clears its cached image. On a new device, packaged/default branding appears until the first successful sync; changes from another device sync after sign-in. A separate local `company-logo.png` remains supported for unconfigured/legacy deployment previews. Company-specific images stay outside generic source control.
+Beta releases use separate tags: `hr-v1.0.0-beta.1`, `payroll-v1.0.0-beta.1` and `employee-v1.0.0-beta.1`. The existing HR automatic-update feed remains stable-only; beta packages are delivered through private GitHub prereleases. Stable-version ordering, installation namespaces and verification keys are preserved. Payroll and Android do not consume HR updates.
 
-## Deployment setup (administrator only)
-
-The dedicated **HRIS** Supabase project is initialized in Singapore (`ap-southeast-1`) on the Free plan, with one company assigned to the confirmed administrator Auth account. Apply every checked-in migration, including account-photo Storage policies, when preparing a company deployment. Earlier live checks verified sign-in, employee storage, attendance, leave approval/balances, refresh and sign-out; their temporary records were removed afterward. See `VERIFICATION.md` for the evidence and limits of each update.
-
-1. Use the assigned HR administrator account; its email is already confirmed. This Auth account is separate from the Supabase dashboard login.
-2. Package `hris-connection.json` beside `HRIS-Desktop.exe`. It contains only the project URL and publishable client key. The generic source includes `hris-connection.example.json` instead of a company-specific profile. The installer carries this profile automatically; users do not configure it.
-3. Open the installed app. It shows the normal **HRIS sign-in** screen. Enter the assigned account's email and password locally. Successful sign-in opens Overview and loads only that company's records. Passwords and sessions are never saved.
-4. Confirm **CONNECTED** in the sidebar, then update the placeholder **HRIS Company** name and policy defaults in Settings. Demo employees are never uploaded.
-5. Add a test employee, refresh, restart the app, sign in again, and verify persistence before entering actual workplace data.
-
-For a separate company's deployment, use a separate dedicated Supabase project. Apply all files in `supabase/migrations/` in order, create and confirm its first HR Auth user, and run `supabase/bootstrap-company.sql` as the project administrator. Bootstrap requires exactly one Auth user and no existing company, so it cannot silently choose another account or replace existing configuration. The desktop client cannot create companies. Deploy `supabase/functions/account-admin/` following [Account Manager setup](docs/ACCOUNT-MANAGER.md) to enable account creation and confirmation delivery. Local migration versions match the hosted migration history; migration files were originally generated by the Supabase CLI.
-
-The packaged company profile is the only connection source. Old remembered device settings and `HRIS_SUPABASE_*` environment variables are ignored. No connection editing or company switcher appears in the application. An invalid profile, or a missing profile in an installed app, blocks startup instead of opening demo or selecting another database. For local development, place a private profile beside the development executable; omit it only when intentionally using the separate demo build.
-
-Passwords and access/refresh tokens stay in memory. Every company launch requires HRIS account sign-in. Signing out clears company records and returns to sign-in, attempts server-side session revocation, and discards local tokens even when the network is unavailable. It never opens demo mode in a company installation.
-
-Display preferences use the signed-in account's editable Auth metadata; they never determine permissions. Profile's name and Employment fields come from the canonical employee record. Its contact and emergency forms save the same private employee-contact row HR manages; they do not change employment or sign-in email. Legacy personal-display metadata remains compatible, but the new Profile does not edit a second name/contact identity. Access comes from protected company membership rows, with the original owner retained as an active Administrator. Photos are normalized from a PNG/JPEG up to 5 MiB and 4096 × 4096 pixels into a centered 256 × 256 PNG, stripping original photo metadata. Rendering applies a circular mask. The private `profile-photos` bucket allows each active member to read/write only their own fixed `<user-id>/avatar.png`, with a 2 MiB PNG limit. Photos are retrieved using the user's bearer token and kept in memory rather than a local photo cache. Do not use public photo URLs or administrative keys.
-
-Password changes require the current password, matching confirmation and 12–128 characters for the new password. Email changes also verify the current password and remain pending until Supabase's email confirmation completes. Email delivery and confirmation follow the project's Auth/SMTP configuration; the app does not bypass confirmation or send administrative updates. Other/global sign-out revokes refresh sessions; already issued access tokens can remain valid until expiry. The app does not claim to enumerate other devices. Demo personal/photo/display changes remain in memory and real account-security controls are disabled.
-
-The desktop client sends the publishable key in `apikey` and the signed-in user's access token in `Authorization: Bearer`. Row-level security enforces the current member's company, role and employee/report relationships on every HR request. Immutable owner/company/employee identifiers are protected by column grants. Anonymous HR access and record deletion are denied. Only Administrators can provision accounts; company creation and deletion remain deployment operations. Access is refreshed when loading data and every 60 seconds while idle; a revoked membership clears the company view.
-
-## Prototype boundaries
-
-- One company per dedicated database. Company setup is an operator action. Four fixed roles are available; Employee is portal-only. The first portal milestone is local; public hosting and additional request flows remain pending. Configurable ordered leave approval chains are available; nobody approves their own leave. Custom roles, delegation and a general HR audit trail remain future work.
-- Leave supports configurable workweeks, dated holidays, full/half-days, annual/monthly entitlement, capped carryover, cancellation and retained approval/charge snapshots. Statutory entitlement rules, posted credit adjustments and effective-date policy versions remain future work. The sample 15-day allowance is a configurable example, not a legal entitlement claim. Requests spanning calendar years must be split.
-- Attendance supports one record per employee work date, saved shift schedules and paid/unpaid break rules, actual break tracking and reasoned HR corrections with retained history. Gross elapsed time includes breaks; break details also show time excluding recorded unpaid breaks. Neither is payable time. Time calculations show late arrival, undertime/early departure and overtime candidates using retained company rules. Overtime requests, partial Manager/HR approvals, revocation and retained history are available under Overtime approvals; changed attendance/breaks makes an earlier approval historical. Payroll remains future work. See [overtime approvals](docs/OVERTIME-APPROVALS.md). See [attendance calculations](docs/ATTENDANCE-CALCULATIONS.md). The visible Biometric integration card remains disabled.
-- Live mode requires internet access; there is no offline queue or local cache of employee data. Use Refresh to load changes from another device. Errors remain visible, and the app never silently falls back to demo after a failed live request.
-- UI and network requests run on separate threads. A failed write/refresh may require a manual Refresh before retrying; duplicate and state-transition rules protect against repeated submissions.
-- The Windows executables have no Authenticode certificate. Update manifests are separately signed with Ed25519 and verified before installation. Database migrations remain an operator action; this is not a production readiness certification.
-
-Company identity, time zone, and allowances are stored as configuration/data, separate from the UI and core rules. A later company rollout can extend these policies without adding an administrative key to the executable. See [the staged HRIS roadmap](docs/ROADMAP.md) for the remaining employee, attendance, leave, payroll, recruitment, development and reporting modules.
-
-## Verification
-
-Rust workflow and HTTP contract tests:
-
-```powershell
-cargo fmt --all -- --check
-cargo test --locked
-```
-
-Local PostgreSQL migration/RLS tests (Node.js 22+):
-
-```powershell
-cd tools/db-tests
-npm ci --ignore-scripts --no-audit --no-fund
-npm test
-```
-
-Account provisioning handler tests:
-
-```powershell
-node --test tests/account_admin_edge.test.mjs
-```
-
-The database suite executes all migrations using PGlite/PostgreSQL, including `btree_gist`, and simulates Supabase's Auth identities, API roles and managed Storage metadata contract; it does not run an S3 service. It covers role scopes, direct-report reviews, disabled accounts, owner protections, access history and metadata tampering. Node tests exercise the provisioning handler with controlled Auth/REST responses. Rust HTTP fixtures cover Auth/REST, profile persistence, private photos, wrong-password rejection, pending email changes, access revocation and session cleanup. Live Profile/security checks passed on 0.1.3; temporary data was removed and the original account restored. Consult `VERIFICATION.md` for the current version's precise local, hosted and native UI evidence. Remote GitHub CI has not been run.
-
-The hosted Account Manager migration and provisioning function were deployed and verified on the dedicated prototype. `tools/db-tests/hosted-accounts-smoke.sql` is a rollback-only role test guarded for one initialized company and no existing HR records; run it only as the trusted project operator. Actual signup confirmation, HR restrictions, disabled-token/photo access, Manager desktop admission and Employee desktop denial passed. Temporary accounts/records were removed. The earlier native HR/Profile checks remain historical evidence; see `VERIFICATION.md` for each version's exact scope and limits.
-
-For native UI screenshots during development:
-
-```powershell
-cargo build --locked --features qa-screenshot
-$env:HRIS_SCREENSHOT_TO = 'C:\absolute\path\hris-preview.png'
-./target/debug/hris-desktop.exe
-```
-
-`HRIS_PREVIEW_PAGE` can select `employees`, `attendance`, `leave`, `accounts`, `settings` or `profile` in this QA build. `HRIS_PREVIEW_FORM` can open `employee`, `leave` or `account`. `HRIS_PREVIEW_ROLE` can preview `hr_generalist`, `manager` or `employee` with fictional role-scoped records. `HRIS_PREVIEW_PROFILE=security` or `sessions` selects a Profile section. `HRIS_PREVIEW_AVATAR` can load a synthetic local QA photo into the visibly labeled demo without authenticating. `HRIS_PREVIEW_SIZE=compact` uses the minimum window size, `HRIS_PREVIEW_SCALE=125` checks enlarged display, and `HRIS_PREVIEW_SCROLL=bottom` captures lower content. `HRIS_PREVIEW_COMPANY_NAME` can override the fictional demo name. These environment controls are excluded from a normal production build.
-
-Implementation references: [eframe native applications](https://docs.rs/eframe/0.37.0/eframe/), [Supabase row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security), [Supabase publishable API keys](https://supabase.com/docs/guides/getting-started/api-keys), [Supabase password authentication](https://supabase.com/docs/guides/auth/passwords), and [PGlite extensions](https://pglite.dev/extensions/).
-
-Shift schedules and dated employee assignments are under **Attendance**. See [shift schedules](docs/SHIFT-SCHEDULES.md) for overnight handling, preserved history and role scope. Add paid/unpaid rules when editing a shift, then open **Daily attendance > Breaks** for actual times, HR corrections and history. See [attendance breaks](docs/ATTENDANCE-BREAKS.md). Open **Time calculations** for saved rules, lateness, early departure and overtime candidates; Administrators configure company rules here or through Settings. See [attendance calculations](docs/ATTENDANCE-CALCULATIONS.md).
-
-Employee exits and assigned clearance tasks are described in [Exit and clearance](docs/EXIT-CLEARANCE.md). Administrator finalization preserves accounts, files and history while disabling company sign-in and archiving the employee.
+This is a beta prototype. Payroll payment/remittance recording does not transfer money or file government returns. Agency-validator acceptance, physical-phone/OEM behavior, email confirmation, paid services and actual biometric hardware retain their documented verification/deferred boundaries. The visible biometric connection remains disabled.

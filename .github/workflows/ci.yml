@@ -1,8 +1,6 @@
-name: HRIS checks and Windows build
+name: Workforce Suite checks and Windows build
 
 on:
-  push:
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -38,13 +36,15 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Test workflows and Supabase transport
-        run: cargo test --locked
+        run: cargo test --workspace --locked
       - name: Build Windows application
-        run: cargo build --release --locked
+        run: cargo build --workspace --release --locked
       - uses: actions/upload-artifact@v4
         with:
-          name: HRIS-Desktop-Windows
-          path: target/release/hris-desktop.exe
+          name: Workforce-Desktop-Windows
+          path: |
+            target/release/hris-desktop.exe
+            target/release/payroll-desktop.exe
           if-no-files-found: error
           retention-days: 14
 
@@ -68,5 +68,7 @@ jobs:
       - name: Test signed update publication
         run: node --test tests/desktop_release_edge.test.mjs
 
+# Manual runs only: do not incur private Actions charges without confirming no-charge capacity.
+# Local verified builds are the first beta release evidence.
 # No automatic database deployment, release publication, or signing is configured.
 # Choose a dedicated Supabase project and deployment approval policy first.

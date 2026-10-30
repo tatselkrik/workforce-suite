@@ -105,7 +105,7 @@ class MainActivity : ComponentActivity() {
                 Surface(Modifier.fillMaxSize()) {
                     Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
                         Row(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("HRIS Employee", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Text("Workforce Employee", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             TextButton(onClick = { notifications() }) { Text("Device alerts") }
                         }
                         when {
@@ -120,7 +120,7 @@ class MainActivity : ComponentActivity() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 browser?.evaluateJavascript("Boolean((typeof state!=='undefined' && (state.dirty||state.pictureDirty||state.securityDirty||state.busy)) || (typeof timeState!=='undefined' && timeState.dirtyKind) || (typeof serviceState!=='undefined' && serviceState.dirty))") { answer ->
-                    if (answer == "true") AlertDialog.Builder(this@MainActivity).setMessage("Discard unsaved edits and close HRIS Employee?").setNegativeButton("Keep editing", null).setPositiveButton("Discard and close") { _, _ -> finish() }.show()
+                    if (answer == "true") AlertDialog.Builder(this@MainActivity).setMessage("Discard unsaved edits and close Workforce Employee?").setNegativeButton("Keep editing", null).setPositiveButton("Discard and close") { _, _ -> finish() }.show()
                     else finish()
                 } ?: finish()
             }

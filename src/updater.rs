@@ -21,24 +21,18 @@ const APP_FILES: &[&str] = &[
     "VERIFICATION.md",
 ];
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Version(pub u32, pub u32, pub u32);
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Version(pub u32, pub u32, pub u32, semver::Prerelease);
 impl Version {
     pub fn parse(value: &str) -> Result<Self> {
-        let parts: Vec<_> = value.split('.').collect();
-        ensure!(parts.len() == 3, "Unsupported update version.");
-        let mut numbers = [0; 3];
-        for (i, part) in parts.iter().enumerate() {
-            ensure!(
-                !part.is_empty()
-                    && part.len() <= 6
-                    && part.bytes().all(|b| b.is_ascii_digit())
-                    && (part.len() == 1 || !part.starts_with('0')),
-                "Unsupported update version."
-            );
-            numbers[i] = part.parse()?;
-        }
-        Ok(Self(numbers[0], numbers[1], numbers[2]))
+        ensure!(value.len() <= 80, "Unsupported update version.");
+        let version = semver::Version::parse(value).context("Unsupported update version.")?;
+        ensure!(
+            version.major <= 999_999 && version.minor <= 999_999 && version.patch <= 999_999
+                && version.build.is_empty(),
+            "Unsupported update version."
+        );
+        Ok(Self(version.major as u32, version.minor as u32, version.patch as u32, version.pre))
     }
 }
 
@@ -573,11 +567,22 @@ mod tests {
             "0.01.6",
             "v0.1.6",
             "0.1",
-            "0.1.6-beta",
+            "1.0.0-beta.01",
+            "1.0.0+ambiguous-build",
             "../0.1.6",
             "0.1.6/evil",
             "1000000.0.0",
         ] {
+            assert!(Version::parse(bad).is_err());
+        }
+    }
+    #[test]
+    fn prerelease_ordering_preserves_stable_upgrades_and_prevents_downgrades() {
+        let ordered = ["0.1.70", "1.0.0-alpha.1", "1.0.0-beta.1", "1.0.0-beta.2", "1.0.0-beta.10", "1.0.0-rc.1", "1.0.0", "1.0.1"];
+        for versions in ordered.windows(2) {
+            assert!(Version::parse(versions[0]).unwrap() < Version::parse(versions[1]).unwrap());
+        }
+        for bad in ["1.0.0-beta/other", "1.0.0-beta\\other", "1.0.0-beta..1", "1.0.0-beta%2f1", "1.0.0-beta. 1", "1.0.0-beta.1?x=1"] {
             assert!(Version::parse(bad).is_err());
         }
     }

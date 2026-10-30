@@ -2346,6 +2346,8 @@ async fn android_navigation_labels_are_short_without_changing_destinations_or_br
     #[cfg(not(feature = "android-ui"))]
     assert_eq!(html, include_str!("../web/index.html"));
     #[cfg(feature = "android-ui")]
+    assert!(html.contains("<title>Workforce Employee</title>") && html.contains("EMPLOYEE SELF-SERVICE"));
+    #[cfg(feature = "android-ui")]
     for label in ["data-page=\"attendance\" aria-label=\"Attendance\">Time", "data-page=\"pay\" aria-label=\"Payslips\">Pay", "data-page=\"services\" aria-label=\"Employee services\">Help", "aria-label=\"My profile\">"] {
         assert!(html.contains(label));
     }

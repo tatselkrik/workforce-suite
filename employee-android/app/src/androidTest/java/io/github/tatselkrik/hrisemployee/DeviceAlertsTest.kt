@@ -56,7 +56,7 @@ class DeviceAlertsTest {
    val manager=context.getSystemService(NotificationManager::class.java);val until=SystemClock.elapsedRealtime()+60000
    while(SystemClock.elapsedRealtime()<until&&manager.activeNotifications.none{it.id==1042})SystemClock.sleep(250)
    val received=manager.activeNotifications.firstOrNull{it.id==1042};assertNotNull("Actual background FCM reception",received)
-   val notification=received!!.notification;assertEquals("HRIS Employee",notification.extras.getString(Notification.EXTRA_TITLE));assertEquals("You have an HRIS update. Open the app to review your inbox.",notification.extras.getString(Notification.EXTRA_TEXT));assertEquals(Notification.VISIBILITY_PRIVATE,notification.visibility)
+   val notification=received!!.notification;assertEquals("Workforce Employee",notification.extras.getString(Notification.EXTRA_TITLE));assertEquals("You have an HRIS update. Open the app to review your inbox.",notification.extras.getString(Notification.EXTRA_TEXT));assertEquals(Notification.VISIBILITY_PRIVATE,notification.visibility)
    File(context.filesDir,"qa-push-received").writeText("received")
    if(realTray) {
     assertTrue("Open only the owned emulator's notification shade",instrument.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS))

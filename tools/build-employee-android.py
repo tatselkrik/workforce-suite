@@ -55,7 +55,7 @@ def main():
             path = ROOT / "work/android-employee" / evidence
             connected = connected and path.exists() and json.loads(path.read_text(encoding="utf-8")).get("all_passed") is True
     if args.release and not args.candidate and not connected: raise RuntimeError("Finish verified background delivery and the protected rollout before the release")
-    version_match = re.search(r'versionCode = (\d+); versionName = "([0-9]+\.[0-9]+\.[0-9]+)"', (APP / "app/build.gradle.kts").read_text(encoding="utf-8"))
+    version_match = re.search(r'versionCode = (\d+); versionName = "([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?)"', (APP / "app/build.gradle.kts").read_text(encoding="utf-8"))
     if not version_match: raise RuntimeError("Resolve the pinned Android version before packaging")
     assets = APP / "app/src/main/assets";
     (assets / "BUILD.json").write_text(json.dumps({"application_id":"io.github.tatselkrik.hrisemployee","version":version_match.group(2),"version_code":int(version_match.group(1)),"source_commit":revision,"source_worktree_clean":clean,"channel":"private local prototype","background_push_connected":connected,"physical_phone_verified":False},indent=2)+"\n",encoding="utf-8")

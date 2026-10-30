@@ -20,26 +20,31 @@ Unicode true
 
 !ifdef PAYROLL_DESKTOP
   !define APP_ID "io.github.tatselkrik.payrolldesktop"
-  !define APP_NAME "Payroll Desktop"
+  !define APP_NAME "Workforce Payroll"
+  !define APP_FOLDER "Payroll Desktop"
   !define APP_EXE "Payroll-Desktop.exe"
   !define APP_MARKER ".payroll-installation"
 !else
   !define APP_ID "io.github.tatselkrik.hrisdesktop"
-  !define APP_NAME "HRIS Desktop"
+  !define APP_NAME "Workforce HR"
+  !define APP_FOLDER "HRIS Desktop"
   !define APP_EXE "HRIS-Desktop.exe"
   !define APP_MARKER ".hris-installation"
 !endif
 !define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}"
 Name "${APP_NAME}"
 OutFile "${SETUP_OUTPUT}"
-InstallDir "$LOCALAPPDATA\Programs\${APP_NAME}"
+InstallDir "$LOCALAPPDATA\Programs\${APP_FOLDER}"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
-VIProductVersion "${APP_VERSION}.0"
+!ifndef APP_FILE_VERSION
+  !define APP_FILE_VERSION "${APP_VERSION}.0"
+!endif
+VIProductVersion "${APP_FILE_VERSION}"
 VIAddVersionKey /LANG=1033 "ProductName" "${APP_NAME}"
 VIAddVersionKey /LANG=1033 "ProductVersion" "${APP_VERSION}"
 VIAddVersionKey /LANG=1033 "FileDescription" "${APP_NAME} private prototype setup"
-VIAddVersionKey /LANG=1033 "FileVersion" "${APP_VERSION}.0"
+VIAddVersionKey /LANG=1033 "FileVersion" "${APP_FILE_VERSION}"
 VIAddVersionKey /LANG=1033 "LegalCopyright" ""
 
 !define MUI_ABORTWARNING
@@ -104,6 +109,7 @@ Section "${APP_NAME}"
   !ifdef UPDATE_ONLY
     ReadRegStr $0 HKCU "${UNINSTALL_KEY}" "InstallLocation"
     StrCmp $0 "$INSTDIR" 0 update_done
+    WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayName" "${APP_NAME}"
     WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "${APP_VERSION}"
     update_done:
     Goto setup_done

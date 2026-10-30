@@ -621,6 +621,8 @@ async fn index() -> impl IntoResponse {
     let html = include_str!("../web/index.html");
     #[cfg(feature = "android-ui")]
     let html = include_str!("../web/index.html")
+        .replace("<title>HRIS · Employee portal</title>", "<title>Workforce Employee</title>")
+        .replace("class=\"eyebrow\">EMPLOYEE PORTAL", "class=\"eyebrow\">EMPLOYEE SELF-SERVICE")
         .replace("data-page=\"attendance\">Attendance", "data-page=\"attendance\" aria-label=\"Attendance\">Time")
         .replace("data-page=\"pay\">Payslips", "data-page=\"pay\" aria-label=\"Payslips\">Pay")
         .replace("data-page=\"services\">Services", "data-page=\"services\" aria-label=\"Employee services\">Help")

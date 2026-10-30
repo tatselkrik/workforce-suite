@@ -5,6 +5,7 @@ import {readFile,writeFile,mkdir,stat} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {validReleaseVersion} from './version.mjs';
 
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const appId='io.github.tatselkrik.hrisdesktop';
@@ -45,7 +46,7 @@ export async function initialize(privateFolder) {
 }
 
 export async function prepare(privateFolder,version,setupFile,exeFile,schema,notesFile) {
-  if(!/^(0|[1-9][0-9]{0,5})\.(0|[1-9][0-9]{0,5})\.(0|[1-9][0-9]{0,5})$/.test(version) || !/^[0-9]{14}$/.test(schema)) throw new Error('Invalid release or database version.');
+  if(!validReleaseVersion(version) || !/^[0-9]{14}$/.test(schema)) throw new Error('Invalid release or database version.');
   await initialize(privateFolder);
   const setup=await readFile(setupFile),exe=await readFile(exeFile),notes=(await readFile(notesFile,'utf8')).trim();
   if(!setup.subarray(0,2).equals(Buffer.from('MZ')) || setup.length>64*1024*1024 || !setup.length || [...notes].length>1200) throw new Error('Unsupported installer or notes.');

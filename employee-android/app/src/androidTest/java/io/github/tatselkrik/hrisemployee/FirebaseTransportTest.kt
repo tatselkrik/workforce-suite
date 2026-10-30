@@ -22,7 +22,7 @@ class FirebaseTransportTest {
   // Do not log, export or persist this address beyond the provider-managed SDK.
   token.set(null)
   val notification=DeviceAlertNotifications.build(context)
-  assertEquals("HRIS Employee",notification.extras.getString(Notification.EXTRA_TITLE))
+  assertEquals("Workforce Employee",notification.extras.getString(Notification.EXTRA_TITLE))
   assertEquals("You have an HRIS update. Open the app to review your inbox.",notification.extras.getString(Notification.EXTRA_TEXT))
   assertEquals(Notification.VISIBILITY_PRIVATE,notification.visibility)
   assertNotNull(notification.contentIntent)

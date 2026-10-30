@@ -1,9 +1,9 @@
 [package]
 name = "payroll-desktop"
-version = "0.1.2"
+version = "1.0.0-beta.1"
 edition = "2024"
 rust-version = "1.95"
-description = "Native Payroll Desktop sharing the HRIS company deployment and payroll engine"
+description = "Workforce Payroll native desktop sharing the company deployment and payroll engine"
 publish = false
 
 [package.metadata.application]
@@ -13,4 +13,4 @@ id = "io.github.tatselkrik.payrolldesktop"
 qa-screenshot = ["hris-desktop/qa-screenshot"]
 
 [dependencies]
-hris-desktop = { path = "..", version = "=0.1.70" }
+hris-desktop = { path = "..", version = "=1.0.0-beta.1" }

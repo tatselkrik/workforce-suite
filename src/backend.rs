@@ -874,7 +874,7 @@ impl CloudClient {
             && !crate::desktop::Product::Payroll.admits(&access)
         {
             let _ = self.sign_out_scope("local");
-            return Err(anyhow::Error::new(AccessRevoked).context("Payroll Desktop requires Payroll Officer or Administrator responsibility. Your other HRIS access is unchanged."));
+            return Err(anyhow::Error::new(AccessRevoked).context("Workforce Payroll requires Payroll Officer or Administrator responsibility. Your other HRIS access is unchanged."));
         }
         Ok(access)
     }

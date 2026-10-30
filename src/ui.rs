@@ -2444,7 +2444,7 @@ impl HrisApp {
         let mut apply = false;
         let mut cancel = false;
         let mut open = true;
-        egui::Window::new("Update HRIS Desktop").collapsible(false).resizable(false).open(&mut open)
+        egui::Window::new("Update Workforce HR").collapsible(false).resizable(false).open(&mut open)
             .anchor(egui::Align2::CENTER_CENTER,[0.0,0.0]).default_width(430.0).show(ctx,|ui| {
                 ui.label(format!("Install version {} and restart HRIS?",update.release.version));
                 ui.label("The download will be verified before installation. Your company connection and logo will be preserved. You will sign in again after restarting.");
@@ -3336,7 +3336,7 @@ impl HrisApp {
         ui.add_space(12.0);
         card(ui, |ui| {
             ui.label(RichText::new("App updates").size(18.0).strong());
-            ui.label(format!("HRIS Desktop {}", updater::VERSION));
+            ui.label(format!("Workforce HR {}", updater::VERSION));
             ui.label("Updates are checked automatically after a successful sign-in. An available update stays visible until you update or sign out.");
             match &self.update_state {
                 UpdateState::UpToDate => {
@@ -3425,8 +3425,8 @@ impl HrisApp {
         self.display_preferences(ui);
         ui.add_space(12.0);
         card(ui, |ui| {
-            ui.heading(format!("Payroll Desktop {}", self.desktop.version));
-            ui.label("Company settings and staff responsibilities are managed in HRIS Desktop.");
+            ui.heading(format!("Workforce Payroll {}", self.desktop.version));
+            ui.label("Company settings and staff responsibilities are managed in Workforce HR.");
             ui.label("Payroll uses the same company records. Its updates are installed locally for this prototype.");
         });
     }
