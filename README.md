@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/desktop-Windows-2474ab?style=flat-square" alt="Windows desktop">
   <img src="https://img.shields.io/badge/employee-Android%208%2B-3b8067?style=flat-square" alt="Android 8 and later">
   <img src="https://img.shields.io/badge/core-Rust-a75b40?style=flat-square" alt="Shared Rust core">
-  <img src="https://img.shields.io/badge/distribution-private-576875?style=flat-square" alt="Private distribution">
+  <img src="https://img.shields.io/badge/distribution-public%20source-576875?style=flat-square" alt="Public source distribution">
 </p>
 
 <p align="center">
@@ -31,13 +31,13 @@
 
 | Application | For | Workspace | Current release |
 | --- | --- | --- | --- |
-| **Workforce HR** | Administrators, HR staff and assigned managers | People, hiring, time and leave, employee services, development and reporting | [1.0.0-beta.1 · Windows](https://github.com/tatselkrik/workforce-suite/releases/tag/hr-v1.0.0-beta.1) |
-| **Workforce Payroll** | Payroll Officers and Administrators | Pay preparation, independent approval, payslips, receipts and statutory review | [1.0.0-beta.1 · Windows](https://github.com/tatselkrik/workforce-suite/releases/tag/payroll-v1.0.0-beta.1) |
-| **Workforce Employee** | Employees, including staff viewing their own records | Attendance, leave, approved payslips, requests, profile and device alerts | [1.0.0-beta.1 · Android](https://github.com/tatselkrik/workforce-suite/releases/tag/employee-v1.0.0-beta.1) |
+| **Workforce HR** | Administrators, HR staff and assigned managers | People, hiring, time and leave, employee services, development and reporting | [1.0.0-beta.1 · Source](https://github.com/tatselkrik/workforce-suite/releases/tag/hr-v1.0.0-beta.1) |
+| **Workforce Payroll** | Payroll Officers and Administrators | Pay preparation, independent approval, payslips, receipts and statutory review | [1.0.0-beta.1 · Source](https://github.com/tatselkrik/workforce-suite/releases/tag/payroll-v1.0.0-beta.1) |
+| **Workforce Employee** | Employees, including staff viewing their own records | Attendance, leave, approved payslips, requests, profile and device alerts | [1.0.0-beta.2 · Source](https://github.com/tatselkrik/workforce-suite/releases/tag/employee-v1.0.0-beta.2) |
 
 Each company installation uses its own packaged Supabase configuration. Users sign in to their company account without selecting a database or company. The three apps share that deployment; a different company receives a separate deployment.
 
-The initial release versions match. Later releases can advance independently without forcing every app to update together.
+The apps advance independently. Source snapshots are public; company-configured installers and APKs stay local to the deployment operator.
 
 ## Core capabilities
 
@@ -95,7 +95,7 @@ A separate desktop keeps financial administration focused while retaining the sa
 
 ### Workforce Employee
 
-The Android app connects directly to the company's backend. It does not depend on a running PC portal. Staff accounts receive the same own-record view when using it.
+The Android app connects directly to the company's backend. It does not depend on a PC browser server. Staff accounts receive the same own-record view when using it.
 
 <p align="center">
   <img src="docs/screenshots/workforce-beta1/employee-home.png" alt="Employee home with attendance and employment summary" width="240">
@@ -112,26 +112,22 @@ The Android app connects directly to the company's backend. It does not depend o
 
 </details>
 
-## What's new in 1.0.0-beta.1
+## Current app family
 
 - **A coordinated suite:** Workforce HR, Workforce Payroll and Workforce Employee now have clear names and independent release tags in one repository.
 - **Consistent appearance:** teal light and charcoal dark themes across the three applications.
 - **Compatible upgrades:** existing application IDs, signing identities, company connections, installation/data paths and original records are retained.
 - **Prerelease ordering:** desktop version comparison recognizes beta versions and a later stable `1.0.0` correctly.
 
-This is a new beta build of the existing prototype. Detailed release, installation and verification evidence is recorded in the [beta delivery report](docs/WORKFORCE-1.0.0-BETA.1-DELIVERY.md).
+Workforce HR and Payroll are at `1.0.0-beta.1`; Workforce Employee is at `1.0.0-beta.2`. Android is the employee-facing app. The former standalone browser portal is retired; its shared Rust service remains part of Android.
 
 ## Installation and updates
 
-Download the appropriate installer or signed APK from its **private release** in the apps table. Repository access is required. Match the download against its accompanying `SHA256SUMS.txt` before installing.
+The public releases contain **source snapshots**, not a connection to the maintainer's company backend. To use the suite, a deployment operator creates a separate company Supabase project, applies the matching migrations/functions, and packages its own publishable configuration. Android also uses that company's Firebase configuration and signing identity. Start with [configuration examples](config-examples/README.md).
 
-1. Save work and close the desktop app being updated, or obtain the Android APK on the intended device.
-2. Install over the existing version. Keep the same application identity and signing key; do not uninstall simply to change the displayed name.
-3. Open **Workforce HR**, **Workforce Payroll** or **Workforce Employee** and sign in with the existing company account.
+Company-configured installers and signed APKs are distributed by the deployment operator and stay outside this repository. Install over the matching existing app after saving work. Existing application IDs, signing identities and legacy installation/data paths are retained across the Workforce rename. The current Android version code is **5**.
 
-Windows shortcuts and Apps registration use the new names. Compatible installation folders and executable basenames retain their earlier HRIS/Payroll names. The Android package identifier and signer are unchanged; this release advances its version code to **4**.
-
-Beta updates are installed manually from these private releases. The existing HR automatic-update feed remains stable-only. Payroll and Android do not consume HR update packages. Windows installers are not Authenticode-signed; the HR update package has its separate retained Ed25519 verification signature.
+The employee application is Android-only; there is no standalone PC browser server to run or maintain. Users sign in to their packaged company account without an in-app database chooser. Product updates, backend deployment and source publication are separate operations.
 
 ## How the suite fits together
 
@@ -143,7 +139,7 @@ flowchart LR
     Alerts["Firebase Cloud Messaging<br/>Generic device alerts"] --> Employee
 ```
 
-Desktop financial screens use shared Rust code rather than separate calculation implementations. Android embeds the own-record service behind a private device-loopback interface. The retained PC browser portal has an independent, local-only lifecycle.
+Desktop financial screens use shared Rust code rather than separate calculation implementations. Android embeds the own-record service behind a private device-loopback interface. There is no standalone browser application; `employee-portal/` retains its historical name as the shared Android employee-service library.
 
 ## Developer setup
 
@@ -154,7 +150,7 @@ workforce-suite/
 ├── src/                 Workforce HR and shared Rust implementation
 ├── payroll-desktop/     Workforce Payroll executable
 ├── employee-android/    Android shell, lifecycle and Rust bridge
-├── employee-portal/     Own-record service and retained local browser portal
+├── employee-portal/     Shared own-record service library for Android
 ├── supabase/            Versioned migrations and protected functions
 ├── tests/               Workflow, transport and release checks
 ├── tools/               Build, packaging and verification utilities
@@ -170,7 +166,7 @@ cargo build --workspace --release --locked
 
 The outputs retain the compatible names `hris-desktop.exe` and `payroll-desktop.exe`. See the [Android guide](employee-android/README.md) for its pinned SDK/JDK/Gradle toolchain and private packaging workflow. Deployment profiles, Firebase configuration and signing keys must be supplied privately; they are excluded from Git.
 
-**GitHub Actions is manual.** Confirm no-charge capacity before dispatching a run. Local verification and installed-artifact evidence are recorded separately from remote CI; no passing remote CI badge is claimed. Building an app does not deploy database migrations.
+The workflow checks public source, employee-service behaviour, native builds and database contracts on standard public GitHub-hosted runners. It does not upload configured packages, use deployment secrets or apply hosted migrations. Local company packaging is separate from CI.
 
 ## Prototype boundaries
 
@@ -184,11 +180,11 @@ The outputs retain the compatible names `hris-desktop.exe` and `payroll-desktop.
 | Start here | Reference |
 | --- | --- |
 | Releases, tags and compatibility | [Release/version policy](docs/WORKFORCE-RELEASES.md) |
-| Current release evidence and checks | [1.0.0-beta.1 delivery](docs/WORKFORCE-1.0.0-BETA.1-DELIVERY.md) |
+| Company packaging inputs | [Configuration examples](config-examples/README.md) |
 | Remaining and deferred work | [Roadmap](docs/REMAINING-ROADMAP.md) |
 | Payroll architecture | [Separate Payroll Desktop](docs/PAYROLL-DESKTOP.md) |
 | Android build and operation | [Employee app guide](employee-android/README.md) |
 | Android notifications | [Protected push pipeline](docs/ANDROID-PUSH.md) |
 | Screenshot provenance | [Reviewed gallery](docs/screenshots/workforce-beta1/README.md) |
 
-<p align="center"><sub>Workforce Suite · Private company prototype · Built with Rust</sub></p>
+<p align="center"><sub>Workforce Suite · Public source, company-specific deployments · Built with Rust</sub></p>

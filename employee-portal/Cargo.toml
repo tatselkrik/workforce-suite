@@ -4,7 +4,8 @@ version = "0.1.8"
 edition = "2024"
 rust-version = "1.95"
 publish = false
-description = "Separate employee self-service portal with a Rust server"
+autobins = false
+description = "Shared own-record employee service embedded by Workforce Employee"
 
 [package.metadata.application]
 id = "io.github.tatselkrik.hrisportal"

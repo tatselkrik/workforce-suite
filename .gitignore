@@ -29,3 +29,18 @@ employee-android/app/src/main/assets/THIRD-PARTY-NOTICES.txt
 employee-android/app/src/main/assets/BUILD.json
 
 tools/__pycache__/
+
+# Operator deployments and credentials never belong in public source.
+**/hris-connection.json
+**/hris-updates.json
+**/google-services.json
+**/.env
+**/.env.*
+!**/.env.example
+*.dpapi
+*.p12
+*.jks
+*.keystore
+*.apk
+*.exe
+*.bundle

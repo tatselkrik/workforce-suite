@@ -1,3 +1,8 @@
+> Historical local-deployment evidence. The public-source transition archives the
+> former configured release assets locally and removes them from GitHub. Current
+> public releases contain source snapshots only; the runtime hashes below describe
+> the retained local company packages, not public installer downloads.
+
 # Workforce Suite 1.0.0-beta.1 delivery —30 October 2026
 
 **Local installations and all three private prereleases verified.**

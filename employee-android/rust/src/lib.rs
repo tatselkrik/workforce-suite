@@ -30,7 +30,14 @@ pub fn start(directory: &Path) -> Result<String> {
             let portal = match Portal::new(config) { Ok(value) => value, Err(_) => { let _ = ready.send(false); return; } };
             let listener = match tokio::net::TcpListener::from_std(socket) { Ok(value) => value, Err(_) => { let _ = ready.send(false); return; } };
             let _ = ready.send(true);
-            let _ = axum::serve(listener, portal.router()).with_graceful_shutdown(async { let _ = stopped.await; }).await;
+            let serving = axum::serve(listener, portal.router()).into_future();
+            tokio::pin!(serving);
+            tokio::select! {
+                _ = &mut serving => {},
+                _ = stopped => {},
+            }
+            // Drop the server/connection runtime even if an untrusted local peer
+            // holds an incomplete HTTP request open during app shutdown.
             let _ = tokio::time::timeout(Duration::from_secs(5), portal.close()).await;
         });
     })?;
@@ -89,7 +96,13 @@ mod tests {
         assert!(success.contains("Sign in"));
         let rejected = request("foreign.example.invalid");
         assert!(rejected.starts_with("HTTP/1.1 403") || rejected.starts_with("HTTP/1.1 400"));
+        let mut held = std::net::TcpStream::connect(authority).unwrap();
+        held.write_all(format!("GET / HTTP/1.1\r\nHost: {authority}\r\nX-Incomplete: ").as_bytes()).unwrap();
+        std::thread::sleep(Duration::from_millis(50));
+        let closing = std::time::Instant::now();
         stop();
+        assert!(closing.elapsed() < Duration::from_secs(8), "An incomplete peer must not block shutdown");
+        drop(held);
         assert!(std::net::TcpStream::connect(authority).is_err());
         // Remove only this generated, exact fixture directory after its contents are checked.
         std::fs::remove_file(directory.join("hris-connection.json")).unwrap();

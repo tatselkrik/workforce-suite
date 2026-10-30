@@ -63,7 +63,7 @@ def main():
     profile = json.loads(source.read_text(encoding="utf-8-sig")); reference = (ROOT / "supabase/.temp/project-ref").read_text(encoding="utf-8").strip()
     if set(profile) != {"url", "publishable_key"} or not profile["publishable_key"].startswith("sb_publishable_") or profile["url"].rstrip("/") != "https://" + reference + ".supabase.co": raise RuntimeError("Company deployment identity mismatch")
     shutil.copyfile(source, assets / "hris-connection.json")
-    branding = ROOT / "work/portal-deployment-0.1.8/HRIS-Employee-Portal/hris-branding.json"
+    branding = PRIVATE / "hris-branding.json"
     if branding.exists(): shutil.copyfile(branding, assets / "hris-branding.json")
     if not (APP / "app/google-services.json").exists(): raise RuntimeError("Prepare the authorized Firebase Android configuration first")
     firebase = json.loads((APP / "app/google-services.json").read_text(encoding="utf-8"))

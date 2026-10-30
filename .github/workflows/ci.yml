@@ -1,74 +1,91 @@
-name: Workforce Suite checks and Windows build
+name: Workforce Suite checks
 
 on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: workforce-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_INCREMENTAL: '0'
+  CARGO_PROFILE_DEV_DEBUG: '0'
+  CARGO_PROFILE_TEST_DEBUG: '0'
+
 jobs:
-  employee-portal:
+  public-source:
+    if: github.event.repository.private == false
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Install pinned Rust toolchain
-        run: rustup toolchain install 1.95.0 --profile minimal --component rustfmt
-      - name: Check portal formatting
-        run: cargo fmt --manifest-path employee-portal/Cargo.toml -- --check
-      - name: Test portal authentication and own-record scopes
-        run: cargo test --manifest-path employee-portal/Cargo.toml --locked
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
-      - name: Check browser script syntax
-        run: |
-          node --check employee-portal/web/app.js
-          node --check employee-portal/web/self-service.js
-      - name: Test payslip CSV cell safety
-        run: node --test employee-portal/tests/browser.test.mjs
+      - run: git diff --check
+      - run: node --test tests/public_source.test.mjs tests/release_version.test.mjs
+      - run: node tools/public-source-check.mjs --history
+
+  employee-service:
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.95.0 --profile minimal
+      - name: Test the shared own-record service
+        run: cargo test --manifest-path employee-portal/Cargo.toml --locked --lib --features android-ui,android-push
+      - name: Test the Android Rust bridge lifecycle
+        run: cargo test --manifest-path employee-android/rust/Cargo.toml --locked
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Test bundled employee interface
+        run: node --test employee-portal/tests/*.test.mjs
 
   desktop:
+    if: github.event.repository.private == false
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Install pinned Rust toolchain
-        run: rustup toolchain install 1.95.0 --profile minimal --component rustfmt
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-      - name: Test workflows and Supabase transport
-        run: cargo test --workspace --locked
-      - name: Build Windows application
-        run: cargo build --workspace --release --locked
-      - uses: actions/upload-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          name: Workforce-Desktop-Windows
-          path: |
-            target/release/hris-desktop.exe
-            target/release/payroll-desktop.exe
-          if-no-files-found: error
-          retention-days: 14
+          persist-credentials: false
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.95.0 --profile minimal
+      - name: Test native workflows and transport
+        run: cargo test --workspace --locked
+      - name: Build generic native applications
+        run: cargo build --workspace --release --locked
 
   database:
+    if: github.event.repository.private == false
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: tools/db-tests/package-lock.json
-      - name: Install pinned PostgreSQL test engine
+      - name: Install pinned local PostgreSQL test engine
         working-directory: tools/db-tests
         run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Test schema and tenant authorization
+      - name: Test schema replay and permission boundaries
         working-directory: tools/db-tests
         run: npm test
-      - name: Test privileged account provisioning
-        run: node --test tests/account_admin_edge.test.mjs tests/staff_provision_edge.test.mjs
-      - name: Test signed update publication
-        run: node --test tests/desktop_release_edge.test.mjs
+      - name: Test privileged functions and release validation
+        run: node --test tests/account_admin_edge.test.mjs tests/staff_provision_edge.test.mjs tests/desktop_release_edge.test.mjs
 
-# Manual runs only: do not incur private Actions charges without confirming no-charge capacity.
-# Local verified builds are the first beta release evidence.
-# No automatic database deployment, release publication, or signing is configured.
-# Choose a dedicated Supabase project and deployment approval policy first.
+# Standard public runners only. Private events skip every job without a runner.
+# No artifact/cache upload, deployment, provider connection or signing credentials.

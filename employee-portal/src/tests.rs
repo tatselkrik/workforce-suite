@@ -8,25 +8,31 @@ fn config() -> Config {
     c
 }
 #[test]
-fn external_plain_http_and_secret_origin_are_rejected() {
+fn only_the_exact_bound_loopback_origin_is_accepted() {
     for (o, l) in [
         ("http://example.invalid", "0.0.0.0:3030"),
         ("http://127.0.0.1:3030", "0.0.0.0:3030"),
         ("https://user:secret@example.invalid", "127.0.0.1:3030"),
         ("https://example.invalid/path", "127.0.0.1:3030"),
+        ("https://hr.example.invalid", "0.0.0.0:3030"),
+        ("https://hr.example.invalid", "127.0.0.1:3030"),
+        ("http://127.0.0.1:3031", "127.0.0.1:3030"),
+        ("http://127.0.0.2:3030", "127.0.0.1:3030"),
+        ("http://127.0.0.1:3030", "127.0.0.1:0"),
+        ("http://localhost:3030", "127.0.0.1:3030"),
     ] {
         assert!(Config::origin(o, l).is_err());
     }
-    assert!(Config::origin("https://hr.example.invalid", "0.0.0.0:3030").is_ok());
+    assert!(Config::origin("http://127.0.0.1:3030", "127.0.0.1:3030").is_ok());
+    assert!(Config::origin("http://[::1]:3030", "[::1]:3030").is_ok());
 }
 #[test]
-fn secure_cookie_has_host_scope_and_no_auth_token() {
-    let c = Config::origin("https://hr.example.invalid", "127.0.0.1:3030").unwrap();
+fn loopback_cookie_has_host_scope_and_no_auth_token() {
+    let c = config();
     let cookie = c.cookie(Some(Uuid::new_v4()));
     for s in [
-        "__Host-hris_portal=",
+        "hris_portal=",
         "HttpOnly",
-        "Secure",
         "SameSite=Strict",
         "Path=/",
     ] {

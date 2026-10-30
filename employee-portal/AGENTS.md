@@ -1,52 +1,18 @@
-# Separate employee portal
+# Shared employee service
 
-Read ../memory.md and the root AGENTS.md; current human authority takes precedence.
-This is a separate Rust server/browser application, never embedded in the native
-staff desktop. Preserve identifier io.github.tatselkrik.hrisportal. Each deployment
-uses one operator-supplied company profile; no company/database chooser in the UI.
+Read the root AGENTS.md and local operator context if present. This directory's
+historical package name is retained for compatibility, but it is a library used
+by Workforce Employee for Android. The standalone browser executable is retired;
+keep automatic binary discovery disabled and do not add hosting instructions.
 
-Use only the publishable Supabase key and the actual user's bearer for upstream
-requests. Keep Auth tokens in server memory; browser receives an opaque HttpOnly
-session cookie and an in-memory CSRF token. Validate live Auth and protected company
-membership on data requests. Query only the session's own employee/company, even
-when the account has broader staff permissions. Never expose private HR drafts,
-team records or raw upstream Auth/error bodies. HTTPS is required outside loopback.
-No credentials, sessions or automatic employee-record caches in logs, browser
-storage or disk. Explicit CSV/PDF exports are private files the person chooses
-to save; keep them distinct from automatic application storage.
+Reuse the signed-in person's own protected Supabase APIs, current live membership,
+memory-only upstream tokens, opaque HttpOnly cookies and page-memory CSRF tokens.
+Never expose HR/team/private payroll records or raw upstream error bodies, even
+when the account has staff permissions. The embedded HTTP origin must match its
+actual bound loopback IP and port. Preserve strict Host/Origin/CSP/no-store rules,
+bounded parsing/uploads/exports and Android lifecycle cleanup.
 
-Own profile/contacts, attendance/breaks, leave requests and approved payslip access
-are the current scope. Portal leave wrappers infer the current employee and guard
-policy/record revisions; staff roles still receive only own-record controls here.
-Follow ../docs/EMPLOYEE-PORTAL.md for verification and remaining scope.
-Do not claim public hosting, phone access or a native mobile app without evidence.
-
-
-Kirk resumed portal development on24October2026 for LOCAL use only, including the
-remaining own correction/overtime requests, notifications, profile/security and
-branding scope. Do not publicly host, tunnel or expose the server, or resume
-unrelated desktop employee access. Preserve the existing own-record/token/CSRF
-boundaries and nested release lifecycle.
-
-Kirk resumed this chat again after desktop0.1.41, approved the ordered checklist
-in ../docs/REMAINING-ROADMAP.md and reactivated the usage-reset scheduler. Complete
-the remaining local portal controls first; cross out the milestone only when all
-its scope is verified. Local-only deployment and all security boundaries remain.
-
-Latest boundary25October2026: finish only the in-progress0.1.3 personal inbox,
-verify/deliver it locally, then stop. Scheduler is paused. Other portal controls
-and subsequent roadmap milestones remain queued until Kirk resumes work.
-
-Latest resumption25October2026: Kirk resumed the roadmap and usage-reset
-scheduler. The preceding stop boundary is superseded. Finish remaining local-only
-pictures/account-security controls and verification, then follow the ordered root
-roadmap. Preserve own-record/token/CSRF and local-only boundaries. Keep build
-outputs separate from versioned packages and avoid duplicate QA binaries.
-
-Own account changes require current-password proof and the same live protected
-membership/identity checks. Email confirmation uses S256 and never establishes a
-browser login: discard its verifier and returned code; only an authenticated
-account refresh establishes current/pending email. Preserve provider confirmation
-rules. Do not infer actual mail delivery from local fixtures or rejected test
-requests. Sign-out-others removes only other own portal cookies; upstream access
-tokens on other clients retain the service's expiry behavior.
+Contact/account changes require current identity and appropriate password proof.
+Preserve unknown-save/retry handling, saved leave approvals and exact own payslip
+projections. Explicit user-chosen exports differ from automatic record caching.
+Keep the native desktop, public source and local deployment boundaries distinct.

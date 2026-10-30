@@ -1,3 +1,11 @@
+# Current source distribution
+
+Workforce Suite is being prepared as one public source repository. Company-specific
+configuration, signing material, installers and historical private build archives
+stay local. Android is the employee-facing client; the standalone browser app is
+retired while its own-record service is retained as an embedded library. Earlier
+private-publication/browser-preservation notes below are historical.
+
 # Remaining HRIS roadmap â€” agreed order
 
 **Workforce Suite beta delivery complete —30 October 2026:** ~~private monorepo and preserved history~~, ~~Workforce HR/Payroll/Employee naming and independent1.0.0-beta.1 tags~~, ~~verified new installers/signed APK and actual desktop/emulator installations~~, ~~private prereleases/download hashes~~ and ~~reviewed screenshot README~~. [Delivery and checks](WORKFORCE-1.0.0-BETA.1-DELIVERY.md). Existing identities/data/keys/history and local portal018 are preserved. This release scope is complete; the SAME reset follow-up is paused. Earlier active-release/design notes below are historical. Deferred agency/phone/email/paid/hardware work remains held; no new module is queued.

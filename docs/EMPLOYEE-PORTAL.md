@@ -1,3 +1,9 @@
+# Shared Android employee service
+
+The standalone browser portal is retired. This historical directory/package is
+now a library embedded by Workforce Employee for Android; it has no server CLI.
+The own-record contracts below remain relevant to the embedded client.
+
 # Separate employee portal
 
 **Current 27October2026: local portal0.1.7 is verified and running at
@@ -145,16 +151,12 @@ company assets in memory for sign-in; employee photos are never part of that cac
 
 ```powershell
 cargo test --manifest-path employee-portal/Cargo.toml --locked
-cargo run --manifest-path employee-portal/Cargo.toml --locked -- C:\private\hris-connection.json
 ```
 
-The default origin/listener is `http://127.0.0.1:3030`. Open that address locally.
-For deployment, supply the externally visible HTTPS origin and a listener as the
-second/third arguments, for example `https://hr.example.invalid 127.0.0.1:3030`.
-An operator-managed TLS reverse proxy must preserve the public Host header, disable
-response caching and route only this dedicated company deployment. Plain HTTP is
-accepted only for a loopback origin with a loopback listener. Do not expose a
-loopback-development configuration to a LAN or public network.
+There is no standalone launch command. The Android bridge binds an ephemeral
+loopback socket and supplies its exact IP/port origin to this library. Hosting on
+LAN/public addresses and remote HTTPS origins are unsupported. Company profiles
+and branding remain operator-supplied local build inputs.
 
 The native desktop and portal have independent release lifecycles. Building this
 crate does not change the installed desktop, its identifier or updater artifacts.

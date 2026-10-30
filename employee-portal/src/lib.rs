@@ -88,12 +88,17 @@ impl Config {
             "Use a public origin without credentials, path or query."
         );
         let secure = u.scheme() == "https";
+        let origin_ip = u.host_str().and_then(|host| {
+            host.trim_start_matches('[').trim_end_matches(']')
+                .parse::<std::net::IpAddr>().ok()
+        });
         ensure!(
-            secure
-                || (u.scheme() == "http"
-                    && matches!(u.host_str(), Some("127.0.0.1" | "localhost" | "[::1]"))
-                    && bind.ip().is_loopback()),
-            "HTTPS is required outside a loopback development server."
+            u.scheme() == "http"
+                && bind.ip().is_loopback()
+                && bind.port() != 0
+                && origin_ip == Some(bind.ip())
+                && u.port_or_known_default() == Some(bind.port()),
+            "Use the exact bound loopback IP and port for the embedded employee service."
         );
         let origin = u.origin().ascii_serialization();
         let authority = origin.split_once("://").unwrap().1.to_string();
