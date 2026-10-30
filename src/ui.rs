@@ -2124,7 +2124,7 @@ impl HrisApp {
             ui.label(RichText::new("An Administrator hid this section. Finish or cancel your current changes; existing records are retained.").color(ui.visuals().warn_fg_color));
             ui.add_space(8.0);
         }
-        if self.desktop.product == crate::desktop::Product::Hris {
+        if design::enabled(ui.ctx()) {
             self.design_toolbar(ui);
         } else {
         ui.horizontal(|ui| {
@@ -4478,8 +4478,8 @@ impl eframe::App for HrisApp {
                 || self.update_confirmation;
             egui::Panel::left("sidebar")
                 .resizable(false)
-                .exact_size(if self.desktop.product == crate::desktop::Product::Hris { if ui.available_width()<1100.0 {212.0}else{224.0} } else { 220.0 })
-                .frame(Frame::new().fill(if self.desktop.product == crate::desktop::Product::Hris { design::palette(ui).sidebar } else { NAVY }).inner_margin(if self.desktop.product == crate::desktop::Product::Hris { 16 } else { 20 }))
+                .exact_size(if design::enabled(ui.ctx()) { if ui.available_width()<1100.0 {212.0}else{224.0} } else { 220.0 })
+                .frame(Frame::new().fill(if design::enabled(ui.ctx()) { design::palette(ui).sidebar } else { NAVY }).inner_margin(if design::enabled(ui.ctx()) { 16 } else { 20 }))
                 .show(ui, |ui| {
                     ui.add_enabled_ui(
                         !self.busy
@@ -4570,7 +4570,8 @@ impl eframe::App for HrisApp {
             {
                 if let Ok(path) = std::env::var("HRIS_SCREENSHOT_TO") {
                     let visual_evidence = serde_json::json!({
-                        "version": crate::updater::VERSION,
+                        "version": self.desktop.version,
+                        "application_id": self.desktop.product.id(),
                         "dark_mode": ui.visuals().dark_mode,
                         "zoom_factor": ctx.zoom_factor(),
                         "viewport_points": [ctx.viewport_rect().width(), ctx.viewport_rect().height()],
@@ -5073,10 +5074,11 @@ fn sign_in_layout_for(
             );
         });
     });
+    let compact_payroll = app.product == crate::desktop::Product::Payroll && ui.available_height() < 600.0;
     ui.vertical_centered(|ui| {
-        ui.add_space(12.0);
+        ui.add_space(if compact_payroll { 8.0 } else { 12.0 });
         if logo.is_some() || !company_name.is_empty() {
-            company_logo(ui, logo, company_name, 64.0);
+            company_logo(ui, logo, company_name, if compact_payroll { 48.0 } else { 64.0 });
             ui.add_space(4.0);
         }
         ui.heading(
@@ -5088,7 +5090,7 @@ fn sign_in_layout_for(
             .size(22.0)
             .strong(),
         );
-        ui.add_space(12.0);
+        ui.add_space(if compact_payroll { 8.0 } else { 12.0 });
         Frame::new()
             .fill(ui.visuals().window_fill)
             .stroke(Stroke::new(
@@ -5096,7 +5098,7 @@ fn sign_in_layout_for(
                 ui.visuals().widgets.noninteractive.bg_stroke.color,
             ))
             .corner_radius(12)
-            .inner_margin(28)
+            .inner_margin(if compact_payroll { 24 } else { 28 })
             .show(ui, |ui| {
                 ui.set_width(ui.available_width().min(420.0));
                 ui.with_layout(Layout::top_down(Align::Min), contents);

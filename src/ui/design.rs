@@ -1,4 +1,4 @@
-//! HRIS-only visual language. Payroll retains its separately configured legacy theme.
+//! Shared native visual language, applied independently to HRIS and Payroll contexts.
 use super::*;
 
 #[derive(Clone, Copy)]
@@ -72,7 +72,10 @@ pub(super) fn palette(ui: &Ui) -> Palette {
     Palette::for_dark(ui.visuals().dark_mode)
 }
 pub(super) fn apply(ctx: &egui::Context, product: crate::desktop::Product) {
-    let active = product == crate::desktop::Product::Hris;
+    let active = matches!(
+        product,
+        crate::desktop::Product::Hris | crate::desktop::Product::Payroll
+    );
     ctx.data_mut(|data| data.insert_temp(egui::Id::unique(KEY), active));
     if !active {
         ctx.set_fonts(egui::FontDefinitions::default());
@@ -309,6 +312,16 @@ pub(super) fn icon(ui: &Ui, page: Page, rect: egui::Rect, color: Color32) {
 }
 
 pub(super) fn nav_item(ui: &mut Ui, page: Page, label: &str, selected: bool, height: f32) -> bool {
+    nav_item_with_rect(ui, page, label, selected, height).0
+}
+
+pub(super) fn nav_item_with_rect(
+    ui: &mut Ui,
+    page: Page,
+    label: &str,
+    selected: bool,
+    height: f32,
+) -> (bool, egui::Rect) {
     let p = palette(ui);
     let (rect, response) = ui.allocate_exact_size(
         egui::vec2(ui.available_width(), height),
@@ -366,11 +379,12 @@ pub(super) fn nav_item(ui: &mut Ui, page: Page, label: &str, selected: bool, hei
     let keyboard = ui.is_enabled()
         && response.has_focus()
         && ui.input(|i| i.key_pressed(egui::Key::Enter) || i.key_pressed(egui::Key::Space));
-    response
+    let clicked = response
         .on_hover_text(label)
         .on_hover_cursor(egui::CursorIcon::PointingHand)
         .clicked()
-        || keyboard
+        || keyboard;
+    (clicked, rect)
 }
 
 pub(super) fn metric(ui: &mut Ui, page: Page, title: &str, value: usize, caption: &str) {
@@ -451,21 +465,21 @@ mod tests {
         }
     }
     #[test]
-    fn payroll_configuration_keeps_legacy_palette_and_opt_out() {
-        let legacy = egui::Context::default();
-        super::super::configure_base_theme(&legacy);
-        let ctx = egui::Context::default();
-        super::super::configure_theme_for(&ctx, crate::desktop::Product::Hris);
-        assert!(enabled(&ctx));
-        super::super::configure_theme_for(&ctx, crate::desktop::Product::Payroll);
-        assert!(!enabled(&ctx));
+    fn payroll_uses_the_approved_hris_theme_without_changing_hris_configuration() {
+        let hris = egui::Context::default();
+        super::super::configure_theme_for(&hris, crate::desktop::Product::Hris);
+        let payroll = egui::Context::default();
+        super::super::configure_theme_for(&payroll, crate::desktop::Product::Payroll);
+        assert!(enabled(&hris) && enabled(&payroll));
         for theme in [egui::Theme::Light, egui::Theme::Dark] {
-            let actual = ctx.style_of(theme);
-            let mut expected = (*legacy.style_of(theme)).clone();
-            // egui compares formatter closures by Arc identity, not behavior.
-            // Separate fresh Contexts have different default callback allocations.
+            let actual = payroll.style_of(theme);
+            let mut expected = (*hris.style_of(theme)).clone();
+            // Separate Contexts allocate distinct default number formatter callbacks.
             expected.number_formatter = actual.number_formatter.clone();
             assert_eq!(*actual, expected);
+            let palette = Palette::for_dark(theme == egui::Theme::Dark);
+            assert_eq!(hris.style_of(theme).visuals.panel_fill, palette.page);
+            assert_eq!(hris.style_of(theme).visuals.text_color(), palette.text);
         }
     }
     #[test]
@@ -616,10 +630,11 @@ impl HrisApp {
         {
             self.navigate(Page::Notifications, ui.ctx());
         }
-        if self
-            .data
-            .access
-            .allows(crate::staff_roles::Capability::PayrollPreparation)
+        if self.desktop.product == crate::desktop::Product::Hris
+            && self
+                .data
+                .access
+                .allows(crate::staff_roles::Capability::PayrollPreparation)
             && ui
                 .add_enabled(
                     !self.busy && !self.has_unsaved_edits(),

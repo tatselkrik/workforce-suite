@@ -38,27 +38,26 @@ pub(super) fn show(
         ui.label(
             RichText::new("PAYROLL")
                 .size(10.0)
-                .color(Color32::from_rgb(140, 160, 179))
+                .color(muted(ui))
                 .strong(),
         );
         for (i, label) in crate::desktop::PAYROLL_TABS.iter().enumerate() {
             let active = page == Page::Payroll && tab == i;
             let label = if i == 3 { "Payslips" } else { *label };
-            let r = ui.add_sized(
-                [ui.available_width(), row],
-                egui::Button::new(RichText::new(label).size(13.0).color(if active {
-                    Color32::WHITE
-                } else {
-                    Color32::from_rgb(175, 193, 207)
-                }))
-                .fill(if active { TEAL } else { Color32::TRANSPARENT })
-                .stroke(Stroke::NONE)
-                .corner_radius(8),
-            );
+            let icon = match i {
+                1 => Page::Employees,
+                2 | 6 => Page::Leave,
+                3 | 4 | 11 | 13 => Page::Reports,
+                5 => Page::Settings,
+                10 => Page::Exits,
+                12 => Page::Overview,
+                _ => Page::Payroll,
+            };
+            let (clicked, rect) = design::nav_item_with_rect(ui, icon, label, active, row);
             if active {
-                selected_rect = Some(r.rect);
+                selected_rect = Some(rect);
             }
-            if r.clicked() {
+            if clicked {
                 choice = Some(Choice::Section(i));
             }
         }
@@ -66,25 +65,16 @@ pub(super) fn show(
         ui.label(
             RichText::new("PREFERENCES")
                 .size(10.0)
-                .color(Color32::from_rgb(140, 160, 179))
+                .color(muted(ui))
                 .strong(),
         );
         let active = page == Page::Settings;
-        let r = ui.add_sized(
-            [ui.available_width(), row],
-            egui::Button::new(RichText::new("Settings").size(13.0).color(if active {
-                Color32::WHITE
-            } else {
-                Color32::from_rgb(175, 193, 207)
-            }))
-            .fill(if active { TEAL } else { Color32::TRANSPARENT })
-            .stroke(Stroke::NONE)
-            .corner_radius(8),
-        );
+        let (clicked, rect) =
+            design::nav_item_with_rect(ui, Page::Settings, "Settings", active, row);
         if active {
-            selected_rect = Some(r.rect);
+            selected_rect = Some(rect);
         }
-        if r.clicked() {
+        if clicked {
             choice = Some(Choice::Settings);
         }
         (choice, selected_rect)
@@ -101,7 +91,7 @@ mod tests {
             for height in [90.0, 180.0, 420.0, 600.0] {
                 for tab in 0..=crate::desktop::PAYROLL_TABS.len() {
                     let ctx = egui::Context::default();
-                    configure_theme(&ctx);
+                    configure_theme_for(&ctx, crate::desktop::Product::Payroll);
                     ctx.set_theme(if dark {
                         egui::Theme::Dark
                     } else {

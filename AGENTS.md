@@ -813,3 +813,8 @@ Kirk approved comparison D Teal hybrid light and C Focused charcoal dark for HRI
 ## HRIS visual refresh delivered —30October2026
 
 HRIS0.1.70 is installed and privately published from frozen7a63a85bfa42439c68966a4db120e803a6000545. See docs/HRIS-0.1.70-DELIVERY.md and its review checklist.872default native checks,23actually reviewed fictional native views, exact installer/recovery, existing-key signature, actual installation and private hash/access/feed verification pass. No schema/rate/backend change; Payroll011/Android011/portal018 stay intact. Account Manager visual is its protected-fetch demo state; installed signed-in clicks and subjective monitor review remain explicitly unverified. The approved HRIS-only refresh is complete; pause SAME resume-hris-android-after-usage-reset heartbeat. Never repeat070delivery or resume another product/deferred module from older active-queue notes. Await Kirk's next scoped instruction.
+
+
+## Payroll visual refresh authorized —30October2026
+
+Kirk explicitly authorized applying the delivered teal-light/charcoal-dark design to Payroll Desktop. Follow docs/PAYROLL-DESIGN-REFRESH.md. This supersedes the earlier preserve-Payroll-legacy-appearance boundary only for this local visual refresh. Keep HRIS070 installed bytes/design unchanged, separate product identities/admission, all financial algorithms/guards/history/exports and current declined-integration state. Payroll012 is a local delivery; no Payroll publishing identity/channel is authorized by the HRIS guard. Reuse SAME reset follow-up for this scope, with current-context recovery and pause on completed delivery. Preserve Android011/local portal018 and drafts.
