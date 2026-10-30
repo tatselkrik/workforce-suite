@@ -823,3 +823,8 @@ Kirk explicitly authorized applying the delivered teal-light/charcoal-dark desig
 ## Payroll visual refresh delivered —30October2026
 
 Payroll0.1.2 is locally installed from frozen9ed91b3bf653499dee52b736778120f0dba1e1a1; see docs/PAYROLL-0.1.2-DELIVERY.md.872workspace checks/81UI checks,22actually reviewed native views, normal launch/HRIS-updater refusal, exact isolated installer own/foreign namespace checks and actual installed hash/BUILD/Windows Apps/normal launch pass. All HRIS070files, Payroll company/unknown files and011rollback are preserved. No financial/server/SQL change or Payroll publication/channel. Shared design is now authorized for both products; prior Payroll legacy-style preservation applies only to earlier immutable releases. Android011/portal018 stay intact. Pause SAME resume-hris-android-after-usage-reset on this completed scope and wait for Kirk's next instruction; never repeat012or070delivery. Installed signed-in clicks/subjective monitor review remain explicit limits.
+
+
+## Android visual refresh authorized —30October2026
+
+Kirk explicitly requested the same teal-light/charcoal-dark design for the Android employee app after HRIS070/Payroll012delivery. Follow docs/ANDROID-DESIGN-REFRESH.md. Preserve separate browser portal018assets/session/design, desktop installed bytes, Android business/security/provider/grant/dispatch/file/print behavior, signer and pinned baseline. Android012/code3 is a private local signed delivery, no new channel/store/paid service. Reuse SAME scoped reset follow-up/current-context checkpoint and pause on completed delivery. Prior Android011acceptance and migrations93–97 remain complete; do not repeat rollout or backend writes for styling.

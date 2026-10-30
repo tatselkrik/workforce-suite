@@ -1,0 +1,95 @@
+/* Android presentation only. Browser assets and print output retain their existing contract. */
+@media screen {
+  :root {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 16px; line-height: 1.5; color-scheme: light;
+    --text: #182f3e; --muted: #536a78; --bg: #f6f9fa; --card: #ffffff;
+    --line: #dce7eb; --input: #f7fafb; --teal: #006b75; --teal-soft: #d8eff0;
+    --hover: #e5eff2; --primary: #00747c; --positive: #1d6f4a;
+    background: var(--bg); color: var(--text);
+  }
+  body { background: var(--bg); color: var(--text); }
+  h1 { font-size: 1.85rem; letter-spacing: -.035em; line-height: 1.18; font-weight: 700; }
+  h2 { font-size: 1.22rem; letter-spacing: -.02em; line-height: 1.3; font-weight: 650; }
+  .eyebrow { color: var(--muted); font-size: .68rem; letter-spacing: .08em; }
+  .intro { color: var(--muted); }
+  .muted,.fine { color: var(--muted); }
+  button { border-radius: 10px; font-weight: 600; min-height: 48px; }
+  button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible {
+    outline: 2px solid var(--teal); outline-offset: 3px;
+  }
+  .primary,.primary:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .secondary,.quiet { background: var(--input); border-color: var(--line); color: var(--text); }
+  .secondary:hover,.quiet:hover { background: var(--hover); border-color: var(--teal); }
+  .text-link { color: var(--teal); }
+  input,textarea,select { background: var(--input); color: var(--text); border-color: var(--line); border-radius: 10px; min-height: 48px; }
+  .card,.sign-in-card,.payslip { background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 3px 14px #142f3e04; }
+  .card { padding: 22px; }
+  .grid { gap: 14px; }
+  .hero { border-radius: 16px; background: var(--teal-soft); color: var(--text); border: 1px solid var(--line); padding: 22px; }
+  .hero h2 { color: var(--text); }
+  .notice { border-radius: 12px; background: var(--teal-soft); color: var(--teal); border-color: var(--line); }
+  .notice.error,.login-notice { background: #ffede8; color: #a4362b; border-color: #f1cfc7; }
+  .record,.service-message { border-color: var(--line); }
+  .facts { align-items: start; gap: 12px 16px; }
+  .facts dt { color: var(--muted); }
+  .facts dd { color: var(--text); font-variant-numeric: tabular-nums; }
+  .amount { color: var(--teal); font-variant-numeric: tabular-nums; letter-spacing: -.025em; }
+  .sidebar { background: #f0f6f7; color: var(--text); border-right: 1px solid var(--line); }
+  .company-brand strong { color: var(--text); }
+  .company-brand>span,.session { color: var(--muted); }
+  .brand-mark,.company-brand .brand-mark { border-radius: 50%; background: transparent; border: 1.5px solid var(--teal); color: var(--teal); }
+  .brand-mark img { border-radius: 50%; }
+  .sidebar nav button { display: flex; align-items: center; gap: 12px; color: var(--text); border: 0; border-radius: 12px; }
+  .sidebar nav button:hover { background: var(--hover); }
+  .sidebar nav button[aria-current=page],.sidebar nav button[aria-current=page]:hover { background: var(--teal-soft); color: var(--teal); }
+  .sidebar nav button:not(.profile-link)::before { content: ""; flex: 0 0 auto; width: 21px; height: 21px; background: currentColor; mask: var(--nav-icon) center/contain no-repeat; -webkit-mask: var(--nav-icon) center/contain no-repeat; }
+  .nav-avatar { width: 26px; height: 26px; flex: 0 0 auto; border-radius: 50%; border: 1px solid var(--teal); background: var(--teal-soft); color: var(--teal); font-size: .66rem; }
+  .nav-avatar img { border-radius: 50%; }
+  .content { padding-top: 26px; }
+  header { gap: 12px; margin-bottom: 24px; }
+  .header-actions { gap: 8px; }
+  .header-actions button { min-height: 48px; padding: 8px 12px; font-size: .76rem; }
+  .sign-in-page { min-height: 0; display: flex; align-items: center; justify-content: flex-start; flex-direction: column; padding: 24px 16px 32px; }
+  .sign-in-card { width: 100%; max-width: 420px; padding: 26px 24px; }
+  .sign-in-card>.brand-mark { width: 60px; height: 60px; margin: 0 auto 14px; }
+  .login-company { text-align: center; font-size: 1.1rem; font-weight: 650; margin-bottom: 8px; }
+  .sign-in-card .eyebrow { text-align: center; margin-bottom: 26px; }
+  .sign-in-card h1 { font-size: 1.8rem; margin-bottom: 8px; }
+  .sign-in-card .fine { font-size: .74rem; }
+  .device-alert-dialog { background: var(--card); border-color: var(--line); border-radius: 16px; box-shadow: 0 12px 44px #102c3930; }
+}
+@media screen and (prefers-color-scheme: dark) {
+  :root { color-scheme: dark; --text: #ebf3f7; --muted: #abbdcb; --bg: #131d28; --card: #1d2b39; --line: #334554; --input: #182532; --teal: #6fdccf; --teal-soft: #1e424a; --hover: #233543; --positive: #88dfb1; }
+  .sidebar { background: #172431; }
+  .notice.error,.login-notice { background: #45292c; color: #ffaa9b; border-color: #70464a; }
+  .sign-in-card { box-shadow: none; }
+}
+@media screen and (max-width: 760px), screen and (max-height: 500px) {
+  .workspace { display: block; }
+  .sidebar { position: static; width: 100%; padding: 14px 18px; border-right: 0; border-bottom: 1px solid var(--line); background: var(--card); }
+  .company-brand { flex-direction: row; gap: 12px; margin: 0; text-align: left; }
+  .company-brand .brand-mark { width: 40px; height: 40px; flex-shrink: 0; font-size: .9rem; }
+  .company-brand strong { font-size: .95rem; }
+  .company-brand>span,.session { display: none; }
+  .sidebar nav { position: fixed; inset: auto 0 0; display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 3px; padding: 7px 6px calc(7px + env(safe-area-inset-bottom)); background: var(--card); border-top: 1px solid var(--line); box-shadow: 0 -4px 18px #102e3a06; z-index: 3; }
+  .sidebar nav button { flex-direction: column; justify-content: center; gap: 4px; min-height: 60px; min-width: 0; padding: 6px 1px; font-size: clamp(10px,2.65vw,12px); font-weight: 500; line-height: 1.15; overflow-wrap: anywhere; }
+  .sidebar nav button[aria-current=page] { font-weight: 650; }
+  .sidebar nav .nav-avatar { width: 23px; height: 23px; }
+  .content { padding: 24px 18px 112px; }
+  .two { grid-template-columns: minmax(0,1fr); }
+  .grid { gap: 0; }
+  .card { padding: 20px 18px; }
+  .hero { padding: 21px 18px; }
+  .facts { grid-template-columns: minmax(105px,.8fr) minmax(0,1fr); }
+  .header-actions { justify-content: flex-start; }
+  header { align-items: flex-start; flex-wrap: wrap; }
+}
+@media screen and (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media screen {
+.sidebar nav [data-page="home"] { --nav-icon: url("/android-icons/home.svg"); }
+.sidebar nav [data-page="attendance"] { --nav-icon: url("/android-icons/attendance.svg"); }
+.sidebar nav [data-page="leave"] { --nav-icon: url("/android-icons/leave.svg"); }
+.sidebar nav [data-page="pay"] { --nav-icon: url("/android-icons/pay.svg"); }
+.sidebar nav [data-page="services"] { --nav-icon: url("/android-icons/services.svg"); }
+}

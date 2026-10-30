@@ -8,7 +8,7 @@ android {
     defaultConfig {
         applicationId = "io.github.tatselkrik.hrisemployee"
         minSdk = 26; targetSdk = 37
-        versionCode = 2; versionName = "0.1.1"
+        versionCode = 3; versionName = "0.1.2"
         buildConfigField("boolean", "PUSH_BACKEND_ENABLED", "true")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }

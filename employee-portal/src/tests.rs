@@ -2288,3 +2288,68 @@ async fn service_body_limit_is_bounded_without_expanding_existing_contact_routes
         StatusCode::PAYLOAD_TOO_LARGE
     );
 }
+
+
+#[tokio::test]
+async fn android_presentation_is_opt_in_and_preserves_private_asset_headers() {
+    let portal = Portal::new(config()).unwrap();
+    let response = portal.router().oneshot(Request::builder().uri("/app.css")
+        .header("host", "127.0.0.1:3030").body(Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.headers()["content-type"], "text/css; charset=utf-8");
+    assert_eq!(response.headers()["cache-control"], "no-store, private");
+    assert!(response.headers()["content-security-policy"].to_str().unwrap().contains("frame-ancestors 'none'"));
+    let bytes = to_bytes(response.into_body(), 65536).await.unwrap();
+    let actual = std::str::from_utf8(&bytes).unwrap();
+    #[cfg(not(feature = "android-ui"))]
+    assert_eq!(actual, include_str!("../web/app.css"), "Browser presentation must remain byte-identical");
+    #[cfg(feature = "android-ui")]
+    {
+        assert_eq!(actual, format!("{}\n{}", include_str!("../web/app.css"), include_str!("../web/android.css")));
+        assert!(actual.contains("--bg: #131d28"));
+        assert!(actual.contains("prefers-reduced-motion"));
+    }
+}
+
+#[tokio::test]
+async fn android_artwork_is_bundled_allowlisted_and_keeps_the_existing_csp() {
+    let app = Portal::new(config()).unwrap().router();
+    for name in ["home", "attendance", "leave", "pay", "services", "unknown"] {
+        let response = app.clone().oneshot(Request::builder()
+            .uri(format!("/android-icons/{name}.svg"))
+            .header("host", "127.0.0.1:3030").body(Body::empty()).unwrap()).await.unwrap();
+        assert_eq!(response.headers()["cache-control"], "no-store, private");
+        assert!(response.headers()["content-security-policy"].to_str().unwrap().contains("img-src 'self' blob:;"));
+        #[cfg(feature = "android-ui")]
+        if name != "unknown" {
+            assert_eq!(response.status(), StatusCode::OK);
+            assert_eq!(response.headers()["content-type"], "image/svg+xml");
+            let bytes = to_bytes(response.into_body(), 4096).await.unwrap();
+            let text = std::str::from_utf8(&bytes).unwrap();
+            assert!(text.starts_with("<svg ") && text.trim_end().ends_with("</svg>"));
+            assert!(!text.contains("<script") && !text.contains("href="));
+            continue;
+        }
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+    let response = app.oneshot(Request::builder().uri("/android-icons/home.svg")
+        .header("host", "foreign.example.invalid").body(Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn android_navigation_labels_are_short_without_changing_destinations_or_browser_html() {
+    let response = Portal::new(config()).unwrap().router().oneshot(Request::builder().uri("/")
+        .header("host", "127.0.0.1:3030").body(Body::empty()).unwrap()).await.unwrap();
+    let bytes = to_bytes(response.into_body(), 65536).await.unwrap();
+    let html = std::str::from_utf8(&bytes).unwrap();
+    #[cfg(not(feature = "android-ui"))]
+    assert_eq!(html, include_str!("../web/index.html"));
+    #[cfg(feature = "android-ui")]
+    for label in ["data-page=\"attendance\" aria-label=\"Attendance\">Time", "data-page=\"pay\" aria-label=\"Payslips\">Pay", "data-page=\"services\" aria-label=\"Employee services\">Help", "aria-label=\"My profile\">"] {
+        assert!(html.contains(label));
+    }
+    for page in ["home", "attendance", "leave", "pay", "services", "profile"] {
+        assert_eq!(html.matches(&format!("data-page=\"{page}\"")).count(), 1);
+    }
+}

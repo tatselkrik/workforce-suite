@@ -7,10 +7,12 @@ import com.google.firebase.messaging.FirebaseMessaging
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
 import android.print.PrintManager
 import android.view.ViewGroup
+import android.view.ContextThemeWrapper
 import android.view.WindowManager
 import android.webkit.CookieManager
 import android.webkit.JsResult
@@ -30,6 +32,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -50,6 +54,7 @@ internal object EmployeeProcess {
     val worker = Executors.newSingleThreadExecutor()
     var origin: String? = null
     var view: WebView? = null
+    var webContext: ContextThemeWrapper? = null
     var activity = WeakReference<MainActivity>(null)
     var pushNonce: String? = null
     var pushEnrollNonce: String? = null
@@ -86,11 +91,21 @@ class MainActivity : ComponentActivity() {
         var serviceOrigin by mutableStateOf(EmployeeProcess.origin)
         var failure by mutableStateOf<String?>(null)
         setContent {
-            MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme(primary = Color(0xFF80D4C4), background = Color(0xFF17242E), surface = Color(0xFF17242E)) else lightColorScheme(primary = Color(0xFF087E7E), background = Color.White, surface = Color.White)) {
+            MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme(
+                primary = Color(0xFF6FDCCF), onPrimary = Color(0xFF131D28),
+                background = Color(0xFF131D28), surface = Color(0xFF131D28),
+                onBackground = Color(0xFFEBF3F7), onSurface = Color(0xFFEBF3F7),
+                surfaceVariant = Color(0xFF1D2B39), onSurfaceVariant = Color(0xFFABBDCB), outline = Color(0xFF334554)
+            ) else lightColorScheme(
+                primary = Color(0xFF006B75), onPrimary = Color.White,
+                background = Color(0xFFF6F9FA), surface = Color(0xFFF6F9FA),
+                onBackground = Color(0xFF182F3E), onSurface = Color(0xFF182F3E),
+                surfaceVariant = Color(0xFFE5EFF2), onSurfaceVariant = Color(0xFF536A78), outline = Color(0xFFDCE7EB)
+            )) {
                 Surface(Modifier.fillMaxSize()) {
                     Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
-                        Row(Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("HRIS Employee", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 9.dp))
+                        Row(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("HRIS Employee", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             TextButton(onClick = { notifications() }) { Text("Device alerts") }
                         }
                         when {
@@ -131,6 +146,11 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        // Refresh only the retained view's application-based theme, preserving drafts/session.
+        EmployeeProcess.webContext?.theme?.applyStyle(R.style.AppTheme, true)
+        super.onConfigurationChanged(newConfig)
+    }
     // JavaScript runs only bundled Rust-served pages under strict CSP/origin rules.
     @SuppressLint("SetJavaScriptEnabled")
     private fun protectedBrowser(local: String): WebView {
@@ -139,7 +159,10 @@ class MainActivity : ComponentActivity() {
             (existing.parent as? ViewGroup)?.removeView(existing)
             browser = existing; return existing
         }
-        val view = WebView(applicationContext)
+        // WebView derives prefers-color-scheme from its context theme, not Compose.
+        val themed = ContextThemeWrapper(applicationContext, R.style.AppTheme)
+        EmployeeProcess.webContext = themed
+        val view = WebView(themed)
         browser = view; EmployeeProcess.view = view
         view.importantForAutofill = android.view.View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
         WebView.setWebContentsDebuggingEnabled(false)

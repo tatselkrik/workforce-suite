@@ -1,4 +1,6 @@
 //! Own-record portal. No service key, token-bearing browser storage or arbitrary proxy.
+#[cfg(feature = "android-ui")]
+mod android_ui;
 mod services;
 mod account_security;
 mod notifications;
@@ -352,7 +354,7 @@ impl Portal {
         })
     }
     pub fn router(&self) -> Router {
-        Router::new()
+        let router = Router::new()
             .route("/", get(index))
             .route("/app.css", get(styles))
             .route("/app.js", get(script))
@@ -375,8 +377,10 @@ impl Portal {
             .merge(account_security::routes())
             .route("/services.js", get(services_script))
             .route("/notifications.js", get(notification_script))
-            .route("/time-requests.js", get(time_requests_script))
-            .layer(DefaultBodyLimit::max(8192))
+            .route("/time-requests.js", get(time_requests_script));
+        #[cfg(feature = "android-ui")]
+        let router = router.merge(android_ui::routes());
+        router.layer(DefaultBodyLimit::max(8192))
             .layer(middleware::from_fn_with_state(self.clone(), security))
             .with_state(self.clone())
     }
@@ -613,15 +617,28 @@ async fn security(State(p): State<Portal>, request: Request, next: Next) -> Resp
     r
 }
 async fn index() -> impl IntoResponse {
+    #[cfg(not(feature = "android-ui"))]
+    let html = include_str!("../web/index.html");
+    #[cfg(feature = "android-ui")]
+    let html = include_str!("../web/index.html")
+        .replace("data-page=\"attendance\">Attendance", "data-page=\"attendance\" aria-label=\"Attendance\">Time")
+        .replace("data-page=\"pay\">Payslips", "data-page=\"pay\" aria-label=\"Payslips\">Pay")
+        .replace("data-page=\"services\">Services", "data-page=\"services\" aria-label=\"Employee services\">Help")
+        .replace("class=\"profile-link\">", "class=\"profile-link\" aria-label=\"My profile\">")
+        .replace("<span>My profile</span>", "<span>Profile</span>");
     (
         [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
-        include_str!("../web/index.html"),
+        html,
     )
 }
+#[cfg(not(feature = "android-ui"))]
+const APP_STYLES: &str = include_str!("../web/app.css");
+#[cfg(feature = "android-ui")]
+const APP_STYLES: &str = concat!(include_str!("../web/app.css"), "\n", include_str!("../web/android.css"));
 async fn styles() -> impl IntoResponse {
     (
         [(header::CONTENT_TYPE, "text/css; charset=utf-8")],
-        include_str!("../web/app.css"),
+        APP_STYLES,
     )
 }
 async fn script() -> impl IntoResponse {

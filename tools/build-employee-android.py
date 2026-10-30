@@ -1,6 +1,6 @@
 """Build the private Android employee package; never print deployment/signing secrets."""
 from pathlib import Path
-import argparse, base64, ctypes, hashlib, json, os, secrets, shutil, subprocess
+import argparse, base64, ctypes, hashlib, json, os, re, secrets, shutil, subprocess
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "employee-android"
 SDK = Path(os.environ["LOCALAPPDATA"]) / "Android/Sdk"
@@ -55,8 +55,10 @@ def main():
             path = ROOT / "work/android-employee" / evidence
             connected = connected and path.exists() and json.loads(path.read_text(encoding="utf-8")).get("all_passed") is True
     if args.release and not args.candidate and not connected: raise RuntimeError("Finish verified background delivery and the protected rollout before the release")
+    version_match = re.search(r'versionCode = (\d+); versionName = "([0-9]+\.[0-9]+\.[0-9]+)"', (APP / "app/build.gradle.kts").read_text(encoding="utf-8"))
+    if not version_match: raise RuntimeError("Resolve the pinned Android version before packaging")
     assets = APP / "app/src/main/assets";
-    (assets / "BUILD.json").write_text(json.dumps({"application_id":"io.github.tatselkrik.hrisemployee","version":"0.1.1","source_commit":revision,"source_worktree_clean":clean,"channel":"private local prototype","background_push_connected":connected,"physical_phone_verified":False},indent=2)+"\n",encoding="utf-8")
+    (assets / "BUILD.json").write_text(json.dumps({"application_id":"io.github.tatselkrik.hrisemployee","version":version_match.group(2),"version_code":int(version_match.group(1)),"source_commit":revision,"source_worktree_clean":clean,"channel":"private local prototype","background_push_connected":connected,"physical_phone_verified":False},indent=2)+"\n",encoding="utf-8")
     source = Path(os.environ["LOCALAPPDATA"]) / "Programs/HRIS Desktop/hris-connection.json"
     profile = json.loads(source.read_text(encoding="utf-8-sig")); reference = (ROOT / "supabase/.temp/project-ref").read_text(encoding="utf-8").strip()
     if set(profile) != {"url", "publishable_key"} or not profile["publishable_key"].startswith("sb_publishable_") or profile["url"].rstrip("/") != "https://" + reference + ".supabase.co": raise RuntimeError("Company deployment identity mismatch")
