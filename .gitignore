@@ -15,6 +15,7 @@
 **/node_modules/
 
 /employee-android/.gradle/
+/employee-android/.kotlin/
 /employee-android/**/build/
 /employee-android/local.properties
 /employee-android/app/src/main/assets/hris-connection.json
