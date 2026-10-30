@@ -1,0 +1,63 @@
+{
+  "version": "1.0.0-beta.1",
+  "date": "2026-10-30",
+  "fictional_data_only": true,
+  "backend_authentication": false,
+  "company_records_used": false,
+  "images": [
+    {
+      "file": "hr-overview.png",
+      "sha256": "4f44b776febfb44e66ed18caa33407e0f440d3566c18ce4be58049750e2bc090",
+      "kind": "native app fictional preview",
+      "actual_image_visually_reviewed": true
+    },
+    {
+      "file": "hr-employees.png",
+      "sha256": "250e882aae3570b3ced81b75ffc9714250025c078b06e98d7809f4e2b7a7907f",
+      "kind": "native app fictional preview",
+      "actual_image_visually_reviewed": true
+    },
+    {
+      "file": "hr-signin.png",
+      "sha256": "f079577de04d998872804b24bfb7b4b9655653062fb406071e202f532fd9c192",
+      "kind": "native app fictional preview",
+      "actual_image_visually_reviewed": true
+    },
+    {
+      "file": "payroll-monthly-dark.png",
+      "sha256": "ceb11a768708930ecf0152bcfa042a942d30aa8198697530f291b1933b743d3f",
+      "kind": "native app fictional preview",
+      "actual_image_visually_reviewed": true
+    },
+    {
+      "file": "payroll-settings-dark.png",
+      "sha256": "df7b48138b86b7408aac70a833e156142d7f0b842957503854e5e19ecfdd679d",
+      "kind": "native app fictional preview",
+      "actual_image_visually_reviewed": true
+    },
+    {
+      "file": "employee-home.png",
+      "sha256": "b689021e31abb63f09738b7a5b9a01b80e65a46dd9b855894970820ba227c67a",
+      "kind": "Android emulator fixture",
+      "actual_image_visually_reviewed": true
+    },
+    {
+      "file": "employee-pay.png",
+      "sha256": "ea0364c19e68721fb34d3964e37a77e98f5cd29e7e185c6ef90bbae3b0484f36",
+      "kind": "Android emulator fixture",
+      "actual_image_visually_reviewed": true
+    },
+    {
+      "file": "employee-profile.png",
+      "sha256": "f127d334f6fe54196a7796208a8cd2bd9e6fb9b263858809060afa55d1005195",
+      "kind": "Android emulator fixture",
+      "actual_image_visually_reviewed": true
+    },
+    {
+      "file": "employee-signin.png",
+      "sha256": "5f59a81529a1bbe2309e0b6fd8a279331d16dd87e32e0cc21448058275cf3209",
+      "kind": "Android emulator fixture",
+      "actual_image_visually_reviewed": true
+    }
+  ]
+}
