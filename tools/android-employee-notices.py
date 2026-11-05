@@ -1,9 +1,10 @@
 """Collect pinned local dependency licenses for the private Android package."""
 from pathlib import Path
-import json,subprocess,xml.etree.ElementTree as E,zipfile
+import argparse,json,subprocess,xml.etree.ElementTree as E,zipfile
 ROOT=Path(__file__).resolve().parents[1]
 APP=ROOT/"employee-android"
 def main():
+    parser=argparse.ArgumentParser();parser.add_argument('--configuration',choices=['debugRuntimeClasspath','releaseRuntimeClasspath'],default='releaseRuntimeClasspath');args=parser.parse_args()
     command=["cargo","metadata","--offline","--locked","--format-version","1","--filter-platform","aarch64-linux-android","--manifest-path",str(APP/"rust/Cargo.toml")]
     metadata=json.loads(subprocess.check_output(command,cwd=ROOT))
     nodes={n["id"]:n for n in metadata["resolve"]["nodes"]}; used=set(); todo=[metadata["resolve"]["root"]]
@@ -26,7 +27,7 @@ def main():
             if body and body not in texts:sections.append(f"{package['name']}/{path.name}\n{body}");texts.add(body)
     cache=ROOT/"work/android-gradle-cache/caches/modules-2/files-2.1";maven_count=0
     for line in (APP/"app/gradle.lockfile").read_text(encoding="utf-8").splitlines():
-        if "="not in line or line.startswith("#")or "RuntimeClasspath"not in line:continue
+        if "="not in line or line.startswith("#")or args.configuration not in line.split('=',1)[1].split(','):continue
         coordinate=line.split("=",1)[0].split(":")
         if len(coordinate)!=3:continue
         group,name,version=coordinate;directory=cache/group/name/version

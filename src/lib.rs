@@ -30,6 +30,8 @@ pub mod tabular;
 pub mod ui;
 pub mod updater;
 pub mod workforce;
+pub mod work_activity;
+pub mod kiosk;
 
 pub const APP_ID: &str = "io.github.tatselkrik.hrisdesktop";
 pub mod branding;

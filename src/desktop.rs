@@ -271,6 +271,10 @@ impl Application {
     }
 }
 pub fn run(app: Application) -> AppResult {
+    if std::env::args().nth(1).as_deref()==Some("--attendance-kiosk"){
+        if app.product!=Product::Hris{std::process::exit(1);}
+        return crate::kiosk::run(std::env::args().nth(2).and_then(|v|uuid::Uuid::parse_str(&v).ok()));
+    }
     if std::env::args().nth(1).as_deref() == Some("--apply-update") {
         if app.product != Product::Hris {
             std::process::exit(1);
@@ -315,6 +319,11 @@ pub fn run(app: Application) -> AppResult {
     )
 }
 /// Launch only the separately verified local product. Never execute a path from company data.
+pub fn open_kiosk(station:uuid::Uuid)->Result<()>{
+    ensure!(!station.is_nil(),"Choose an enrolled station.");
+    std::process::Command::new(std::env::current_exe()?).arg("--attendance-kiosk").arg(station.to_string()).spawn().context("Could not open the office attendance station.")?;
+    Ok(())
+}
 pub fn open_payroll() -> Result<()> {
     let folder = Product::Payroll.installation()?.canonicalize().context("Workforce Payroll is not installed yet. Install your company's Workforce Payroll package first.")?;
     verify_payroll_installation(&folder)?;

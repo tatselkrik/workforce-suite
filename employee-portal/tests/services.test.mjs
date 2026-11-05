@@ -47,7 +47,7 @@ test('shared messages render as literal text and terminal requests have no actio
 });
 test('actual navigation code blocks leaving a service draft and never refreshes it implicitly',async()=>{
  const f=await fixture();f.draft();const source=await readFile(new URL('../web/app.js',import.meta.url),'utf8');
- Object.assign(f.c,{timeState:{dirtyKind:null},document:{querySelectorAll(){return[]}},window:{scrollTo(){}},busy:async()=>{throw Error('Unexpected draft refresh')}});
+ Object.assign(f.c,{workState:{dirty:false,pending:null},timeState:{dirtyKind:null},document:{querySelectorAll(){return[]}},window:{scrollTo(){}},busy:async()=>{throw Error('Unexpected draft refresh')}});
  vm.runInContext(source.slice(source.indexOf('function navigate('),source.indexOf('function clock(')),f.c);
  f.c.navigate('home');assert.equal(f.state.page,'services');assert(f.messages.some(m=>m.includes('draft')));f.c.navigate('services');assert.equal(f.state.page,'services');
 });

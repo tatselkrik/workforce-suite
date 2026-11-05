@@ -122,7 +122,8 @@ employee archive must not be treated as proof that a payment has been made.
 
 Open **Attendance** in Workforce HR and choose a date from the calendar. Review
 recorded check-ins, open shifts and completed records. A missing punch alone does
-not establish an absence. Employees normally record their own punches in Android.
+not establish an absence. Employees use the punch method assigned by HR: an office
+station or their own Android account.
 
 HR can record a justified exception or past attendance for an employee with no
 record. Enter the correct work date, times and reason. For an existing record,
@@ -160,6 +161,52 @@ and follows the request's date and status rules.
 Administrators configure temporary substitutes through **Approval delegation**.
 Delegation covers the selected operational workflow and dates; it does not grant
 account administration or payroll approval.
+
+<!-- pagebreak -->
+
+## Office and remote work
+
+### Set a work arrangement
+
+HR uses **Attendance → Work arrangements** to save a dated on-site, remote or
+hybrid policy with a reason. New policies are drafts until deliberately activated.
+Hybrid policies name the office weekdays. An open shift keeps its saved work date
+and policy for checkout. Existing punches remain unchanged.
+
+Office restrictions require an active station with a verified photo-backed punch.
+Test the station before activating a real employee's policy. Use reasoned HR
+corrections for missing punches, camera failures and justified exceptions.
+
+### Use the office station
+
+1. An Administrator enrolls the PC under **Attendance → Office stations**. HR sets the employee's personal attendance PIN.
+2. Open the kiosk and let an Administrator unlock the attendance-only session.
+3. The employee enters their code and PIN, faces the webcam and selects check-in or checkout.
+4. Wait for a saved receipt. Retry the same capture if delivery is uncertain.
+
+Each punch needs a fresh photo. A failed upload does not record attendance.
+Personal fields clear after a confirmed action or an idle interval. Five incorrect
+PIN attempts cause a 15-minute lock. Station authorization stays in memory and
+expires after 16 hours. Biometrics and facial recognition remain disabled.
+
+Authorized HR can review private photos from Daily attendance. The station page
+has a cleanup action for photos older than seven days and abandoned uploads.
+Receipts and photo hashes remain after cleanup. Review storage before the
+128 MiB evidence limit is reached.
+
+### Assign and review daily work
+
+Managers use **Attendance → Tasks & daily reports** to assign current team members
+an expected outcome, priority and due date. Employees open **My work** in Android
+to update progress and submit a daily report. Include completed and unfinished
+work, blockers, next actions and relevant own task snapshots.
+
+A current authorized Manager accepts or returns submitted work with a reason.
+Employees can revise returned reports and resubmit; previous submissions and
+decisions stay in history. Nobody can approve their own work.
+
+Reports do not change attendance, overtime, appraisals or pay. An employee can
+check out without submitting a report. Use the shift start date for overnight work.
 
 <!-- pagebreak -->
 

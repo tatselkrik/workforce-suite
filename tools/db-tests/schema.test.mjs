@@ -93,6 +93,7 @@ try {
   const staffCapabilityMigrations=[];
   const staffPermissionMigrations=[];
   const staffWorkflowMigrations=[];
+  const workforceMigrations=[];
   let companyA;
   const deferred=[];
   const shiftMigrations=[];
@@ -106,6 +107,7 @@ try {
   const hiringMigrations=[];
   const recruitingMigrations=[];
   for (const filename of (await readdir(folder)).filter(f=>f.endsWith('.sql')).sort()) {
+    if(filename.endsWith('_workforce_attendance_and_work_reports.sql')||filename.endsWith('_workforce_attendance_kiosk.sql')){workforceMigrations.push(filename);continue;}
     if(filename.endsWith('_staff_workflow_people.sql')){staffWorkflowMigrations.push(filename);continue;}
     if(filename.endsWith('_staff_account_safeguards.sql')){staffPermissionMigrations.push(filename);continue;}
     if(filename.endsWith('_staff_account_history.sql')){staffPermissionMigrations.push(filename);continue;}
@@ -619,6 +621,10 @@ try {
   for(const t of capTables)eq((await db.query('select to_jsonb(t)r from public.'+t+' t order by to_jsonb(t)::text')).rows,permissionBefore[t],'Permission rollout preserves '+t);
   for(const f of permissionAcl)eq((await db.query('select p.oid::regprocedure::text identity,p.prosecdef,p.provolatile,p.proconfig,p.proacl::text from pg_proc p where p.oid=$1::regprocedure',[f.identity])).rows[0],f,'Permission rollout preserves signature, owner execution and grants '+f.identity);
   await session(uidA);eq((await db.query('select public.staff_role_context()c')).rows[0].c.runtime_ready,false,'Module permission patches do not activate incomplete roles');
+  // This staged legacy suite defers newer capability-dependent features until
+  // their prerequisite role contracts are present. Fresh replay also tests chronology.
+  await db.exec('reset role');
+  for(const filename of workforceMigrations){await db.exec(await readFile(new URL(filename,folder),'utf8'));await db.query('insert into supabase_migrations.schema_migrations(version)values($1)',[filename.split('_')[0]]);}
   console.log(`Passed ${checks} local PostgreSQL migration, authorization, and workflow assertions.`);
 } finally {
   await db.close();

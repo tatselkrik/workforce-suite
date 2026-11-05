@@ -13,7 +13,8 @@
     "test:relations": "node relations.test.mjs",
     "test:services": "node services.test.mjs",
     "test:benefits": "node benefits.test.mjs",
-    "test:leadership": "node leadership.test.mjs"
+    "test:leadership": "node leadership.test.mjs",
+    "test:workforce-attendance": "node workforce-attendance.test.mjs && node workforce-kiosk.test.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.5.10"

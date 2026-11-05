@@ -1,3 +1,4 @@
+mod work_activity_adapter;
 mod leadership_adapter;
 #[cfg(test)]
 mod leadership_tests;
@@ -2302,6 +2303,7 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
 }
 
 pub enum Command {
+    WorkActivity(Option<Value>),
     Services(crate::services::Operation),
     Relations(crate::relations::Operation),
     Benefits(crate::benefits::Operation),
@@ -2416,6 +2418,9 @@ pub enum Command {
 }
 
 pub struct Update {
+    pub work_activity: Option<crate::work_activity::Context>,
+    pub work_activity_clear: bool,
+    pub work_activity_rejected: bool,
     pub leadership: Option<crate::leadership::Report>,
     pub leadership_clear: bool,
     pub benefits: Option<crate::benefits::Response>,
@@ -2519,6 +2524,8 @@ fn worker_in(
             let relations_requested = matches!(&command,Command::Relations(_));
             let mut relations_result = None;
             let mut message = String::new();
+            let work_activity_requested = matches!(&command,Command::WorkActivity(_));
+            let mut work_activity_result = None;
             let mut opening_preview_result = None;
             let mut leave_import_history_result = None;
             let mut attendance_import_history_result = None;
@@ -3441,6 +3448,13 @@ fn worker_in(
                     relations_result = Some(response);
                     Ok(current.clone())
                 })(),
+                Command::WorkActivity(request) => (|| {
+                    work_activity_result=Some(if let Some(client)=cloud.as_mut(){client.work_activity(&current,request)?}else{
+                        ensure!(request.is_none(),"Connect to your company to save work policies and reports.");
+                        crate::work_activity::Context::empty(&current)
+                    });
+                    message="Current work arrangements and reports refreshed.".into();Ok(current.clone())
+                })(),
                 Command::Benefits(operation) => (|| {
                     benefits_loaded = true;
                     if cloud.is_none() && current.mode == Mode::Demo && current.access.user_id.is_nil() {
@@ -3607,6 +3621,9 @@ fn worker_in(
             }
             if events
                 .send(Update {
+                    work_activity: work_activity_result,
+                    work_activity_clear: work_activity_requested && result.is_err(),
+                    work_activity_rejected: result.as_ref().err().is_some_and(|e|e.is::<crate::work_activity::Rejected>()),
                     leadership: if result.is_ok() { leadership_result } else { None },
                     leadership_clear: !leadership_requested || result.is_err(),
                     services: services_result,
@@ -3673,6 +3690,9 @@ fn worker_in(
                         .unwrap_or_else(|e| UpdateState::Failed(e.to_string()));
                     if events
                         .send(Update {
+                            work_activity: None,
+                            work_activity_clear: false,
+                            work_activity_rejected: false,
                             staff_provision: None,
                             services: None,
                             services_clear: false,

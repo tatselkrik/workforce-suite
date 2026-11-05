@@ -71,7 +71,7 @@ def main():
     if "`" + firebase["project_info"]["project_id"] + "`" not in firebase_guard or firebase["client"][0]["client_info"]["android_client_info"]["package_name"] != "io.github.tatselkrik.hrisemployee": raise RuntimeError("Firebase deployment target mismatch")
     signing(env)
     command([ROOT / "work/android-tools/gradle-9.8.2/bin/gradle.bat", "-p", APP, ":app:dependencies", "--configuration", "releaseRuntimeClasspath" if args.release else "debugRuntimeClasspath", *(["--write-locks"] if args.refresh_locks else []), "--no-daemon"], env)
-    command([os.sys.executable, ROOT / "tools/android-employee-notices.py"], env)
+    command([os.sys.executable, ROOT / "tools/android-employee-notices.py", "--configuration", "releaseRuntimeClasspath" if args.release else "debugRuntimeClasspath"], env)
     tasks = [":app:assembleRelease", ":app:lintRelease"] if args.release else [":app:assembleDebug", ":app:testDebugUnitTest", ":app:lintDebug"]
     if args.instrumentation: tasks.append(":app:assembleDebugAndroidTest")
     command([ROOT / "work/android-tools/gradle-9.8.2/bin/gradle.bat", "-p", APP, *tasks, *(["--write-locks"] if args.refresh_locks else []), "--no-daemon"], env)

@@ -1,3 +1,4 @@
+mod work_activity_view;
 mod design;
 mod leadership_view;
 mod benefits_view;
@@ -106,6 +107,7 @@ enum SessionChoice {
 mod payroll_navigation;
 
 pub struct HrisApp {
+    work_state: work_activity_view::State,
     services_state: services_view::State,
     relations_state: relations_view::State,
     benefits_state: benefits_view::State,
@@ -384,6 +386,7 @@ impl HrisApp {
             employee_status: Some(EmployeeStatus::Active),
             employee_view: EmployeeView::Directory,
             services_state: Default::default(),
+            work_state: Default::default(),
             relations_state: Default::default(),
             benefits_state: Default::default(),
             organization: organization_view::State::default(),
@@ -1149,6 +1152,8 @@ impl HrisApp {
                 continue;
             }
             self.busy = false;
+            if update.work_activity_clear { self.work_state.context=None; }
+            if update.work_activity_rejected { self.work_state.rejected=true; }
             if update.leadership_clear { self.leadership_state.report=None; }
             if update.services_clear { self.services_state.clear_context(); }
             if update.services_rejected { self.services_state.reject(); }
@@ -1158,6 +1163,15 @@ impl HrisApp {
             if update.relations_rejected { self.relations_state.reject(); }
             match update.result {
                 Ok(data) => {
+                    if data.access!=self.data.access || data.mode==Mode::SignedOut
+                        || self.work_state.context.as_ref().is_some_and(|c|c.validate(&data).is_err()) {
+                        self.work_state.clear();work_activity_view::clear_undo(ctx);
+                    }
+                    if let Some(context)=update.work_activity {
+                        let was_saving=self.work_state.pending.is_some();
+                        if let Err(error)=self.work_state.accept(context,&data){self.work_state.clear();self.notice=Some((error.to_string(),true));}
+                        if was_saving { work_activity_view::clear_undo(ctx); }
+                    }
                     let newly_signed_in =
                         self.data.mode == Mode::SignedOut && data.mode != Mode::SignedOut;
                     if self
@@ -1816,7 +1830,16 @@ impl HrisApp {
                 .stick_to_bottom(std::env::var("HRIS_PREVIEW_SCROLL").as_deref() == Ok("bottom"));
             scroll.show(ui,|ui| {
                 ui.add_enabled_ui(editable && !self.busy,|ui|match self.contacts_section {
-                    ContactSection::Employment=>employment_fields(ui,&mut draft,&self.data),
+                    ContactSection::Employment=>{
+                        employment_fields(ui,&mut draft,&self.data);
+                        if let Some(employee)=draft.id {
+                            ui.separator();ui.strong("Attendance work arrangement");
+                            let label=self.work_state.context.as_ref().and_then(|c|c.policy(employee,self.data.company.today()))
+                                .map(|p|format!("{} · effective {}",p.arrangement,p.starts_on)).unwrap_or("No loaded active attendance policy".into());
+                            ui.label(label);ui.label("Dated policies are managed in Attendance → Work arrangements; save employment edits before leaving this record.");
+                            if ui.button("Refresh attendance arrangement").clicked(){self.send(Command::WorkActivity(None));}
+                        }
+                    },
                     ContactSection::Contact if private_visible=>contact_fields(ui,&mut contacts,false),
                     ContactSection::Emergency if private_visible=>contact_fields(ui,&mut contacts,true),
                     ContactSection::History if editable=>{
@@ -2218,6 +2241,9 @@ impl HrisApp {
                         shifts_view::Tab::Calculations => "Time calculations",
                         shifts_view::Tab::Requests => "Correction requests",
                         shifts_view::Tab::Overtime => "Overtime approvals",
+                        shifts_view::Tab::WorkPolicies => "Work arrangements",
+                        shifts_view::Tab::DailyWork => "Tasks and daily reports",
+                        shifts_view::Tab::Stations => "Office attendance stations",
                     }
                 },
                 "Review attendance and manage employee work schedules.",
@@ -2366,6 +2392,7 @@ impl HrisApp {
             || self.services_state.editing()
             || self.relations_state.editing()
             || self.benefits_state.editing()
+            || self.work_state.editing()
             || self.hiring_state.editing()
             || self.onboarding_state.editing()
             || self.exit_state.editing()
@@ -2809,6 +2836,7 @@ impl HrisApp {
         if !self.attendance_navigation(ui) {
             return;
         }
+        self.attendance_photos(ui);
         let today = self.data.company.today();
         ui.horizontal_wrapped(|ui| {
             ui.label("Attendance date");
@@ -3020,6 +3048,10 @@ impl HrisApp {
                                             .count();
                                         if ui.button(format!("History ({count})")).clicked() {
                                             self.correction_history = Some(record.id);
+                                        }
+                                        if self.data.access.allows(crate::staff_roles::Capability::AttendanceAdministration)&&ui.button("Photos").clicked(){
+                                            self.work_state.evidence_target=Some(record.id);
+                                            self.send(Command::WorkActivity(Some(serde_json::json!({"operation":"evidence","id":record.id}))));
                                         }
                                     }
                                 });

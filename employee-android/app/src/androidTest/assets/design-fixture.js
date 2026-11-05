@@ -7,6 +7,7 @@
     api = async (path, body) => {
       if (body !== undefined) { window.__designWrites++; throw Error('Design fixture blocks all writes'); }
       if (path === '/api/services') return service;
+      if (path === '/api/work') return {tasks:[{id:'00000000-0000-0000-0000-000000000071',title:'Review customer support handover',outcome:'Document completed cases and remaining blockers',due_on:asof,priority:'normal',status:'in_progress',progress:'Prepared the case summary'}],reports:[{id:'00000000-0000-0000-0000-000000000072',work_date:asof,status:'returned',revision:2,body:{summary:'Completed assigned reviews and recorded one follow-up'},task_ids:[],review_note:'Please clarify the remaining source dependency'}],submissions:[],decisions:[]};
       throw Error('Unexpected design-fixture API read');
     };
     state.me = {csrf:'fictional-rendering-only',email:'fictional@example.invalid',

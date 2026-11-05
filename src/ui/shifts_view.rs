@@ -11,6 +11,9 @@ pub(super) enum Tab {
     Calculations,
     Requests,
     Overtime,
+    WorkPolicies,
+    DailyWork,
+    Stations,
 }
 #[derive(Default)]
 pub(super) struct State {
@@ -41,6 +44,9 @@ impl HrisApp {
             (Tab::Calculations, "Time calculations"),
             (Tab::Requests, "Correction requests"),
             (Tab::Overtime, "Overtime approvals"),
+            (Tab::WorkPolicies, "Work arrangements"),
+            (Tab::DailyWork, "Tasks & daily reports"),
+            (Tab::Stations, "Office stations"),
         ];
         for row in tabs.chunks(tabs_per_row) {
             ui.horizontal_wrapped(|ui| {
@@ -52,7 +58,8 @@ impl HrisApp {
                             && self.break_state.void_target.is_none()
                             && !self.calculation_state.editing()
                             && !self.request_state.editing()
-                            && !self.overtime_state.editing(),
+                            && !self.overtime_state.editing()
+                            && !self.work_state.editing(),
                         |ui| {
                             ui.selectable_value(&mut self.shift_state.tab, tab, label);
                         },
@@ -81,6 +88,9 @@ impl HrisApp {
             return false;
         }
         match self.shift_state.tab {
+            Tab::Stations => { self.office_stations(ui); false },
+            Tab::WorkPolicies => { self.work_activity(ui,true); false },
+            Tab::DailyWork => { self.work_activity(ui,false); false },
             Tab::Overtime => {
                 self.overtime_approvals(ui);
                 false

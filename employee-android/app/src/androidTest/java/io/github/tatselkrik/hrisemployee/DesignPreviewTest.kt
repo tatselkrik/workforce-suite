@@ -67,7 +67,7 @@ class DesignPreviewTest {
             await(scenario,"window.__designIconsLoaded===5 || window.__designIconsFailed")
             assertEquals("All five bundled icons load under the actual CSP","5",evaluate(scenario,"window.__designIconsLoaded"))
             painted(scenario)
-            val pages=if(tablet)listOf("home","profile")else if(compact)listOf("leave","profile")else listOf("home","attendance","leave","pay","services","profile","notifications")
+            val pages=if(tablet)listOf("home","profile")else if(compact)listOf("leave","profile")else listOf("home","attendance","work","leave","pay","services","profile","notifications")
             val metrics=JSONObject()
             for(page in pages){
                 evaluate(scenario,"navigate('${page}');true");await(scenario,"state.page==='${page}' && !state.busy && !document.getElementById('page-${page}').hidden");painted(scenario)

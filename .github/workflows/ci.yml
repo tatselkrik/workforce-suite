@@ -84,8 +84,11 @@ jobs:
       - name: Test schema replay and permission boundaries
         working-directory: tools/db-tests
         run: npm test
+      - name: Test work arrangements, reports and office stations
+        working-directory: tools/db-tests
+        run: npm run test:workforce-attendance
       - name: Test privileged functions and release validation
-        run: node --test tests/account_admin_edge.test.mjs tests/staff_provision_edge.test.mjs tests/desktop_release_edge.test.mjs
+        run: node --test tests/account_admin_edge.test.mjs tests/staff_provision_edge.test.mjs tests/desktop_release_edge.test.mjs tests/attendance_kiosk_edge.test.mjs
 
 # Standard public runners only. Private events skip every job without a runner.
 # No artifact/cache upload, deployment, provider connection or signing credentials.

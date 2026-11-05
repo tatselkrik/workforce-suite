@@ -35,6 +35,7 @@ references below describe individual workflows and their data contracts.
 | Topic | Reference |
 | --- | --- |
 | Scheduling and time | [Shifts](SHIFT-SCHEDULES.md) · [Breaks](ATTENDANCE-BREAKS.md) · [Time calculations](ATTENDANCE-CALCULATIONS.md) |
+| Office and remote work | [Work arrangements, office stations and daily reports](WORK-ARRANGEMENTS.md) |
 | Exceptions and review | [HR corrections](ATTENDANCE-CORRECTIONS.md) · [Correction requests](ATTENDANCE-REQUESTS.md) · [Overtime approvals](OVERTIME-APPROVALS.md) |
 | Leave setup | [Leave policies and chains](LEAVE-POLICIES.md) · [Dated policies and opening balances](LEAVE-OPENINGS.md) · [Credit adjustments](LEAVE-CREDITS.md) |
 | Temporary reviewers | [Approval delegation](APPROVAL-DELEGATION.md) |

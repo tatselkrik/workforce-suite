@@ -1,6 +1,7 @@
 //! Own-record portal. No service key, token-bearing browser storage or arbitrary proxy.
 #[cfg(feature = "android-ui")]
 mod android_ui;
+mod work_activity;
 mod services;
 mod account_security;
 mod notifications;
@@ -376,11 +377,13 @@ impl Portal {
             .merge(self_service::routes())
             .merge(requests::routes())
             .merge(services::routes())
+            .merge(work_activity::routes())
             .merge(notifications::routes())
             .merge(device_alerts::routes())
             .merge(pictures::routes())
             .merge(account_security::routes())
             .route("/services.js", get(services_script))
+            .route("/work-activity.js", get(work_activity_script))
             .route("/notifications.js", get(notification_script))
             .route("/time-requests.js", get(time_requests_script));
         #[cfg(feature = "android-ui")]
@@ -665,6 +668,9 @@ async fn time_requests_script() -> impl IntoResponse {
         [(header::CONTENT_TYPE, "text/javascript; charset=utf-8")],
         include_str!("../web/time-requests.js"),
     )
+}
+async fn work_activity_script() -> impl IntoResponse {
+    ([(header::CONTENT_TYPE,"text/javascript; charset=utf-8")],include_str!("../web/work-activity.js"))
 }
 async fn services_script() -> impl IntoResponse {
     ([(header::CONTENT_TYPE, "text/javascript; charset=utf-8")], include_str!("../web/services.js"))

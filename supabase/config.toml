@@ -423,3 +423,7 @@ verify_jwt = false
 [functions.device-push]
 # Own constant-time worker authentication or live Auth plus protected own RPC.
 verify_jwt = false
+
+[functions.attendance-kiosk]
+# Restricted station grants and employee PINs are checked by protected server functions.
+verify_jwt = false

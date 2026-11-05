@@ -287,6 +287,14 @@ async fn fake(State(m): State<Mock>, request: Request) -> Response {
     row["revision"] = json!(0);
     row["planned_shift"] = json!({"break_rules":[{"id":rule_id(),"name":"Standard break","minutes":15,"paid":false,"required":false,"private":"PRIVATE_SENTINEL"}]});
     let data = match path.as_str() {
+        "/rest/v1/rpc/work_activity_context" => {
+            assert_eq!(b,json!({"p_own":true}));
+            json!({"version":"workforce-attendance-v1","company_id":cid(),"user_id":uid(),"employee_id":person,"own_only":true,"can_administer":false,"policies":[],"reports":[],"submissions":[],"events":[],"tasks":[{"id":aid(),"company_id":cid(),"employee_id":person,"title":"Own fictional task","internal":"PRIVATE_SENTINEL"}]})
+        }
+        "/rest/v1/rpc/work_attendance_status" => json!({"version":1,"company_id":cid(),"user_id":uid(),"employee_id":person,"work_date":"2026-11-05","method":"kiosk","arrangement":"onsite","private":"PRIVATE_SENTINEL"}),
+        "/rest/v1/rpc/work_activity_change" => {
+            json!({"id":if m.service_receipt_foreign.load(Ordering::SeqCst){json!(Uuid::from_u128(999))}else{b["p_request"]["id"].clone()},"revision":1})
+        }
         "/rest/v1/rpc/portal_service_context" => {
             let service = Uuid::from_u128(170);
             json!({"schema_version":1,"company_id":cid(),"user_id":uid(),"employee_id":if m.service_foreign.load(Ordering::SeqCst){Uuid::from_u128(999)}else{eid()},"private_cases":"PRIVATE_SENTINEL",
@@ -2103,6 +2111,26 @@ async fn company_logo_revision_refresh_replaces_cached_image_and_removal_clears_
             .0,
         StatusCode::NOT_FOUND
     );
+}
+
+#[tokio::test]
+async fn own_work_routes_bind_scope_csrf_exact_receipt_and_current_access() {
+    use std::sync::atomic::Ordering;
+    let f=fixture().await;let(cookie,csrf)=login(&f).await;
+    let(status,_,v)=request(&f.portal,"/api/work",None,Some(&cookie),None).await;
+    assert_eq!(status,StatusCode::OK);assert_eq!(v["tasks"][0]["title"],"Own fictional task");assert!(!v.to_string().contains("PRIVATE_SENTINEL"));
+    let(status,_,v)=request(&f.portal,"/api/attendance-policy",None,Some(&cookie),None).await;
+    assert_eq!(status,StatusCode::OK);assert_eq!(v["method"],"kiosk");assert!(v.get("employee_id").is_none());
+    let raw=json!({"operation":"report_save","id":Uuid::new_v4(),"request_id":Uuid::new_v4(),"expected_revision":-1,"work_date":"2026-11-05","body":{"summary":"Fictional work","completed":"","unfinished":"","blockers":"","next_steps":""},"task_ids":[]});
+    let(status,_,v)=request(&f.portal,"/api/work",Some(raw.clone()),Some(&cookie),Some(&csrf)).await;
+    assert_eq!(status,StatusCode::OK);assert_eq!(v["receipt"]["request_id"],raw["request_id"]);
+    let count=f.mock.requests.lock().await.iter().filter(|(_,p,_)|p=="/rest/v1/rpc/work_activity_change").count();assert_eq!(count,1);
+    for bad in [json!({"operation":"policy_save","id":aid(),"request_id":aid()}),{let mut b=raw.clone();b["employee_id"]=json!(eid());b}]{assert_eq!(request(&f.portal,"/api/work",Some(bad),Some(&cookie),Some(&csrf)).await.0,StatusCode::BAD_REQUEST);}
+    assert_eq!(request(&f.portal,"/api/work",Some(raw.clone()),Some(&cookie),None).await.0,StatusCode::FORBIDDEN);
+    f.mock.service_receipt_foreign.store(true,Ordering::SeqCst);assert_eq!(request(&f.portal,"/api/work",Some(raw.clone()),Some(&cookie),Some(&csrf)).await.0,StatusCode::BAD_GATEWAY);
+    f.mock.service_receipt_foreign.store(false,Ordering::SeqCst);f.mock.foreign.store(true,Ordering::SeqCst);
+    assert_eq!(request(&f.portal,"/api/work",None,Some(&cookie),None).await.0,StatusCode::BAD_GATEWAY);assert_eq!(request(&f.portal,"/api/attendance-policy",None,Some(&cookie),None).await.0,StatusCode::BAD_GATEWAY);
+    f.mock.foreign.store(false,Ordering::SeqCst);let(cookie,csrf)=login(&f).await;f.mock.disabled.store(true,Ordering::SeqCst);assert_eq!(request(&f.portal,"/api/work",Some(raw),Some(&cookie),Some(&csrf)).await.0,StatusCode::UNAUTHORIZED);
 }
 
 #[tokio::test]
