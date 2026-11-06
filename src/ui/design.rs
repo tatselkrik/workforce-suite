@@ -9,14 +9,44 @@ struct ReviewItem {
     employee: String,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub(super) enum ReviewFilter {
+    #[default]
+    All,
+    Leave,
+    Corrections,
+    Overtime,
+    DailyReports,
+}
+
+impl ReviewFilter {
+    fn matches(self, target: &Target) -> bool {
+        match self {
+            Self::All => true,
+            Self::Leave => matches!(target, Target::Leave(_)),
+            Self::Corrections => matches!(target, Target::Correction(_)),
+            Self::Overtime => matches!(target, Target::Overtime(_)),
+            Self::DailyReports => matches!(target, Target::DailyReport(_)),
+        }
+    }
+}
+
 pub(super) struct ReviewVisit {
     target: Target,
     date: NaiveDate,
     pub reset_scroll: bool,
 }
 
-fn next_review<'a>(items: &'a [ReviewItem], visit: &ReviewVisit) -> Option<&'a ReviewItem> {
-    let other = || items.iter().filter(|item| item.target != visit.target);
+fn next_review<'a>(
+    items: &'a [ReviewItem],
+    visit: &ReviewVisit,
+    filter: ReviewFilter,
+) -> Option<&'a ReviewItem> {
+    let other = || {
+        items
+            .iter()
+            .filter(|item| item.target != visit.target && filter.matches(&item.target))
+    };
     other()
         .find(|item| (item.date, &item.target) > (visit.date, &visit.target))
         .or_else(|| other().next())
@@ -545,16 +575,25 @@ mod tests {
             date,
             reset_scroll: false,
         };
-        let items = overview_review_items(&data, None);
-        assert_eq!(next_review(&items, &visit).unwrap().target, Target::Leave(last));
+        let correction = Target::Correction(Uuid::from_u128(401));
+        let mut items = overview_review_items(&data, None);
+        items.push(ReviewItem {
+            target: correction.clone(),
+            date,
+            kind: "Attendance correction",
+            employee: "Fictional employee".into(),
+        });
+        items.sort_by(|a, b| (a.date, &a.target).cmp(&(b.date, &b.target)));
+        assert_eq!(next_review(&items, &visit, ReviewFilter::All).unwrap().target, correction);
+        assert_eq!(next_review(&items, &visit, ReviewFilter::Leave).unwrap().target, Target::Leave(last));
         data.leave[1].status = LeaveStatus::Approved;
         let items = overview_review_items(&data, None);
-        assert_eq!(next_review(&items, &visit).unwrap().target, Target::Leave(last));
+        assert_eq!(next_review(&items, &visit, ReviewFilter::Leave).unwrap().target, Target::Leave(last));
         data.leave.last_mut().unwrap().status = LeaveStatus::Rejected;
         let items = overview_review_items(&data, None);
-        assert_eq!(next_review(&items, &visit).unwrap().target, Target::Leave(first));
+        assert_eq!(next_review(&items, &visit, ReviewFilter::Leave).unwrap().target, Target::Leave(first));
         data.leave[0].status = LeaveStatus::Approved;
-        assert!(next_review(&overview_review_items(&data, None), &visit).is_none());
+        assert!(next_review(&overview_review_items(&data, None), &visit, ReviewFilter::Leave).is_none());
     }
 
     #[test]
@@ -888,29 +927,59 @@ impl HrisApp {
             self.send(Command::WorkActivity(None));
         }
         let items = overview_review_items(&self.data, self.work_state.context.as_ref());
+        let reports_pending = loads_reports && self.work_state.context.is_none();
         let can_open = !self.busy && !self.has_unsaved_edits();
         let mut open = None;
         card(ui, |ui| {
             ui.heading("Needs your review");
-            if loads_reports && self.work_state.context.is_none() {
+            ui.horizontal_wrapped(|ui| {
+                for (filter, label) in [
+                    (ReviewFilter::All, "All"),
+                    (ReviewFilter::Leave, "Leave"),
+                    (ReviewFilter::Corrections, "Corrections"),
+                    (ReviewFilter::Overtime, "Overtime"),
+                    (ReviewFilter::DailyReports, "Daily reports"),
+                ] {
+                    let count = items.iter().filter(|item| filter.matches(&item.target)).count();
+                    let label = if reports_pending
+                        && matches!(filter, ReviewFilter::All | ReviewFilter::DailyReports)
+                    {
+                        label.to_owned()
+                    } else {
+                        format!("{label} ({count})")
+                    };
+                    ui.selectable_value(&mut self.review_filter, filter, label);
+                }
+            });
+            if reports_pending {
                 if self.busy {
                     ui.label("Loading daily report reviews…");
                 } else if ui.button("Load daily report reviews").clicked() {
                     self.send(Command::WorkActivity(None));
                 }
             }
-            if items.is_empty() {
-                if !loads_reports || self.work_state.context.is_some() {
-                    empty(ui, "You're caught up.");
+            let visible = items
+                .iter()
+                .filter(|item| self.review_filter.matches(&item.target))
+                .collect::<Vec<_>>();
+            if visible.is_empty() {
+                if !reports_pending
+                    || !matches!(self.review_filter, ReviewFilter::All | ReviewFilter::DailyReports)
+                {
+                    let message = if self.review_filter == ReviewFilter::All {
+                        "You're caught up."
+                    } else {
+                        "Nothing to review in this category."
+                    };
+                    empty(ui, message);
                 }
             } else {
-                ui.label(format!("{} awaiting your review", items.len()));
                 let row_height = ui.spacing().interact_size.y;
                 egui::ScrollArea::vertical()
-                    .id_salt("overview-reviews")
+                    .id_salt(("overview-reviews", self.review_filter))
                     .max_height(230.0)
-                    .show_rows(ui, row_height, items.len(), |ui, rows| {
-                        for item in &items[rows] {
+                    .show_rows(ui, row_height, visible.len(), |ui, rows| {
+                        for &item in &visible[rows] {
                             let label = format!("{} · {} · {}", item.kind, item.employee, item.date);
                             let button = egui::Button::new(label.as_str())
                                 .wrap_mode(egui::TextWrapMode::Truncate);
@@ -1009,7 +1078,7 @@ impl HrisApp {
         let ready = !self.busy && !dirty;
         let leave_notes = matches!(visit.target, Target::Leave(_)) && self.leave_state.has_decision_notes();
         let items = overview_review_items(&self.data, self.work_state.context.as_ref());
-        let next = next_review(&items, visit);
+        let next = next_review(&items, visit, self.review_filter);
         let mut back = false;
         let mut advance = false;
         ui.horizontal_wrapped(|ui| {
@@ -1112,7 +1181,8 @@ impl HrisApp {
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     if ui.button("Open leave").clicked() {
                         self.page = Page::Leave;
-                        self.leave_filter = Some(LeaveStatus::Pending);
+                        self.leave_state.filters = leave_view::RequestFilters::default();
+                        self.leave_state.filters.status = leave_view::RequestFilter::Status(LeaveStatus::Pending);
                     }
                 });
             });

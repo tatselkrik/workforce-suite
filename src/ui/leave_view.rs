@@ -13,6 +13,83 @@ pub(super) enum View {
     Openings,
     Delegation,
 }
+
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+pub(super) enum RequestFilter {
+    #[default]
+    All,
+    NeedsMyReview,
+    Status(LeaveStatus),
+}
+
+#[derive(Default)]
+pub(super) struct RequestFilters {
+    pub status: RequestFilter,
+    query: String,
+    from: Option<NaiveDate>,
+    through: Option<NaiveDate>,
+    from_month: Option<NaiveDate>,
+    through_month: Option<NaiveDate>,
+}
+
+impl RequestFilters {
+    fn valid_dates(&self) -> bool {
+        self.from.zip(self.through).is_none_or(|(from, through)| from <= through)
+    }
+
+    fn matches(&self, data: &Snapshot, row: &LeaveRequest, query: &str) -> bool {
+        row.company_id == data.company.id
+            && self.from.is_none_or(|from| row.ends_on >= from)
+            && self.through.is_none_or(|through| row.starts_on <= through)
+            && match self.status {
+                RequestFilter::All => true,
+                RequestFilter::NeedsMyReview => leave::can_review(data, row),
+                RequestFilter::Status(status) => row.status == status,
+            }
+            && (query.is_empty()
+                || data
+                    .employees
+                    .iter()
+                    .find(|e| e.id == row.employee_id && e.company_id == row.company_id)
+                    .map_or_else(
+                        || row.policy.requester_name.to_lowercase().contains(query),
+                        |e| employee_identity_matches(e, query),
+                    ))
+    }
+
+    fn controls(&mut self, ui: &mut Ui, data: &Snapshot) {
+        let today = data.company.today();
+        let latest = data
+            .leave
+            .iter()
+            .filter(|row| row.company_id == data.company.id)
+            .map(|row| row.ends_on)
+            .max()
+            .unwrap_or(today)
+            .max(today + Duration::days(366));
+        ui.horizontal_wrapped(|ui| {
+            ui.add(
+                egui::TextEdit::singleline(&mut self.query)
+                    .id_salt("leave-request-search")
+                    .hint_text("Name or code")
+                    .desired_width(180.0),
+            );
+            optional_date_filter(
+                ui, "From", &mut self.from, &mut self.from_month, today, latest, None,
+            );
+            optional_date_filter(
+                ui, "Through", &mut self.through, &mut self.through_month, today, latest, None,
+            );
+            if (self.status != RequestFilter::All || !self.query.is_empty()
+                || self.from.is_some() || self.through.is_some())
+                && ui.button("Clear filters").clicked()
+            {
+                *self = Self::default();
+            }
+        });
+    }
+}
+
 #[derive(Default)]
 pub(super) struct State {
     pub openings: super::leave_openings_view::State,
@@ -30,6 +107,7 @@ pub(super) struct State {
     pub draft: Option<LeavePolicy>,
     pub detail: Option<Uuid>,
     pub employee: Option<Uuid>,
+    pub filters: RequestFilters,
     pub type_index: usize,
     pub holiday_date: String,
     pub holiday_name: String,
@@ -67,6 +145,42 @@ impl State {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn review_filter_uses_current_eligibility_and_inclusive_overlap() {
+        let mut data = DemoStore::new().data;
+        let mut row = data.leave[0].clone();
+        let code = data.employees.iter().find(|e| e.id == row.employee_id)
+            .unwrap().employee_code.to_lowercase();
+        row.ends_on = row.starts_on + Duration::days(2);
+        let mut filters = RequestFilters {
+            status: RequestFilter::NeedsMyReview,
+            from: Some(row.ends_on),
+            through: Some(row.ends_on + Duration::days(1)),
+            ..Default::default()
+        };
+        assert!(filters.valid_dates());
+        assert!(filters.matches(&data, &row, &code));
+        filters.from = Some(row.ends_on + Duration::days(1));
+        assert!(!filters.matches(&data, &row, &code));
+        filters.through = Some(row.starts_on);
+        assert!(!filters.valid_dates());
+        filters.from = None;
+        assert!(filters.matches(&data, &row, &code));
+        let reviewer = data.access.employee_id;
+        data.access.employee_id = Some(row.employee_id);
+        assert!(!filters.matches(&data, &row, &code));
+        data.access.employee_id = reviewer;
+        row.status = LeaveStatus::Approved;
+        assert!(!filters.matches(&data, &row, &code));
+        filters.status = RequestFilter::Status(LeaveStatus::Approved);
+        row.policy.requester_name = "Previously filed name".into();
+        data.employees.retain(|e| e.id != row.employee_id);
+        assert!(filters.matches(&data, &row, "filed name"));
+        assert!(!filters.matches(&data, &row, &code));
+        row.company_id = Uuid::nil();
+        assert!(!filters.matches(&data, &row, "filed name"));
+    }
 
     #[test]
     fn switching_leave_requests_clears_the_previous_decision_draft() {
@@ -157,14 +271,16 @@ impl HrisApp {
         }
         employee_context_filter(ui, &self.data, &mut self.leave_state.employee);
         ui.horizontal_wrapped(|ui| {
-            ui.selectable_value(&mut self.leave_filter, None, "All");
+            let status = &mut self.leave_state.filters.status;
+            ui.selectable_value(status, RequestFilter::All, "All");
+            ui.selectable_value(status, RequestFilter::NeedsMyReview, "Needs my review");
             for s in [
                 LeaveStatus::Pending,
                 LeaveStatus::Approved,
                 LeaveStatus::Rejected,
                 LeaveStatus::Cancelled,
             ] {
-                ui.selectable_value(&mut self.leave_filter, Some(s), s.label());
+                ui.selectable_value(status, RequestFilter::Status(s), s.label());
             }
             if ui
                 .add_enabled(!self.busy, egui::Button::new("+ Request leave"))
@@ -173,24 +289,31 @@ impl HrisApp {
                 self.new_leave();
             }
         });
+        self.leave_state.filters.controls(ui, &self.data);
+        let filters = &self.leave_state.filters;
+        if !filters.valid_dates() {
+            ui.colored_label(ui.visuals().error_fg_color, "From must be on or before Through.");
+            return;
+        }
         ui.label(RichText::new("Pending requests reserve days. Only the final approval deducts leave; cancellation retains history and releases the days.").small().color(muted(ui)));
+        let query = filters.query.trim().to_lowercase();
         let rows = self
             .data
             .leave
             .iter()
-            .filter(|r| self.leave_filter.is_none_or(|s| s == r.status))
             .filter(|r| self.leave_state.employee.is_none_or(|id| id == r.employee_id))
-            .cloned()
+            .filter(|r| filters.matches(&self.data, r, &query))
             .collect::<Vec<_>>();
         if rows.is_empty() {
             card(ui, |ui| empty(ui, "No leave requests in this view."));
         }
+        let mut open = None;
         for row in rows {
             ui.add_space(8.0);
             card(ui, |ui| {
                 ui.vertical(|ui| {
                     ui.horizontal_wrapped(|ui| {
-                        ui.label(RichText::new(self.leave_employee_name(&row)).strong());
+                        ui.label(RichText::new(self.leave_employee_name(row)).strong());
                         badge(ui, row.status.label(), row.status == LeaveStatus::Approved);
                         ui.label(row.type_name());
                     });
@@ -220,18 +343,21 @@ impl HrisApp {
                             );
                         }
                         if ui
-                            .button(if leave::can_review(&self.data, &row) {
+                            .button(if leave::can_review(&self.data, row) {
                                 "Review request"
                             } else {
                                 "Details / history"
                             })
                             .clicked()
                         {
-                            self.leave_state.open_request(row.id);
+                            open = Some(row.id);
                         }
                     });
                 });
             });
+        }
+        if let Some(id) = open {
+            self.leave_state.open_request(id);
         }
     }
     fn leave_employee_name(&self, row: &LeaveRequest) -> String {

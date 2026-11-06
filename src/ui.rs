@@ -110,6 +110,7 @@ mod payroll_navigation;
 pub struct HrisApp {
     work_state: work_activity_view::State,
     review_visit: Option<design::ReviewVisit>,
+    review_filter: design::ReviewFilter,
     employee_finder: Option<employee_finder::State>,
     employee_record_search: Option<employee_finder::State>,
     services_state: services_view::State,
@@ -159,7 +160,6 @@ pub struct HrisApp {
     attendance_date: NaiveDate,
     calendar_month: NaiveDate,
     check_in_employee: Option<Uuid>,
-    leave_filter: Option<LeaveStatus>,
     employee_form: Option<EmployeeDraft>,
     contacts_form: Option<EmployeeContacts>,
     contacts_section: ContactSection,
@@ -392,6 +392,7 @@ impl HrisApp {
             services_state: Default::default(),
             work_state: Default::default(),
             review_visit: None,
+            review_filter: design::ReviewFilter::default(),
             employee_finder: None,
             employee_record_search: None,
             relations_state: Default::default(),
@@ -428,7 +429,6 @@ impl HrisApp {
             show_discarded_documents: false,
             close_document_on_success: false,
             check_in_employee: None,
-            leave_filter: None,
             employee_form: None,
             contacts_form: None,
             contacts_section: ContactSection::Contact,
@@ -1199,6 +1199,7 @@ impl HrisApp {
                     }
                     if self.data.access != data.access {
                         self.review_visit = None;
+                        self.review_filter = design::ReviewFilter::default();
                         self.workspace_draft = None;
                         self.sidebar_last_page = None;
                         self.staff_roles_state = Default::default();
@@ -1283,7 +1284,6 @@ impl HrisApp {
                         self.employment_type_filter = EmploymentFilter::All;
                         self.work_location_filter = EmploymentFilter::All;
                         self.employee_status = Some(EmployeeStatus::Active);
-                        self.leave_filter = None;
                         self.attendance_date = data.company.today();
                         self.calendar_month = month_start(self.attendance_date);
                         self.check_in_employee = data.active().next().map(|employee| employee.id);
@@ -1765,6 +1765,7 @@ impl HrisApp {
                 self.shift_state.tab = shifts_view::Tab::Daily;
                 self.shift_state.roster_employee = Some(id);
                 self.shift_state.roster_filter = shifts_view::RosterFilter::All;
+                self.shift_state.roster_search = shifts_view::RosterSearch::default();
                 self.attendance_date = self.data.company.today();
                 self.calendar_month = month_start(self.attendance_date);
                 self.break_state.detail = None;
@@ -1774,7 +1775,7 @@ impl HrisApp {
                 self.leave_state.view = leave_view::View::Requests;
                 self.leave_state.detail = None;
                 self.leave_state.employee = Some(id);
-                self.leave_filter = None;
+                self.leave_state.filters = leave_view::RequestFilters::default();
             }
             Page::Employees => {
                 self.employee_view = EmployeeView::Development;
@@ -3119,16 +3120,18 @@ impl HrisApp {
         });
         ui.add_space(8.0);
         let mut rows = crate::attendance::daily_roster(&self.data, date);
+        let has_roster = !rows.is_empty();
         if let Some(id) = self.shift_state.roster_employee {
             rows.retain(|row| row.employee.id == id);
         }
-        let has_roster = !rows.is_empty();
         card(ui, |ui| {
             ui.label(
                 RichText::new(date.format("%A, %B %d, %Y").to_string())
                     .size(17.0)
                     .strong(),
             );
+            self.shift_state.roster_search.controls(ui, &rows);
+            self.shift_state.roster_search.apply(&mut rows);
             shifts_view::roster_filters(ui, &rows, &mut self.shift_state.roster_filter);
             rows.retain(|row| self.shift_state.roster_filter.matches(row));
             ui.add_space(8.0);
@@ -4844,6 +4847,12 @@ fn employee_record_matches_snapshot(
         )
 }
 
+fn employee_identity_matches(employee: &Employee, query: &str) -> bool {
+    query.is_empty()
+        || employee.full_name.to_lowercase().contains(query)
+        || employee.employee_code.to_lowercase().contains(query)
+}
+
 fn employee_context_filter(ui: &mut Ui, data: &Snapshot, selected: &mut Option<Uuid>) {
     if let Some(id) = *selected {
         ui.horizontal_wrapped(|ui| {
@@ -5736,6 +5745,46 @@ fn calendar_control(
     latest: NaiveDate,
     data: &Snapshot,
 ) -> bool {
+    date_calendar(ui, selected, month, today, latest, Some(&data.attendance))
+}
+
+fn optional_date_filter(
+    ui: &mut Ui,
+    label: &str,
+    date: &mut Option<NaiveDate>,
+    month: &mut Option<NaiveDate>,
+    today: NaiveDate,
+    latest: NaiveDate,
+    attendance: Option<&[Attendance]>,
+) {
+    ui.push_id(label, |ui| {
+        let value = date.map_or_else(|| "Any date".into(), |d| d.format("%b %d, %Y").to_string());
+        let button = ui.add(
+            egui::Button::new(format!("{label} · {value}")).wrap_mode(egui::TextWrapMode::Extend),
+        );
+        egui::Popup::from_toggle_button_response(&button).show(|ui| {
+            let mut selected = date.unwrap_or(today);
+            let month = month.get_or_insert_with(|| month_start(selected));
+            if date_calendar(ui, &mut selected, month, today, latest, attendance) {
+                *date = Some(selected);
+                ui.close();
+            }
+            if date.is_some() && ui.button("Any date").clicked() {
+                *date = None;
+                ui.close();
+            }
+        });
+    });
+}
+
+fn date_calendar(
+    ui: &mut Ui,
+    selected: &mut NaiveDate,
+    month: &mut NaiveDate,
+    today: NaiveDate,
+    latest: NaiveDate,
+    attendance: Option<&[Attendance]>,
+) -> bool {
     ui.set_min_width(280.0);
     ui.spacing_mut().item_spacing = Vec2::new(6.0, 5.0);
     let mut chosen = false;
@@ -5749,7 +5798,7 @@ fn calendar_control(
         {
             *month = month.checked_sub_months(Months::new(1)).unwrap();
         }
-        let mut year = month.year();
+        let mut year = month.year().min(latest.year());
         let mut number = month.month();
         egui::ComboBox::from_id_salt("attendance_calendar_month")
             .width(116.0)
@@ -5804,25 +5853,25 @@ fn calendar_control(
                 .unwrap_or(35);
             for (index, cell) in cells.into_iter().take(visible_cells).enumerate() {
                 if let Some(date) = cell {
-                    let count = data
-                        .attendance
-                        .iter()
-                        .filter(|record| record.work_date == date)
-                        .count();
+                    let count = attendance.map(|records| {
+                        records.iter().filter(|record| record.work_date == date).count()
+                    });
                     let mut text = RichText::new(date.day().to_string());
-                    if count > 0 {
+                    if count.unwrap_or(0) > 0 {
                         text = text.color(accent(ui)).strong();
                     }
                     let mut button = egui::Button::new(text).selected(date == *selected);
                     if date == today {
                         button = button.stroke(Stroke::new(1.0, accent(ui)));
                     }
+                    let day = date.format("%b %d, %Y");
+                    let hover = count.map_or_else(
+                        || day.to_string(),
+                        |count| format!("{day} · {count} check-in record(s)"),
+                    );
                     if ui
                         .add_enabled(date <= latest, button.min_size(Vec2::new(34.0, 30.0)))
-                        .on_hover_text(format!(
-                            "{} · {count} check-in record(s)",
-                            date.format("%b %d, %Y")
-                        ))
+                        .on_hover_text(hover)
                         .clicked()
                     {
                         *selected = date;
@@ -5836,11 +5885,13 @@ fn calendar_control(
                 }
             }
         });
-    ui.label(
-        RichText::new("Teal dates have recorded check-ins.")
-            .small()
-            .color(muted(ui)),
-    );
+    if attendance.is_some() {
+        ui.label(
+            RichText::new("Teal dates have recorded check-ins.")
+                .small()
+                .color(muted(ui)),
+        );
+    }
     chosen
 }
 

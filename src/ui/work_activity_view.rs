@@ -328,34 +328,6 @@ fn editor_text(ui: &mut Ui, label: &str, value: &mut String, multiline: bool, ma
     ui.add_space(6.0);
 }
 
-fn report_date_filter(
-    ui: &mut Ui,
-    label: &str,
-    date: &mut Option<NaiveDate>,
-    month: &mut Option<NaiveDate>,
-    data: &Snapshot,
-) {
-    ui.push_id(label, |ui| {
-        let value = date.map_or_else(|| "Any date".into(), |d| d.format("%b %d, %Y").to_string());
-        let button = ui.add(
-            egui::Button::new(format!("{label} · {value}")).wrap_mode(egui::TextWrapMode::Extend),
-        );
-        egui::Popup::from_toggle_button_response(&button).show(|ui| {
-            let today = data.company.today();
-            let mut selected = date.unwrap_or(today);
-            let month = month.get_or_insert_with(|| month_start(selected));
-            if attendance_calendar(ui, &mut selected, month, today, data) {
-                *date = Some(selected);
-                ui.close();
-            }
-            if date.is_some() && ui.button("Any date").clicked() {
-                *date = None;
-                ui.close();
-            }
-        });
-    });
-}
-
 impl HrisApp {
     pub(super) fn attendance_photos(&mut self, ui: &mut Ui) {
         let Some(_record) = self.work_state.evidence_target else {
@@ -714,21 +686,26 @@ impl HrisApp {
 
     fn report_filter_controls(&mut self, ui: &mut Ui) {
         let filters = &mut self.work_state.report_filters;
+        let today = self.data.company.today();
         ui.strong("Filter the daily report list");
         ui.horizontal_wrapped(|ui| {
-            report_date_filter(
+            optional_date_filter(
                 ui,
                 "From",
                 &mut filters.from,
                 &mut filters.from_month,
-                &self.data,
+                today,
+                today,
+                Some(&self.data.attendance),
             );
-            report_date_filter(
+            optional_date_filter(
                 ui,
                 "Through",
                 &mut filters.through,
                 &mut filters.through_month,
-                &self.data,
+                today,
+                today,
+                Some(&self.data.attendance),
             );
             let status_label = REPORT_STATUSES
                 .iter()

@@ -21,10 +21,7 @@ fn employee_matches<'a>(data: &'a Snapshot, query: &str) -> Vec<&'a Employee> {
             employee.company_id == data.company.id
                 && data.access.can_read_operational_employee(employee)
         })
-        .filter(|employee| {
-            employee.full_name.to_lowercase().contains(&query)
-                || employee.employee_code.to_lowercase().contains(&query)
-        })
+        .filter(|employee| employee_identity_matches(employee, &query))
         .collect();
     matches.sort_by(|a, b| (&a.full_name, &a.employee_code).cmp(&(&b.full_name, &b.employee_code)));
     matches

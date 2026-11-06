@@ -30,8 +30,9 @@ before signing out or closing an app. After process termination, sign in again.
 
 Start with **Overview** in Workforce HR. **Needs your review** opens leave,
 attendance, overtime and daily report reviews assigned to your current scope.
-Use **Back to review queue** to keep your place, or **Review next** to open the
-next eligible item. Save or discard an open decision before switching.
+Choose a category to narrow the queue. **Review next** opens the next eligible
+item in that category. Use **Back to review queue** to keep your place. Save or
+discard an open decision before switching.
 Use the sidebar to browse workspaces and the circular profile control for your
 personal details. Notification links open permitted records.
 
@@ -130,10 +131,11 @@ employee archive must not be treated as proof that a payment has been made.
 
 ### Review daily attendance
 
-Open **Attendance → Daily attendance** and choose a date from the calendar. Review
-the roster using **Open shifts**, **Completed**, **No check-in**, or **On leave**.
-Select **All** to clear the status filter while keeping the selected date and
-employee. Review missing punches alongside scheduled work and approved leave.
+Open **Attendance → Daily attendance** and choose a date from the calendar. Search
+by employee name or code, or choose a department. **Open shifts**, **Completed**,
+**No check-in** and **On leave** count matching roster entries. Choose **All** to
+clear the status filter. The record-a-check-in picker is separate from roster search.
+Review missing punches alongside scheduled work and approved leave.
 Employees use the punch method assigned by HR, either an office station or their
 own Android account.
 
@@ -164,6 +166,10 @@ posting. Use **credit adjustments** for a reviewed delta; a remaining balance is
 not the same thing as a credit to add.
 
 ### Approve or cancel leave
+
+In **Leave → Requests**, choose **Needs my review** for requests you can decide
+now. You can search by employee name or code and choose **From** and **Through**
+dates. A request appears if any of its dates overlap the selected range.
 
 Review the request's charge dates, quantity, balance and approval history. Only the
 current eligible reviewer can decide a step; self-approval is blocked. A request

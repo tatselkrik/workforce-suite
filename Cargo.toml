@@ -6,7 +6,7 @@ resolver = "3"
 
 [package]
 name = "hris-desktop"
-version = "1.0.0-beta.7"
+version = "1.0.0-beta.8"
 edition = "2024"
 rust-version = "1.95"
 description = "Workforce HR native desktop and shared Workforce Suite core"

@@ -62,6 +62,61 @@ impl RosterFilter {
     }
 }
 
+#[derive(Default)]
+pub(super) struct RosterSearch {
+    query: String,
+    department: Option<String>,
+}
+
+impl RosterSearch {
+    pub(super) fn controls(&mut self, ui: &mut Ui, rows: &[crate::attendance::DailyRow]) {
+        let departments = rows
+            .iter()
+            .map(|row| row.employee.department.trim())
+            .collect::<std::collections::BTreeSet<_>>();
+        let department_label = |name: &str| {
+            if name.is_empty() { "No department".to_owned() } else { name.to_owned() }
+        };
+        ui.horizontal_wrapped(|ui| {
+            ui.add(
+                egui::TextEdit::singleline(&mut self.query)
+                    .id_salt("attendance-roster-search")
+                    .hint_text("Name or code")
+                    .desired_width(180.0),
+            );
+            let selected = self.department.as_deref().map_or_else(
+                || "All departments".to_owned(),
+                department_label,
+            );
+            egui::ComboBox::from_id_salt("attendance-roster-department")
+                .selected_text(selected)
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.department, None, "All departments");
+                    for name in departments {
+                        ui.selectable_value(
+                            &mut self.department,
+                            Some(name.to_owned()),
+                            department_label(name),
+                        );
+                    }
+                });
+            if (!self.query.is_empty() || self.department.is_some())
+                && ui.button("Clear search").clicked()
+            {
+                *self = Self::default();
+            }
+        });
+    }
+
+    pub(super) fn apply(&self, rows: &mut Vec<crate::attendance::DailyRow>) {
+        let query = self.query.trim().to_lowercase();
+        rows.retain(|row| {
+            self.department.as_deref().is_none_or(|name| name == row.employee.department.trim())
+                && employee_identity_matches(&row.employee, &query)
+        });
+    }
+}
+
 pub(super) fn roster_filters(
     ui: &mut Ui,
     rows: &[crate::attendance::DailyRow],
@@ -98,6 +153,7 @@ pub(super) struct State {
     pub tab: Tab,
     pub roster_employee: Option<Uuid>,
     pub roster_filter: RosterFilter,
+    pub roster_search: RosterSearch,
     pub template: Option<ShiftTemplateDraft>,
     pub assignment: Option<ShiftAssignmentDraft>,
     pub show_inactive: bool,
@@ -648,6 +704,34 @@ fn shift_hours_fields(ui: &mut Ui, start: &mut String, end: &mut String) -> [egu
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn attendance_search_composes_with_status_and_scoped_roster() {
+        let mut data = DemoStore::new().data;
+        let date = data.company.today();
+        let manager = data.employees[0].id;
+        let report = data.employees[1].id;
+        data.access.role = Role::Manager;
+        data.access.employee_id = Some(manager);
+        data.access.direct_reports = vec![report];
+        data.employees[1].reports_to = Some(manager);
+        data.employees[1].employee_code = "TEAM-123".into();
+        data.employees[1].department = "Operations".into();
+        data.employees[2].employee_code = "TEAM-124".into();
+        data.employees[2].department = "Operations".into();
+        let mut rows = crate::attendance::daily_roster(&data, date);
+        let search = RosterSearch {
+            query: " team-12 ".into(),
+            department: Some("Operations".into()),
+        };
+        search.apply(&mut rows);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].employee.id, report);
+        assert!(RosterFilter::Open.matches(&rows[0]));
+        assert!(!RosterFilter::Completed.matches(&rows[0]));
+        RosterSearch { department: Some("Finance".into()), ..search }.apply(&mut rows);
+        assert!(rows.is_empty());
+    }
 
     #[test]
     fn attendance_filters_use_recorded_punches_schedule_and_approved_leave() {
