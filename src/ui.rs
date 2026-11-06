@@ -4853,6 +4853,39 @@ fn employee_record_matches_snapshot(
         )
 }
 
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+enum DeadlineFilter {
+    #[default]
+    All,
+    Overdue,
+    Today,
+    Upcoming,
+}
+
+impl DeadlineFilter {
+    const ALL: [Self; 4] = [Self::All, Self::Overdue, Self::Today, Self::Upcoming];
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::All => "All deadlines",
+            Self::Overdue => "Overdue",
+            Self::Today => "Due today",
+            Self::Upcoming => "Next 30 days",
+        }
+    }
+
+    fn matches(self, date: Option<NaiveDate>, today: NaiveDate) -> bool {
+        match self {
+            Self::All => true,
+            Self::Overdue => date.is_some_and(|date| date < today),
+            Self::Today => date == Some(today),
+            Self::Upcoming => {
+                date.is_some_and(|date| (1..=30).contains(&(date - today).num_days()))
+            }
+        }
+    }
+}
+
 const EMPLOYEE_PAGE_SIZE: usize = 25;
 
 #[derive(Default)]

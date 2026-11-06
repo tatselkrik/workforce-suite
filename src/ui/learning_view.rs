@@ -11,6 +11,8 @@ pub(super) struct State {
     pub pending: Option<Change>,
     employee: Option<Uuid>,
     search: String,
+    deadline: DeadlineFilter,
+    notice_id: Option<Uuid>,
     resolved: bool,
     archived: bool,
     pub certificates: bool,
@@ -19,33 +21,81 @@ impl State {
     pub(super) fn focus_employee(&mut self, id: Uuid) {
         self.employee = Some(id);
         self.search.clear();
+        self.deadline = DeadlineFilter::All;
+        self.notice_id = None;
     }
 
-    pub(super) fn open_notice(
-        &mut self,
-        data: &Snapshot,
-        employee: Uuid,
-        id: Uuid,
-        certificate: bool,
-    ) {
-        self.employee = Some(employee);
+    pub(super) fn open_notice(&mut self, employee: Uuid, id: Uuid, certificate: bool) {
+        self.focus_employee(employee);
         self.certificates = certificate;
-        self.archived = false;
-        self.search = if certificate {
-            data.learning
-                .certificates
-                .iter()
-                .find(|r| r.id == id)
-                .map(|r| r.title.clone())
-        } else {
-            data.learning
-                .training
-                .iter()
-                .find(|r| r.id == id)
-                .map(|r| r.title.clone())
-        }
-        .unwrap_or_default();
+        self.notice_id = Some(id);
     }
+
+    fn allows_row(&self, data: &Snapshot, id: Uuid, company: Uuid, employee: Uuid) -> bool {
+        company == data.company.id
+            && self.employee.is_none_or(|selected| selected == employee)
+            && self.notice_id.is_none_or(|notice| notice == id)
+            && learning::in_scope(data, employee)
+    }
+
+    fn training_matches(
+        &self,
+        data: &Snapshot,
+        training: &learning::Training,
+        today: NaiveDate,
+        search: &str,
+    ) -> bool {
+        if !self.allows_row(data, training.id, training.company_id, training.employee_id) {
+            return false;
+        }
+        self.notice_id.is_some()
+            || ((self.resolved || !["completed", "cancelled"].contains(&training.status.as_str()))
+                && self.deadline.matches(training_due(training), today)
+                && format!(
+                    "{} {} {} {}",
+                    training.employee_name,
+                    training.employee_code,
+                    training.title,
+                    training.provider
+                )
+                .to_lowercase()
+                .contains(search))
+    }
+
+    fn certificate_matches(
+        &self,
+        data: &Snapshot,
+        certificate: &learning::Certificate,
+        today: NaiveDate,
+        search: &str,
+    ) -> bool {
+        if !self.allows_row(
+            data,
+            certificate.id,
+            certificate.company_id,
+            certificate.employee_id,
+        ) {
+            return false;
+        }
+        let expiry = if certificate.archived || certificate.status == "revoked" {
+            None
+        } else {
+            certificate.expires_on
+        };
+        self.notice_id.is_some()
+            || ((self.archived || !certificate.archived)
+                && self.deadline.matches(expiry, today)
+                && format!(
+                    "{} {} {} {}",
+                    certificate.employee_name,
+                    certificate.employee_code,
+                    certificate.title,
+                    certificate.issuer
+                )
+                .to_lowercase()
+                .contains(search))
+    }
+
     pub fn editing(&self) -> bool {
         self.training_form.is_some()
             || self.certificate_form.is_some()
@@ -66,6 +116,14 @@ impl State {
         true
     }
 }
+fn training_due(training: &learning::Training) -> Option<NaiveDate> {
+    if matches!(training.status.as_str(), "planned" | "in_progress") {
+        training.due_on
+    } else {
+        None
+    }
+}
+
 fn area(ui: &mut Ui, label: &str, value: &mut String, rows: usize) {
     ui.label(label);
     ui.add(
@@ -105,6 +163,10 @@ impl HrisApp {
         self.send(Command::Change(Action::Learning(a)));
     }
     pub(super) fn learning(&mut self, ui: &mut Ui, certificates: bool) {
+        if self.learning_state.certificates != certificates {
+            self.learning_state.deadline = DeadlineFilter::All;
+            self.learning_state.notice_id = None;
+        }
         self.learning_state.certificates = certificates;
         if self.learning_decision(ui) {
             return;
@@ -126,6 +188,15 @@ impl HrisApp {
             .access
             .allows(crate::staff_roles::Capability::DevelopmentAdministration);
         card(ui, |ui| {
+            if self.learning_state.notice_id.is_some() {
+                ui.horizontal_wrapped(|ui| {
+                    ui.label("Opened from Notifications");
+                    if ui.button("Back to list").clicked() {
+                        self.learning_state.notice_id = None;
+                    }
+                });
+                return;
+            }
             ui.horizontal_wrapped(|ui| {
                 if hr
                     && ui
@@ -190,11 +261,22 @@ impl HrisApp {
                         .desired_width(260.0),
                 );
             });
+            ui.horizontal_wrapped(|ui| {
+                for deadline in DeadlineFilter::ALL {
+                    let label = match (certificates, deadline) {
+                        (true, DeadlineFilter::Overdue) => "Expired",
+                        (true, DeadlineFilter::Today) => "Expires today",
+                        _ => deadline.label(),
+                    };
+                    ui.selectable_value(&mut self.learning_state.deadline, deadline, label);
+                }
+            });
             ui.label(if certificates{"Recorded certificates and expiry dates; HR retains file evidence separately in private 201 files. "}else{"HR assigns training and records completion. Staff can record their own progress; current reporting Managers can also record team progress. Dates do not change attendance or leave."});
         });
         ui.add_space(10.0);
-        let search = self.learning_state.search.to_lowercase();
-        let employee = self.learning_state.employee;
+        let search = self.learning_state.search.trim().to_lowercase();
+        let today = self.data.company.today();
+        let has_deadline_filter = self.learning_state.deadline != DeadlineFilter::All;
         let mut found = false;
         if certificates {
             let mut rows: Vec<_> = self
@@ -203,26 +285,23 @@ impl HrisApp {
                 .certificates
                 .iter()
                 .filter(|c| {
-                    learning::in_scope(&self.data, c.employee_id)
-                        && employee.is_none_or(|id| c.employee_id == id)
-                        && (self.learning_state.archived || !c.archived)
-                        && format!(
-                            "{} {} {} {}",
-                            c.employee_name, c.employee_code, c.title, c.issuer
-                        )
-                        .to_lowercase()
-                        .contains(&search)
+                    self.learning_state
+                        .certificate_matches(&self.data, c, today, &search)
                 })
                 .cloned()
                 .collect();
-            rows.sort_by_key(|c| {
-                (
-                    c.archived,
-                    c.employee_name.clone(),
-                    c.expires_on,
-                    c.title.clone(),
-                )
-            });
+            if has_deadline_filter {
+                rows.sort_by_key(|c| (c.expires_on, c.id));
+            } else {
+                rows.sort_by(|a, b| {
+                    (a.archived, &a.employee_name, a.expires_on, &a.title).cmp(&(
+                        b.archived,
+                        &b.employee_name,
+                        b.expires_on,
+                        &b.title,
+                    ))
+                });
+            }
             for c in rows {
                 found = true;
                 self.learning_certificate_card(ui, &c);
@@ -235,20 +314,22 @@ impl HrisApp {
                 .training
                 .iter()
                 .filter(|t| {
-                    learning::in_scope(&self.data, t.employee_id)
-                        && employee.is_none_or(|id| t.employee_id == id)
-                        && (self.learning_state.resolved
-                            || !["completed", "cancelled"].contains(&t.status.as_str()))
-                        && format!(
-                            "{} {} {} {}",
-                            t.employee_name, t.employee_code, t.title, t.provider
-                        )
-                        .to_lowercase()
-                        .contains(&search)
+                    self.learning_state
+                        .training_matches(&self.data, t, today, &search)
                 })
                 .cloned()
                 .collect();
-            rows.sort_by_key(|t| (t.employee_name.clone(), t.due_on, t.title.clone()));
+            if has_deadline_filter {
+                rows.sort_by_key(|t| (t.due_on, t.id));
+            } else {
+                rows.sort_by(|a, b| {
+                    (&a.employee_name, a.due_on, &a.title).cmp(&(
+                        &b.employee_name,
+                        b.due_on,
+                        &b.title,
+                    ))
+                });
+            }
             for t in rows {
                 found = true;
                 self.learning_training_card(ui, &t);
@@ -257,7 +338,9 @@ impl HrisApp {
         }
         if !found {
             card(ui, |ui| {
-                ui.label(if certificates {
+                ui.label(if self.learning_state.notice_id.is_some() {
+                    "This record is unavailable in your current access."
+                } else if certificates {
                     "No certifications match these filters."
                 } else {
                     "No training matches these filters."
@@ -289,6 +372,14 @@ impl HrisApp {
                 date_or(t.ends_on),
                 date_or(t.due_on)
             ));
+            let today = self.data.company.today();
+            if let Some(due) = training_due(t) {
+                if due < today {
+                    badge(ui, "Overdue", false);
+                } else if due == today {
+                    badge(ui, "Due today", false);
+                }
+            }
             if !t.progress_note.is_empty() {
                 ui.label(RichText::new("Recorded progress").strong());
                 ui.label(&t.progress_note);
@@ -880,6 +971,107 @@ impl HrisApp {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn deadline_windows_use_company_today_and_an_inclusive_end() {
+        let today = NaiveDate::from_ymd_opt(2026, 11, 7).unwrap();
+        assert!(DeadlineFilter::All.matches(None, today));
+        for filter in [
+            DeadlineFilter::Overdue,
+            DeadlineFilter::Today,
+            DeadlineFilter::Upcoming,
+        ] {
+            assert!(!filter.matches(None, today));
+        }
+        assert!(DeadlineFilter::Overdue.matches(Some(today - Duration::days(1)), today));
+        assert!(!DeadlineFilter::Overdue.matches(Some(today), today));
+        assert!(DeadlineFilter::Today.matches(Some(today), today));
+        assert!(!DeadlineFilter::Upcoming.matches(Some(today), today));
+        assert!(DeadlineFilter::Upcoming.matches(Some(today + Duration::days(30)), today));
+        assert!(!DeadlineFilter::Upcoming.matches(Some(today + Duration::days(31)), today));
+    }
+
+    #[test]
+    fn learning_deadlines_skip_finished_training_and_inactive_certifications() {
+        let mut data = DemoStore::new().data;
+        let today = data.company.today();
+        let mut training = TrainingDraft::new(data.access.employee_id);
+        training.title = "Fictional work skills".into();
+        training.reason = "Fictional assignment".into();
+        training.due_on = today.to_string();
+        learning::apply_demo(
+            &mut data,
+            &Change::TrainingSave(training),
+            chrono::Utc::now(),
+        )
+        .unwrap();
+        let mut certificate = CertificateDraft::new(data.access.employee_id, today);
+        certificate.title = "Fictional certificate".into();
+        certificate.reason = "Fictional issuance record".into();
+        certificate.expires_on = today.to_string();
+        learning::apply_demo(
+            &mut data,
+            &Change::CertificateSave(certificate),
+            chrono::Utc::now(),
+        )
+        .unwrap();
+        let mut training = data.learning.training[0].clone();
+        let mut certificate = data.learning.certificates[0].clone();
+        let mut state = State {
+            deadline: DeadlineFilter::Today,
+            resolved: true,
+            archived: true,
+            ..Default::default()
+        };
+        assert!(state.training_matches(&data, &training, today, ""));
+        assert!(state.certificate_matches(&data, &certificate, today, ""));
+        for status in ["completed", "cancelled"] {
+            training.status = status.into();
+            assert!(!state.training_matches(&data, &training, today, ""));
+        }
+        certificate.status = "revoked".into();
+        assert!(!state.certificate_matches(&data, &certificate, today, ""));
+        certificate.status = "valid".into();
+        certificate.archived = true;
+        assert!(!state.certificate_matches(&data, &certificate, today, ""));
+        state.deadline = DeadlineFilter::All;
+        assert!(state.training_matches(&data, &training, today, ""));
+        assert!(state.certificate_matches(&data, &certificate, today, ""));
+    }
+
+    #[test]
+    fn learning_notice_uses_exact_identity_and_rechecks_scope() {
+        let mut data = DemoStore::new().data;
+        let today = data.company.today();
+        let employee = data.employees[1].id;
+        let mut draft = TrainingDraft::new(Some(employee));
+        draft.title = "Same title".into();
+        draft.reason = "Fictional assignment".into();
+        learning::apply_demo(&mut data, &Change::TrainingSave(draft), chrono::Utc::now()).unwrap();
+        let record = data.learning.training[0].clone();
+        let duplicate = learning::Training {
+            id: Uuid::new_v4(),
+            ..record.clone()
+        };
+        let mut state = State {
+            deadline: DeadlineFilter::Overdue,
+            ..Default::default()
+        };
+        state.open_notice(employee, record.id, false);
+        assert!(state.deadline == DeadlineFilter::All);
+        assert!(state.training_matches(&data, &record, today, ""));
+        assert!(!state.training_matches(&data, &duplicate, today, ""));
+        let foreign = learning::Training {
+            company_id: Uuid::new_v4(),
+            ..record.clone()
+        };
+        assert!(!state.training_matches(&data, &foreign, today, ""));
+        data.access.role = Role::Employee;
+        data.access.employee_id = Some(data.employees[0].id);
+        assert!(!state.training_matches(&data, &record, today, ""));
+        state.focus_employee(employee);
+        assert!(state.notice_id.is_none());
+    }
+
     #[test]
     fn unrelated_refresh_preserves_learning_draft() {
         let data = DemoStore::new().data;

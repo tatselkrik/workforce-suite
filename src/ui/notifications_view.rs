@@ -1,26 +1,6 @@
 use super::*;
 use crate::notifications::{self, Category, ReadAction, Target};
 
-#[derive(Clone, Copy, Default, PartialEq, Eq)]
-enum Deadline {
-    #[default]
-    All,
-    Overdue,
-    Today,
-    Upcoming,
-}
-
-impl Deadline {
-    fn matches(self, date: NaiveDate, today: NaiveDate) -> bool {
-        match self {
-            Self::All => true,
-            Self::Overdue => date < today,
-            Self::Today => date == today,
-            Self::Upcoming => date > today && date <= today + Duration::days(30),
-        }
-    }
-}
-
 fn reminder_document(data: &Snapshot, id: Uuid) -> Option<&documents::EmployeeDocument> {
     documents::record(data, id).ok().filter(|doc| {
         doc.state == DocumentState::Ready
@@ -34,7 +14,7 @@ pub(super) struct State {
     pub unread_only: bool,
     pub category: Option<Category>,
     pub page: usize,
-    deadline: Deadline,
+    deadline: DeadlineFilter,
     refreshed: Option<std::time::Instant>,
     scope: Option<crate::access::Access>,
     items: std::sync::Arc<Vec<notifications::Alert>>,
@@ -172,7 +152,7 @@ impl HrisApp {
         if form.contains("documents") {
             self.notification_state.category = Some(Category::Documents);
             if form.contains("overdue") || form.contains("record") {
-                self.notification_state.deadline = Deadline::Overdue;
+                self.notification_state.deadline = DeadlineFilter::Overdue;
             }
             if form.contains("record") {
                 for doc in &mut self.data.documents {
@@ -248,13 +228,12 @@ impl HrisApp {
             });
             if self.notification_state.category == Some(Category::Documents) {
                 ui.horizontal_wrapped(|ui| {
-                    for (deadline, label) in [
-                        (Deadline::All, "All deadlines"),
-                        (Deadline::Overdue, "Overdue"),
-                        (Deadline::Today, "Due today"),
-                        (Deadline::Upcoming, "Next 30 days"),
-                    ] {
-                        ui.selectable_value(&mut self.notification_state.deadline, deadline, label);
+                    for deadline in DeadlineFilter::ALL {
+                        ui.selectable_value(
+                            &mut self.notification_state.deadline,
+                            deadline,
+                            deadline.label(),
+                        );
                     }
                 });
             }
@@ -278,7 +257,10 @@ impl HrisApp {
                         .category
                         .is_none_or(|c| c == a.category)
                     && (self.notification_state.category != Some(Category::Documents)
-                        || self.notification_state.deadline.matches(a.date, today))
+                        || self
+                            .notification_state
+                            .deadline
+                            .matches(Some(a.date), today))
             })
             .cloned()
             .collect();
@@ -433,12 +415,8 @@ impl HrisApp {
                     } else {
                         self.performance_state
                             .open_learning_notice(page == "certificate");
-                        self.learning_state.open_notice(
-                            &self.data,
-                            *employee,
-                            *record,
-                            page == "certificate",
-                        );
+                        self.learning_state
+                            .open_notice(*employee, *record, page == "certificate");
                     }
                 }
             }

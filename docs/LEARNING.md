@@ -14,6 +14,11 @@ Expiry is derived from the company date; archival preserves the validity state.
 Managers read only own and current-report metadata. Employee read projections remain own-only; learning administration uses Workforce HR.
 Ordinary employees still cannot enter the desktop or invoke staff mutation RPCs.
 
+Use the deadline filters to find open training and recorded certifications by
+due date or expiry. Today has its own filter. **Next 30 days** begins tomorrow.
+Completed or cancelled training and archived or revoked certifications stay out
+of deadline queues. Notifications open the exact record within current access.
+
 Optional evidence links to an existing ready, unarchived private 201 document
 for the same company and employee. Binding rows and their events are HR-only;
 no file path/key/document identifier enters Manager or employee summaries or

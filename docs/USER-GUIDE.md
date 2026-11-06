@@ -260,7 +260,9 @@ from feedback shared with the employee.
 
 Record training dates, progress and completion outcomes. Maintain certificate
 issue and expiry dates from supporting facts. Link private evidence only through
-the permitted document workflow. Career plans describe development targets and
+the permitted document workflow. Use **Overdue**, **Due today** and **Next 30 days**
+for open training. Certifications have corresponding expiry filters. A notice
+opens the specific record. Career plans describe development targets and
 milestones; completing a plan does not change salary, job title or department.
 
 ### Confidential employee relations
