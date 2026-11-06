@@ -926,7 +926,7 @@ impl HrisApp {
             self.work_state.overview_reports_requested = true;
             self.send(Command::WorkActivity(None));
         }
-        let items = overview_review_items(&self.data, self.work_state.context.as_ref());
+        let items = overview_review_items(&self.data, self.work_state.context.as_deref());
         let reports_pending = loads_reports && self.work_state.context.is_none();
         let can_open = !self.busy && !self.has_unsaved_edits();
         let mut open = None;
@@ -1077,7 +1077,7 @@ impl HrisApp {
         let dirty = self.review_queue_has_draft();
         let ready = !self.busy && !dirty;
         let leave_notes = matches!(visit.target, Target::Leave(_)) && self.leave_state.has_decision_notes();
-        let items = overview_review_items(&self.data, self.work_state.context.as_ref());
+        let items = overview_review_items(&self.data, self.work_state.context.as_deref());
         let next = next_review(&items, visit, self.review_filter);
         let mut back = false;
         let mut advance = false;

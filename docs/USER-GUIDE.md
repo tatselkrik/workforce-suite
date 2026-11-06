@@ -33,6 +33,10 @@ attendance, overtime and daily report reviews assigned to your current scope.
 Choose a category to narrow the queue. **Review next** opens the next eligible
 item in that category. Use **Back to review queue** to keep your place. Save or
 discard an open decision before switching.
+
+Press **Ctrl+F** to focus search in the Directory, daily attendance roster,
+Daily reports or Leave list.
+
 Use the sidebar to browse workspaces and the circular profile control for your
 personal details.
 
@@ -237,7 +241,8 @@ revision**. Employees can revise and resubmit. The history retains each submissi
 and decision.
 
 Use **Quick dates** to filter today's reports, the last seven days, month to date
-or last month. The selected report status still applies.
+or last month. Search by employee name or code and combine it with a status.
+Each page shows up to 25 matching reports.
 
 Reports do not change attendance, overtime, appraisals or pay. An employee can
 check out without submitting a report. Use the shift start date for overnight work.

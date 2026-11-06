@@ -1,6 +1,7 @@
 use super::*;
 use crate::work_activity::{Context, DailyReport, ReportBody, ReportFollowUps, Submission, Task, can_review};
 use serde_json::{Value, json};
+use std::{collections::HashSet, sync::Arc};
 
 const REPORT_STATUSES: [(Option<&str>, &str); 5] = [
     (None, "All statuses"),
@@ -40,9 +41,26 @@ impl ReportFilters {
     }
 }
 
+fn report_employee_matches(data: &Snapshot, query: &str) -> Option<HashSet<Uuid>> {
+    let query = query.trim().to_lowercase();
+    if query.is_empty() {
+        return None;
+    }
+    Some(
+        data.employees
+            .iter()
+            .filter(|employee| {
+                employee.company_id == data.company.id
+                    && employee_identity_matches(employee, &query)
+            })
+            .map(|employee| employee.id)
+            .collect(),
+    )
+}
+
 #[derive(Default)]
 pub(super) struct State {
-    pub context: Option<Context>,
+    pub context: Option<Arc<Context>>,
     pub overview_reports_requested: bool,
     pub follow_ups: Option<ReportFollowUps>,
     pub form: Option<Form>,
@@ -53,6 +71,8 @@ pub(super) struct State {
     textures: std::collections::HashMap<Uuid, egui::TextureHandle>,
     report_tab: bool,
     report_filters: ReportFilters,
+    report_query: String,
+    report_page: ListPager,
 }
 pub(super) struct Form {
     operation: &'static str,
@@ -186,6 +206,13 @@ impl State {
     pub(super) fn show_reports(&mut self) {
         self.report_tab = true;
     }
+    fn focus_saved_report(&mut self, employee: Uuid, date: NaiveDate) {
+        self.employee = Some(employee);
+        self.report_filters = ReportFilters::default();
+        self.report_filters.set_dates(Some((date, date)));
+        self.report_query.clear();
+        self.report_page = ListPager::default();
+    }
     pub(super) fn reviewing_report(&self) -> Option<Uuid> {
         self.form
             .as_ref()
@@ -214,7 +241,7 @@ impl State {
             self.rejected = false;
         }
         self.textures.clear();
-        self.context = Some(c);
+        self.context = Some(Arc::new(c));
         self.overview_reports_requested = true;
         Ok(())
     }
@@ -384,7 +411,7 @@ impl HrisApp {
             self.work_state.evidence_target = None;
             self.work_state.textures.clear();
             if let Some(c) = &mut self.work_state.context {
-                c.images.clear();
+                Arc::make_mut(c).images.clear();
             }
         }
     }
@@ -395,13 +422,12 @@ impl HrisApp {
             self.work_editor(ui);
             return;
         }
-        if self.work_state.context.is_none() {
+        let Some(context) = self.work_state.context.clone() else {
             if ui.button("Load station settings").clicked() {
                 self.send(Command::WorkActivity(None));
             }
             return;
-        }
-        let context = self.work_state.context.clone().unwrap();
+        };
         ui.horizontal_wrapped(|ui|{
             if ui.button("Refresh stations").clicked(){self.send(Command::WorkActivity(None));}
             if self.data.access.allows(crate::staff_roles::Capability::AccountAdministration)&&ui.button("Enroll station").clicked(){self.work_state.form=Some(Form::new("station_save",self.data.company.today()));}
@@ -451,13 +477,13 @@ impl HrisApp {
             self.work_editor(ui);
             return;
         }
-        if self.work_state.context.is_none() {
+        let Some(context) = self.work_state.context.clone() else {
             if !self.busy && ui.button("Load current work records").clicked() {
                 self.send(Command::WorkActivity(None));
             }
             return;
-        }
-        let context = self.work_state.context.clone().unwrap();
+        };
+        let previous_employee = self.work_state.employee;
         ui.horizontal_wrapped(|ui| {
             if ui.button("Refresh work records").clicked() {
                 self.send(Command::WorkActivity(None));
@@ -468,6 +494,9 @@ impl HrisApp {
                 self.work_state.employee = None;
             }
         });
+        if previous_employee != self.work_state.employee {
+            self.work_state.report_page = ListPager::default();
+        }
         let company_mode = self.data.mode == Mode::Supabase;
         if !company_mode {
             ui.label("Connect to your company to save policies and work reports.");
@@ -557,18 +586,7 @@ impl HrisApp {
                         self.edit_work_report(report);
                     }
                     Some(report) => {
-                        if !self
-                            .work_state
-                            .report_filters
-                            .matches(report, self.work_state.employee)
-                        {
-                            self.work_state.employee = employee;
-                            self.work_state.report_filters = ReportFilters {
-                                from: Some(day),
-                                through: Some(day),
-                                ..Default::default()
-                            };
-                        }
+                        self.work_state.focus_saved_report(report.employee_id, day);
                         self.notice = Some((
                             format!(
                                 "Your report for {day} is {}. Open its submission history below.",
@@ -595,24 +613,31 @@ impl HrisApp {
                 ui.label("Choose a through date on or after the from date.");
                 return;
             }
-            let reports = context
+            let employees = report_employee_matches(&self.data, &self.work_state.report_query);
+            let reports: Vec<_> = context
                 .reports
                 .iter()
-                .filter(|r| filters.matches(r, selected_employee));
-            let shown = reports.clone().count();
-            if shown == 0 {
+                .filter(|r| {
+                    filters.matches(r, selected_employee)
+                        && employees.as_ref().is_none_or(|ids| ids.contains(&r.employee_id))
+                })
+                .collect();
+            if reports.is_empty() {
                 ui.label("No daily reports match this selection.");
                 return;
             }
-            ui.label(format!(
-                "Showing {shown} · {} awaiting review · {} returned for revision",
+            let summary = ui.label(format!(
+                "Matching reports · {}   Awaiting your review · {}   Returned · {}",
+                reports.len(),
                 reports
-                    .clone()
+                    .iter()
                     .filter(|r| r.status == "submitted" && can_review(&self.data, r.employee_id))
                     .count(),
-                reports.clone().filter(|r| r.status == "returned").count()
+                reports.iter().filter(|r| r.status == "returned").count()
             ));
-            for r in reports {
+            self.work_state.report_page.controls(ui, reports.len(), "reports");
+            let page = self.work_state.report_page.range(reports.len());
+            for &r in &reports[page] {
                 card(ui, |ui| {
                     ui.strong(format!(
                         "{} · {} · {}",
@@ -650,6 +675,9 @@ impl HrisApp {
                         report_decisions(ui, &context, r.id, &self.data.company, self.time_format());
                     });
                 });
+            }
+            if self.work_state.report_page.controls(ui, reports.len(), "reports") {
+                ui.scroll_to_rect(summary.rect, Some(Align::Min));
             }
         } else {
             for t in context
@@ -692,8 +720,17 @@ impl HrisApp {
 
     fn report_filter_controls(&mut self, ui: &mut Ui) {
         let filters = &mut self.work_state.report_filters;
+        let query = &mut self.work_state.report_query;
+        let previous = (filters.from, filters.through, filters.status);
         let today = self.data.company.today();
         ui.strong("Filter the daily report list");
+        let mut changed = queue_search(ui.add(
+            egui::TextEdit::singleline(&mut *query)
+                .id_salt("daily-report-employee-search")
+                .hint_text("Employee name or code")
+                .desired_width(225.0),
+        ))
+        .changed();
         ui.horizontal_wrapped(|ui| {
             optional_date_filter(
                 ui,
@@ -740,12 +777,20 @@ impl HrisApp {
                         ui.selectable_value(&mut filters.status, status, label);
                     }
                 });
-            if (filters.from.is_some() || filters.through.is_some() || filters.status.is_some())
-                && ui.button("Clear date and status").clicked()
+            if (!query.is_empty()
+                || filters.from.is_some()
+                || filters.through.is_some()
+                || filters.status.is_some())
+                && ui.button("Clear report filters").clicked()
             {
                 *filters = ReportFilters::default();
+                query.clear();
+                changed = true;
             }
         });
+        if changed || previous != (filters.from, filters.through, filters.status) {
+            self.work_state.report_page = ListPager::default();
+        }
     }
 
     fn report_follow_ups(&mut self, ui: &mut Ui, selected_employee: Option<Uuid>) {
@@ -1029,6 +1074,40 @@ pub(super) fn clear_undo(ctx: &egui::Context) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn employee_search_matches_current_company_codes_and_names() {
+        let mut data = DemoStore::new().data;
+        let employee = data.employees[0].clone();
+        let mut foreign = employee.clone();
+        foreign.id = Uuid::new_v4();
+        foreign.company_id = Uuid::new_v4();
+        data.employees.push(foreign);
+        for query in [&employee.employee_code, &employee.full_name] {
+            let matches = report_employee_matches(&data, &format!("  {}  ", query.to_uppercase()));
+            assert_eq!(matches, Some(HashSet::from([employee.id])));
+        }
+        assert!(report_employee_matches(&data, " ").is_none());
+        assert_eq!(report_employee_matches(&data, "No such employee"), Some(HashSet::new()));
+    }
+
+    #[test]
+    fn saved_report_focus_clears_old_query_and_page() {
+        let employee = Uuid::new_v4();
+        let date = NaiveDate::from_ymd_opt(2026, 11, 7).unwrap();
+        let mut state = State {
+            report_query: "Another employee".into(),
+            report_page: ListPager { page: 4 },
+            report_filters: ReportFilters { status: Some("returned"), ..Default::default() },
+            ..Default::default()
+        };
+        state.focus_saved_report(employee, date);
+        assert_eq!(state.employee, Some(employee));
+        assert_eq!((state.report_filters.from, state.report_filters.through), (Some(date), Some(date)));
+        assert!(state.report_query.is_empty());
+        assert!(state.report_filters.status.is_none());
+        assert_eq!(state.report_page.page, 0);
+    }
 
     #[test]
     fn review_uses_the_exact_saved_submission_and_current_team_scope() {

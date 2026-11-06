@@ -71,10 +71,11 @@ after saving or discarding your note. Returned reports can be revised and
 resubmitted. Each submission and decision remains in history. Review permissions
 follow the current reporting relationship.
 
-In **Daily reports**, use **From**, **Through** and the status menu to filter the
-report list alongside the employee selection. Both date boundaries are included
-and either can be left open. Counts reflect the visible list. **Clear date and
-status** resets those filters and keeps the employee selection.
+In **Daily reports**, search by employee name or code and use **From**,
+**Through** and the status menu. Both date boundaries are included and either
+can be left open. Counts cover all matching reports, and each page shows up to
+25. **Clear report filters** resets search, date and status and keeps the
+employee selection.
 
 In **Daily reports → Remote report follow-ups**, choose a work date and load the
 list of completed remote shifts with a missing, draft or returned report. The

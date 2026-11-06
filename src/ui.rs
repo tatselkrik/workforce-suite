@@ -2797,10 +2797,10 @@ impl HrisApp {
         );
         let company = self.data.company.id;
         ui.horizontal_wrapped(|ui| {
-            ui.add_sized(
+            queue_search(ui.add_sized(
                 [240.0, 36.0],
                 egui::TextEdit::singleline(&mut self.search).hint_text("Name, code or title"),
-            );
+            ));
             egui::ComboBox::from_id_salt("employee_status")
                 .selected_text(self.employee_status.map_or("All statuses", |s| s.label()))
                 .show_ui(ui, |ui| {
@@ -4886,6 +4886,55 @@ impl DeadlineFilter {
             Self::Upcoming => {
                 date.is_some_and(|date| (1..=30).contains(&(date - today).num_days()))
             }
+        }
+    }
+}
+
+fn queue_search(response: egui::Response) -> egui::Response {
+    if response.enabled()
+        && response
+            .ctx
+            .memory(|memory| memory.allows_interaction(response.layer_id))
+        && response
+            .ctx
+            .input_mut(|input| input.consume_key(egui::Modifiers::CTRL, egui::Key::F))
+    {
+        response.request_focus();
+        response.scroll_to_me(Some(Align::Center));
+    }
+    response.on_hover_text("Ctrl+F focuses this search")
+}
+
+#[cfg(test)]
+mod queue_search_tests {
+    use super::*;
+
+    #[test]
+    fn control_f_focuses_an_enabled_list_search() {
+        for enabled in [true, false] {
+            let ctx = egui::Context::default();
+            let mut search = String::new();
+            let mut id = None;
+            let input = egui::RawInput {
+                events: vec![egui::Event::Key {
+                    key: egui::Key::F,
+                    physical_key: None,
+                    pressed: true,
+                    repeat: false,
+                    modifiers: egui::Modifiers::CTRL,
+                }],
+                ..Default::default()
+            };
+            let mut output = ctx.run_ui(input, |ui| {
+                let search = queue_search(ui.add_enabled(
+                    enabled,
+                    egui::TextEdit::singleline(&mut search),
+                ));
+                id = Some(search.id);
+            });
+            output.textures_delta.clear();
+            assert_eq!(ctx.memory(|memory| memory.focused()) == id, enabled);
+            assert!(search.is_empty());
         }
     }
 }

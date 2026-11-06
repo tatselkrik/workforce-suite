@@ -79,14 +79,13 @@ impl RosterSearch {
         };
         let mut changed = false;
         ui.horizontal_wrapped(|ui| {
-            changed |= ui
-                .add(
-                    egui::TextEdit::singleline(&mut self.query)
-                        .id_salt("attendance-roster-search")
-                        .hint_text("Name or code")
-                        .desired_width(180.0),
-                )
-                .changed();
+            changed |= queue_search(ui.add(
+                egui::TextEdit::singleline(&mut self.query)
+                    .id_salt("attendance-roster-search")
+                    .hint_text("Name or code")
+                    .desired_width(180.0),
+            ))
+            .changed();
             let selected = self.department.as_deref().map_or_else(
                 || "All departments".to_owned(),
                 department_label,

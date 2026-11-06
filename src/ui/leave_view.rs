@@ -68,12 +68,12 @@ impl RequestFilters {
             .unwrap_or(today)
             .max(today + Duration::days(366));
         ui.horizontal_wrapped(|ui| {
-            ui.add(
+            queue_search(ui.add(
                 egui::TextEdit::singleline(&mut self.query)
                     .id_salt("leave-request-search")
                     .hint_text("Name or code")
                     .desired_width(180.0),
-            );
+            ));
             optional_date_filter(
                 ui, "From", &mut self.from, &mut self.from_month, today, latest, None,
             );
