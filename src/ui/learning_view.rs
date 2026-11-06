@@ -16,6 +16,11 @@ pub(super) struct State {
     pub certificates: bool,
 }
 impl State {
+    pub(super) fn focus_employee(&mut self, id: Uuid) {
+        self.employee = Some(id);
+        self.search.clear();
+    }
+
     pub(super) fn open_notice(
         &mut self,
         data: &Snapshot,

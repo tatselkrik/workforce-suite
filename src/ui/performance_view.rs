@@ -32,6 +32,14 @@ pub(super) struct State {
     cycles_closed: bool,
 }
 impl State {
+    pub(super) fn focus_employee(&mut self, id: Uuid) {
+        self.tab = Tab::Goals;
+        self.goal_id = None;
+        self.review_id = None;
+        self.employee = Some(id);
+        self.search.clear();
+    }
+
     pub(super) fn open_notice(&mut self, id: Uuid) {
         self.tab = Tab::Appraisals;
         self.review_id = Some(id);

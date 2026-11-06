@@ -1,5 +1,93 @@
 //! Shared native visual language, applied independently to HRIS and Payroll contexts.
 use super::*;
+use crate::notifications::Target;
+
+struct ReviewItem {
+    target: Target,
+    date: NaiveDate,
+    kind: &'static str,
+    employee: String,
+}
+
+fn overview_review_items(
+    data: &Snapshot,
+    work: Option<&crate::work_activity::Context>,
+) -> Vec<ReviewItem> {
+    let company = data.company.id;
+    let mut items = Vec::new();
+    for request in &data.leave {
+        if request.company_id == company && crate::leave::can_review(data, request) {
+            let name = data
+                .employees
+                .iter()
+                .find(|e| e.id == request.employee_id && e.company_id == company)
+                .map(|e| e.full_name.as_str())
+                .or_else(|| {
+                    (!request.policy.requester_name.is_empty())
+                        .then_some(request.policy.requester_name.as_str())
+                })
+                .unwrap_or("Employee");
+            items.push(ReviewItem {
+                target: Target::Leave(request.id),
+                date: request.starts_on,
+                kind: "Leave request",
+                employee: name.into(),
+            });
+        }
+    }
+    for request in &data.requests.records {
+        if request.company_id == company && crate::requests::can_review_in(data, request) {
+            items.push(ReviewItem {
+                target: Target::Correction(request.id),
+                date: request.work_date,
+                kind: "Attendance correction",
+                employee: request.employee_name.clone(),
+            });
+        }
+    }
+    for request in &data.overtime.records {
+        if request.company_id == company
+            && request.status == crate::overtime::Status::Pending
+            && crate::overtime::can_review_in(data, request)
+        {
+            items.push(ReviewItem {
+                target: Target::Overtime(request.id),
+                date: request.work_date,
+                kind: "Overtime request",
+                employee: request.employee_name.clone(),
+            });
+        }
+    }
+    if let Some(work) = work.filter(|c| {
+        c.company_id == company
+            && c.user_id == data.access.user_id
+            && Some(c.employee_id) == data.access.employee_id
+            && !c.own_only
+    }) {
+        let submissions: std::collections::HashSet<_> = work
+            .submissions
+            .iter()
+            .filter(|s| s.company_id == company)
+            .map(|s| (s.report_id, s.version, s.employee_id))
+            .collect();
+        for report in &work.reports {
+            if report.company_id == company
+                && report.status == "submitted"
+                && crate::work_activity::can_review(data, report.employee_id)
+                && submissions.contains(&(report.id, report.submission, report.employee_id))
+            {
+                items.push(ReviewItem {
+                    target: Target::DailyReport(report.id),
+                    date: report.work_date,
+                    kind: "Daily report",
+                    employee: data.employee_name(report.employee_id).into(),
+                });
+            }
+        }
+    }
+    items.sort_by_key(|item| item.date);
+    items
+}
 
 #[derive(Clone, Copy)]
 pub(super) struct Palette {
@@ -426,6 +514,105 @@ pub(super) fn metric(ui: &mut Ui, page: Page, title: &str, value: usize, caption
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn overview_routes_only_current_actionable_reviews() {
+        use crate::work_activity::{Context, DailyReport, ReportBody, Submission};
+
+        let mut data = DemoStore::new().data;
+        let employee = data.employees[1].clone();
+        let reviewer = data.employees[3].id;
+        data.access.role = Role::Manager;
+        data.access.employee_id = Some(reviewer);
+        data.access.direct_reports = vec![employee.id];
+        let date = data.company.today();
+        let time = date.and_hms_opt(9, 0, 0).unwrap().and_utc();
+        let correction_id = Uuid::from_u128(40);
+        let overtime_id = Uuid::from_u128(41);
+        let report_id = Uuid::from_u128(42);
+        let submitter = Uuid::from_u128(43);
+        let attendance = data.attendance[1].clone();
+        data.requests.records.push(crate::requests::Request {
+            id: correction_id,
+            company_id: data.company.id,
+            employee_id: employee.id,
+            employee_name: employee.full_name.clone(),
+            employee_code: employee.employee_code.clone(),
+            submitted_by: submitter,
+            work_date: date - Duration::days(2),
+            timezone: data.company.timezone.clone(),
+            base_record: None,
+            proposed_in: time,
+            proposed_out: None,
+            planned_shift: None,
+            reason: "Missed punch".into(),
+            status: crate::requests::Status::Pending,
+            revision: 0,
+            applied_attendance_id: None,
+            correction_id: None,
+            created_at: time,
+        });
+        data.overtime.records.push(crate::overtime::Request {
+            id: overtime_id,
+            company_id: data.company.id,
+            attendance_id: attendance.id,
+            employee_id: employee.id,
+            employee_name: employee.full_name,
+            employee_code: employee.employee_code,
+            submitted_by: submitter,
+            work_date: date,
+            requested_minutes: 30,
+            basis: crate::overtime::Basis { attendance, breaks: vec![], minutes: 30 },
+            status: crate::overtime::Status::Pending,
+            approved_minutes: None,
+            reason: "Late handover".into(),
+            revision: 0,
+            created_at: time,
+        });
+        let mut work = Context::empty(&data);
+        let body = ReportBody { summary: "Submitted work".into(), ..Default::default() };
+        work.reports.push(DailyReport {
+            id: report_id,
+            company_id: data.company.id,
+            employee_id: employee.id,
+            work_date: date - Duration::days(1),
+            status: "submitted".into(),
+            revision: 2,
+            submission: 2,
+            body: body.clone(),
+            task_ids: vec![],
+            review_note: String::new(),
+            updated_at: time,
+        });
+        work.submissions.push(Submission {
+            report_id,
+            version: 1,
+            company_id: data.company.id,
+            employee_id: employee.id,
+            body,
+            task_snapshot: vec![],
+            submitted_by: submitter,
+            submitted_at: time,
+        });
+        assert_eq!(overview_review_items(&data, Some(&work)).len(), 3);
+        work.submissions[0].version = 2;
+        let items = overview_review_items(&data, Some(&work));
+        assert_eq!(items.len(), 4);
+        assert!(matches!(items[0].target, Target::Correction(id) if id == correction_id));
+        assert!(matches!(items[1].target, Target::DailyReport(id) if id == report_id));
+        assert!(items.iter().any(|r| matches!(r.target, Target::Overtime(id) if id == overtime_id)));
+        assert!(items.iter().any(|r| matches!(r.target, Target::Leave(id) if id == data.leave[0].id)));
+        work.user_id = submitter;
+        assert_eq!(overview_review_items(&data, Some(&work)).len(), 3);
+        work.user_id = data.access.user_id;
+        work.reports[0].status = "returned".into();
+        data.requests.records[0].submitted_by = data.access.user_id;
+        data.overtime.records[0].status = crate::overtime::Status::Approved;
+        let items = overview_review_items(&data, Some(&work));
+        assert_eq!(items.len(), 1);
+        assert!(matches!(items[0].target, Target::Leave(id) if id == data.leave[0].id));
+    }
+
     fn luminance(c: Color32) -> f32 {
         let rgb = [c.r(), c.g(), c.b()].map(|n| {
             let s = n as f32 / 255.0;
@@ -647,6 +834,52 @@ impl HrisApp {
             }
         }
     }
+    pub(super) fn overview_reviews(&mut self, ui: &mut Ui) {
+        let loads_reports = self.data.mode == Mode::Supabase
+            && (self.data.access.allows(crate::staff_roles::Capability::AttendanceAdministration)
+                || self.data.access.allows(crate::staff_roles::Capability::TeamReview));
+        if loads_reports && !self.work_state.overview_reports_requested && !self.busy {
+            self.work_state.overview_reports_requested = true;
+            self.send(Command::WorkActivity(None));
+        }
+        let items = overview_review_items(&self.data, self.work_state.context.as_ref());
+        let mut open = None;
+        card(ui, |ui| {
+            ui.heading("Needs your review");
+            if loads_reports && self.work_state.context.is_none() {
+                if self.busy {
+                    ui.label("Loading daily report reviews…");
+                } else if ui.button("Load daily report reviews").clicked() {
+                    self.send(Command::WorkActivity(None));
+                }
+            }
+            if items.is_empty() {
+                if !loads_reports || self.work_state.context.is_some() {
+                    empty(ui, "You're caught up.");
+                }
+            } else {
+                ui.label(format!("{} awaiting your review", items.len()));
+                let row_height = ui.spacing().interact_size.y;
+                egui::ScrollArea::vertical()
+                    .id_salt("overview-reviews")
+                    .max_height(230.0)
+                    .show_rows(ui, row_height, items.len(), |ui, rows| {
+                        for item in &items[rows] {
+                            let label = format!("{} · {} · {}", item.kind, item.employee, item.date);
+                            let button = egui::Button::new(label.as_str())
+                                .wrap_mode(egui::TextWrapMode::Truncate);
+                            if ui.add_enabled(!self.busy, button).on_hover_text(&label).clicked() {
+                                open = Some(item.target.clone());
+                            }
+                        }
+                    });
+            }
+        });
+        if let Some(target) = open {
+            self.open_notification(&target, ui.ctx());
+        }
+    }
+
     pub(super) fn overview_attendance_card(
         &mut self,
         ui: &mut Ui,
@@ -726,7 +959,7 @@ impl HrisApp {
                 });
             });
             ui.label(
-                RichText::new("Requests in your review scope")
+                RichText::new("Pending requests in your workspace")
                     .size(12.0)
                     .color(muted(ui)),
             );

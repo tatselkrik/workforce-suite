@@ -5,7 +5,7 @@ reports. Workforce Employee for Android shows only the signed-in person's work.
 
 ## Attendance methods
 
-In **Attendance → Work arrangements**, HR saves a new policy version for an
+In **Attendance → Setup → Work arrangements**, HR saves a new policy version for an
 employee. Choose an effective date, optional end date, reason and arrangement:
 
 | Arrangement | Routine attendance |
@@ -27,7 +27,7 @@ exception route for missing punches, camera failures or a policy dispute.
 
 ## Office station
 
-1. An Administrator enrolls the PC under **Attendance → Office stations**.
+1. An Administrator enrolls the PC under **Attendance → Setup → Office stations**.
 2. HR sets an active employee's personal attendance PIN and gives it to them privately.
 3. Open the attendance kiosk and let an Administrator unlock the station session.
 4. The employee enters their code and PIN, checks the live webcam preview and records check-in or checkout.
@@ -54,7 +54,7 @@ evidence budget until HR reviews storage.
 
 ## Tasks and reports
 
-Managers use **Attendance → Tasks & daily reports** to assign current team members
+Managers use **Attendance → Daily reports → Tasks** to assign current team members
 a task, expected outcome, priority and due date. HR attendance administrators can
 oversee this work. Independent review excludes the reviewer's own submissions.
 
@@ -63,10 +63,12 @@ report: summary, completed work, unfinished work, blockers and next actions. The
 may include their own assigned task snapshots and explain necessary unassigned
 work in the report. Use the shift start date for overnight work.
 
-A Manager reviews a submitted task or report and records a reason when accepting
-or returning it. Returned reports can be revised and resubmitted. Each submission
-and decision remains available in history. Review permissions follow the current
-reporting relationship; an earlier Manager does not retain access after reassignment.
+A Manager can open a submitted report from **Overview → Needs your review** or
+**Daily reports**. The review shows the saved submission, task snapshots and prior
+decisions alongside the review note and **Approve** and **Return for revision**
+buttons. Returned reports can be revised and resubmitted. Each submission and
+decision remains in history. Review permissions follow the current reporting
+relationship.
 
 In **Daily reports**, use **From**, **Through** and the status menu to filter the
 report list alongside the employee selection. Both date boundaries are included

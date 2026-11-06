@@ -1,5 +1,5 @@
 use super::*;
-use crate::work_activity::{Context, DailyReport, ReportBody, ReportFollowUps, Task, can_review};
+use crate::work_activity::{Context, DailyReport, ReportBody, ReportFollowUps, Submission, Task, can_review};
 use serde_json::{Value, json};
 
 const REPORT_STATUSES: [(Option<&str>, &str); 5] = [
@@ -37,6 +37,7 @@ impl ReportFilters {
 #[derive(Default)]
 pub(super) struct State {
     pub context: Option<Context>,
+    pub overview_reports_requested: bool,
     pub follow_ups: Option<ReportFollowUps>,
     pub form: Option<Form>,
     pub pending: Option<Value>,
@@ -148,6 +149,19 @@ impl Form {
                 v["body"] = json!(self.body);
                 v["task_ids"] = json!(self.task_ids);
             }
+            "report_review" => {
+                anyhow::ensure!(
+                    matches!(self.choice.as_str(), "approved" | "returned"),
+                    "Choose Approve or Return for revision."
+                );
+                let note = self.note.trim();
+                anyhow::ensure!(
+                    (1..=2000).contains(&note.chars().count()),
+                    "Enter a review note of 1 to 2,000 characters."
+                );
+                v["status"] = json!(self.choice);
+                v["note"] = json!(note);
+            }
             _ => {
                 v["status"] = json!(self.choice);
                 v["note"] = json!(self.note.trim());
@@ -163,6 +177,9 @@ impl State {
     pub fn clear(&mut self) {
         *self = Self::default();
     }
+    pub(super) fn show_reports(&mut self) {
+        self.report_tab = true;
+    }
     pub fn accept(&mut self, c: Context, data: &Snapshot) -> anyhow::Result<()> {
         c.validate(data)?;
         if self.pending.as_ref().is_some_and(|p| {
@@ -176,7 +193,101 @@ impl State {
         }
         self.textures.clear();
         self.context = Some(c);
+        self.overview_reports_requested = true;
         Ok(())
+    }
+}
+
+fn review_submission<'a>(
+    context: &'a Context,
+    data: &Snapshot,
+    id: Uuid,
+) -> Option<(&'a DailyReport, &'a Submission)> {
+    if context.company_id != data.company.id
+        || context.user_id != data.access.user_id
+        || Some(context.employee_id) != data.access.employee_id
+        || context.own_only
+    {
+        return None;
+    }
+    let report = context.reports.iter().find(|report| {
+        report.id == id
+            && report.company_id == data.company.id
+            && report.status == "submitted"
+            && can_review(data, report.employee_id)
+    })?;
+    let submission = context.submissions.iter().find(|submission| {
+        submission.report_id == report.id
+            && submission.version == report.submission
+            && submission.employee_id == report.employee_id
+            && submission.company_id == report.company_id
+    })?;
+    Some((report, submission))
+}
+
+fn submission_details(ui: &mut Ui, submission: &Submission) {
+    for (label, text) in [
+        ("Summary", &submission.body.summary),
+        ("Completed work", &submission.body.completed),
+        ("Unfinished work", &submission.body.unfinished),
+        ("Blockers", &submission.body.blockers),
+        ("Next actions", &submission.body.next_steps),
+    ] {
+        if !text.trim().is_empty() {
+            ui.strong(label);
+            ui.label(text);
+        }
+    }
+    if !submission.task_snapshot.is_empty() {
+        ui.strong("Submitted task snapshots");
+        for task in &submission.task_snapshot {
+            ui.label(format!("{} · {} · due {}", task.title, task.status, task.due_on));
+            ui.label(&task.outcome);
+            if !task.progress.is_empty() {
+                ui.label(&task.progress);
+            }
+        }
+    }
+}
+
+fn report_decisions(
+    ui: &mut Ui,
+    context: &Context,
+    report_id: Uuid,
+    company: &Company,
+    time_format: &str,
+) {
+    let record_id = report_id.to_string();
+    let mut decisions = context
+        .events
+        .iter()
+        .filter(|event| {
+            event["record_id"].as_str() == Some(record_id.as_str())
+                && event["kind"] == "report_review"
+        })
+        .peekable();
+    if decisions.peek().is_none() {
+        ui.label("No prior decisions in this view.");
+    }
+    for decision in decisions {
+        let status = match decision["body"]["request"]["status"].as_str() {
+            Some("approved") => "Approved",
+            Some("returned") => "Returned for revision",
+            _ => "Review decision",
+        };
+        let raw_time = decision["created_at"].as_str().unwrap_or_default();
+        let local_time = chrono::DateTime::parse_from_rfc3339(raw_time).map_or_else(
+            |_| raw_time.to_owned(),
+            |time| {
+                time.with_timezone(&company.tz())
+                    .format(&format!("%b %d, %Y {time_format}"))
+                    .to_string()
+            },
+        );
+        ui.label(format!("{status} · {local_time}"));
+        if let Some(note) = decision["body"]["request"]["note"].as_str() {
+            ui.label(note);
+        }
     }
 }
 fn editor_text(ui: &mut Ui, label: &str, value: &mut String, multiline: bool, max: usize) {
@@ -529,11 +640,7 @@ impl HrisApp {
                         && can_review(&self.data, r.employee_id)
                         && ui.button("Review submission").clicked()
                     {
-                        let mut f = Form::new("report_review", r.work_date);
-                        f.id = r.id;
-                        f.revision = r.revision;
-                        f.choice = "approved".into();
-                        self.work_state.form = Some(f);
+                        self.open_daily_report_review(r.id, ui.ctx());
                     }
                     let history = egui::CollapsingHeader::new("Submission and decision history")
                         .id_salt(r.id);
@@ -544,40 +651,9 @@ impl HrisApp {
                                 s.version,
                                 s.submitted_at.format("%Y-%m-%d %H:%M UTC")
                             ));
-                            for (label, text) in [
-                                ("Summary", &s.body.summary),
-                                ("Completed", &s.body.completed),
-                                ("Unfinished", &s.body.unfinished),
-                                ("Blockers", &s.body.blockers),
-                                ("Next actions", &s.body.next_steps),
-                            ] {
-                                ui.label(format!("{label}: {text}"));
-                            }
-                            for task in &s.task_snapshot {
-                                ui.label(format!(
-                                    "Saved task: {} · {} · due {}",
-                                    task.title, task.status, task.due_on
-                                ));
-                                ui.label(format!(
-                                    "Outcome: {} · Progress: {}",
-                                    task.outcome, task.progress
-                                ));
-                            }
+                            submission_details(ui, s);
                         }
-                        for e in context
-                            .events
-                            .iter()
-                            .filter(|e| e["record_id"].as_str() == Some(r.id.to_string().as_str()))
-                        {
-                            if e["kind"] == "report_review" {
-                                ui.label(format!(
-                                    "{} · {} · {}",
-                                    e["created_at"].as_str().unwrap_or(""),
-                                    e["body"]["request"]["status"].as_str().unwrap_or(""),
-                                    e["body"]["request"]["note"].as_str().unwrap_or("")
-                                ));
-                            }
-                        }
+                        report_decisions(ui, &context, r.id, &self.data.company, self.time_format());
                     });
                 });
             }
@@ -717,6 +793,35 @@ impl HrisApp {
         f.task_ids = r.task_ids.clone();
         self.work_state.form = Some(f);
     }
+
+    pub(super) fn open_daily_report_review(&mut self, id: Uuid, ctx: &egui::Context) {
+        if self.busy || self.work_state.editing() {
+            return;
+        }
+        let Some((report, _)) = self
+            .work_state
+            .context
+            .as_ref()
+            .and_then(|context| review_submission(context, &self.data, id))
+        else {
+            self.notice = Some((
+                "Refresh work records to see the current submission and review access.".into(),
+                true,
+            ));
+            return;
+        };
+        let mut form = Form::new("report_review", report.work_date);
+        form.id = id;
+        form.revision = report.revision;
+        self.navigate(Page::Attendance, ctx);
+        if self.page == Page::Attendance {
+            self.shift_state.tab = shifts_view::Tab::DailyWork;
+            self.work_state.show_reports();
+            self.work_state.form = Some(form);
+            self.notice = None;
+        }
+    }
+
     fn edit_work_task(&mut self, t: &Task, review: bool) {
         let mut f = Form::new(
             if review {
@@ -743,8 +848,43 @@ impl HrisApp {
         let mut retry = false;
         let company_mode = self.data.mode == Mode::Supabase;
         let pending = self.work_state.pending.is_some();
+        let time_format = self.time_format();
         let form = self.work_state.form.as_mut().unwrap();
+        let report_review = form.operation == "report_review";
+        let review = self.work_state.context.as_ref().and_then(|context| {
+            if !report_review {
+                return None;
+            }
+            review_submission(context, &self.data, form.id)
+                .filter(|(report, _)| report.revision == form.revision)
+                .map(|(report, submission)| (context, report, submission))
+        });
+        let review_available = review.is_some();
         card(ui, |ui| {
+            if report_review {
+                ui.heading("Review daily report");
+                if let Some((context, report, submission)) = review {
+                    ui.strong(format!(
+                        "{} · {}",
+                        self.data.employee_name(report.employee_id),
+                        report.work_date,
+                    ));
+                    ui.label(format!(
+                        "Submission {} · {}",
+                        submission.version,
+                        submission.submitted_at.with_timezone(&self.data.company.tz())
+                            .format(&format!("%b %d, %Y {time_format}")),
+                    ));
+                    ui.separator();
+                    submission_details(ui, submission);
+                    ui.separator();
+                    ui.strong("Prior decisions");
+                    report_decisions(ui, context, report.id, &self.data.company, time_format);
+                    ui.separator();
+                } else if !pending {
+                    ui.label("Refresh work records to review the current submission.");
+                }
+            }
             ui.add_enabled_ui(!self.busy && !pending,|ui|{
                 if matches!(form.operation,"policy_save"|"task_save"|"station_pin_reset") {employee_picker(ui,"work-editor-person",&self.data,&mut form.employee);}
                 match form.operation {
@@ -763,11 +903,27 @@ impl HrisApp {
                         editor_text(ui,"Work summary",&mut form.body.summary,true,4000);editor_text(ui,"Completed work",&mut form.body.completed,true,4000);
                         editor_text(ui,"Unfinished work",&mut form.body.unfinished,true,4000);editor_text(ui,"Blockers",&mut form.body.blockers,true,4000);editor_text(ui,"Next actions",&mut form.body.next_steps,true,4000);
                         ui.collapsing("Include snapshots of my assigned tasks",|ui|{if let Some(c)=&self.work_state.context{for t in c.tasks.iter().filter(|t|Some(t.employee_id)==self.data.access.employee_id){let mut selected=form.task_ids.contains(&t.id);if ui.checkbox(&mut selected,&t.title).changed(){if selected{form.task_ids.push(t.id);}else{form.task_ids.retain(|id|*id!=t.id);}}}}});},
+                    "report_review" => {
+                        if review.is_some() {
+                            editor_text(ui, "Review note (required)", &mut form.note, true, 2000);
+                            ui.horizontal_wrapped(|ui| {
+                                let ready = company_mode && !form.note.trim().is_empty();
+                                for (label, decision) in [("Approve", "approved"), ("Return for revision", "returned")] {
+                                    if ui.add_enabled(ready, egui::Button::new(label)).clicked() {
+                                        form.choice = decision.into();
+                                        save = true;
+                                    }
+                                }
+                            });
+                        }
+                    }
                     op => {let choices:&[&str]=match op{"task_progress"=>&["in_progress","submitted"],"task_review"=>&["accepted","returned"],_=>&["approved","returned"]};
                         egui::ComboBox::from_id_salt("work-decision").selected_text(&form.choice).show_ui(ui,|ui|{for v in choices{ui.selectable_value(&mut form.choice,(*v).into(),*v);}});
                         editor_text(ui,"Progress or review note",&mut form.note,true,2000);},
                 }
-                ui.horizontal_wrapped(|ui|{save=ui.add_enabled(company_mode,egui::Button::new(if form.operation=="report_save"{"Save draft"}else{"Save"})).clicked();if form.operation=="report_save"{submit=ui.add_enabled(company_mode,egui::Button::new("Submit to manager")).clicked();}});
+                if !report_review {
+                    ui.horizontal_wrapped(|ui|{save=ui.add_enabled(company_mode,egui::Button::new(if form.operation=="report_save"{"Save draft"}else{"Save"})).clicked();if form.operation=="report_save"{submit=ui.add_enabled(company_mode,egui::Button::new("Submit to manager")).clicked();}});
+                }
             });
             if pending && !self.busy {
                 ui.label("The previous save is awaiting confirmation. Retry the same request before editing it.");
@@ -778,6 +934,8 @@ impl HrisApp {
                     !self.busy && (!pending || self.work_state.rejected),
                     egui::Button::new(if pending {
                         "Rejected: close and refresh"
+                    } else if report_review {
+                        "Back to reports"
                     } else {
                         "Discard draft"
                     }),
@@ -806,11 +964,14 @@ impl HrisApp {
             self.send(Command::WorkActivity(Some(request)));
         }
         if discard {
+            let reload = !report_review || !review_available || self.work_state.rejected;
             self.work_state.form = None;
             self.work_state.pending = None;
             self.work_state.rejected = false;
             clear_undo(ui.ctx());
-            self.send(Command::WorkActivity(None));
+            if reload {
+                self.send(Command::WorkActivity(None));
+            }
         }
     }
 }
@@ -833,6 +994,7 @@ pub(super) fn clear_undo(ctx: &egui::Context) {
             "work-Blockers",
             "work-Next actions",
             "work-Progress or review note",
+            "work-Review note (required)",
         ],
     );
 }
@@ -840,6 +1002,79 @@ pub(super) fn clear_undo(ctx: &egui::Context) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn review_uses_the_exact_saved_submission_and_current_team_scope() {
+        let mut data = DemoStore::new().data;
+        let reviewer = data.employees[3].id;
+        let employee = data.employees[1].id;
+        data.access.role = Role::Manager;
+        data.access.employee_id = Some(reviewer);
+        data.employees[1].reports_to = Some(reviewer);
+        let date = data.company.today();
+        let time = date.and_hms_opt(9, 0, 0).unwrap().and_utc();
+        let id = Uuid::from_u128(40);
+        let mut context = Context::empty(&data);
+        context.reports.push(DailyReport {
+            id,
+            company_id: data.company.id,
+            employee_id: employee,
+            work_date: date,
+            status: "submitted".into(),
+            revision: 3,
+            submission: 2,
+            body: ReportBody { summary: "Editable report".into(), ..Default::default() },
+            task_ids: vec![],
+            review_note: String::new(),
+            updated_at: time,
+        });
+        let first = Submission {
+            report_id: id,
+            version: 1,
+            company_id: data.company.id,
+            employee_id: employee,
+            body: ReportBody { summary: "First submission".into(), ..Default::default() },
+            task_snapshot: vec![],
+            submitted_by: Uuid::from_u128(41),
+            submitted_at: time,
+        };
+        context.submissions.push(first.clone());
+        assert!(review_submission(&context, &data, id).is_none());
+        context.submissions.push(Submission {
+            version: 2,
+            body: ReportBody { summary: "Revised submission".into(), ..Default::default() },
+            ..first
+        });
+        let (report, saved) = review_submission(&context, &data, id).unwrap();
+        assert_eq!(report.revision, 3);
+        assert_eq!(saved.body.summary, "Revised submission");
+        context.own_only = true;
+        assert!(review_submission(&context, &data, id).is_none());
+        context.own_only = false;
+        data.employees[1].reports_to = None;
+        assert!(review_submission(&context, &data, id).is_none());
+    }
+
+    #[test]
+    fn review_request_requires_a_decision_and_note_for_the_selected_revision() {
+        let date = NaiveDate::from_ymd_opt(2026, 11, 6).unwrap();
+        let mut form = Form::new("report_review", date);
+        form.revision = 3;
+        form.note = "Checked the saved task snapshot".into();
+        assert!(form.request(false).is_err());
+        for decision in ["approved", "returned"] {
+            form.choice = decision.into();
+            form.note = "   ".into();
+            assert!(form.request(false).is_err());
+            form.note = " Checked the saved task snapshot ".into();
+            let request = form.request(false).unwrap();
+            assert_eq!(request["id"], form.id.to_string());
+            assert_eq!(request["expected_revision"], 3);
+            assert_eq!(request["operation"], "report_review");
+            assert_eq!(request["status"], decision);
+            assert_eq!(request["note"], "Checked the saved task snapshot");
+        }
+    }
 
     #[test]
     fn report_filters_include_both_work_dates_and_compose_with_status_and_employee() {

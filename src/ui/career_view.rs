@@ -12,6 +12,12 @@ pub(super) struct State {
     resolved: bool,
 }
 impl State {
+    pub(super) fn focus_employee(&mut self, id: Uuid) {
+        self.selected = None;
+        self.employee = Some(id);
+        self.search.clear();
+    }
+
     pub fn editing(&self) -> bool {
         self.plan_form.is_some() || self.milestone_form.is_some() || self.decision.is_some()
     }

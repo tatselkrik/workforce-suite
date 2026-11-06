@@ -15,9 +15,33 @@ pub(super) enum Tab {
     DailyWork,
     Stations,
 }
+
+const ATTENDANCE_GROUPS: &[(&str, &[(Tab, &str)])] = &[
+    (
+        "Daily attendance",
+        &[(Tab::Daily, "Attendance log"), (Tab::Calculations, "Time calculations")],
+    ),
+    (
+        "Requests & approvals",
+        &[(Tab::Requests, "Correction requests"), (Tab::Overtime, "Overtime approvals")],
+    ),
+    ("Daily reports", &[(Tab::DailyWork, "Daily reports")]),
+    (
+        "Setup",
+        &[
+            (Tab::Shifts, "Shift schedules"),
+            (Tab::Assignments, "Assignments"),
+            (Tab::History, "Schedule history"),
+            (Tab::WorkPolicies, "Work arrangements"),
+            (Tab::Stations, "Office stations"),
+        ],
+    ),
+];
+
 #[derive(Default)]
 pub(super) struct State {
     pub tab: Tab,
+    pub roster_employee: Option<Uuid>,
     pub template: Option<ShiftTemplateDraft>,
     pub assignment: Option<ShiftAssignmentDraft>,
     pub show_inactive: bool,
@@ -29,18 +53,6 @@ pub(super) struct State {
 
 impl HrisApp {
     pub(super) fn attendance_navigation(&mut self, ui: &mut Ui) -> bool {
-        let tabs = [
-            (Tab::Daily, "Daily attendance"),
-            (Tab::Shifts, "Shift schedules"),
-            (Tab::Assignments, "Assignments"),
-            (Tab::History, "Schedule history"),
-            (Tab::Calculations, "Time calculations"),
-            (Tab::Requests, "Correction requests"),
-            (Tab::Overtime, "Overtime approvals"),
-            (Tab::WorkPolicies, "Work arrangements"),
-            (Tab::DailyWork, "Tasks & daily reports"),
-            (Tab::Stations, "Office stations"),
-        ];
         let can_switch = self.shift_state.template.is_none()
             && self.shift_state.assignment.is_none()
             && self.break_state.form.is_none()
@@ -50,14 +62,31 @@ impl HrisApp {
             && !self.overtime_state.editing()
             && !self.work_state.editing();
         ui.horizontal_wrapped(|ui| {
-            for (tab, label) in tabs {
-                let button = egui::Button::selectable(self.shift_state.tab == tab, label)
+            for &(label, tabs) in ATTENDANCE_GROUPS {
+                let selected = tabs.iter().any(|(tab, _)| *tab == self.shift_state.tab);
+                let button = egui::Button::selectable(selected, label)
                     .wrap_mode(egui::TextWrapMode::Extend);
                 if ui.add_enabled(can_switch, button).clicked() {
-                    self.shift_state.tab = tab;
+                    self.shift_state.tab = tabs[0].0;
+                    if self.shift_state.tab == Tab::DailyWork {
+                        self.work_state.show_reports();
+                    }
                 }
             }
         });
+        if let Some((_, tabs)) = ATTENDANCE_GROUPS.iter().find(|(_, tabs)| {
+            tabs.len() > 1 && tabs.iter().any(|(tab, _)| *tab == self.shift_state.tab)
+        }) {
+            ui.horizontal_wrapped(|ui| {
+                for &(tab, label) in *tabs {
+                    let button = egui::Button::selectable(self.shift_state.tab == tab, label)
+                        .wrap_mode(egui::TextWrapMode::Extend);
+                    if ui.add_enabled(can_switch, button).clicked() {
+                        self.shift_state.tab = tab;
+                    }
+                }
+            });
+        }
         ui.add_space(10.0);
         if matches!(self.shift_state.tab, Tab::Daily | Tab::DailyWork)
             && self.attendance_date > self.data.company.today()

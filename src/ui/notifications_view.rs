@@ -331,12 +331,11 @@ impl HrisApp {
         }
         ui.add(egui::Label::new(RichText::new("Payroll notices separate issued advice from recorded individual payments. Appraisal and training deadlines cover the next seven days and overdue open tasks; recorded certificates cover 30 days and past expiry. Read status does not approve or change a record.").small().color(muted(ui))).wrap());
     }
-    fn open_notification(&mut self, target: &Target, ctx: &egui::Context) {
+    pub(super) fn open_notification(&mut self, target: &Target, ctx: &egui::Context) {
         match target {
             Target::Leave(id) => {
                 self.navigate(Page::Leave, ctx);
-                self.leave_state.view = leave_view::View::Requests;
-                self.leave_state.detail = Some(*id);
+                self.leave_state.open_request(*id);
             }
             Target::Correction(id) => {
                 self.navigate(Page::Attendance, ctx);
@@ -348,6 +347,7 @@ impl HrisApp {
                 self.shift_state.tab = shifts_view::Tab::Overtime;
                 self.overtime_state.detail = Some(*id);
             }
+            Target::DailyReport(id) => self.open_daily_report_review(*id, ctx),
             Target::Document { employee, title } => {
                 self.navigate(Page::Employees, ctx);
                 self.open_employee(*employee);

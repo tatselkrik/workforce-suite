@@ -28,9 +28,10 @@ before signing out or closing an app. After process termination, sign in again.
 
 ### Find your work
 
-Start with **Overview** in Workforce HR. Open the relevant workspace from the sidebar;
-personal and assigned work appears according to your permissions. Select the circular
-profile control for personal details. Notification links open permitted records.
+Start with **Overview** in Workforce HR. **Needs your review** opens leave,
+attendance, overtime and daily report reviews assigned to your current scope.
+Use the sidebar to browse workspaces and the circular profile control for your
+personal details. Notification links open permitted records.
 
 Workforce Payroll has its own financial navigation. Staff using Workforce Employee
 receive the same own-record view as any other employee.
@@ -45,6 +46,10 @@ receive the same own-record view as any other employee.
 2. Select the employee or **Edit employee** to open the record.
 3. Review **Employment**, contact details and emergency contact information. Record department, job title, joining date, employment type, location and **Reports to** where known.
 4. Save the changes. If another user changed the record, refresh and review the latest values before saving again.
+
+Use **Attendance**, **Leave** or **Learning & performance** from a saved employee
+record to open that workspace with the employee selected. Save or close open edits
+before switching.
 
 Employment history retains earlier saved values. Correct an error by saving the
 correct information; do not try to overwrite the original timeline entry.
@@ -120,7 +125,7 @@ employee archive must not be treated as proof that a payment has been made.
 
 ### Review daily attendance
 
-Open **Attendance** in Workforce HR and choose a date from the calendar. Review
+Open **Attendance → Daily attendance** and choose a date from the calendar. Review
 recorded check-ins, open shifts and completed records. A missing punch alone does
 not establish an absence. Employees use the punch method assigned by HR: an office
 station or their own Android account.
@@ -131,7 +136,7 @@ review the current values before saving a correction. History retains the change
 
 ### Review requests and overtime
 
-1. Open the correction or overtime request queue.
+1. Open **Attendance → Requests & approvals** and choose **Correction requests** or **Overtime approvals**.
 2. Compare the proposal with recorded attendance, shift and break information.
 3. Enter the review note and approve or reject only when you are an eligible reviewer.
 4. Read the retained decision history. Submission alone does not change a recorded punch or establish payable overtime.
@@ -168,7 +173,7 @@ account administration or payroll approval.
 
 ### Set a work arrangement
 
-HR uses **Attendance → Work arrangements** to save a dated on-site, remote or
+HR uses **Attendance → Setup → Work arrangements** to save a dated on-site, remote or
 hybrid policy with a reason. New policies are drafts until deliberately activated.
 Hybrid policies name the office weekdays. An open shift keeps its saved work date
 and policy for checkout. Existing punches remain unchanged.
@@ -179,7 +184,7 @@ corrections for missing punches, camera failures and justified exceptions.
 
 ### Use the office station
 
-1. An Administrator enrolls the PC under **Attendance → Office stations**. HR sets the employee's personal attendance PIN.
+1. An Administrator enrolls the PC under **Attendance → Setup → Office stations**. HR sets the employee's personal attendance PIN.
 2. Open the kiosk and let an Administrator unlock the attendance-only session.
 3. The employee enters their code and PIN, faces the webcam and selects check-in or checkout.
 4. Wait for a saved receipt. Retry the same capture if delivery is uncertain.
@@ -196,14 +201,14 @@ Receipts and photo hashes remain after cleanup. Review storage before the
 
 ### Assign and review daily work
 
-Managers use **Attendance → Tasks & daily reports** to assign current team members
-an expected outcome, priority and due date. Employees open **My work** in Android
-to update progress and submit a daily report. Include completed and unfinished
-work, blockers, next actions and relevant own task snapshots.
+Managers open **Attendance → Daily reports** and select **Tasks** to assign work.
+Employees use **My work** in Android to update progress and submit a report.
+Include completed and unfinished work, blockers, next actions and task snapshots.
 
-A current authorized Manager accepts or returns submitted work with a reason.
-Employees can revise returned reports and resubmit; previous submissions and
-decisions stay in history. Nobody can approve their own work.
+Open a submission from **Needs your review** or **Daily reports**. Read the report
+and prior decisions, enter a review note, then choose **Approve** or **Return for
+revision**. Employees can revise and resubmit. The history retains each submission
+and decision.
 
 Reports do not change attendance, overtime, appraisals or pay. An employee can
 check out without submitting a report. Use the shift start date for overnight work.

@@ -91,7 +91,7 @@ pub struct Employee {
     pub status: EmployeeStatus,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct EmployeeDraft {
     pub id: Option<Uuid>,
     pub employee_code: String,

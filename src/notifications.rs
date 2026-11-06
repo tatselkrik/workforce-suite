@@ -155,6 +155,7 @@ pub enum Target {
     Leave(Uuid),
     Correction(Uuid),
     Overtime(Uuid),
+    DailyReport(Uuid),
     Document {
         employee: Uuid,
         title: String,

@@ -1715,6 +1715,51 @@ impl HrisApp {
         self.notice = None;
     }
 
+    fn employee_shortcuts_ready(
+        &self,
+        draft: &EmployeeDraft,
+        contacts: &EmployeeContacts,
+        role_editor_open: bool,
+    ) -> bool {
+        !self.busy
+            && !role_editor_open
+            && self.document_form.is_none()
+            && !self.staff_roles_state.has_draft()
+            && !self.staff_provision_state.has_draft()
+            && employee_record_matches_snapshot(&self.data, draft, contacts)
+    }
+
+    fn open_employee_workspace(&mut self, id: Uuid, page: Page, ctx: &egui::Context) {
+        self.navigate(page, ctx);
+        if self.page != page {
+            return;
+        }
+        self.notice = None;
+        match page {
+            Page::Attendance => {
+                self.shift_state.tab = shifts_view::Tab::Daily;
+                self.shift_state.roster_employee = Some(id);
+                self.attendance_date = self.data.company.today();
+                self.calendar_month = month_start(self.attendance_date);
+                self.break_state.detail = None;
+                self.work_state.evidence_target = None;
+            }
+            Page::Leave => {
+                self.leave_state.view = leave_view::View::Requests;
+                self.leave_state.detail = None;
+                self.leave_state.employee = Some(id);
+                self.leave_filter = None;
+            }
+            Page::Employees => {
+                self.employee_view = EmployeeView::Development;
+                self.performance_state.focus_employee(id);
+                self.learning_state.focus_employee(id);
+                self.career_state.focus_employee(id);
+            }
+            _ => unreachable!("Only employee workspace shortcuts call this route"),
+        }
+    }
+
     #[cfg(feature = "qa-screenshot")]
     fn open_contacts(&mut self, id: Uuid) {
         self.open_employee(id);
@@ -1749,6 +1794,17 @@ impl HrisApp {
                 .is_some_and(|id| self.data.access.can_read_contacts(id));
         let mut close = false;
         let mut save = false;
+        let mut shortcut = None;
+        let destinations = draft.id.and_then(|id| {
+            let employee = self.data.employees.iter().find(|e| e.id == id)?;
+            let operational = self.data.access.can_read_operational_employee(employee);
+            let development = workspaces::development(&self.data) && crate::learning::in_scope(&self.data, id);
+            Some((id, [
+                (Page::Attendance, "Attendance", operational),
+                (Page::Leave, "Leave", operational),
+                (Page::Employees, "Learning & performance", development),
+            ]))
+        });
         card(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
                 close = ui
@@ -1772,6 +1828,20 @@ impl HrisApp {
                     .strong(),
                 );
             });
+            if let Some((id, destinations)) = destinations {
+                let ready = self.employee_shortcuts_ready(&draft, &contacts, access.is_some());
+                ui.horizontal_wrapped(|ui| {
+                    for (page, label, allowed) in destinations {
+                        if allowed && self.desktop.product.visible(page, &self.data)
+                            && ui.add_enabled(ready, egui::Button::new(label))
+                                .on_disabled_hover_text("Save or close the open edit before switching workspaces.")
+                                .clicked()
+                        {
+                            shortcut = Some((id, page));
+                        }
+                    }
+                });
+            }
             ui.horizontal_wrapped(|ui| {
                 ui.selectable_value(
                     &mut self.contacts_section,
@@ -1838,7 +1908,7 @@ impl HrisApp {
                             ui.separator();ui.strong("Attendance work arrangement");
                             let label=self.work_state.context.as_ref().and_then(|c|c.policy(employee,self.data.company.today()))
                                 .map(|p|format!("{} · effective {}",p.arrangement,p.starts_on)).unwrap_or("No loaded active attendance policy".into());
-                            ui.label(label);ui.label("Dated policies are managed in Attendance → Work arrangements; save employment edits before leaving this record.");
+                            ui.label(label);ui.label("Manage dated policies under Attendance → Setup → Work arrangements.");
                             if ui.button("Refresh attendance arrangement").clicked(){self.send(Command::WorkActivity(None));}
                         }
                     },
@@ -1899,6 +1969,12 @@ impl HrisApp {
                 ui.label("Employment is managed by HR. Update your own contact and emergency details in Profile.");
             }
         });
+        if let Some((id, page)) = shortcut {
+            if self.employee_shortcuts_ready(&draft, &contacts, access.is_some()) {
+                self.open_employee_workspace(id, page, ui.ctx());
+                close = self.page == page;
+            }
+        }
         if save {
             match draft
                 .employee(self.data.company.id)
@@ -2174,6 +2250,7 @@ impl HrisApp {
                     ui.spinner();
                     ui.label(RichText::new("Working…").color(muted(ui)));
                 } else if ui.button("Refresh").clicked() {
+                    self.work_state.overview_reports_requested = false;
                     self.send(Command::Refresh);
                 }
                 self.notification_state
@@ -2492,6 +2569,8 @@ impl HrisApp {
     }
 
     fn overview(&mut self, ui: &mut Ui) {
+        self.overview_reviews(ui);
+        ui.add_space(12.0);
         let today = self.data.company.today();
         let active = self
             .data
@@ -2521,7 +2600,7 @@ impl HrisApp {
         let metrics = [
             (Page::Employees, "Active employees", active, "Your attendance and leave scope"),
             (Page::Attendance, "Checked in today", attendance, "Daily attendance records"),
-            (Page::Leave, "Awaiting review", pending, "Pending leave requests"),
+            (Page::Leave, "Pending leave", pending, "Pending leave requests"),
             (Page::Leave, "On leave today", away, "Approved time away"),
         ];
         let columns=if ui.available_width() >= 720.0 {4}else{2};
@@ -2839,6 +2918,7 @@ impl HrisApp {
             return;
         }
         self.attendance_photos(ui);
+        employee_context_filter(ui, &self.data, &mut self.shift_state.roster_employee);
         let today = self.data.company.today();
         ui.horizontal_wrapped(|ui| {
             ui.label("Attendance date");
@@ -2875,7 +2955,10 @@ impl HrisApp {
         card(ui, |ui| {
             ui.label(RichText::new("Record a check-in").strong());
             ui.horizontal_wrapped(|ui| {
-                if date < today
+                let employee_filter = self.shift_state.roster_employee;
+                if let Some(id) = employee_filter {
+                    ui.strong(self.data.employee_name(id));
+                } else if date < today
                     && self
                         .data
                         .access
@@ -2917,9 +3000,26 @@ impl HrisApp {
                         &mut self.check_in_employee,
                     );
                 }
-                ui.add_enabled_ui(date == today && self.check_in_employee.is_some(), |ui| {
+                let filtered_employee = employee_filter.and_then(|id| {
+                    self.data.employees.iter().find(|e| {
+                        e.id == id
+                            && e.joined_on.is_none_or(|joined| joined <= date)
+                            && self.data.access.can_read_operational_employee(e)
+                    })
+                });
+                let selected = if employee_filter.is_some() {
+                    filtered_employee.map(|e| e.id)
+                } else {
+                    self.check_in_employee
+                };
+                let can_check_in = date == today
+                    && selected.is_some()
+                    && filtered_employee.is_none_or(|e| {
+                        e.status == EmployeeStatus::Active && self.data.access.can_record(e.id)
+                    });
+                ui.add_enabled_ui(can_check_in, |ui| {
                     if primary(ui, "Check in") {
-                        if let Some(id) = self.check_in_employee {
+                        if let Some(id) = selected {
                             self.send(Command::Change(Action::CheckIn(id)));
                         }
                     }
@@ -2931,7 +3031,7 @@ impl HrisApp {
                 {
                     if ui
                         .add_enabled(
-                            date <= today && self.check_in_employee.is_some(),
+                            date <= today && selected.is_some(),
                             egui::Button::new(if date < today {
                                 "Record past attendance"
                             } else {
@@ -2940,7 +3040,7 @@ impl HrisApp {
                         )
                         .clicked()
                     {
-                        if let Some(id) = self.check_in_employee {
+                        if let Some(id) = selected {
                             self.open_correction(id, date);
                         }
                     }
@@ -2949,7 +3049,10 @@ impl HrisApp {
             ui.label(RichText::new(if self.data.access.allows(crate::staff_roles::Capability::Personnel) { "Check in records the current server time. Past entries and changed times require a reason and are kept in correction history." } else { "Check in records the current server time. Ask HR to resolve missing or incorrect attendance." }).color(muted(ui)).size(12.0));
         });
         ui.add_space(8.0);
-        let rows = crate::attendance::daily_roster(&self.data, date);
+        let mut rows = crate::attendance::daily_roster(&self.data, date);
+        if let Some(id) = self.shift_state.roster_employee {
+            rows.retain(|row| row.employee.id == id);
+        }
         let recorded = rows.iter().filter(|row| row.attendance.is_some()).count();
         let on_leave = rows
             .iter()
@@ -4646,6 +4749,33 @@ fn same_contacts(a: &EmployeeContacts, b: &EmployeeContacts) -> bool {
     a == b
 }
 
+fn employee_record_matches_snapshot(
+    data: &Snapshot,
+    draft: &EmployeeDraft,
+    contacts: &EmployeeContacts,
+) -> bool {
+    let Some(employee) = data.employees.iter().find(|employee| Some(employee.id) == draft.id) else {
+        return false;
+    };
+    let saved_contacts = data.contacts.iter().find(|row| row.employee_id == employee.id);
+    *draft == EmployeeDraft::from(employee)
+        && saved_contacts.map_or_else(
+            || same_contacts(contacts, &EmployeeContacts::empty(data.company.id, employee.id)),
+            |saved| same_contacts(contacts, saved),
+        )
+}
+
+fn employee_context_filter(ui: &mut Ui, data: &Snapshot, selected: &mut Option<Uuid>) {
+    if let Some(id) = *selected {
+        ui.horizontal_wrapped(|ui| {
+            ui.strong(format!("Employee · {}", data.employee_name(id)));
+            if ui.button("Clear employee filter").clicked() {
+                *selected = None;
+            }
+        });
+    }
+}
+
 fn sync_profile_contacts(
     previous: &Snapshot,
     next: &Snapshot,
@@ -5726,6 +5856,23 @@ fn employee_picker(ui: &mut Ui, id: &str, data: &Snapshot, selected: &mut Option
 #[cfg(test)]
 mod identity_ui_tests {
     use super::*;
+
+    #[test]
+    fn employee_shortcuts_require_the_saved_employment_and_contact_details() {
+        let mut data = DemoStore::new().data;
+        let id = data.employees[3].id;
+        let mut draft = EmployeeDraft::from(&data.employees[3]);
+        let saved = data.contacts.iter().find(|row| row.employee_id == id).unwrap().clone();
+        assert!(employee_record_matches_snapshot(&data, &draft, &saved));
+        let mut contacts = saved.clone();
+        contacts.emergency_name = "Different emergency contact".into();
+        assert!(!employee_record_matches_snapshot(&data, &draft, &contacts));
+        draft.department.push_str(" changed");
+        assert!(!employee_record_matches_snapshot(&data, &draft, &saved));
+        draft = EmployeeDraft::from(&data.employees[3]);
+        data.employees.retain(|employee| employee.id != id);
+        assert!(!employee_record_matches_snapshot(&data, &draft, &saved));
+    }
 
     #[test]
     fn sign_in_form_stays_near_the_top_and_fits_the_minimum_and_enlarged_viewports() {

@@ -28,12 +28,45 @@ pub(super) struct State {
     pub view: View,
     pub draft: Option<LeavePolicy>,
     pub detail: Option<Uuid>,
+    pub employee: Option<Uuid>,
     pub type_index: usize,
     pub holiday_date: String,
     pub holiday_name: String,
     pub review_note: String,
     pub cancel_reason: String,
 }
+impl State {
+    pub(super) fn open_request(&mut self, id: Uuid) {
+        if self.detail != Some(id) {
+            self.review_note.clear();
+            self.cancel_reason.clear();
+        }
+        self.view = View::Requests;
+        self.detail = Some(id);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn switching_leave_requests_clears_the_previous_decision_draft() {
+        let original = Uuid::from_u128(1);
+        let next = Uuid::from_u128(2);
+        let mut state = State::default();
+        state.open_request(original);
+        state.review_note = "Reviewed the original request".into();
+        state.cancel_reason = "Reason on the original request".into();
+        state.open_request(original);
+        assert!(!state.review_note.is_empty());
+        state.open_request(next);
+        assert_eq!(state.detail, Some(next));
+        assert!(state.review_note.is_empty());
+        assert!(state.cancel_reason.is_empty());
+    }
+}
+
 impl HrisApp {
     pub(super) fn leave_page(&mut self, ui: &mut Ui) {
         if self.data.mode == Mode::Demo && self.data.leave_setup.dated.is_none() {
@@ -85,6 +118,7 @@ impl HrisApp {
             self.leave_detail(ui, id);
             return;
         }
+        employee_context_filter(ui, &self.data, &mut self.leave_state.employee);
         ui.horizontal_wrapped(|ui| {
             ui.selectable_value(&mut self.leave_filter, None, "All");
             for s in [
@@ -108,6 +142,7 @@ impl HrisApp {
             .leave
             .iter()
             .filter(|r| self.leave_filter.is_none_or(|s| s == r.status))
+            .filter(|r| self.leave_state.employee.is_none_or(|id| id == r.employee_id))
             .cloned()
             .collect::<Vec<_>>();
         if rows.is_empty() {
@@ -155,9 +190,7 @@ impl HrisApp {
                             })
                             .clicked()
                         {
-                            self.leave_state.detail = Some(row.id);
-                            self.leave_state.review_note.clear();
-                            self.leave_state.cancel_reason.clear();
+                            self.leave_state.open_request(row.id);
                         }
                     });
                 });
