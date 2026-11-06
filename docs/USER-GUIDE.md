@@ -258,6 +258,9 @@ before submitting an appraisal. Published reviews preserve their original facts;
 later progress changes do not rewrite them. Keep confidential HR notes separate
 from feedback shared with the employee.
 
+Use **Drafts** to find overdue or upcoming appraisals. Choose **Awaiting
+publication** to see submitted reviews. Large lists show 25 appraisals per page.
+
 Record training dates, progress and completion outcomes. Maintain certificate
 issue and expiry dates from supporting facts. Link private evidence only through
 the permitted document workflow. Use **Overdue**, **Due today** and **Next 30 days**

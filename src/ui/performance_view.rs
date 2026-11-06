@@ -13,6 +13,56 @@ enum Tab {
     Certifications,
     Career,
 }
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+enum AppraisalStage {
+    #[default]
+    Current,
+    Drafts,
+    Submitted,
+    Published,
+    Cancelled,
+    All,
+}
+
+impl AppraisalStage {
+    const ALL: [Self; 6] = [
+        Self::Current,
+        Self::Drafts,
+        Self::Submitted,
+        Self::Published,
+        Self::Cancelled,
+        Self::All,
+    ];
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::Current => "All except cancelled",
+            Self::Drafts => "Drafts",
+            Self::Submitted => "Awaiting publication",
+            Self::Published => "Published",
+            Self::Cancelled => "Cancelled",
+            Self::All => "All statuses",
+        }
+    }
+
+    fn matches(
+        self,
+        status: &str,
+        due: NaiveDate,
+        deadline: DeadlineFilter,
+        today: NaiveDate,
+    ) -> bool {
+        match self {
+            Self::Current => status != "cancelled",
+            Self::Drafts => status == "draft" && deadline.matches(Some(due), today),
+            Self::Submitted => status == "submitted",
+            Self::Published => status == "published",
+            Self::Cancelled => status == "cancelled",
+            Self::All => true,
+        }
+    }
+}
+
 #[derive(Default)]
 pub(super) struct State {
     tab: Tab,
@@ -28,7 +78,9 @@ pub(super) struct State {
     employee: Option<Uuid>,
     search: String,
     goals_resolved: bool,
-    reviews_cancelled: bool,
+    appraisal_stage: AppraisalStage,
+    appraisal_deadline: DeadlineFilter,
+    appraisal_page: ListPager,
     cycles_closed: bool,
 }
 impl State {
@@ -38,6 +90,9 @@ impl State {
         self.review_id = None;
         self.employee = Some(id);
         self.search.clear();
+        self.appraisal_stage = AppraisalStage::Current;
+        self.appraisal_deadline = DeadlineFilter::All;
+        self.appraisal_page = ListPager::default();
     }
 
     pub(super) fn open_notice(&mut self, id: Uuid) {
@@ -45,6 +100,7 @@ impl State {
         self.review_id = Some(id);
         self.employee = None;
         self.search.clear();
+        self.appraisal_page = ListPager::default();
     }
     pub(super) fn open_learning_notice(&mut self, certificate: bool) {
         self.tab = if certificate {
@@ -265,7 +321,7 @@ impl HrisApp {
                     ui.label("Submission locks this assessment and saves the current goal facts for the review period. HR can return it to draft or publish it.");
                 }
                 Change::ReviewStatus { status, .. } if status == "published" => {
-                    ui.label("Publication makes this review available to the employee in their future portal. The assessment and submitted goal facts become read-only. Corrections require a follow-up cycle; private HR notes stay separate.");
+                    ui.label("Publication makes this review available to the employee in Workforce Employee. The assessment and submitted goals become read-only. Use a follow-up cycle for corrections. Private HR notes stay separate.");
                 }
                 Change::CycleStatus { status, .. } if status == "closed" => {
                     ui.label("Close only after every appraisal is published or cancelled. Reopening the cycle keeps published reviews unchanged.");
@@ -292,45 +348,50 @@ impl HrisApp {
         }
         true
     }
-    fn performance_filter(&mut self, ui: &mut Ui) {
-        ui.horizontal_wrapped(|ui| {
-            egui::ComboBox::from_id_salt("performance_employee_filter")
-                .width(280.0)
-                .selected_text(
-                    self.performance_state
-                        .employee
-                        .map(|id| self.data.employee_name(id))
-                        .unwrap_or("All employees in your access"),
-                )
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(
-                        &mut self.performance_state.employee,
-                        None,
-                        "All employees in your access",
-                    );
-                    for e in &self.data.employees {
+    fn performance_filter(&mut self, ui: &mut Ui) -> bool {
+        let before = self.performance_state.employee;
+        let search_changed = ui
+            .horizontal_wrapped(|ui| {
+                egui::ComboBox::from_id_salt("performance_employee_filter")
+                    .width(280.0)
+                    .selected_text(
+                        self.performance_state
+                            .employee
+                            .map(|id| self.data.employee_name(id))
+                            .unwrap_or("All employees in your access"),
+                    )
+                    .show_ui(ui, |ui| {
                         ui.selectable_value(
                             &mut self.performance_state.employee,
-                            Some(e.id),
-                            format!(
-                                "{} · {}{}",
-                                e.employee_code,
-                                e.full_name,
-                                if e.status == EmployeeStatus::Archived {
-                                    " (archived)"
-                                } else {
-                                    ""
-                                }
-                            ),
+                            None,
+                            "All employees in your access",
                         );
-                    }
-                });
-            ui.add(
-                egui::TextEdit::singleline(&mut self.performance_state.search)
-                    .hint_text("Search employee, title or cycle")
-                    .desired_width(260.0),
-            );
-        });
+                        for e in &self.data.employees {
+                            ui.selectable_value(
+                                &mut self.performance_state.employee,
+                                Some(e.id),
+                                format!(
+                                    "{} · {}{}",
+                                    e.employee_code,
+                                    e.full_name,
+                                    if e.status == EmployeeStatus::Archived {
+                                        " (archived)"
+                                    } else {
+                                        ""
+                                    }
+                                ),
+                            );
+                        }
+                    });
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.performance_state.search)
+                        .hint_text("Search employee, title or cycle")
+                        .desired_width(260.0),
+                )
+                .changed()
+            })
+            .inner;
+        search_changed || self.performance_state.employee != before
     }
     fn performance_goals(&mut self, ui: &mut Ui) {
         if let Some(g) = self
@@ -489,7 +550,12 @@ impl HrisApp {
             self.performance_review_detail(ui, &r);
             return;
         }
+        let today = self.data.company.today();
         card(ui, |ui| {
+            let previous = (
+                self.performance_state.appraisal_stage,
+                self.performance_state.appraisal_deadline,
+            );
             ui.horizontal_wrapped(|ui| {
                 if self
                     .data
@@ -504,12 +570,40 @@ impl HrisApp {
                     self.performance_state.assignment_form =
                         Some(AssignmentDraft::new(person, None));
                 }
-                ui.checkbox(
-                    &mut self.performance_state.reviews_cancelled,
-                    "Include cancelled",
-                );
+                egui::ComboBox::from_id_salt("appraisal-stage")
+                    .selected_text(self.performance_state.appraisal_stage.label())
+                    .show_ui(ui, |ui| {
+                        for stage in AppraisalStage::ALL {
+                            ui.selectable_value(
+                                &mut self.performance_state.appraisal_stage,
+                                stage,
+                                stage.label(),
+                            );
+                        }
+                    });
             });
-            self.performance_filter(ui);
+            if self.performance_state.appraisal_stage == AppraisalStage::Drafts {
+                ui.horizontal_wrapped(|ui| {
+                    for deadline in DeadlineFilter::ALL {
+                        ui.selectable_value(
+                            &mut self.performance_state.appraisal_deadline,
+                            deadline,
+                            deadline.label(),
+                        );
+                    }
+                });
+            } else {
+                self.performance_state.appraisal_deadline = DeadlineFilter::All;
+            }
+            if self.performance_filter(ui)
+                || previous
+                    != (
+                        self.performance_state.appraisal_stage,
+                        self.performance_state.appraisal_deadline,
+                    )
+            {
+                self.performance_state.appraisal_page = ListPager::default();
+            }
             if !self
                 .data
                 .access
@@ -518,30 +612,43 @@ impl HrisApp {
                 ui.label("Review your assigned current reports and read your own published appraisals. Drafts and private HR notes remain restricted.");
             }
         });
-        let q = self.performance_state.search.to_lowercase();
+        let q = self.performance_state.search.trim().to_lowercase();
         let mut rows: Vec<_> = self
             .data
             .performance
             .reviews
             .iter()
             .filter(|r| {
-                performance::review(&self.data, r.id).is_ok()
-                    && (self.performance_state.reviews_cancelled || r.status != "cancelled")
+                performance::can_read_review(&self.data, r)
+                    && self.performance_state.appraisal_stage.matches(
+                        &r.status,
+                        r.due_on,
+                        self.performance_state.appraisal_deadline,
+                        today,
+                    )
                     && self
                         .performance_state
                         .employee
                         .is_none_or(|e| e == r.employee_id)
-                    && format!("{} {} {}", r.employee_code, r.employee_name, r.cycle_name)
-                        .to_lowercase()
-                        .contains(&q)
+                    && (q.is_empty()
+                        || format!("{} {} {}", r.employee_code, r.employee_name, r.cycle_name)
+                            .to_lowercase()
+                            .contains(&q))
             })
-            .cloned()
             .collect();
-        rows.sort_by_key(|r| (r.due_on, r.employee_code.clone(), r.id));
+        rows.sort_by(|a, b| {
+            (a.due_on, &a.employee_code, a.id).cmp(&(b.due_on, &b.employee_code, b.id))
+        });
         if rows.is_empty() {
             empty(ui, "No matching appraisals.");
+            return;
         }
-        for r in rows {
+        let anchor = ui.label(format!("Matching appraisals · {}", rows.len()));
+        self.performance_state
+            .appraisal_page
+            .controls(ui, rows.len(), "appraisals");
+        let page = self.performance_state.appraisal_page.range(rows.len());
+        for r in &rows[page] {
             ui.add_space(10.0);
             card(ui, |ui| {
                 ui.label(
@@ -550,17 +657,42 @@ impl HrisApp {
                         .size(18.0),
                 );
                 ui.horizontal_wrapped(|ui| {
-                    badge(ui, &r.status, r.status == "published");
+                    let stage = match r.status.as_str() {
+                        "draft" => "Draft",
+                        "submitted" => "Awaiting publication",
+                        "published" => "Published",
+                        "cancelled" => "Cancelled",
+                        _ => &r.status,
+                    };
+                    badge(ui, stage, r.status == "published");
                     ui.label(&r.cycle_name);
                 });
                 ui.label(format!(
                     "Reviewer: {} · Review due {}",
                     r.reviewer_name, r.due_on
                 ));
+                if r.status == "draft" && r.due_on <= today {
+                    badge(
+                        ui,
+                        if r.due_on == today {
+                            "Due today"
+                        } else {
+                            "Overdue"
+                        },
+                        false,
+                    );
+                }
                 if ui.button("Open appraisal").clicked() {
                     self.performance_state.review_id = Some(r.id);
                 }
             });
+        }
+        if self
+            .performance_state
+            .appraisal_page
+            .controls(ui, rows.len(), "appraisals")
+        {
+            ui.scroll_to_rect(anchor.rect, Some(Align::Min));
         }
     }
     fn performance_review_detail(&mut self, ui: &mut Ui, r: &performance::Review) {
@@ -1453,6 +1585,33 @@ impl HrisApp {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn draft_deadlines_do_not_include_submitted_published_or_cancelled_reviews() {
+        let today = NaiveDate::from_ymd_opt(2026, 11, 7).unwrap();
+        let overdue = today - Duration::days(1);
+        for status in ["draft", "submitted", "published", "cancelled"] {
+            let due =
+                AppraisalStage::Drafts.matches(status, overdue, DeadlineFilter::Overdue, today);
+            assert_eq!(due, status == "draft");
+            assert_eq!(
+                AppraisalStage::Current.matches(status, overdue, DeadlineFilter::All, today),
+                status != "cancelled"
+            );
+            assert_eq!(
+                AppraisalStage::Submitted.matches(status, overdue, DeadlineFilter::Overdue, today),
+                status == "submitted"
+            );
+        }
+        assert!(!AppraisalStage::Drafts.matches("draft", today, DeadlineFilter::Overdue, today));
+        assert!(AppraisalStage::Drafts.matches("draft", today, DeadlineFilter::Today, today));
+        assert!(AppraisalStage::Cancelled.matches(
+            "cancelled",
+            overdue,
+            DeadlineFilter::All,
+            today
+        ));
+    }
+
     #[test]
     fn unrelated_refresh_preserves_an_unsaved_goal() {
         let data = DemoStore::new().data;

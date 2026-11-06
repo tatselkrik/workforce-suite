@@ -23,6 +23,10 @@ review to draft; published reviews are immutable. Corrections use a follow-up
 cycle. Cycle labels/dates freeze when reviews are assigned, and cycles close
 only after unfinished reviews are resolved.
 
+Filter Appraisals by stage. The **Drafts** view includes deadline filters and
+**Awaiting publication** lists submitted reviews. Lists show 25 records per page
+within the current reviewer's or HR user's existing access.
+
 An exit-readiness projection adds unfinished reviews about/assigned to a
 leaving employee. A protected late guard also rejects finalization for older
 clients, rolling back membership deactivation and employee archiving together.

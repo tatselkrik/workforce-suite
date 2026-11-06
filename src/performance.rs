@@ -359,7 +359,15 @@ pub fn review(data: &Snapshot, id: Uuid) -> Result<&Review> {
         .find(|r| r.id == id && r.company_id == data.company.id)
         .context("Appraisal not found. Refresh.")?;
     ensure!(
-        (data
+        can_read_review(data, r),
+        "This appraisal is outside your current access."
+    );
+    Ok(r)
+}
+
+pub(crate) fn can_read_review(data: &Snapshot, r: &Review) -> bool {
+    r.company_id == data.company.id
+        && ((data
             .access
             .allows(crate::staff_roles::Capability::DevelopmentAdministration)
             || data
@@ -370,10 +378,7 @@ pub fn review(data: &Snapshot, id: Uuid) -> Result<&Review> {
                 .access
                 .allows(crate::staff_roles::Capability::TeamReview)
                 && Some(r.reviewer_employee_id) == data.access.employee_id
-                && manages_goal(data, r.employee_id)),
-        "This appraisal is outside your current access."
-    );
-    Ok(r)
+                && manages_goal(data, r.employee_id)))
 }
 pub fn cycle(data: &Snapshot, id: Uuid) -> Result<&Cycle> {
     data.performance

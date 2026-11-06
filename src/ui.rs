@@ -125,7 +125,7 @@ pub struct HrisApp {
     busy: bool,
     notice: Option<(String, bool)>,
     search: String,
-    directory_page: EmployeePager,
+    directory_page: ListPager,
     employee_status: Option<EmployeeStatus>,
     employee_view: EmployeeView,
     organization: organization_view::State,
@@ -389,7 +389,7 @@ impl HrisApp {
             },
             search: String::new(),
             employee_status: Some(EmployeeStatus::Active),
-            directory_page: EmployeePager::default(),
+            directory_page: ListPager::default(),
             employee_view: EmployeeView::Directory,
             services_state: Default::default(),
             work_state: Default::default(),
@@ -1234,7 +1234,7 @@ impl HrisApp {
                         self.leave_request_import_state =
                             leave_request_import_view::State::default();
                         self.employee_view = EmployeeView::Directory;
-                        self.directory_page = EmployeePager::default();
+                        self.directory_page = ListPager::default();
                         self.document_form = None;
                         self.account_form = None;
                         self.employee_form = None;
@@ -1277,7 +1277,7 @@ impl HrisApp {
                         self.leave_request_import_state =
                             leave_request_import_view::State::default();
                         self.employee_view = EmployeeView::Directory;
-                        self.directory_page = EmployeePager::default();
+                        self.directory_page = ListPager::default();
                         self.document_form = None;
                         self.clear_profile_secrets(ctx);
                         self.session_confirmation = None;
@@ -1770,7 +1770,7 @@ impl HrisApp {
                 self.shift_state.roster_employee = Some(id);
                 self.shift_state.roster_filter = shifts_view::RosterFilter::All;
                 self.shift_state.roster_search = shifts_view::RosterSearch::default();
-                self.shift_state.roster_pager = EmployeePager::default();
+                self.shift_state.roster_pager = ListPager::default();
                 self.attendance_date = self.data.company.today();
                 self.calendar_month = month_start(self.attendance_date);
                 self.break_state.detail = None;
@@ -2865,7 +2865,7 @@ impl HrisApp {
                 self.work_location_filter,
             )
         {
-            self.directory_page = EmployeePager::default();
+            self.directory_page = ListPager::default();
         }
 
         let query = self.search.trim().to_lowercase();
@@ -2913,10 +2913,10 @@ impl HrisApp {
             })
             .inner;
         let selected = card(ui, |ui| {
-            self.directory_page.controls(ui, rows.len());
+            self.directory_page.controls(ui, rows.len(), "employees");
             let page = self.directory_page.range(rows.len());
             let selected = Self::directory_rows(ui, &self.data, &rows[page], can_edit);
-            if self.directory_page.controls(ui, rows.len()) {
+            if self.directory_page.controls(ui, rows.len(), "employees") {
                 ui.scroll_to_rect(count.rect, Some(Align::Min));
             }
             if rows.is_empty() {
@@ -3225,11 +3225,15 @@ impl HrisApp {
             let filters_changed = search_changed || previous_filter != self.shift_state.roster_filter;
             self.shift_state.set_roster_context(date, filters_changed);
             let pager = &mut self.shift_state.roster_pager;
-            pager.controls(ui, rows.len());
+            pager.controls(ui, rows.len(), "employees");
             let page = pager.range(rows.len());
             ui.add_space(8.0);
             self.attendance_roster_rows(ui, &rows[page], date);
-            if self.shift_state.roster_pager.controls(ui, rows.len()) {
+            if self
+                .shift_state
+                .roster_pager
+                .controls(ui, rows.len(), "employees")
+            {
                 ui.scroll_to_rect(roster_header.rect, Some(Align::Min));
             }
             if rows.is_empty() {
@@ -4886,16 +4890,16 @@ impl DeadlineFilter {
     }
 }
 
-const EMPLOYEE_PAGE_SIZE: usize = 25;
+const LIST_PAGE_SIZE: usize = 25;
 
 #[derive(Default)]
-struct EmployeePager {
+struct ListPager {
     page: usize,
 }
 
-impl EmployeePager {
-    fn controls(&mut self, ui: &mut Ui, total: usize) -> bool {
-        let pages = total.div_ceil(EMPLOYEE_PAGE_SIZE).max(1);
+impl ListPager {
+    fn controls(&mut self, ui: &mut Ui, total: usize, noun: &str) -> bool {
+        let pages = total.div_ceil(LIST_PAGE_SIZE).max(1);
         self.page = self.page.min(pages - 1);
         let before = self.page;
         if pages > 1 {
@@ -4903,8 +4907,14 @@ impl EmployeePager {
                 if ui.add_enabled(self.page > 0, egui::Button::new("Previous")).clicked() {
                     self.page -= 1;
                 }
-                ui.label(format!("Page {} of {pages} · {total} employees", self.page + 1));
-                if ui.add_enabled(self.page + 1 < pages, egui::Button::new("Next")).clicked() {
+                ui.label(format!(
+                    "Page {} of {pages} · {total} {noun}",
+                    self.page + 1
+                ));
+                if ui
+                    .add_enabled(self.page + 1 < pages, egui::Button::new("Next"))
+                    .clicked()
+                {
                     self.page += 1;
                 }
             });
@@ -4913,8 +4923,8 @@ impl EmployeePager {
     }
 
     fn range(&self, total: usize) -> std::ops::Range<usize> {
-        let start = self.page * EMPLOYEE_PAGE_SIZE;
-        start..(start + EMPLOYEE_PAGE_SIZE).min(total)
+        let start = self.page * LIST_PAGE_SIZE;
+        start..(start + LIST_PAGE_SIZE).min(total)
     }
 }
 

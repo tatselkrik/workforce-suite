@@ -318,7 +318,7 @@ pub(super) struct State {
     pub roster_employee: Option<Uuid>,
     pub roster_filter: RosterFilter,
     pub roster_search: RosterSearch,
-    pub roster_pager: EmployeePager,
+    pub roster_pager: ListPager,
     roster_context: Option<(NaiveDate, Option<Uuid>)>,
     pub template: Option<ShiftTemplateDraft>,
     pub assignment: Option<ShiftAssignmentDraft>,
@@ -333,7 +333,7 @@ impl State {
     pub(super) fn set_roster_context(&mut self, date: NaiveDate, filters_changed: bool) {
         let context = Some((date, self.roster_employee));
         if self.roster_context != context || filters_changed {
-            self.roster_pager = EmployeePager::default();
+            self.roster_pager = ListPager::default();
         }
         self.roster_context = context;
     }
@@ -890,7 +890,7 @@ mod tests {
         assert_eq!(state.roster_pager.range(125), 100..125);
         let ctx = egui::Context::default();
         let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
-            state.roster_pager.controls(ui, 32);
+            state.roster_pager.controls(ui, 32, "employees");
             assert_eq!(state.roster_pager.range(32), 25..32);
         });
         output.textures_delta.clear();
