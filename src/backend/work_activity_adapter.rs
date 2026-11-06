@@ -16,6 +16,30 @@ fn decode_save(response: Response) -> Result<Value> {
     decode(response)
 }
 impl CloudClient {
+    pub fn work_report_follow_ups(
+        &mut self,
+        current: &Snapshot,
+        work_date: NaiveDate,
+    ) -> Result<crate::work_activity::ReportFollowUps> {
+        let access = self.current_access()?;
+        if access != current.access {
+            return Err(AccessRevoked.into());
+        }
+        let mut follow_ups: crate::work_activity::ReportFollowUps = decode(
+            self.request(Method::POST, "rpc/work_report_follow_ups")?
+                .json(&json!({"p_work_date": work_date}))
+                .send()?,
+        )?;
+        if self.current_access()? != access {
+            return Err(AccessRevoked.into());
+        }
+        follow_ups.validate(current, work_date)?;
+        follow_ups
+            .rows
+            .sort_by_cached_key(|row| current.employee_name(row.employee_id).to_lowercase());
+        Ok(follow_ups)
+    }
+
     pub fn station_operation(&mut self, request: &Value) -> Result<Value> {
         ensure!(
             self.product != Some(crate::desktop::Product::Payroll),

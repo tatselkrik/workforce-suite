@@ -84,6 +84,74 @@ pub struct DailyReport {
     pub review_note: String,
     pub updated_at: DateTime<Utc>,
 }
+
+pub fn can_review(data: &Snapshot, employee: Uuid) -> bool {
+    let Some(reviewer) = data.access.employee_id else {
+        return false;
+    };
+    reviewer != employee
+        && data.employees.iter().any(|e| {
+            e.id == employee
+                && e.company_id == data.company.id
+                && e.status == crate::domain::EmployeeStatus::Active
+                && (data.access.allows(Capability::AttendanceAdministration)
+                    || (data.access.allows(Capability::TeamReview)
+                        && e.reports_to == Some(reviewer)))
+        })
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FollowUpState {
+    Missing,
+    Draft,
+    Returned,
+}
+impl FollowUpState {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Missing => "No report yet",
+            Self::Draft => "Draft saved",
+            Self::Returned => "Returned for revision",
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ReportFollowUp {
+    pub employee_id: Uuid,
+    pub state: FollowUpState,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ReportFollowUps {
+    company_id: Uuid,
+    user_id: Uuid,
+    pub work_date: NaiveDate,
+    pub rows: Vec<ReportFollowUp>,
+}
+impl ReportFollowUps {
+    pub fn validate(&self, data: &Snapshot, work_date: NaiveDate) -> Result<()> {
+        ensure!(
+            self.company_id == data.company.id
+                && self.user_id == data.access.user_id
+                && self.work_date == work_date
+                && (data.access.allows(Capability::AttendanceAdministration)
+                    || data.access.allows(Capability::TeamReview)),
+            "Report follow-ups do not match the current reviewer and work date."
+        );
+        let mut employees = std::collections::HashSet::new();
+        ensure!(
+            self.rows.len() <= 5000
+                && self.rows.iter().all(|row| {
+                    can_review(data, row.employee_id) && employees.insert(row.employee_id)
+                }),
+            "Report follow-ups exceed the current reviewer scope or supported size."
+        );
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Submission {
     pub report_id: Uuid,
@@ -306,6 +374,38 @@ impl std::error::Error for Rejected {}
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn follow_ups_reject_stale_or_out_of_scope_results() {
+        let mut data = crate::domain::DemoStore::new().data;
+        let reviewer = data.employees[0].id;
+        let employee = data.employees[1].id;
+        data.access.role = crate::access::Role::Manager;
+        data.access.employee_id = Some(reviewer);
+        data.employees[1].reports_to = Some(reviewer);
+        let work_date = data.company.today();
+        let mut report = ReportFollowUps {
+            company_id: data.company.id,
+            user_id: data.access.user_id,
+            work_date,
+            rows: vec![ReportFollowUp {
+                employee_id: employee,
+                state: FollowUpState::Missing,
+            }],
+        };
+        assert!(report.validate(&data, work_date).is_ok());
+        assert!(report.validate(&data, work_date.pred_opt().unwrap()).is_err());
+        report.rows[0].employee_id = reviewer;
+        assert!(report.validate(&data, work_date).is_err());
+        report.rows[0].employee_id = employee;
+        data.employees[1].reports_to = None;
+        assert!(report.validate(&data, work_date).is_err());
+        data.access.role = crate::access::Role::HrGeneralist;
+        assert!(report.validate(&data, work_date).is_ok());
+        data.employees[1].status = crate::domain::EmployeeStatus::Archived;
+        assert!(report.validate(&data, work_date).is_err());
+    }
+
     #[test]
     fn daily_report_requires_a_summary_only_on_submission() {
         let mut body = ReportBody::default();

@@ -75,7 +75,75 @@ try{
  await db.exec('reset role');const retained=(await db.query('select *from hris_private.kiosk_punch_intents where id=$1',[punch.request_id])).rows[0];eq(retained.result,saved,'Cleanup preserves immutable attendance receipt');eq(retained.purged_by,hr,'Cleanup records authorized HR actor');eq(retained.photo_hash,punch.photo_hash,'Cleanup retains evidence digest');
  await service();const expired=request(office);await prepare(expired);await db.exec('reset role');await db.query("update hris_private.kiosk_punch_intents set expires_at=now()-interval '1 minute'where id=$1",[expired.request_id]);await service();eq((await prepare(expired)).accepted,false,'Expired pending photo requires a new capture');await deny('select public.kiosk_punch_complete($1,$2)',[grant.token,expired.request_id]);
  await session(admin);const hybrid=policy(office,'hybrid');hybrid.office_days=[];await rpc('work_activity_change',hybrid);await session(office);eq((await db.query('select public.work_attendance_status()r')).rows[0].r.method,'remote','Hybrid non-office day uses own remote attendance');await service();eq((await prepare(request(office))).accepted,false,'Hybrid remote date cannot use kiosk');
- await db.query('select public.kiosk_station_close($1)',[grant.token]);eq((await prepare(request(worker))).accepted,false,'Closing a station revokes its grant');
+
+ const followUpSql = 'select public.work_report_follow_ups($1::date) r';
+ const followUps = async (date = today) => (await db.query(followUpSql, [date])).rows[0].r;
+ const remoteRow = state => ({ employee_id: emp(remote).id, state });
+ await session(office);
+ const hybridRecord = (await db.query(
+  'insert into public.attendance(company_id,employee_id)values($1,$2)returning id',
+  [company, emp(office).id]
+ )).rows[0].id;
+ await deny(followUpSql, [today]);
+ await session(null, 'anon');
+ await deny(followUpSql, [today]);
+ await session(hr);
+ eq(await followUps(), {
+  company_id: company, user_id: hr, work_date: today, rows: [remoteRow('missing')]
+ }, 'Uses saved remote method after policy changes and excludes open shifts and kiosk punches');
+ await deny(followUpSql, [null]);
+ await deny(followUpSql, ['infinity']);
+ const dates = (await db.query('select ($1::date-1)::text previous,($1::date+1)::text next', [today])).rows[0];
+ await deny(followUpSql, [dates.next]);
+ eq((await followUps(dates.previous)).rows, [], 'Work date must match the recorded shift');
+
+ await session(office);
+ await db.query('update public.attendance set checked_out_at=now()where id=$1', [hybridRecord]);
+ await session(hr);
+ eq((await followUps()).rows.length, 2, 'Closed hybrid remote shift joins the queue');
+ await session(admin);
+ await db.exec('reset role');
+ await db.query('update public.employees set reports_to=$1 where id=$2', [emp(manager).id, emp(remote).id]);
+ await session(manager);
+ eq((await followUps()).rows, [remoteRow('missing')], 'Manager sees current team only');
+
+ const report = {
+  id: id(), work_date: today, expected_revision: -1, task_ids: [],
+  body: { summary: 'Completed the remote shift', completed: '', unfinished: '', blockers: '', next_steps: '' }
+ };
+ const changeReport = (operation, updates) => rpc('work_activity_change', {
+  ...report, request_id: id(), operation, ...updates
+ });
+ await session(remote);
+ await changeReport('report_save', {});
+ await session(manager);
+ eq((await followUps()).rows, [remoteRow('draft')], 'Saved draft is distinguished from missing');
+ await session(remote);
+ await changeReport('report_submit', { expected_revision: 1 });
+ await session(manager);
+ eq((await followUps()).rows, [], 'Submitted report moves to the existing review queue');
+ const review = (status, expected_revision) => rpc('work_activity_change', {
+  id: report.id, request_id: id(), operation: 'report_review', status, expected_revision,
+  note: 'Fictional independent review'
+ });
+ await review('returned', 2);
+ eq((await followUps()).rows, [remoteRow('returned')], 'Returned report appears again');
+ await session(admin);
+ await db.exec('reset role');
+ await db.query('update public.employees set reports_to=null where id=$1', [emp(remote).id]);
+ await session(manager);
+ eq((await followUps()).rows, [], 'Former manager loses the follow-up immediately');
+ await session(hr);
+ eq((await followUps()).rows.find(row => row.employee_id === emp(remote).id), remoteRow('returned'),
+  'HR keeps review scope after reassignment');
+ await session(remote);
+ await changeReport('report_submit', { expected_revision: 3 });
+ await session(hr);
+ await review('approved', 4);
+ eq((await followUps()).rows, [{ employee_id: emp(office).id, state: 'missing' }],
+  'Approval clears the follow-up and leaves other staff untouched');
+
+ await service();await db.query('select public.kiosk_station_close($1)',[grant.token]);eq((await prepare(request(worker))).accepted,false,'Closing a station revokes its grant');
  await session(admin);const second=await stationRpc({operation:'unlock',id:station});await db.exec('reset role');await db.query("update hris_private.attendance_station_sessions set expires_at=now()-interval '1 second'where token_hash=encode(sha256(convert_to($1,'UTF8')),'hex')",[second.token]);await service();eq((await prepare({...request(worker),token:second.token})).accepted,false,'Expired session cannot punch');
  await session(admin);await stationRpc({operation:'save',id:station,name:'Fictional reception PC',expected_revision:0,active:false});
  await service();eq((await prepare(request(office))).accepted,false,'Disabling a station revokes its grants immediately');

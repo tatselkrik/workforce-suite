@@ -29,13 +29,6 @@ pub(super) struct State {
 
 impl HrisApp {
     pub(super) fn attendance_navigation(&mut self, ui: &mut Ui) -> bool {
-        let tabs_per_row = if ui.available_width() >= 700.0 {
-            5
-        } else if ui.available_width() >= 420.0 {
-            3
-        } else {
-            2
-        };
         let tabs = [
             (Tab::Daily, "Daily attendance"),
             (Tab::Shifts, "Shift schedules"),
@@ -48,27 +41,27 @@ impl HrisApp {
             (Tab::DailyWork, "Tasks & daily reports"),
             (Tab::Stations, "Office stations"),
         ];
-        for row in tabs.chunks(tabs_per_row) {
-            ui.horizontal_wrapped(|ui| {
-                for &(tab, label) in row {
-                    ui.add_enabled_ui(
-                        self.shift_state.template.is_none()
-                            && self.shift_state.assignment.is_none()
-                            && self.break_state.form.is_none()
-                            && self.break_state.void_target.is_none()
-                            && !self.calculation_state.editing()
-                            && !self.request_state.editing()
-                            && !self.overtime_state.editing()
-                            && !self.work_state.editing(),
-                        |ui| {
-                            ui.selectable_value(&mut self.shift_state.tab, tab, label);
-                        },
-                    );
+        let can_switch = self.shift_state.template.is_none()
+            && self.shift_state.assignment.is_none()
+            && self.break_state.form.is_none()
+            && self.break_state.void_target.is_none()
+            && !self.calculation_state.editing()
+            && !self.request_state.editing()
+            && !self.overtime_state.editing()
+            && !self.work_state.editing();
+        ui.horizontal_wrapped(|ui| {
+            for (tab, label) in tabs {
+                let button = egui::Button::selectable(self.shift_state.tab == tab, label)
+                    .wrap_mode(egui::TextWrapMode::Extend);
+                if ui.add_enabled(can_switch, button).clicked() {
+                    self.shift_state.tab = tab;
                 }
-            });
-        }
+            }
+        });
         ui.add_space(10.0);
-        if self.shift_state.tab == Tab::Daily && self.attendance_date > self.data.company.today() {
+        if matches!(self.shift_state.tab, Tab::Daily | Tab::DailyWork)
+            && self.attendance_date > self.data.company.today()
+        {
             self.attendance_date = self.data.company.today();
             self.calendar_month = month_start(self.attendance_date);
         }

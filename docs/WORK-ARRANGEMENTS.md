@@ -68,6 +68,12 @@ or returning it. Returned reports can be revised and resubmitted. Each submissio
 and decision remains available in history. Review permissions follow the current
 reporting relationship; an earlier Manager does not retain access after reassignment.
 
+In **Daily reports → Remote report follow-ups**, choose a work date and load the
+list of completed remote shifts with a missing, draft or returned report. The
+list uses the work date and attendance method saved at check-in, including hybrid
+remote days and overnight shifts. Managers see their current team and HR sees
+the current staff they can review. The employee filter narrows the list.
+
 Report approval and task acceptance do not change punches, absence, overtime,
 performance ratings or pay. Employees can check out without submitting a report.
 Task availability never blocks legitimate attendance.

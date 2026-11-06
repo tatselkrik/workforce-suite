@@ -1152,6 +1152,7 @@ impl HrisApp {
                 continue;
             }
             self.busy = false;
+            self.work_state.follow_ups = None;
             if update.work_activity_clear { self.work_state.context=None; }
             if update.work_activity_rejected { self.work_state.rejected=true; }
             if update.leadership_clear { self.leadership_state.report=None; }
@@ -1172,6 +1173,7 @@ impl HrisApp {
                         if let Err(error)=self.work_state.accept(context,&data){self.work_state.clear();self.notice=Some((error.to_string(),true));}
                         if was_saving { work_activity_view::clear_undo(ctx); }
                     }
+                    self.work_state.follow_ups = update.work_report_follow_ups;
                     let newly_signed_in =
                         self.data.mode == Mode::SignedOut && data.mode != Mode::SignedOut;
                     if self

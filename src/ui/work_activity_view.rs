@@ -1,10 +1,11 @@
 use super::*;
-use crate::work_activity::{Context, DailyReport, ReportBody, Task};
+use crate::work_activity::{Context, DailyReport, ReportBody, ReportFollowUps, Task, can_review};
 use serde_json::{Value, json};
 
 #[derive(Default)]
 pub(super) struct State {
     pub context: Option<Context>,
+    pub follow_ups: Option<ReportFollowUps>,
     pub form: Option<Form>,
     pub pending: Option<Value>,
     pub rejected: bool,
@@ -166,19 +167,6 @@ fn editor_text(ui: &mut Ui, label: &str, value: &mut String, multiline: bool, ma
     }
     ui.add_space(6.0);
 }
-fn can_review(data: &Snapshot, employee: Uuid) -> bool {
-    data.access.employee_id != Some(employee)
-        && (data
-            .access
-            .allows(crate::staff_roles::Capability::AttendanceAdministration)
-            || (data
-                .access
-                .allows(crate::staff_roles::Capability::TeamReview)
-                && data
-                    .employees
-                    .iter()
-                    .any(|e| e.id == employee && e.reports_to == data.access.employee_id)))
-}
 impl HrisApp {
     pub(super) fn attendance_photos(&mut self, ui: &mut Ui) {
         let Some(_record) = self.work_state.evidence_target else {
@@ -286,12 +274,12 @@ impl HrisApp {
         ui.label("Webcam snapshots are private attendance evidence. Biometric recognition remains disabled.");
     }
     pub(super) fn work_activity(&mut self, ui: &mut Ui, policies: bool) {
-        ui.heading(if policies {
-            "Work arrangements"
+        if policies {
+            ui.heading("Work arrangements");
+            ui.label("Set dated attendance methods for office, remote and hybrid work.");
         } else {
-            "Tasks and daily reports"
-        });
-        ui.label(if policies{"Set dated attendance methods for office, remote and hybrid work."}else{"Assign outcomes, record progress and review end-of-day reports. Attendance remains a separate record."});
+            ui.label("Assign outcomes, record progress and review end-of-day reports.");
+        }
         if self.work_state.form.is_some() {
             self.work_editor(ui);
             return;
@@ -380,6 +368,12 @@ impl HrisApp {
             }
         });
         if self.work_state.report_tab {
+            if company_mode
+                && (context.can_administer
+                    || self.data.access.allows(crate::staff_roles::Capability::TeamReview))
+            {
+                self.report_follow_ups(ui, selected_employee);
+            }
             ui.label(format!(
                 "Awaiting review: {} · Returned for revision: {}",
                 context
@@ -507,6 +501,58 @@ impl HrisApp {
             }
         }
     }
+    fn report_follow_ups(&mut self, ui: &mut Ui, selected_employee: Option<Uuid>) {
+        card(ui, |ui| {
+            ui.strong("Remote report follow-ups");
+            ui.label("Review report status for completed remote shifts. Use the shift start date for overnight work.");
+            ui.horizontal_wrapped(|ui| {
+                let today = self.data.company.today();
+                let date = ui.button(self.attendance_date.format("%b %d, %Y").to_string());
+                egui::Popup::from_toggle_button_response(&date).show(|ui| {
+                    if attendance_calendar(
+                        ui,
+                        &mut self.attendance_date,
+                        &mut self.calendar_month,
+                        today,
+                        &self.data,
+                    ) {
+                        self.work_state.follow_ups = None;
+                        ui.close();
+                    }
+                });
+                if ui
+                    .add_enabled(!self.busy, egui::Button::new("Load follow-ups"))
+                    .clicked()
+                {
+                    self.work_state.follow_ups = None;
+                    self.send(Command::WorkReportFollowUps(self.attendance_date));
+                }
+            });
+            if let Some(follow_ups) = self
+                .work_state
+                .follow_ups
+                .as_ref()
+                .filter(|result| result.work_date == self.attendance_date)
+            {
+                let mut rows = follow_ups
+                    .rows
+                    .iter()
+                    .filter(|row| selected_employee.is_none_or(|id| row.employee_id == id))
+                    .peekable();
+                if rows.peek().is_none() {
+                    ui.label("No report follow-ups for this selection.");
+                }
+                for row in rows {
+                    ui.label(format!(
+                        "{} · {}",
+                        self.data.employee_name(row.employee_id),
+                        row.state.label()
+                    ));
+                }
+            }
+        });
+    }
+
     fn edit_work_report(&mut self, r: &DailyReport) {
         let mut f = Form::new("report_save", r.work_date);
         f.id = r.id;

@@ -40,7 +40,7 @@ use crate::documents::{self, DocumentAction, DocumentState, EmployeeDocument};
 use crate::domain::*;
 use crate::updater::{self, SignedRelease, UpdateConfig, UpdateState, VerifiedRelease};
 use anyhow::{Context, Result, bail, ensure};
-use chrono::Utc;
+use chrono::{NaiveDate, Utc};
 use reqwest::{
     Method, StatusCode,
     blocking::{Client, RequestBuilder, Response},
@@ -2304,6 +2304,7 @@ fn decode<T: DeserializeOwned>(response: Response) -> Result<T> {
 
 pub enum Command {
     WorkActivity(Option<Value>),
+    WorkReportFollowUps(NaiveDate),
     Services(crate::services::Operation),
     Relations(crate::relations::Operation),
     Benefits(crate::benefits::Operation),
@@ -2421,6 +2422,7 @@ pub struct Update {
     pub work_activity: Option<crate::work_activity::Context>,
     pub work_activity_clear: bool,
     pub work_activity_rejected: bool,
+    pub work_report_follow_ups: Option<crate::work_activity::ReportFollowUps>,
     pub leadership: Option<crate::leadership::Report>,
     pub leadership_clear: bool,
     pub benefits: Option<crate::benefits::Response>,
@@ -2526,6 +2528,7 @@ fn worker_in(
             let mut message = String::new();
             let work_activity_requested = matches!(&command,Command::WorkActivity(_));
             let mut work_activity_result = None;
+            let mut work_report_follow_ups = None;
             let mut opening_preview_result = None;
             let mut leave_import_history_result = None;
             let mut attendance_import_history_result = None;
@@ -3455,6 +3458,14 @@ fn worker_in(
                     });
                     message="Current work arrangements and reports refreshed.".into();Ok(current.clone())
                 })(),
+                Command::WorkReportFollowUps(work_date) => (|| {
+                    work_report_follow_ups = Some(
+                        cloud.as_mut().context("Sign in to load report follow-ups.")?
+                            .work_report_follow_ups(&current, work_date)?,
+                    );
+                    message = "Remote report follow-ups loaded.".into();
+                    Ok(current.clone())
+                })(),
                 Command::Benefits(operation) => (|| {
                     benefits_loaded = true;
                     if cloud.is_none() && current.mode == Mode::Demo && current.access.user_id.is_nil() {
@@ -3624,6 +3635,7 @@ fn worker_in(
                     work_activity: work_activity_result,
                     work_activity_clear: work_activity_requested && result.is_err(),
                     work_activity_rejected: result.as_ref().err().is_some_and(|e|e.is::<crate::work_activity::Rejected>()),
+                    work_report_follow_ups,
                     leadership: if result.is_ok() { leadership_result } else { None },
                     leadership_clear: !leadership_requested || result.is_err(),
                     services: services_result,
@@ -3693,6 +3705,7 @@ fn worker_in(
                             work_activity: None,
                             work_activity_clear: false,
                             work_activity_rejected: false,
+                            work_report_follow_ups: None,
                             staff_provision: None,
                             services: None,
                             services_clear: false,
