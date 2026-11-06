@@ -143,7 +143,8 @@ Open **Attendance → Daily attendance** and choose a date from the calendar. Se
 by employee name or code, or choose a department. **Open shifts**, **Completed**,
 **No check-in** and **On leave** count matching roster entries. Choose **All** to
 clear the status filter. Use **Previous** and **Next** when the results span
-multiple pages. The record-a-check-in picker is separate from roster search.
+multiple pages. On narrower windows, each row stacks the status, punch times
+and available actions. The record-a-check-in picker is separate from roster search.
 Review missing punches alongside scheduled work and approved leave.
 Employees use the punch method assigned by HR, either an office station or their
 own Android account.

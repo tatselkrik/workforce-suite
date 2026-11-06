@@ -128,6 +128,158 @@ impl RosterSearch {
     }
 }
 
+fn roster_status(row: &crate::attendance::DailyRow) -> (&'static str, bool) {
+    match &row.attendance {
+        Some(record) if record.checked_out_at.is_some() => ("Completed", true),
+        Some(_) => ("Checked in", true),
+        None if row.approved_leave_units >= 2 => ("Approved leave (full day)", false),
+        None if row.approved_leave_units == 1 => ("Approved leave (half-day)", false),
+        None if !row.scheduled_workday => ("Holiday / non-workday", false),
+        None => ("No check-in", false),
+    }
+}
+
+fn roster_shift(ui: &mut Ui, row: &crate::attendance::DailyRow) {
+    let text = match &row.planned_shift {
+        Some(plan) => format!("{} · {} · {}", plan.name, plan.hours(), plan.timezone),
+        None if row.attendance.is_some() => "No saved shift hours".into(),
+        None => "Company calendar".into(),
+    };
+    ui.add(egui::Label::new(RichText::new(text).small().color(muted(ui))).wrap());
+}
+
+impl HrisApp {
+    pub(super) fn attendance_roster_rows(
+        &mut self,
+        ui: &mut Ui,
+        rows: &[crate::attendance::DailyRow],
+        date: NaiveDate,
+    ) {
+        if ui.available_width() < 900.0 {
+            for row in rows {
+                ui.push_id(row.employee.id, |ui| {
+                    ui.separator();
+                    ui.add(egui::Label::new(RichText::new(&row.employee.full_name).strong()).wrap());
+                    ui.horizontal_wrapped(|ui| {
+                        ui.small(&row.employee.employee_code);
+                        let (label, positive) = roster_status(row);
+                        badge(ui, label, positive);
+                    });
+                    roster_shift(ui, row);
+                    if let Some(record) = &row.attendance {
+                        let [check_in, check_out, elapsed] = self.roster_times(record);
+                        ui.horizontal_wrapped(|ui| {
+                            ui.label(format!("In {check_in}"));
+                            ui.label(format!("Out {check_out}"));
+                            ui.label(format!("Elapsed · {elapsed}"));
+                        });
+                    }
+                    ui.horizontal_wrapped(|ui| {
+                        self.roster_breaks(ui, row.attendance.as_ref());
+                        self.roster_actions(ui, row, date);
+                    });
+                });
+            }
+        } else {
+            egui::ScrollArea::horizontal().show(ui, |ui| {
+                egui::Grid::new("attendance_table")
+                    .striped(true)
+                    .spacing([28.0, 16.0])
+                    .show(ui, |ui| {
+                        headers(
+                            ui,
+                            &["EMPLOYEE / PLANNED SHIFT", "CHECK-IN", "CHECK-OUT", "ELAPSED", "STATUS", ""],
+                        );
+                        for row in rows {
+                            ui.vertical(|ui| {
+                                ui.set_width(230.0);
+                                ui.label(RichText::new(&row.employee.full_name).strong())
+                                    .on_hover_text(&row.employee.employee_code);
+                                roster_shift(ui, row);
+                                self.roster_breaks(ui, row.attendance.as_ref());
+                            });
+                            if let Some(record) = &row.attendance {
+                                for value in self.roster_times(record) {
+                                    ui.label(value);
+                                }
+                            } else {
+                                for _ in 0..3 {
+                                    ui.label("—");
+                                }
+                            }
+                            let (label, positive) = roster_status(row);
+                            badge(ui, label, positive);
+                            ui.horizontal(|ui| self.roster_actions(ui, row, date));
+                            ui.end_row();
+                        }
+                    });
+            });
+        }
+    }
+
+    fn roster_times(&self, record: &Attendance) -> [String; 3] {
+        let tz = self.data.company.tz();
+        let format = self.time_format();
+        [
+            record.checked_in_at.with_timezone(&tz).format(format).to_string(),
+            record.checked_out_at
+                .map(|time| time.with_timezone(&tz).format(format).to_string())
+                .unwrap_or_else(|| "—".into()),
+            record.checked_out_at
+                .map(|time| {
+                    let minutes = (time - record.checked_in_at).num_minutes();
+                    format!("{:.1} h", minutes as f64 / 60.0)
+                })
+                .unwrap_or_else(|| "In progress".into()),
+        ]
+    }
+
+    fn roster_breaks(&mut self, ui: &mut Ui, record: Option<&Attendance>) {
+        if let Some(record) = record {
+            let count = self.data.breaks.for_attendance(record.id).count();
+            if ui.button(format!("Breaks ({count})")).clicked() {
+                self.break_state.detail = Some(record.id);
+            }
+        }
+    }
+
+    fn roster_actions(&mut self, ui: &mut Ui, row: &crate::attendance::DailyRow, date: NaiveDate) {
+        use crate::staff_roles::Capability;
+
+        let personnel = self.data.access.allows(Capability::Personnel);
+        let Some(record) = &row.attendance else {
+            if personnel && ui.button("Record").clicked() {
+                self.open_correction(row.employee.id, date);
+            }
+            return;
+        };
+        if record.checked_out_at.is_none() && self.data.access.can_record(record.employee_id)
+            && ui
+                .add_enabled(self.data.breaks.open(record.id).is_none(), egui::Button::new("Check out now"))
+                .on_hover_text("End an open break first. Records the current server time. Use Correct for a missed past check-out.")
+                .clicked()
+        {
+            self.send(Command::Change(Action::CheckOut(record.id)));
+        }
+        if personnel {
+            if ui.button("Correct").clicked() {
+                self.open_correction(record.employee_id, date);
+            }
+            let count = self.data.corrections.iter().filter(|c| c.attendance_id == record.id).count();
+            if ui.button(format!("History ({count})")).clicked() {
+                self.correction_history = Some(record.id);
+            }
+            if self.data.access.allows(Capability::AttendanceAdministration) && ui.button("Photos").clicked() {
+                self.work_state.evidence_target = Some(record.id);
+                self.send(Command::WorkActivity(Some(serde_json::json!({
+                    "operation": "evidence",
+                    "id": record.id,
+                }))));
+            }
+        }
+    }
+}
+
 const ROSTER_PAGE_SIZE: usize = 25;
 
 #[derive(Default)]
@@ -828,23 +980,29 @@ mod tests {
         row.scheduled_workday = false;
         assert!(RosterFilter::All.matches(&row));
         assert!(!RosterFilter::Missing.matches(&row));
+        assert_eq!(roster_status(&row), ("Holiday / non-workday", false));
         row.scheduled_workday = true;
         assert!(RosterFilter::Missing.matches(&row));
+        assert_eq!(roster_status(&row), ("No check-in", false));
         row.approved_leave = Some(LeaveKind::Annual);
         row.approved_leave_units = 2;
         assert!(RosterFilter::OnLeave.matches(&row));
         assert!(!RosterFilter::Missing.matches(&row));
+        assert_eq!(roster_status(&row), ("Approved leave (full day)", false));
         row.approved_leave_units = 1;
         assert!(RosterFilter::Missing.matches(&row));
+        assert_eq!(roster_status(&row), ("Approved leave (half-day)", false));
         attendance.checked_out_at = None;
         row.attendance = Some(attendance);
         assert!(RosterFilter::Open.matches(&row));
+        assert_eq!(roster_status(&row), ("Checked in", true));
         assert!(RosterFilter::OnLeave.matches(&row));
         assert!(!RosterFilter::Completed.matches(&row));
         assert!(!RosterFilter::Missing.matches(&row));
         let attendance = row.attendance.as_mut().unwrap();
         attendance.checked_out_at = Some(attendance.checked_in_at + Duration::hours(8));
         assert!(RosterFilter::Completed.matches(&row));
+        assert_eq!(roster_status(&row), ("Completed", true));
         assert!(!RosterFilter::Open.matches(&row));
     }
 
