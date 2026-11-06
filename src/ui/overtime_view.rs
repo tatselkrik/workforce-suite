@@ -434,7 +434,10 @@ impl HrisApp {
         }
     }
     fn overtime_detail(&mut self, ui: &mut Ui, id: Uuid) {
-        if self.overtime_state.decision.is_none() && ui.button("Back to overtime").clicked() {
+        if self.overtime_state.decision.is_none()
+            && !self.in_review_queue(&crate::notifications::Target::Overtime(id))
+            && ui.button("Back to overtime").clicked()
+        {
             self.overtime_state.detail = None;
             return;
         }

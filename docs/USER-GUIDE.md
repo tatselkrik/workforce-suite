@@ -30,6 +30,8 @@ before signing out or closing an app. After process termination, sign in again.
 
 Start with **Overview** in Workforce HR. **Needs your review** opens leave,
 attendance, overtime and daily report reviews assigned to your current scope.
+Use **Back to review queue** to keep your place, or **Review next** to open the
+next eligible item. Save or discard an open decision before switching.
 Use the sidebar to browse workspaces and the circular profile control for your
 personal details. Notification links open permitted records.
 
@@ -42,8 +44,8 @@ receive the same own-record view as any other employee.
 
 ### Open or update an employee
 
-1. In Workforce HR, open **Employees** and find the person in the directory.
-2. Select the employee or **Edit employee** to open the record.
+1. In Workforce HR, use **Find employee** or press **Ctrl+K**. Search by name or employee code.
+2. Select a result, or press **Enter** when one result matches. You can also open the record from **Employees**.
 3. Review **Employment**, contact details and emergency contact information. Record department, job title, joining date, employment type, location and **Reports to** where known.
 4. Save the changes. If another user changed the record, refresh and review the latest values before saving again.
 
@@ -126,9 +128,11 @@ employee archive must not be treated as proof that a payment has been made.
 ### Review daily attendance
 
 Open **Attendance → Daily attendance** and choose a date from the calendar. Review
-recorded check-ins, open shifts and completed records. A missing punch alone does
-not establish an absence. Employees use the punch method assigned by HR: an office
-station or their own Android account.
+the roster using **Open shifts**, **Completed**, **No check-in**, or **On leave**.
+Select **All** to clear the status filter while keeping the selected date and
+employee. Review missing punches alongside scheduled work and approved leave.
+Employees use the punch method assigned by HR, either an office station or their
+own Android account.
 
 HR can record a justified exception or past attendance for an employee with no
 record. Enter the correct work date, times and reason. For an existing record,

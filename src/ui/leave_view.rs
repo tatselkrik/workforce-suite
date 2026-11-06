@@ -25,6 +25,7 @@ pub(super) struct State {
     pub credits: super::leave_credits_view::State,
     pub show_inactive_types: bool,
     pub saving_revision: Option<i64>,
+    pub decision_submitted: Option<(Uuid, i64)>,
     pub view: View,
     pub draft: Option<LeavePolicy>,
     pub detail: Option<Uuid>,
@@ -38,11 +39,28 @@ pub(super) struct State {
 impl State {
     pub(super) fn open_request(&mut self, id: Uuid) {
         if self.detail != Some(id) {
-            self.review_note.clear();
-            self.cancel_reason.clear();
+            self.clear_decision_notes();
         }
         self.view = View::Requests;
         self.detail = Some(id);
+    }
+
+    pub(super) fn has_decision_notes(&self) -> bool {
+        self.detail.is_some() && (!self.review_note.is_empty() || !self.cancel_reason.is_empty())
+    }
+
+    pub(super) fn clear_decision_notes(&mut self) {
+        self.review_note.clear();
+        self.cancel_reason.clear();
+    }
+
+    pub(super) fn settle_decision(&mut self, data: &Snapshot) {
+        if let Some((id, revision)) = self.decision_submitted.take()
+            && self.detail == Some(id)
+            && data.leave.iter().any(|row| row.id == id && row.policy.revision > revision)
+        {
+            self.clear_decision_notes();
+        }
     }
 }
 
@@ -65,6 +83,23 @@ mod tests {
         assert!(state.review_note.is_empty());
         assert!(state.cancel_reason.is_empty());
     }
+
+    #[test]
+    fn leave_decision_notes_clear_after_the_submitted_record_advances() {
+        let mut data = DemoStore::new().data;
+        let id = data.leave[0].id;
+        let revision = data.leave[0].policy.revision;
+        let mut state = State::default();
+        state.open_request(id);
+        state.review_note = "Reason for this decision".into();
+        state.decision_submitted = Some((id, revision));
+        state.settle_decision(&data);
+        assert!(state.has_decision_notes());
+        state.decision_submitted = Some((id, revision));
+        data.leave[0].policy.revision += 1;
+        state.settle_decision(&data);
+        assert!(!state.has_decision_notes());
+    }
 }
 
 impl HrisApp {
@@ -85,24 +120,26 @@ impl HrisApp {
             self.leave_state.policy_reason.clear();
             self.leave_state.policy_reference.clear();
         }
-        ui.horizontal_wrapped(|ui| {
-            ui.selectable_value(&mut self.leave_state.view, View::Requests, "Requests");
-            ui.selectable_value(&mut self.leave_state.view, View::Policies, "Leave policies");
-            ui.selectable_value(
-                &mut self.leave_state.view,
-                View::Credits,
-                "Credit adjustments",
-            );
-            ui.selectable_value(
-                &mut self.leave_state.view,
-                View::Openings,
-                "Opening balances",
-            );
-            ui.selectable_value(
-                &mut self.leave_state.view,
-                View::Delegation,
-                "Approval delegation",
-            );
+        ui.add_enabled_ui(!self.review_queue_has_draft(), |ui| {
+            ui.horizontal_wrapped(|ui| {
+                ui.selectable_value(&mut self.leave_state.view, View::Requests, "Requests");
+                ui.selectable_value(&mut self.leave_state.view, View::Policies, "Leave policies");
+                ui.selectable_value(
+                    &mut self.leave_state.view,
+                    View::Credits,
+                    "Credit adjustments",
+                );
+                ui.selectable_value(
+                    &mut self.leave_state.view,
+                    View::Openings,
+                    "Opening balances",
+                );
+                ui.selectable_value(
+                    &mut self.leave_state.view,
+                    View::Delegation,
+                    "Approval delegation",
+                );
+            });
         });
         ui.add_space(10.0);
         match self.leave_state.view {
@@ -207,7 +244,9 @@ impl HrisApp {
     }
     fn leave_detail(&mut self, ui: &mut Ui, id: Uuid) {
         self.delegated_review_history(ui, crate::approvals::Scope::Leave, id);
-        if ui.button("Back to requests").clicked() {
+        if !self.in_review_queue(&crate::notifications::Target::Leave(id))
+            && ui.button("Back to requests").clicked()
+        {
             self.leave_state.detail = None;
             return;
         }
@@ -273,20 +312,14 @@ impl HrisApp {
                     );
                     ui.horizontal_wrapped(|ui| {
                         if primary(ui, "Approve this step") {
-                            self.send(Command::Change(Action::ReviewLeave(
-                                id,
-                                row.policy.revision,
-                                true,
-                                self.leave_state.review_note.clone(),
-                            )));
+                            self.submit_leave_decision(&row, Action::ReviewLeave(
+                                id, row.policy.revision, true, self.leave_state.review_note.clone(),
+                            ));
                         }
                         if ui.button("Reject request").clicked() {
-                            self.send(Command::Change(Action::ReviewLeave(
-                                id,
-                                row.policy.revision,
-                                false,
-                                self.leave_state.review_note.clone(),
-                            )));
+                            self.submit_leave_decision(&row, Action::ReviewLeave(
+                                id, row.policy.revision, false, self.leave_state.review_note.clone(),
+                            ));
                         }
                     });
                 }
@@ -313,11 +346,9 @@ impl HrisApp {
                         )
                         .clicked()
                     {
-                        self.send(Command::Change(Action::CancelLeave(
-                            id,
-                            row.policy.revision,
-                            self.leave_state.cancel_reason.clone(),
-                        )));
+                        self.submit_leave_decision(&row, Action::CancelLeave(
+                            id, row.policy.revision, self.leave_state.cancel_reason.clone(),
+                        ));
                     }
                 }
             });
@@ -349,6 +380,15 @@ impl HrisApp {
             }
         });
     }
+    fn submit_leave_decision(&mut self, row: &LeaveRequest, action: Action) {
+        if !self.busy {
+            self.send(Command::Change(action));
+            if self.busy {
+                self.leave_state.decision_submitted = Some((row.id, row.policy.revision));
+            }
+        }
+    }
+
     fn leave_policies(&mut self, ui: &mut Ui) {
         let admin = self.data.access.role.manages_accounts();
         self.dated_policy_history(ui);

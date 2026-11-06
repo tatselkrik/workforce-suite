@@ -357,6 +357,7 @@ impl HrisApp {
             Target::Attendance(date) => {
                 self.navigate(Page::Attendance, ctx);
                 self.shift_state.tab = shifts_view::Tab::Daily;
+                self.shift_state.roster_filter = shifts_view::RosterFilter::All;
                 self.attendance_date = *date;
                 self.calendar_month = month_start(*date);
             }

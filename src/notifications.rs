@@ -150,7 +150,7 @@ impl Category {
         }
     }
 }
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Target {
     Leave(Uuid),
     Correction(Uuid),

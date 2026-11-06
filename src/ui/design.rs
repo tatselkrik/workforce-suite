@@ -9,6 +9,19 @@ struct ReviewItem {
     employee: String,
 }
 
+pub(super) struct ReviewVisit {
+    target: Target,
+    date: NaiveDate,
+    pub reset_scroll: bool,
+}
+
+fn next_review<'a>(items: &'a [ReviewItem], visit: &ReviewVisit) -> Option<&'a ReviewItem> {
+    let other = || items.iter().filter(|item| item.target != visit.target);
+    other()
+        .find(|item| (item.date, &item.target) > (visit.date, &visit.target))
+        .or_else(|| other().next())
+}
+
 fn overview_review_items(
     data: &Snapshot,
     work: Option<&crate::work_activity::Context>,
@@ -85,7 +98,7 @@ fn overview_review_items(
             }
         }
     }
-    items.sort_by_key(|item| item.date);
+    items.sort_by(|a, b| (a.date, &a.target).cmp(&(b.date, &b.target)));
     items
 }
 
@@ -516,6 +529,35 @@ mod tests {
     use super::*;
 
     #[test]
+    fn review_next_uses_the_current_queue_and_retains_position_after_a_decision() {
+        let mut data = DemoStore::new().data;
+        let first = data.leave[0].id;
+        let second = data.leave[1].id;
+        let date = data.leave[0].starts_on;
+        let mut later = data.leave[1].clone();
+        later.id = Uuid::from_u128(400);
+        later.starts_on = date + Duration::days(1);
+        later.ends_on = later.starts_on;
+        let last = later.id;
+        data.leave.push(later);
+        let visit = ReviewVisit {
+            target: Target::Leave(second),
+            date,
+            reset_scroll: false,
+        };
+        let items = overview_review_items(&data, None);
+        assert_eq!(next_review(&items, &visit).unwrap().target, Target::Leave(last));
+        data.leave[1].status = LeaveStatus::Approved;
+        let items = overview_review_items(&data, None);
+        assert_eq!(next_review(&items, &visit).unwrap().target, Target::Leave(last));
+        data.leave.last_mut().unwrap().status = LeaveStatus::Rejected;
+        let items = overview_review_items(&data, None);
+        assert_eq!(next_review(&items, &visit).unwrap().target, Target::Leave(first));
+        data.leave[0].status = LeaveStatus::Approved;
+        assert!(next_review(&overview_review_items(&data, None), &visit).is_none());
+    }
+
+    #[test]
     fn overview_routes_only_current_actionable_reviews() {
         use crate::work_activity::{Context, DailyReport, ReportBody, Submission};
 
@@ -768,7 +810,8 @@ impl HrisApp {
     pub(super) fn design_toolbar(&mut self, ui: &mut Ui) {
         self.notification_state
             .for_product(&self.data, self.desktop.product);
-        let compact = ui.available_width() < 660.0;
+        let compact_width = if self.employee_finder_available() { 820.0 } else { 660.0 };
+        let compact = ui.available_width() < compact_width;
         ui.horizontal(|ui| {
             ui.label(
                 RichText::new(self.desktop.product.label(self.page, &self.data))
@@ -804,8 +847,10 @@ impl HrisApp {
             .add(egui::Button::new(RichText::new("Refresh").size(12.0)))
             .clicked()
         {
+            self.work_state.overview_reports_requested = false;
             self.send(Command::Refresh);
         }
+        self.employee_finder_button(ui);
         let unread = self.notification_state.unread;
         if ui
             .add_enabled(
@@ -843,6 +888,7 @@ impl HrisApp {
             self.send(Command::WorkActivity(None));
         }
         let items = overview_review_items(&self.data, self.work_state.context.as_ref());
+        let can_open = !self.busy && !self.has_unsaved_edits();
         let mut open = None;
         card(ui, |ui| {
             ui.heading("Needs your review");
@@ -868,16 +914,128 @@ impl HrisApp {
                             let label = format!("{} · {} · {}", item.kind, item.employee, item.date);
                             let button = egui::Button::new(label.as_str())
                                 .wrap_mode(egui::TextWrapMode::Truncate);
-                            if ui.add_enabled(!self.busy, button).on_hover_text(&label).clicked() {
-                                open = Some(item.target.clone());
+                            if ui.add_enabled(can_open, button).on_hover_text(&label).clicked() {
+                                open = Some(item);
                             }
                         }
                     });
             }
         });
-        if let Some(target) = open {
-            self.open_notification(&target, ui.ctx());
+        if let Some(item) = open {
+            self.open_overview_review(item, ui.ctx());
         }
+    }
+
+    fn open_overview_review(&mut self, item: &ReviewItem, ctx: &egui::Context) {
+        if self.busy || self.has_unsaved_edits() {
+            return;
+        }
+        self.open_notification(&item.target, ctx);
+        let opened = self.review_target_is_open(&item.target)
+            && match item.target {
+                Target::DailyReport(id) => self.work_state.reviewing_report() == Some(id),
+                _ => true,
+            };
+        if opened {
+            self.review_visit = Some(ReviewVisit {
+                target: item.target.clone(),
+                date: item.date,
+                reset_scroll: true,
+            });
+        }
+    }
+
+    fn review_target_is_open(&self, target: &Target) -> bool {
+        match *target {
+            Target::Leave(id) => self.page == Page::Leave
+                && self.leave_state.view == leave_view::View::Requests
+                && self.leave_state.detail == Some(id),
+            Target::Correction(id) => self.page == Page::Attendance
+                && self.shift_state.tab == shifts_view::Tab::Requests
+                && self.request_state.detail == Some(id),
+            Target::Overtime(id) => self.page == Page::Attendance
+                && self.shift_state.tab == shifts_view::Tab::Overtime
+                && self.overtime_state.detail == Some(id),
+            Target::DailyReport(id) => self.page == Page::Attendance
+                && self.shift_state.tab == shifts_view::Tab::DailyWork
+                && self.work_state.showing_queue_report(id),
+            _ => false,
+        }
+    }
+
+    pub(super) fn reconcile_review_visit(&mut self) {
+        if self.review_visit.as_ref().is_some_and(|visit| !self.review_target_is_open(&visit.target)) {
+            self.review_visit = None;
+        }
+    }
+
+    pub(super) fn in_review_queue(&self, target: &Target) -> bool {
+        self.review_visit.as_ref().is_some_and(|visit| {
+            &visit.target == target && self.review_target_is_open(target)
+        })
+    }
+
+    pub(super) fn review_queue_has_draft(&self) -> bool {
+        self.review_visit.as_ref().is_some_and(|visit| match visit.target {
+            Target::Leave(_) => self.leave_state.has_decision_notes(),
+            Target::Correction(_) => self.request_state.editing(),
+            Target::Overtime(_) => self.overtime_state.editing(),
+            Target::DailyReport(_) => self.work_state.queue_review_has_draft(),
+            _ => false,
+        })
+    }
+
+    pub(super) fn close_review_visit(&mut self, ctx: &egui::Context) {
+        let Some(visit) = self.review_visit.take() else {
+            return;
+        };
+        if !self.review_target_is_open(&visit.target) {
+            return;
+        }
+        match visit.target {
+            Target::Leave(_) => self.leave_state.detail = None,
+            Target::Correction(_) => self.request_state.detail = None,
+            Target::Overtime(_) => self.overtime_state.detail = None,
+            Target::DailyReport(_) => self.work_state.close_queue_review(ctx),
+            _ => {}
+        }
+    }
+
+    pub(super) fn review_queue_navigation(&mut self, ui: &mut Ui) -> bool {
+        let Some(visit) = self.review_visit.as_ref() else {
+            return false;
+        };
+        let dirty = self.review_queue_has_draft();
+        let ready = !self.busy && !dirty;
+        let leave_notes = matches!(visit.target, Target::Leave(_)) && self.leave_state.has_decision_notes();
+        let items = overview_review_items(&self.data, self.work_state.context.as_ref());
+        let next = next_review(&items, visit);
+        let mut back = false;
+        let mut advance = false;
+        ui.horizontal_wrapped(|ui| {
+            back = ui.add_enabled(ready, egui::Button::new("Back to review queue"))
+                .on_disabled_hover_text("Finish or discard the open decision first.")
+                .clicked();
+            if let Some(item) = next {
+                advance = ui.add_enabled(ready, egui::Button::new("Review next"))
+                    .on_hover_text(format!("{} · {} · {}", item.kind, item.employee, item.date))
+                    .on_disabled_hover_text("Finish or discard the open decision first.")
+                    .clicked();
+            }
+            if leave_notes && ui.add_enabled(!self.busy, egui::Button::new("Discard notes")).clicked() {
+                self.leave_state.clear_decision_notes();
+            }
+        });
+        ui.add_space(8.0);
+        if advance {
+            self.close_review_visit(ui.ctx());
+            if let Some(item) = next {
+                self.open_overview_review(item, ui.ctx());
+            }
+        } else if back {
+            self.navigate(Page::Overview, ui.ctx());
+        }
+        back || advance
     }
 
     pub(super) fn overview_attendance_card(

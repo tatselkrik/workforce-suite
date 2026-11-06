@@ -180,6 +180,22 @@ impl State {
     pub(super) fn show_reports(&mut self) {
         self.report_tab = true;
     }
+    pub(super) fn reviewing_report(&self) -> Option<Uuid> {
+        self.form
+            .as_ref()
+            .filter(|form| form.operation == "report_review")
+            .map(|form| form.id)
+    }
+    pub(super) fn showing_queue_report(&self, id: Uuid) -> bool {
+        self.report_tab && (self.form.is_none() || self.reviewing_report() == Some(id))
+    }
+    pub(super) fn queue_review_has_draft(&self) -> bool {
+        self.pending.is_some() || self.form.as_ref().is_some_and(|form| !form.note.is_empty())
+    }
+    pub(super) fn close_queue_review(&mut self, ctx: &egui::Context) {
+        self.form = None;
+        clear_edit_history(ctx, &["work-Review note (required)"]);
+    }
     pub fn accept(&mut self, c: Context, data: &Snapshot) -> anyhow::Result<()> {
         c.validate(data)?;
         if self.pending.as_ref().is_some_and(|p| {
@@ -849,6 +865,9 @@ impl HrisApp {
         let company_mode = self.data.mode == Mode::Supabase;
         let pending = self.work_state.pending.is_some();
         let time_format = self.time_format();
+        let from_queue = self.work_state.reviewing_report().is_some_and(|id| {
+            self.in_review_queue(&crate::notifications::Target::DailyReport(id))
+        });
         let form = self.work_state.form.as_mut().unwrap();
         let report_review = form.operation == "report_review";
         let review = self.work_state.context.as_ref().and_then(|context| {
@@ -929,18 +948,27 @@ impl HrisApp {
                 ui.label("The previous save is awaiting confirmation. Retry the same request before editing it.");
                 retry = ui.button("Retry same save").clicked();
             }
-            discard = ui
-                .add_enabled(
-                    !self.busy && (!pending || self.work_state.rejected),
-                    egui::Button::new(if pending {
-                        "Rejected: close and refresh"
-                    } else if report_review {
-                        "Back to reports"
-                    } else {
-                        "Discard draft"
-                    }),
-                )
-                .clicked();
+            if from_queue && !pending {
+                if !form.note.is_empty()
+                    && ui.add_enabled(!self.busy, egui::Button::new("Discard review note")).clicked()
+                {
+                    form.note.clear();
+                    clear_edit_history(ui.ctx(), &["work-Review note (required)"]);
+                }
+            } else {
+                discard = ui
+                    .add_enabled(
+                        !self.busy && (!pending || self.work_state.rejected),
+                        egui::Button::new(if pending {
+                            "Rejected: close and refresh"
+                        } else if report_review {
+                            "Back to reports"
+                        } else {
+                            "Discard draft"
+                        }),
+                    )
+                    .clicked();
+            }
             if pending && !self.work_state.rejected {
                 ui.label("Keep this request until its receipt is confirmed. It cannot be discarded while delivery is uncertain.");
             }

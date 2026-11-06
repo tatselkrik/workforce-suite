@@ -343,7 +343,10 @@ impl HrisApp {
         }
     }
     fn request_detail(&mut self, ui: &mut Ui, id: Uuid) {
-        if self.request_state.resolution.is_none() && ui.button("Back to requests").clicked() {
+        if self.request_state.resolution.is_none()
+            && !self.in_review_queue(&crate::notifications::Target::Correction(id))
+            && ui.button("Back to requests").clicked()
+        {
             self.request_state.detail = None;
             return;
         }

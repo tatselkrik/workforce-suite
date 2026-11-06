@@ -38,10 +38,66 @@ const ATTENDANCE_GROUPS: &[(&str, &[(Tab, &str)])] = &[
     ),
 ];
 
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+pub(super) enum RosterFilter {
+    #[default]
+    All,
+    Open,
+    Completed,
+    Missing,
+    OnLeave,
+}
+
+impl RosterFilter {
+    pub(super) fn matches(self, row: &crate::attendance::DailyRow) -> bool {
+        match self {
+            Self::All => true,
+            Self::Open => row.attendance.as_ref().is_some_and(|a| a.checked_out_at.is_none()),
+            Self::Completed => row.attendance.as_ref().is_some_and(|a| a.checked_out_at.is_some()),
+            Self::Missing => {
+                row.attendance.is_none() && row.scheduled_workday && row.approved_leave_units < 2
+            }
+            Self::OnLeave => row.approved_leave.is_some(),
+        }
+    }
+}
+
+pub(super) fn roster_filters(
+    ui: &mut Ui,
+    rows: &[crate::attendance::DailyRow],
+    selected: &mut RosterFilter,
+) {
+    ui.horizontal_wrapped(|ui| {
+        for (filter, label) in [
+            (RosterFilter::All, "All"),
+            (RosterFilter::Open, "Open shifts"),
+            (RosterFilter::Completed, "Completed"),
+            (RosterFilter::Missing, "No check-in"),
+            (RosterFilter::OnLeave, "On leave"),
+        ] {
+            let count = rows.iter().filter(|row| filter.matches(row)).count();
+            let button = egui::Button::selectable(*selected == filter, format!("{label} ({count})"))
+                .wrap_mode(egui::TextWrapMode::Extend);
+            let response = ui.add(button);
+            let response = match filter {
+                RosterFilter::Missing => response.on_hover_text(
+                    "Scheduled employees due to work with no check-in.",
+                ),
+                RosterFilter::OnLeave => response.on_hover_text("Includes approved half-days."),
+                _ => response,
+            };
+            if response.clicked() {
+                *selected = filter;
+            }
+        }
+    });
+}
+
 #[derive(Default)]
 pub(super) struct State {
     pub tab: Tab,
     pub roster_employee: Option<Uuid>,
+    pub roster_filter: RosterFilter,
     pub template: Option<ShiftTemplateDraft>,
     pub assignment: Option<ShiftAssignmentDraft>,
     pub show_inactive: bool,
@@ -592,6 +648,41 @@ fn shift_hours_fields(ui: &mut Ui, start: &mut String, end: &mut String) -> [egu
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn attendance_filters_use_recorded_punches_schedule_and_approved_leave() {
+        let data = DemoStore::new().data;
+        let date = data.company.today();
+        let mut row = crate::attendance::daily_roster(&data, date)
+            .into_iter()
+            .find(|row| row.attendance.is_some())
+            .unwrap();
+        let mut attendance = row.attendance.take().unwrap();
+        row.approved_leave = None;
+        row.approved_leave_units = 0;
+        row.scheduled_workday = false;
+        assert!(RosterFilter::All.matches(&row));
+        assert!(!RosterFilter::Missing.matches(&row));
+        row.scheduled_workday = true;
+        assert!(RosterFilter::Missing.matches(&row));
+        row.approved_leave = Some(LeaveKind::Annual);
+        row.approved_leave_units = 2;
+        assert!(RosterFilter::OnLeave.matches(&row));
+        assert!(!RosterFilter::Missing.matches(&row));
+        row.approved_leave_units = 1;
+        assert!(RosterFilter::Missing.matches(&row));
+        attendance.checked_out_at = None;
+        row.attendance = Some(attendance);
+        assert!(RosterFilter::Open.matches(&row));
+        assert!(RosterFilter::OnLeave.matches(&row));
+        assert!(!RosterFilter::Completed.matches(&row));
+        assert!(!RosterFilter::Missing.matches(&row));
+        let attendance = row.attendance.as_mut().unwrap();
+        attendance.checked_out_at = Some(attendance.checked_in_at + Duration::hours(8));
+        assert!(RosterFilter::Completed.matches(&row));
+        assert!(!RosterFilter::Open.matches(&row));
+    }
+
     #[test]
     fn both_shift_time_fields_fit_and_align_at_normal_and_enlarged_display_sizes() {
         for width in [730.0, 520.0, 420.0] {

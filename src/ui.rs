@@ -1,5 +1,6 @@
 mod work_activity_view;
 mod design;
+mod employee_finder;
 mod leadership_view;
 mod benefits_view;
 mod services_view;
@@ -108,6 +109,8 @@ mod payroll_navigation;
 
 pub struct HrisApp {
     work_state: work_activity_view::State,
+    review_visit: Option<design::ReviewVisit>,
+    employee_finder: Option<employee_finder::State>,
     services_state: services_view::State,
     relations_state: relations_view::State,
     benefits_state: benefits_view::State,
@@ -387,6 +390,8 @@ impl HrisApp {
             employee_view: EmployeeView::Directory,
             services_state: Default::default(),
             work_state: Default::default(),
+            review_visit: None,
+            employee_finder: None,
             relations_state: Default::default(),
             benefits_state: Default::default(),
             organization: organization_view::State::default(),
@@ -1176,6 +1181,7 @@ impl HrisApp {
                     self.work_state.follow_ups = update.work_report_follow_ups;
                     let newly_signed_in =
                         self.data.mode == Mode::SignedOut && data.mode != Mode::SignedOut;
+                    self.leave_state.settle_decision(&data);
                     if self
                         .leave_state
                         .saving_revision
@@ -1185,6 +1191,9 @@ impl HrisApp {
                         self.leave_state.saving_revision = None;
                     }
                     if self.data.access != data.access {
+                        self.review_visit = None;
+                        self.employee_finder = None;
+                        clear_edit_history(ctx, &["find-employee-query"]);
                         self.workspace_draft = None;
                         self.sidebar_last_page = None;
                         self.staff_roles_state = Default::default();
@@ -1546,6 +1555,7 @@ impl HrisApp {
                     }
                 }
                 Err(error) => {
+                    self.leave_state.decision_submitted = None;
                     if update.staff_role_rejected {
                         self.staff_roles_state.reject();
                     }
@@ -1660,6 +1670,10 @@ impl HrisApp {
                 workspaces::reconcile(page, self.employee_view, &self.data, false).1;
         }
         if self.page != page {
+            if self.review_queue_has_draft() {
+                return;
+            }
+            self.close_review_visit(ctx);
             self.clear_profile_secrets(ctx);
             self.session_confirmation = None;
             self.account_form = None;
@@ -1739,6 +1753,7 @@ impl HrisApp {
             Page::Attendance => {
                 self.shift_state.tab = shifts_view::Tab::Daily;
                 self.shift_state.roster_employee = Some(id);
+                self.shift_state.roster_filter = shifts_view::RosterFilter::All;
                 self.attendance_date = self.data.company.today();
                 self.calendar_month = month_start(self.attendance_date);
                 self.break_state.detail = None;
@@ -2253,6 +2268,7 @@ impl HrisApp {
                     self.work_state.overview_reports_requested = false;
                     self.send(Command::Refresh);
                 }
+                self.employee_finder_button(ui);
                 self.notification_state
                     .for_product(&self.data, self.desktop.product);
                 let unread = self.notification_state.unread;
@@ -2454,6 +2470,7 @@ impl HrisApp {
             || self.correction_form.is_some()
             || self.leave_form.is_some()
             || self.leave_state.draft.is_some()
+            || self.leave_state.has_decision_notes()
             || self.leave_state.policy_pending.is_some()
             || self.leave_state.withdraw_target.is_some()
             || self.leave_state.openings.has_draft()
@@ -3053,28 +3070,15 @@ impl HrisApp {
         if let Some(id) = self.shift_state.roster_employee {
             rows.retain(|row| row.employee.id == id);
         }
-        let recorded = rows.iter().filter(|row| row.attendance.is_some()).count();
-        let on_leave = rows
-            .iter()
-            .filter(|row| row.attendance.is_none() && row.approved_leave.is_some())
-            .count();
-        let missing = rows
-            .iter()
-            .filter(|row| {
-                row.attendance.is_none() && row.scheduled_workday && row.approved_leave_units < 2
-            })
-            .count();
+        let has_roster = !rows.is_empty();
         card(ui, |ui| {
             ui.label(
                 RichText::new(date.format("%A, %B %d, %Y").to_string())
                     .size(17.0)
                     .strong(),
             );
-            ui.horizontal_wrapped(|ui| {
-                badge(ui, &format!("{recorded} recorded"), true);
-                badge(ui, &format!("{missing} no check-in"), false);
-                badge(ui, &format!("{on_leave} approved leave"), false);
-            });
+            shifts_view::roster_filters(ui, &rows, &mut self.shift_state.roster_filter);
+            rows.retain(|row| self.shift_state.roster_filter.matches(row));
             ui.add_space(8.0);
             egui::ScrollArea::horizontal().show(ui, |ui| {
                 egui::Grid::new("attendance_table")
@@ -3188,7 +3192,11 @@ impl HrisApp {
                     });
             });
             if rows.is_empty() {
-                empty(ui, "No employee records available for this date.");
+                empty(ui, if has_roster {
+                    "No employees match this attendance filter."
+                } else {
+                    "No employee records available for this date."
+                });
             }
             ui.label(RichText::new("Roster uses dated shift assignments, hire dates, saved leave charges and company holidays. Unassigned employees use the company calendar. No check-in does not confirm absence.").color(muted(ui)).small());
         });
@@ -4599,6 +4607,8 @@ impl eframe::App for HrisApp {
             }
         }
         self.reconcile_workspaces(&ctx);
+        self.reconcile_review_visit();
+        self.employee_finder_shortcut(&ctx);
         if self.data.mode == Mode::SignedOut {
             egui::CentralPanel::default()
                 .frame(Frame::new().fill(ui.visuals().panel_fill).inner_margin(28))
@@ -4612,7 +4622,8 @@ impl eframe::App for HrisApp {
                 || self.correction_form.is_some()
                 || self.correction_history.is_some()
                 || self.session_confirmation.is_some()
-                || self.update_confirmation;
+                || self.update_confirmation
+                || self.employee_finder.is_some();
             egui::Panel::left("sidebar")
                 .resizable(false)
                 .exact_size(if design::enabled(ui.ctx()) { if ui.available_width()<1100.0 {212.0}else{224.0} } else { 220.0 })
@@ -4621,6 +4632,7 @@ impl eframe::App for HrisApp {
                     ui.add_enabled_ui(
                         !self.busy
                             && !form_open
+                            && !self.review_queue_has_draft()
                             && self.employee_form.is_none()
                             && !self.staff_provision_state.has_draft()
                             && !self.hiring_state.editing()
@@ -4653,12 +4665,28 @@ impl eframe::App for HrisApp {
                         });
                         return;
                     }
+                    if ui
+                        .add_enabled_ui(!form_open, |ui| self.review_queue_navigation(ui))
+                        .inner
+                    {
+                        return;
+                    }
                     let scroll_id = ("main_scroll", self.page as u8);
                     let scroll = if self.page == Page::Payroll && self.payroll_state.tab == 13 {
                         egui::ScrollArea::vertical()
                             .id_salt((scroll_id, self.payroll_state.government.scroll_key()))
                     } else {
                         egui::ScrollArea::vertical().id_salt(scroll_id)
+                    };
+                    let scroll = if let Some(visit) = self.review_visit.as_mut() {
+                        let scroll = scroll.id_salt("queue_review");
+                        if std::mem::take(&mut visit.reset_scroll) {
+                            scroll.vertical_scroll_offset(0.0)
+                        } else {
+                            scroll
+                        }
+                    } else {
+                        scroll
                     };
                     #[cfg(feature = "qa-screenshot")]
                     let scroll = if std::env::var("HRIS_PREVIEW_SCROLL").as_deref() == Ok("bottom")
@@ -4697,6 +4725,7 @@ impl eframe::App for HrisApp {
             self.forms(&ctx);
             self.confirm_session_action(&ctx);
             self.confirm_update(&ctx);
+            self.show_employee_finder(&ctx);
         }
         #[cfg(feature = "qa-screenshot")]
         {

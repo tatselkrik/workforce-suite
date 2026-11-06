@@ -66,9 +66,10 @@ work in the report. Use the shift start date for overnight work.
 A Manager can open a submitted report from **Overview → Needs your review** or
 **Daily reports**. The review shows the saved submission, task snapshots and prior
 decisions alongside the review note and **Approve** and **Return for revision**
-buttons. Returned reports can be revised and resubmitted. Each submission and
-decision remains in history. Review permissions follow the current reporting
-relationship.
+buttons. From an Overview review, use **Back to review queue** or **Review next**
+after saving or discarding your note. Returned reports can be revised and
+resubmitted. Each submission and decision remains in history. Review permissions
+follow the current reporting relationship.
 
 In **Daily reports**, use **From**, **Through** and the status menu to filter the
 report list alongside the employee selection. Both date boundaries are included
