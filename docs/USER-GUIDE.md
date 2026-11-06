@@ -267,7 +267,8 @@ milestones; completing a plan does not change salary, job title or department.
 
 Open **Employees > Employee relations** to maintain a confidential case. Record
 the category, priority, description and follow-up dates. Add factual notes and
-complete follow-ups before resolving or closing a case.
+complete follow-ups before resolving or closing a case. Filter by **Open
+follow-ups**, **Overdue** or **Due today** to find cases that need attention.
 
 Administrators oversee cases and assign handlers. HR Generalists see their assigned
 cases. A reporting relationship or Payroll role does not grant case access. Case

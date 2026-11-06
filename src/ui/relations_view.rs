@@ -81,6 +81,72 @@ impl Form {
         })
     }
 }
+#[derive(Clone, Copy, Default)]
+struct FollowUpSummary {
+    open: usize,
+    overdue: usize,
+    today: usize,
+    next_due: Option<NaiveDate>,
+}
+
+fn follow_up_summaries(
+    context: &Context,
+    today: NaiveDate,
+) -> std::collections::HashMap<Uuid, FollowUpSummary> {
+    let cases = context
+        .cases
+        .iter()
+        .filter(|case| case.company_id == context.company_id)
+        .map(|case| case.id)
+        .collect::<std::collections::HashSet<_>>();
+    let mut summaries = std::collections::HashMap::<Uuid, FollowUpSummary>::new();
+    for task in context.follow_ups.iter().filter(|task| {
+        task.company_id == context.company_id
+            && task.completed_at.is_none()
+            && cases.contains(&task.case_id)
+    }) {
+        let summary = summaries.entry(task.case_id).or_default();
+        summary.open += 1;
+        summary.overdue += usize::from(task.due_on < today);
+        summary.today += usize::from(task.due_on == today);
+        summary.next_due = Some(
+            summary
+                .next_due
+                .map_or(task.due_on, |date| date.min(task.due_on)),
+        );
+    }
+    summaries
+}
+
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+enum FollowUpFilter {
+    #[default]
+    All,
+    Open,
+    Overdue,
+    Today,
+}
+
+impl FollowUpFilter {
+    fn label(self) -> &'static str {
+        match self {
+            Self::All => "Any follow-up status",
+            Self::Open => "Open follow-ups",
+            Self::Overdue => "Overdue",
+            Self::Today => "Due today",
+        }
+    }
+
+    fn matches(self, summary: FollowUpSummary) -> bool {
+        match self {
+            Self::All => true,
+            Self::Open => summary.open > 0,
+            Self::Overdue => summary.overdue > 0,
+            Self::Today => summary.today > 0,
+        }
+    }
+}
+
 #[derive(Default)]
 pub(super) struct State {
     context: Option<Context>,
@@ -88,6 +154,7 @@ pub(super) struct State {
     form: Option<Form>,
     search: String,
     status_filter: Option<Status>,
+    follow_up_filter: FollowUpFilter,
     error: Option<String>,
 }
 impl State {
@@ -359,61 +426,108 @@ impl State {
                     ui.add_space(6.0);
                 }
             } else {
-                let overdue = c
-                    .follow_ups
-                    .iter()
-                    .filter(|f| f.completed_at.is_none() && f.due_on < data.company.today())
-                    .count();
+                let today = data.company.today();
+                let summaries = follow_up_summaries(c, today);
+                let overdue = summaries
+                    .values()
+                    .map(|summary| summary.overdue)
+                    .sum::<usize>();
                 ui.label(format!(
-                    "{} visible cases · {} overdue follow-ups",
-                    c.cases.len(),
-                    overdue
+                    "Visible cases · {}   Overdue follow-ups · {overdue}",
+                    c.cases.len()
                 ));
                 ui.horizontal_wrapped(|ui| {
                     ui.add(
                         egui::TextEdit::singleline(&mut self.search)
-                            .hint_text("Search assigned case or employee"),
+                            .hint_text("Case or employee")
+                            .desired_width(205.0),
                     );
                     egui::ComboBox::from_id_salt("relation-filter")
-                        .selected_text(
-                            self.status_filter
-                                .map(|s| s.label())
-                                .unwrap_or("All statuses"),
-                        )
+                        .selected_text(self.status_filter.map_or("All statuses", Status::label))
                         .show_ui(ui, |ui| {
                             ui.selectable_value(&mut self.status_filter, None, "All statuses");
-                            for s in Status::ALL {
-                                ui.selectable_value(&mut self.status_filter, Some(s), s.label());
+                            for status in Status::ALL {
+                                ui.selectable_value(
+                                    &mut self.status_filter,
+                                    Some(status),
+                                    status.label(),
+                                );
                             }
                         });
+                    egui::ComboBox::from_id_salt("relation-follow-up-filter")
+                        .selected_text(self.follow_up_filter.label())
+                        .show_ui(ui, |ui| {
+                            for filter in [
+                                FollowUpFilter::All,
+                                FollowUpFilter::Open,
+                                FollowUpFilter::Overdue,
+                                FollowUpFilter::Today,
+                            ] {
+                                ui.selectable_value(
+                                    &mut self.follow_up_filter,
+                                    filter,
+                                    filter.label(),
+                                );
+                            }
+                        });
+                    if (!self.search.is_empty()
+                        || self.status_filter.is_some()
+                        || self.follow_up_filter != FollowUpFilter::All)
+                        && ui.button("Clear filters").clicked()
+                    {
+                        self.search.clear();
+                        self.status_filter = None;
+                        self.follow_up_filter = FollowUpFilter::All;
+                    }
                 });
                 let query = self.search.trim().to_lowercase();
-                let mut found = false;
-                for case in c
+                let mut rows = c
                     .cases
                     .iter()
-                    .filter(|case| self.status_filter.is_none_or(|s| s == case.status))
-                {
-                    let name = data
-                        .employees
-                        .iter()
-                        .find(|e| e.id == case.employee_id)
-                        .map(|e| format!("{} {}", e.employee_code, e.full_name))
-                        .unwrap_or_else(|| "Retained employee".into());
-                    if !query.is_empty()
-                        && !format!("{} {} {}", case.code, case.title, name)
-                            .to_lowercase()
-                            .contains(&query)
-                    {
-                        continue;
-                    }
-                    found = true;
+                    .filter(|case| case.company_id == c.company_id)
+                    .filter(|case| {
+                        self.status_filter
+                            .is_none_or(|status| status == case.status)
+                    })
+                    .filter_map(|case| {
+                        let summary = summaries.get(&case.id).copied().unwrap_or_default();
+                        if !self.follow_up_filter.matches(summary) {
+                            return None;
+                        }
+                        let name = data
+                            .employees
+                            .iter()
+                            .find(|employee| {
+                                employee.id == case.employee_id
+                                    && employee.company_id == c.company_id
+                            })
+                            .map(|employee| {
+                                format!("{} {}", employee.employee_code, employee.full_name)
+                            })
+                            .unwrap_or_else(|| "Retained employee".into());
+                        (query.is_empty()
+                            || format!("{} {} {}", case.code, case.title, name)
+                                .to_lowercase()
+                                .contains(&query))
+                        .then_some((case, name, summary))
+                    })
+                    .collect::<Vec<_>>();
+                if self.follow_up_filter != FollowUpFilter::All {
+                    rows.sort_by_key(|(case, _, summary)| (summary.next_due, case.id));
+                }
+                if rows.len() != c.cases.len() {
+                    ui.small(format!("Showing {} of {}", rows.len(), c.cases.len()));
+                }
+                if rows.is_empty() {
+                    ui.label("No assigned cases match this view.");
+                }
+                for (case, name, summary) in rows {
                     Frame::group(ui.style()).show(ui, |ui| {
                         if ui
                             .add(egui::Button::new(RichText::new(&case.title).strong()).wrap())
                             .clicked()
                         {
-                            self.selected = Some(case.id)
+                            self.selected = Some(case.id);
                         }
                         ui.label(format!(
                             "{} · {} · {} priority",
@@ -421,12 +535,26 @@ impl State {
                             case.status.label(),
                             case.priority.label()
                         ));
-                        ui.label(RichText::new(&case.code).small());
+                        ui.small(&case.code);
+                        if let Some(next) = summary.next_due {
+                            ui.small(format!(
+                                "Open follow-ups · {} · Next due {}",
+                                summary.open,
+                                next.format("%b %d, %Y")
+                            ));
+                        }
+                        if summary.overdue > 0 || summary.today > 0 {
+                            ui.horizontal_wrapped(|ui| {
+                                if summary.overdue > 0 {
+                                    badge(ui, &format!("Overdue · {}", summary.overdue), false);
+                                }
+                                if summary.today > 0 {
+                                    badge(ui, &format!("Due today · {}", summary.today), false);
+                                }
+                            });
+                        }
                     });
                     ui.add_space(6.0);
-                }
-                if !found {
-                    ui.label("No assigned cases match this view.");
                 }
             }
         } else {
@@ -774,6 +902,7 @@ impl HrisApp {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Utc;
     fn fixture() -> (Snapshot, Context, Request, Response) {
         let d = DemoStore::new().data;
         let mut repo = relations::Demo::default();
@@ -796,6 +925,65 @@ mod tests {
             .execute(Operation::Save(Box::new(r.clone())), &d)
             .unwrap();
         (d, context, r, saved)
+    }
+    #[test]
+    fn deadlines_count_only_open_follow_ups_on_visible_cases() {
+        let (data, _, _, saved) = fixture();
+        let mut context = saved.context;
+        let case = &context.cases[0];
+        let case_id = case.id;
+        let today = data.company.today();
+        let overdue = relations::FollowUp {
+            id: Uuid::new_v4(),
+            case_id,
+            company_id: case.company_id,
+            task: "Fictional follow-up".into(),
+            due_on: today - Duration::days(1),
+            created_by: data.access.user_id,
+            created_at: Utc::now(),
+            completed_by: None,
+            completed_at: None,
+            completion_note: None,
+        };
+        context.follow_ups.extend([
+            overdue.clone(),
+            relations::FollowUp {
+                id: Uuid::new_v4(),
+                due_on: today,
+                ..overdue.clone()
+            },
+            relations::FollowUp {
+                id: Uuid::new_v4(),
+                due_on: today - Duration::days(2),
+                completed_at: Some(Utc::now()),
+                ..overdue.clone()
+            },
+            relations::FollowUp {
+                id: Uuid::new_v4(),
+                company_id: Uuid::new_v4(),
+                ..overdue.clone()
+            },
+            relations::FollowUp {
+                id: Uuid::new_v4(),
+                case_id: Uuid::new_v4(),
+                ..overdue
+            },
+        ]);
+
+        let summaries = follow_up_summaries(&context, today);
+        assert_eq!(summaries.len(), 1);
+        let summary = summaries[&case_id];
+        assert_eq!((summary.open, summary.overdue, summary.today), (2, 1, 1));
+        assert_eq!(summary.next_due, Some(today - Duration::days(1)));
+        for filter in [
+            FollowUpFilter::Open,
+            FollowUpFilter::Overdue,
+            FollowUpFilter::Today,
+        ] {
+            assert!(filter.matches(summary));
+            assert!(!filter.matches(FollowUpSummary::default()));
+        }
+        assert!(FollowUpFilter::All.matches(FollowUpSummary::default()));
     }
     #[test]
     fn uncertain_create_preserves_the_exact_request_until_receipt() {

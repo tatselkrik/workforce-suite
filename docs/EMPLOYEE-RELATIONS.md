@@ -29,5 +29,7 @@ Auth metadata or local files. Once loaded, refresh it during normal protected
 refreshes. Revoked assignment/access clears cached case contents and affected
 drafts. Preserve ordinary drafts through non-authority failures and uncertain
 saves: retry the exact frozen request; definitive rejection requires explicit review.
+Use **Open follow-ups**, **Overdue** or **Due today** to review case deadlines. The
+list shows counts and the earliest open due date. Task details stay in the case.
 Attachments, automatic disciplinary decisions, employee self-service cases, external
 communications and statutory case-handling advice are outside this increment.
