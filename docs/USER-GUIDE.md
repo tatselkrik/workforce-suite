@@ -115,6 +115,10 @@ successful conversion. Review the resulting employment and contact information,
 assign tasks and track their completion. Sign-in provisioning remains a separate
 Administrator action.
 
+In **Hiring → Onboarding → Task follow-ups**, review open tasks across checklists.
+Use **Overdue**, **Due today** or the assignee filter, then choose **Open checklist**.
+Managers use **Your onboarding tasks** to review their assignments by deadline.
+
 ### Exit and clearance
 
 Open the employee's exit workflow, enter the actual last working date and assign

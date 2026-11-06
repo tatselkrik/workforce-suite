@@ -102,6 +102,21 @@ pub struct Task {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+
+impl Task {
+    pub fn visible_to(&self, data: &Snapshot) -> bool {
+        data.mode != crate::domain::Mode::SignedOut
+            && self.company_id == data.company.id
+            && self.company_id == data.access.company_id
+            && data.access.uses_desktop()
+            && (data.access.allows(crate::staff_roles::Capability::Recruiting)
+                || data
+                    .access
+                    .employee_id
+                    .is_some_and(|id| self.assigned_employee_id == Some(id)))
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Event {
     pub id: Uuid,
@@ -329,12 +344,7 @@ fn task(data: &Snapshot, id: Uuid) -> Result<&Task> {
         .iter()
         .find(|r| r.id == id && r.company_id == data.company.id)
         .context("Task not found. Refresh.")?;
-    ensure!(
-        data.access
-            .allows(crate::staff_roles::Capability::Recruiting)
-            || (data.access.uses_desktop() && r.assigned_employee_id == data.access.employee_id),
-        "This task is not assigned to you."
-    );
+    ensure!(r.visible_to(data), "This task is not assigned to you.");
     Ok(r)
 }
 impl HiringAction {

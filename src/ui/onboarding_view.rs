@@ -1,5 +1,112 @@
 use super::*;
 use crate::onboarding::{self, HireDraft, HiringAction, OfferDraft, OfferStatus, TaskDraft};
+
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+enum TaskStatus {
+    #[default]
+    Open,
+    Overdue,
+    DueToday,
+    All,
+}
+
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+enum TaskAssignee {
+    #[default]
+    Anyone,
+    Unassigned,
+    Me,
+}
+
+#[derive(Default)]
+struct TaskFilters {
+    status: TaskStatus,
+    assignee: TaskAssignee,
+    query: String,
+}
+
+fn open_task(task: &onboarding::Task) -> bool {
+    task.status == "open" && task.case_status == "open"
+}
+
+impl TaskFilters {
+    fn rows<'a>(&self, data: &'a Snapshot, today: NaiveDate) -> Vec<&'a onboarding::Task> {
+        let query = self.query.trim().to_lowercase();
+        let mut rows = data
+            .onboarding
+            .tasks
+            .iter()
+            .filter(|task| task.visible_to(data))
+            .filter(|task| match self.status {
+                TaskStatus::Open => open_task(task),
+                TaskStatus::Overdue => open_task(task) && task.due_on.is_some_and(|d| d < today),
+                TaskStatus::DueToday => open_task(task) && task.due_on == Some(today),
+                TaskStatus::All => true,
+            })
+            .filter(|task| match self.assignee {
+                TaskAssignee::Anyone => true,
+                TaskAssignee::Unassigned => task.assigned_employee_id.is_none(),
+                TaskAssignee::Me => data
+                    .access
+                    .employee_id
+                    .is_some_and(|id| task.assigned_employee_id == Some(id)),
+            })
+            .filter(|task| {
+                query.is_empty()
+                    || [&task.employee_name, &task.employee_code, &task.title]
+                        .iter()
+                        .any(|label| label.to_lowercase().contains(&query))
+            })
+            .collect::<Vec<_>>();
+        rows.sort_by_key(|task| (!open_task(task), task.due_on.is_none(), task.due_on, task.id));
+        rows
+    }
+
+    fn controls(&mut self, ui: &mut Ui, hr: bool) {
+        ui.horizontal_wrapped(|ui| {
+            for (status, label) in [
+                (TaskStatus::Open, "Open"),
+                (TaskStatus::Overdue, "Overdue"),
+                (TaskStatus::DueToday, "Due today"),
+                (TaskStatus::All, "All statuses"),
+            ] {
+                ui.selectable_value(&mut self.status, status, label);
+            }
+        });
+        ui.horizontal_wrapped(|ui| {
+            ui.add(
+                egui::TextEdit::singleline(&mut self.query)
+                    .id_salt("onboarding-task-search")
+                    .hint_text("Name, code or task")
+                    .desired_width(185.0),
+            );
+            if hr {
+                let options = [
+                    (TaskAssignee::Anyone, "Any assignee"),
+                    (TaskAssignee::Unassigned, "Unassigned"),
+                    (TaskAssignee::Me, "Assigned to me"),
+                ];
+                let label = options
+                    .iter()
+                    .find(|(owner, _)| *owner == self.assignee)
+                    .map_or("Any assignee", |(_, label)| *label);
+                egui::ComboBox::from_id_salt("onboarding-task-assignee")
+                    .selected_text(label)
+                    .show_ui(ui, |ui| {
+                        for (owner, label) in options {
+                            ui.selectable_value(&mut self.assignee, owner, label);
+                        }
+                    });
+            }
+            if (self.status != TaskStatus::Open || self.assignee != TaskAssignee::Anyone
+                || !self.query.is_empty()) && ui.button("Clear filters").clicked()
+            {
+                *self = Self::default();
+            }
+        });
+    }
+}
+
 #[derive(Default)]
 pub(super) struct State {
     pub active: bool,
@@ -11,6 +118,8 @@ pub(super) struct State {
     pub case_id: Option<Uuid>,
     pub show_completed: bool,
     pub search: String,
+    follow_ups: bool,
+    task_filters: TaskFilters,
 }
 impl State {
     pub fn editing(&self) -> bool {
@@ -442,7 +551,7 @@ impl HrisApp {
             .access
             .allows(crate::staff_roles::Capability::Recruiting);
         if !hr {
-            self.assigned_onboarding(ui);
+            self.onboarding_tasks(ui, false);
             return;
         }
         let app_case = applicant.and_then(|id| {
@@ -467,11 +576,16 @@ impl HrisApp {
                 .onboarding
                 .cases
                 .iter()
-                .find(|c| c.id == id)
+                .find(|c| c.id == id && c.company_id == self.data.company.id)
                 .cloned()
             {
                 card(ui, |ui| {
-                    if applicant.is_none() && ui.button("< All onboarding").clicked() {
+                    let back = if self.onboarding_state.follow_ups {
+                        "Back to task follow-ups"
+                    } else {
+                        "Back to onboarding cases"
+                    };
+                    if applicant.is_none() && ui.button(back).clicked() {
                         self.onboarding_state.case_id = None;
                     }
                     ui.label(
@@ -523,7 +637,7 @@ impl HrisApp {
                         .onboarding
                         .tasks
                         .iter()
-                        .filter(|t| t.case_id == id);
+                        .filter(|t| t.case_id == id && t.visible_to(&self.data));
                     let required = all.clone().filter(|t| t.required).count();
                     let done = all.filter(|t| t.required && t.status != "open").count();
                     ui.label(format!("{done} / {required} required tasks resolved"));
@@ -533,7 +647,7 @@ impl HrisApp {
                     .onboarding
                     .tasks
                     .iter()
-                    .filter(|t| t.case_id == id)
+                    .filter(|t| t.case_id == id && t.visible_to(&self.data))
                     .cloned()
                     .collect();
                 for t in tasks {
@@ -565,25 +679,36 @@ impl HrisApp {
                     self.onboarding_state.active = false;
                 }
                 ui.label(RichText::new("Onboarding").strong().size(20.0));
-                ui.checkbox(
-                    &mut self.onboarding_state.show_completed,
-                    "Include completed",
-                );
             });
-            ui.add(
-                egui::TextEdit::singleline(&mut self.onboarding_state.search)
-                    .hint_text("Search employee code or name")
-                    .desired_width(350.0),
-            );
+            ui.horizontal_wrapped(|ui| {
+                ui.selectable_value(&mut self.onboarding_state.follow_ups, false, "Cases");
+                ui.selectable_value(&mut self.onboarding_state.follow_ups, true, "Task follow-ups");
+            });
+            if !self.onboarding_state.follow_ups {
+                ui.horizontal_wrapped(|ui| {
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.onboarding_state.search)
+                            .hint_text("Name or code")
+                            .desired_width(185.0),
+                    );
+                    ui.checkbox(&mut self.onboarding_state.show_completed, "Include completed");
+                });
+            }
         });
-        let query = self.onboarding_state.search.to_lowercase();
+        if self.onboarding_state.follow_ups {
+            ui.add_space(10.0);
+            self.onboarding_tasks(ui, true);
+            return;
+        }
+        let query = self.onboarding_state.search.trim().to_lowercase();
         let cases: Vec<_> = self
             .data
             .onboarding
             .cases
             .iter()
             .filter(|c| {
-                (self.onboarding_state.show_completed || c.status == "open")
+                c.company_id == self.data.company.id
+                    && (self.onboarding_state.show_completed || c.status == "open")
                     && format!("{} {}", c.employee_code, c.employee_name)
                         .to_lowercase()
                         .contains(&query)
@@ -609,34 +734,79 @@ impl HrisApp {
             });
         }
     }
-    fn assigned_onboarding(&mut self, ui: &mut Ui) {
+    fn onboarding_tasks(&mut self, ui: &mut Ui, hr: bool) {
         card(ui, |ui| {
-            ui.label(RichText::new("Your onboarding tasks").strong().size(20.0));
-            ui.label("Complete assigned tasks and record a reason. HR manages assignments, waivers and overall completion.");
-            ui.checkbox(
-                &mut self.onboarding_state.show_completed,
-                "Include resolved / completed onboarding",
-            );
+            if !hr {
+                ui.label(RichText::new("Your onboarding tasks").strong().size(20.0));
+                ui.label("Complete assigned tasks and record a reason. HR manages assignments, waivers and overall completion.");
+            }
+            self.onboarding_state.task_filters.controls(ui, hr);
         });
-        let tasks: Vec<_> = self
-            .data
-            .onboarding
-            .tasks
-            .iter()
-            .filter(|t| {
-                t.assigned_employee_id == self.data.access.employee_id
-                    && (self.onboarding_state.show_completed
-                        || (t.status == "open" && t.case_status == "open"))
-            })
-            .cloned()
-            .collect();
+        let today = self.data.company.today();
+        let tasks = self.onboarding_state.task_filters.rows(&self.data, today);
         if tasks.is_empty() {
-            empty(ui, "No assigned onboarding tasks match this view.");
+            empty(ui, "No onboarding tasks match these filters.");
+        } else {
+            ui.label(format!("{} matching tasks", tasks.len()));
         }
-        for t in tasks {
-            ui.add_space(10.0);
-            self.onboarding_task_card(ui, &t);
+        if hr {
+            let mut open = None;
+            for task in tasks {
+                ui.add_space(8.0);
+                card(ui, |ui| {
+                    ui.horizontal_wrapped(|ui| {
+                        ui.strong(&task.title);
+                        let status = match task.status.as_str() {
+                            "done" => "Done",
+                            "waived" => "Waived",
+                            _ if task.case_status != "open" => "Checklist closed",
+                            _ => "Open",
+                        };
+                        badge(ui, status, task.status == "done");
+                        if task.required {
+                            ui.label("Required");
+                        }
+                    });
+                    ui.label(format!("{} · {}", task.employee_code, task.employee_name));
+                    self.onboarding_task_due(ui, task, today);
+                    let case_available = self.data.onboarding.cases.iter().any(|case| {
+                        case.id == task.case_id && case.company_id == self.data.company.id
+                    });
+                    if ui.add_enabled(case_available, egui::Button::new("Open checklist"))
+                        .on_disabled_hover_text("Refresh to check whether this checklist is available.")
+                        .clicked()
+                    {
+                        open = Some(task.case_id);
+                    }
+                });
+            }
+            if let Some(case) = open {
+                self.onboarding_state.case_id = Some(case);
+            }
+        } else {
+            let tasks = tasks.into_iter().cloned().collect::<Vec<_>>();
+            for task in tasks {
+                ui.add_space(10.0);
+                self.onboarding_task_card(ui, &task);
+            }
         }
+    }
+
+    fn onboarding_task_due(&self, ui: &mut Ui, task: &onboarding::Task, today: NaiveDate) {
+        ui.horizontal_wrapped(|ui| {
+            let assignee = task.assigned_employee_id
+                .map(|id| self.data.employee_name(id))
+                .unwrap_or("Unassigned");
+            let due = task.due_on.map_or_else(|| "No due date".into(), |d| format!("Due {d}"));
+            ui.label(format!("{assignee} · {due}"));
+            if open_task(task) {
+                match task.due_on {
+                    Some(date) if date < today => badge(ui, "Overdue", false),
+                    Some(date) if date == today => badge(ui, "Due today", false),
+                    _ => {}
+                }
+            }
+        });
     }
     fn onboarding_task_card(&mut self, ui: &mut Ui, t: &onboarding::Task) {
         let hr = self
@@ -659,15 +829,7 @@ impl HrisApp {
                     t.employee_code, t.employee_name, t.starts_on
                 ));
             }
-            ui.label(format!(
-                "Assigned: {} · Due: {}",
-                t.assigned_employee_id
-                    .map(|id| self.data.employee_name(id))
-                    .unwrap_or("Unassigned"),
-                t.due_on
-                    .map(|d| d.to_string())
-                    .unwrap_or_else(|| "Not set".into())
-            ));
+            self.onboarding_task_due(ui, t, self.data.company.today());
             if !t.instructions.is_empty() {
                 ui.label(&t.instructions);
             }
@@ -1030,11 +1192,22 @@ impl HrisApp {
             )
             .unwrap();
             let mut t = TaskDraft::existing(&data.onboarding.tasks[0]);
+            let assigned = t.id;
             t.assigned_employee_id = Some(own);
             t.instructions="Review the employee’s submitted details, request any missing emergency information through HR, and record completion. Fictional test data only.".into();
             t.reason = "Fictional responsibility assigned".into();
             onboarding::apply_demo(&mut data, &HiringAction::TaskSave(t), chrono::Utc::now())
                 .unwrap();
+            if matches!(preview.as_str(), "onboard-follow-ups" | "onboard-overdue") {
+                let today = data.company.today();
+                for task in &mut data.onboarding.tasks {
+                    if task.id == assigned {
+                        task.due_on = Some(today - Duration::days(1));
+                    } else if task.title == "Complete company orientation" {
+                        task.due_on = Some(today);
+                    }
+                }
+            }
         }
         data.access = access.clone();
         self.data = data;
@@ -1067,7 +1240,12 @@ impl HrisApp {
             }
         } else {
             self.onboarding_state.active = true;
-            if preview != "onboard-list" {
+            self.onboarding_state.follow_ups =
+                matches!(preview.as_str(), "onboard-follow-ups" | "onboard-overdue");
+            if preview == "onboard-overdue" {
+                self.onboarding_state.task_filters.status = TaskStatus::Overdue;
+            }
+            if preview != "onboard-list" && !self.onboarding_state.follow_ups {
                 self.onboarding_state.case_id = Some(hire.id);
             }
             if preview == "onboard-task-form" {
@@ -1106,6 +1284,82 @@ impl HrisApp {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn follow_ups_combine_company_dates_assignment_and_current_access() {
+        let mut data = DemoStore::new().data;
+        let today = data.company.today();
+        let now = chrono::Utc::now();
+        let own = data.access.employee_id;
+        let first = Uuid::from_u128(11);
+        let due = Uuid::from_u128(12);
+        let closed = Uuid::from_u128(13);
+        let original = onboarding::Task {
+            id: first,
+            company_id: data.company.id,
+            case_id: Uuid::from_u128(10),
+            employee_id: data.employees[1].id,
+            employee_name: "Sample employee".into(),
+            employee_code: "DEMO-17".into(),
+            starts_on: today,
+            case_status: "open".into(),
+            assigned_employee_id: own,
+            title: "Equipment and access".into(),
+            instructions: String::new(),
+            due_on: Some(today - Duration::days(1)),
+            required: true,
+            status: "open".into(),
+            revision: 1,
+            created_by: data.access.user_id,
+            created_at: now,
+            updated_at: now,
+        };
+        data.onboarding.tasks = vec![
+            onboarding::Task {
+                id: due,
+                assigned_employee_id: None,
+                due_on: Some(today),
+                ..original.clone()
+            },
+            onboarding::Task {
+                id: closed,
+                case_status: "completed".into(),
+                ..original.clone()
+            },
+            onboarding::Task {
+                id: Uuid::from_u128(14),
+                company_id: Uuid::nil(),
+                ..original.clone()
+            },
+            original,
+        ];
+        let ids = |filters: &TaskFilters, data: &Snapshot| {
+            filters.rows(data, today).iter().map(|task| task.id).collect::<Vec<_>>()
+        };
+        let mut filters = TaskFilters {
+            query: " demo-17 ".into(),
+            ..Default::default()
+        };
+        assert_eq!(ids(&filters, &data), [first, due]);
+        filters.status = TaskStatus::Overdue;
+        assert_eq!(ids(&filters, &data), [first]);
+        filters.assignee = TaskAssignee::Unassigned;
+        assert!(ids(&filters, &data).is_empty());
+        filters.status = TaskStatus::DueToday;
+        assert_eq!(ids(&filters, &data), [due]);
+        filters.status = TaskStatus::All;
+        filters.assignee = TaskAssignee::Me;
+        assert_eq!(ids(&filters, &data), [first, closed]);
+
+        data.access.role = Role::Manager;
+        filters.assignee = TaskAssignee::Anyone;
+        assert_eq!(ids(&filters, &data), [first, closed]);
+        data.onboarding.tasks.last_mut().unwrap().assigned_employee_id = Some(data.employees[2].id);
+        assert_eq!(ids(&filters, &data), [closed]);
+        data.access.employee_id = None;
+        assert!(ids(&filters, &data).is_empty());
+    }
+
     #[test]
     fn unrelated_saved_record_keeps_offer_and_decision_drafts() {
         let data = DemoStore::new().data;

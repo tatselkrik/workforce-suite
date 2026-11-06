@@ -87,10 +87,15 @@ requirements or closes/reopens the case. All required tasks must be resolved
 before closing. Closing locks tasks until HR reopens the case. Reassignment
 and disabled membership immediately restrict fresh task/history reads.
 
+In the global queue, **Task follow-ups** lists checklist tasks across hiring cases.
+Search by employee name, code or task title. Filter by deadline or assignment,
+then open the checklist to record a change. **Overdue** uses the company date and
+includes open tasks with a past due date. **Your onboarding tasks** gives assigned
+staff the same deadline filters for their assignments.
+
 Each task and case retains protected actor, reason, server time and before/after
 history. Task instructions are visible to assigned staff; keep private HR/pay
-notes in the applicant or offer instead. Applicant self-service, job-board posting, calendar/email invitations, signed offers and
-exit/clearance remain subsequent modules.
+notes in the applicant or offer instead.
 
 ## Persistence and concurrency
 
