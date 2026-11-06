@@ -277,6 +277,9 @@ set due dates and record outcomes. Shared messages are visible to the requester;
 do not place confidential case notes in a service thread. Requesters can follow
 their own requests and respond through Workforce Employee.
 
+Filter requests by **Active**, **Overdue** or **Due today**. **Assigned to me**
+focuses on your queue. HR can also choose **Unassigned**.
+
 In **Benefits**, maintain plan guidance, record eligibility review, enroll employees
 and manage permitted dependents and coverage dates. Keep the reason for each change.
 An enrollment record does not itself contact an insurer or change payroll amounts.

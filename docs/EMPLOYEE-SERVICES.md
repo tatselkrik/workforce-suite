@@ -35,6 +35,11 @@ revision. Reassignment or loss of the handling role removes that assignment's
 access, while the person's own-request access remains. Preserve former-employee
 history and never gate owed pay or canonical employment on a service request.
 
+The desktop queue filters the current visible requests by status, deadline and
+handler. **Overdue** and **Due today** cover active requests. Deadline views list
+the earliest due date first. **Assigned to me** uses the current handler
+assignment. HR can select **Unassigned** to route incoming work.
+
 Use additive private tables with no direct client privileges, guarded invoker
 wrappers, current company/employee/role/assignment checks, immutable events,
 optimistic revisions and actor/full-payload retry receipts. Old receipts still need

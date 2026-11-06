@@ -80,13 +80,72 @@ impl Form {
         })
     }
 }
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+enum QueueStatus {
+    #[default]
+    All,
+    Active,
+    Overdue,
+    DueToday,
+    Status(Status),
+}
+
+impl QueueStatus {
+    fn label(self) -> &'static str {
+        match self {
+            Self::All => "All statuses",
+            Self::Active => "Active",
+            Self::Overdue => "Overdue",
+            Self::DueToday => "Due today",
+            Self::Status(status) => status.label(),
+        }
+    }
+
+    fn matches(self, ticket: &Ticket, today: NaiveDate) -> bool {
+        match self {
+            Self::All => true,
+            Self::Active => ticket.status.active(),
+            Self::Overdue => ticket.status.active() && ticket.due_on.is_some_and(|date| date < today),
+            Self::DueToday => ticket.status.active() && ticket.due_on == Some(today),
+            Self::Status(status) => ticket.status == status,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+enum HandlerFilter {
+    #[default]
+    Any,
+    Mine,
+    Unassigned,
+}
+
+impl HandlerFilter {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Any => "Any handler",
+            Self::Mine => "Assigned to me",
+            Self::Unassigned => "Unassigned",
+        }
+    }
+
+    fn matches(self, ticket: &Ticket, user: Uuid) -> bool {
+        match self {
+            Self::Any => true,
+            Self::Mine => ticket.assignee_user_id == Some(user),
+            Self::Unassigned => ticket.assignee_user_id.is_none(),
+        }
+    }
+}
+
 #[derive(Default)]
 pub(super) struct State {
     context: Option<Context>,
     selected: Option<Uuid>,
     form: Option<Form>,
     search: String,
-    status_filter: Option<Status>,
+    status_filter: QueueStatus,
+    handler_filter: HandlerFilter,
     error: Option<String>,
 }
 impl State {
@@ -318,55 +377,77 @@ impl State {
                     ui.add_space(6.0);
                 }
             } else {
-                let active = c.requests.iter().filter(|t| t.status.active()).count();
-                let overdue = c
-                    .requests
-                    .iter()
-                    .filter(|t| {
-                        t.status.active() && t.due_on.is_some_and(|d| d < data.company.today())
-                    })
+                let today = data.company.today();
+                let hr = c.hr(&data.access);
+                let visible = c.requests.iter()
+                    .filter(|ticket| c.visible(ticket, &data.access))
+                    .collect::<Vec<_>>();
+                let active = visible.iter()
+                    .filter(|ticket| QueueStatus::Active.matches(ticket, today))
+                    .count();
+                let overdue = visible.iter()
+                    .filter(|ticket| QueueStatus::Overdue.matches(ticket, today))
                     .count();
                 ui.add_space(8.0);
-                ui.label(format!(
-                    "{} visible requests · {active} active · {overdue} overdue",
-                    c.requests.len()
-                ));
+                ui.label(format!("{} visible · {active} active · {overdue} overdue", visible.len()));
+                if !hr && self.handler_filter == HandlerFilter::Unassigned {
+                    self.handler_filter = HandlerFilter::Any;
+                }
                 ui.horizontal_wrapped(|ui| {
                     ui.add(
                         egui::TextEdit::singleline(&mut self.search)
-                            .hint_text("Search request or requester"),
+                            .hint_text("Request or requester")
+                            .desired_width(205.0),
                     );
                     egui::ComboBox::from_id_salt("services-filter")
-                        .selected_text(
-                            self.status_filter
-                                .map(|s| s.label())
-                                .unwrap_or("All statuses"),
-                        )
+                        .selected_text(self.status_filter.label())
                         .show_ui(ui, |ui| {
-                            ui.selectable_value(&mut self.status_filter, None, "All statuses");
-                            for s in Status::ALL {
-                                ui.selectable_value(&mut self.status_filter, Some(s), s.label());
+                            for status in [
+                                QueueStatus::All,
+                                QueueStatus::Active,
+                                QueueStatus::Overdue,
+                                QueueStatus::DueToday,
+                            ].into_iter().chain(Status::ALL.into_iter().map(QueueStatus::Status)) {
+                                ui.selectable_value(&mut self.status_filter, status, status.label());
                             }
                         });
+                    egui::ComboBox::from_id_salt("services-handler-filter")
+                        .selected_text(self.handler_filter.label())
+                        .show_ui(ui, |ui| {
+                            for handler in [HandlerFilter::Any, HandlerFilter::Mine, HandlerFilter::Unassigned] {
+                                if hr || handler != HandlerFilter::Unassigned {
+                                    ui.selectable_value(&mut self.handler_filter, handler, handler.label());
+                                }
+                            }
+                        });
+                    if (!self.search.is_empty() || self.status_filter != QueueStatus::All
+                        || self.handler_filter != HandlerFilter::Any)
+                        && ui.button("Clear filters").clicked()
+                    {
+                        self.search.clear();
+                        self.status_filter = QueueStatus::All;
+                        self.handler_filter = HandlerFilter::Any;
+                    }
                 });
                 let query = self.search.trim().to_lowercase();
-                let mut found = false;
-                for ticket in c
-                    .requests
-                    .iter()
-                    .filter(|t| self.status_filter.is_none_or(|s| s == t.status))
-                {
-                    if !query.is_empty()
-                        && !format!(
-                            "{} {} {} {}",
-                            ticket.title, ticket.code, ticket.requester_code, ticket.requester_name
-                        )
-                        .to_lowercase()
-                        .contains(&query)
-                    {
-                        continue;
-                    }
-                    found = true;
+                let mut rows = visible.iter().copied()
+                    .filter(|ticket| self.status_filter.matches(ticket, today))
+                    .filter(|ticket| self.handler_filter.matches(ticket, c.user_id))
+                    .filter(|ticket| query.is_empty() || format!(
+                        "{} {} {} {}",
+                        ticket.title, ticket.code, ticket.requester_code, ticket.requester_name
+                    ).to_lowercase().contains(&query))
+                    .collect::<Vec<_>>();
+                if matches!(self.status_filter, QueueStatus::Overdue | QueueStatus::DueToday) {
+                    rows.sort_by_key(|ticket| (ticket.due_on, ticket.priority != Priority::High, ticket.id));
+                }
+                if rows.len() != visible.len() {
+                    ui.small(format!("Showing {} of {}", rows.len(), visible.len()));
+                }
+                if rows.is_empty() {
+                    ui.label("No requests match this view.");
+                }
+                for ticket in rows {
                     Frame::group(ui.style()).show(ui, |ui| {
                         if ui
                             .add(egui::Button::new(RichText::new(&ticket.title).strong()).wrap())
@@ -383,21 +464,28 @@ impl State {
                         ui.label(format!(
                             "{} · Handler: {}",
                             ticket.category.label(),
-                            ticket
-                                .assignee_name
-                                .as_deref()
-                                .unwrap_or("HR service queue")
+                            ticket.assignee_name.as_deref().unwrap_or("HR service queue")
                         ));
-                        ui.label(RichText::new(&ticket.code).small());
+                        ui.horizontal_wrapped(|ui| {
+                            ui.small(&ticket.code);
+                            if let Some(due) = ticket.due_on {
+                                ui.small(format!("Due {}", due.format("%b %d, %Y")));
+                                if QueueStatus::Overdue.matches(ticket, today) {
+                                    badge(ui, "Overdue", false);
+                                } else if QueueStatus::DueToday.matches(ticket, today) {
+                                    badge(ui, "Due today", false);
+                                }
+                            }
+                            if ticket.priority == Priority::High {
+                                badge(ui, "High priority", false);
+                            }
+                        });
                     });
                     ui.add_space(6.0);
                 }
-                if !found {
-                    ui.label("No requests match this view.");
-                }
             }
         } else {
-            ui.label("Load the current service queue to begin. Ordinary employees submit and track their requests in the local portal.");
+            ui.label("Load the current service queue to begin. Employees submit and track their requests in Workforce Employee.");
         }
         self.context = context;
         output
@@ -615,6 +703,31 @@ mod tests {
         let response = repo.save(&d, Audience::Staff, &r).unwrap();
         (d, c, r, response)
     }
+    #[test]
+    fn queue_deadlines_and_handler_filters_compose_on_current_ticket_state() {
+        let (data, _, _, response) = fixture();
+        let today = data.company.today();
+        let mut ticket = response.context.requests[0].clone();
+        assert!(QueueStatus::Active.matches(&ticket, today));
+        assert!(!QueueStatus::Overdue.matches(&ticket, today));
+        assert!(HandlerFilter::Unassigned.matches(&ticket, data.access.user_id));
+        assert!(!HandlerFilter::Mine.matches(&ticket, data.access.user_id));
+
+        ticket.due_on = Some(today - Duration::days(1));
+        ticket.assignee_user_id = Some(data.access.user_id);
+        assert!(QueueStatus::Overdue.matches(&ticket, today));
+        assert!(HandlerFilter::Mine.matches(&ticket, data.access.user_id));
+        assert!(!HandlerFilter::Mine.matches(&ticket, Uuid::nil()));
+        assert!(!HandlerFilter::Unassigned.matches(&ticket, data.access.user_id));
+        ticket.due_on = Some(today);
+        assert!(QueueStatus::DueToday.matches(&ticket, today));
+        assert!(!QueueStatus::Overdue.matches(&ticket, today));
+        ticket.status = Status::Completed;
+        assert!(!QueueStatus::Active.matches(&ticket, today));
+        assert!(!QueueStatus::DueToday.matches(&ticket, today));
+        assert!(QueueStatus::Status(Status::Completed).matches(&ticket, today));
+    }
+
     #[test]
     fn confirmed_receipt_clears_only_the_exact_pending_form() {
         let (d, c, r, response) = fixture();
