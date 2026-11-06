@@ -2,6 +2,38 @@ use super::*;
 use crate::work_activity::{Context, DailyReport, ReportBody, ReportFollowUps, Task, can_review};
 use serde_json::{Value, json};
 
+const REPORT_STATUSES: [(Option<&str>, &str); 5] = [
+    (None, "All statuses"),
+    (Some("draft"), "Draft"),
+    (Some("submitted"), "Submitted"),
+    (Some("returned"), "Returned for revision"),
+    (Some("approved"), "Approved"),
+];
+
+#[derive(Clone, Copy, Default)]
+struct ReportFilters {
+    from: Option<NaiveDate>,
+    through: Option<NaiveDate>,
+    status: Option<&'static str>,
+    from_month: Option<NaiveDate>,
+    through_month: Option<NaiveDate>,
+}
+
+impl ReportFilters {
+    fn valid_range(self) -> bool {
+        self.from
+            .zip(self.through)
+            .is_none_or(|(from, through)| from <= through)
+    }
+
+    fn matches(self, report: &DailyReport, employee: Option<Uuid>) -> bool {
+        employee.is_none_or(|id| report.employee_id == id)
+            && self.from.is_none_or(|from| report.work_date >= from)
+            && self.through.is_none_or(|through| report.work_date <= through)
+            && self.status.is_none_or(|status| report.status == status)
+    }
+}
+
 #[derive(Default)]
 pub(super) struct State {
     pub context: Option<Context>,
@@ -13,6 +45,7 @@ pub(super) struct State {
     pub evidence_target: Option<Uuid>,
     textures: std::collections::HashMap<Uuid, egui::TextureHandle>,
     report_tab: bool,
+    report_filters: ReportFilters,
 }
 pub(super) struct Form {
     operation: &'static str,
@@ -167,6 +200,35 @@ fn editor_text(ui: &mut Ui, label: &str, value: &mut String, multiline: bool, ma
     }
     ui.add_space(6.0);
 }
+
+fn report_date_filter(
+    ui: &mut Ui,
+    label: &str,
+    date: &mut Option<NaiveDate>,
+    month: &mut Option<NaiveDate>,
+    data: &Snapshot,
+) {
+    ui.push_id(label, |ui| {
+        let value = date.map_or_else(|| "Any date".into(), |d| d.format("%b %d, %Y").to_string());
+        let button = ui.add(
+            egui::Button::new(format!("{label} · {value}")).wrap_mode(egui::TextWrapMode::Extend),
+        );
+        egui::Popup::from_toggle_button_response(&button).show(|ui| {
+            let today = data.company.today();
+            let mut selected = date.unwrap_or(today);
+            let month = month.get_or_insert_with(|| month_start(selected));
+            if attendance_calendar(ui, &mut selected, month, today, data) {
+                *date = Some(selected);
+                ui.close();
+            }
+            if date.is_some() && ui.button("Any date").clicked() {
+                *date = None;
+                ui.close();
+            }
+        });
+    });
+}
+
 impl HrisApp {
     pub(super) fn attendance_photos(&mut self, ui: &mut Ui) {
         let Some(_record) = self.work_state.evidence_target else {
@@ -302,11 +364,11 @@ impl HrisApp {
             }
         });
         let company_mode = self.data.mode == Mode::Supabase;
-        let selected_employee = self.work_state.employee;
         if !company_mode {
             ui.label("Connect to your company to save policies and work reports.");
         }
         if policies {
+            let selected_employee = self.work_state.employee;
             if context.can_administer
                 && ui
                     .add_enabled(company_mode, egui::Button::new("New policy version"))
@@ -357,41 +419,95 @@ impl HrisApp {
             }
             return;
         }
-        ui.horizontal_wrapped(|ui|{
-            ui.selectable_value(&mut self.work_state.report_tab,false,"Tasks");ui.selectable_value(&mut self.work_state.report_tab,true,"Daily reports");
-            if !self.work_state.report_tab && (context.can_administer || self.data.access.allows(crate::staff_roles::Capability::TeamReview))
-                && ui.add_enabled(company_mode,egui::Button::new("Assign task")).clicked(){self.work_state.form=Some(Form::new("task_save",self.data.company.today()));}
-            if self.work_state.report_tab && ui.add_enabled(company_mode,egui::Button::new("My daily report")).clicked(){
-                let day=self.data.attendance.iter().find(|a|Some(a.employee_id)==self.data.access.employee_id&&a.checked_out_at.is_none()).map(|a|a.work_date).unwrap_or(self.data.company.today());let own=context.reports.iter().find(|r|Some(r.employee_id)==self.data.access.employee_id && r.work_date==day);
-                if let Some(r)=own {if matches!(r.status.as_str(),"draft"|"returned"){self.edit_work_report(r);}else{self.notice=Some(("Today's report is already submitted or approved. Review its retained history below.".into(),false));}}
-                else{self.work_state.form=Some(Form::new("report_save",day));}
+        ui.horizontal_wrapped(|ui| {
+            ui.selectable_value(&mut self.work_state.report_tab, false, "Tasks");
+            ui.selectable_value(&mut self.work_state.report_tab, true, "Daily reports");
+            if !self.work_state.report_tab
+                && (context.can_administer
+                    || self.data.access.allows(crate::staff_roles::Capability::TeamReview))
+                && ui
+                    .add_enabled(company_mode, egui::Button::new("Assign task"))
+                    .clicked()
+            {
+                self.work_state.form = Some(Form::new("task_save", self.data.company.today()));
+            }
+            if self.work_state.report_tab
+                && ui
+                    .add_enabled(company_mode, egui::Button::new("My daily report"))
+                    .clicked()
+            {
+                let employee = self.data.access.employee_id;
+                let day = self
+                    .data
+                    .attendance
+                    .iter()
+                    .find(|a| Some(a.employee_id) == employee && a.checked_out_at.is_none())
+                    .map_or_else(|| self.data.company.today(), |a| a.work_date);
+                let own = context
+                    .reports
+                    .iter()
+                    .find(|r| Some(r.employee_id) == employee && r.work_date == day);
+                match own {
+                    Some(report) if matches!(report.status.as_str(), "draft" | "returned") => {
+                        self.edit_work_report(report);
+                    }
+                    Some(report) => {
+                        if !self
+                            .work_state
+                            .report_filters
+                            .matches(report, self.work_state.employee)
+                        {
+                            self.work_state.employee = employee;
+                            self.work_state.report_filters = ReportFilters {
+                                from: Some(day),
+                                through: Some(day),
+                                ..Default::default()
+                            };
+                        }
+                        self.notice = Some((
+                            format!(
+                                "Your report for {day} is {}. Open its submission history below.",
+                                report.status
+                            ),
+                            false,
+                        ));
+                    }
+                    None => self.work_state.form = Some(Form::new("report_save", day)),
+                }
             }
         });
+        let selected_employee = self.work_state.employee;
         if self.work_state.report_tab {
+            self.report_filter_controls(ui);
             if company_mode
                 && (context.can_administer
                     || self.data.access.allows(crate::staff_roles::Capability::TeamReview))
             {
                 self.report_follow_ups(ui, selected_employee);
             }
-            ui.label(format!(
-                "Awaiting review: {} · Returned for revision: {}",
-                context
-                    .reports
-                    .iter()
-                    .filter(|r| r.status == "submitted" && can_review(&self.data, r.employee_id))
-                    .count(),
-                context
-                    .reports
-                    .iter()
-                    .filter(|r| r.status == "returned")
-                    .count()
-            ));
-            for r in context
+            let filters = self.work_state.report_filters;
+            if !filters.valid_range() {
+                ui.label("Choose a through date on or after the from date.");
+                return;
+            }
+            let reports = context
                 .reports
                 .iter()
-                .filter(|r| selected_employee.is_none_or(|id| r.employee_id == id))
-            {
+                .filter(|r| filters.matches(r, selected_employee));
+            let shown = reports.clone().count();
+            if shown == 0 {
+                ui.label("No daily reports match this selection.");
+                return;
+            }
+            ui.label(format!(
+                "Showing {shown} · {} awaiting review · {} returned for revision",
+                reports
+                    .clone()
+                    .filter(|r| r.status == "submitted" && can_review(&self.data, r.employee_id))
+                    .count(),
+                reports.clone().filter(|r| r.status == "returned").count()
+            ));
+            for r in reports {
                 card(ui, |ui| {
                     ui.strong(format!(
                         "{} · {} · {}",
@@ -419,7 +535,9 @@ impl HrisApp {
                         f.choice = "approved".into();
                         self.work_state.form = Some(f);
                     }
-                    ui.collapsing("Submission and decision history", |ui| {
+                    let history = egui::CollapsingHeader::new("Submission and decision history")
+                        .id_salt(r.id);
+                    history.show(ui, |ui| {
                         for s in context.submissions.iter().filter(|s| s.report_id == r.id) {
                             ui.strong(format!(
                                 "Submission {} · {}",
@@ -501,6 +619,44 @@ impl HrisApp {
             }
         }
     }
+
+    fn report_filter_controls(&mut self, ui: &mut Ui) {
+        let filters = &mut self.work_state.report_filters;
+        ui.strong("Filter the daily report list");
+        ui.horizontal_wrapped(|ui| {
+            report_date_filter(
+                ui,
+                "From",
+                &mut filters.from,
+                &mut filters.from_month,
+                &self.data,
+            );
+            report_date_filter(
+                ui,
+                "Through",
+                &mut filters.through,
+                &mut filters.through_month,
+                &self.data,
+            );
+            let status_label = REPORT_STATUSES
+                .iter()
+                .find(|(status, _)| *status == filters.status)
+                .map_or("All statuses", |(_, label)| *label);
+            egui::ComboBox::from_id_salt("daily-report-status")
+                .selected_text(status_label)
+                .show_ui(ui, |ui| {
+                    for (status, label) in REPORT_STATUSES {
+                        ui.selectable_value(&mut filters.status, status, label);
+                    }
+                });
+            if (filters.from.is_some() || filters.through.is_some() || filters.status.is_some())
+                && ui.button("Clear date and status").clicked()
+            {
+                *filters = ReportFilters::default();
+            }
+        });
+    }
+
     fn report_follow_ups(&mut self, ui: &mut Ui, selected_employee: Option<Uuid>) {
         card(ui, |ui| {
             ui.strong("Remote report follow-ups");
@@ -679,4 +835,55 @@ pub(super) fn clear_undo(ctx: &egui::Context) {
             "work-Progress or review note",
         ],
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn report_filters_include_both_work_dates_and_compose_with_status_and_employee() {
+        let from = NaiveDate::from_ymd_opt(2026, 10, 26).unwrap();
+        let through = from + Duration::days(6);
+        let employee = Uuid::from_u128(1);
+        let other_employee = Uuid::from_u128(2);
+        let mut report = DailyReport {
+            id: Uuid::from_u128(3),
+            company_id: Uuid::from_u128(4),
+            employee_id: employee,
+            work_date: from,
+            status: "submitted".into(),
+            revision: 1,
+            submission: 1,
+            body: ReportBody::default(),
+            task_ids: vec![],
+            review_note: String::new(),
+            updated_at: (through + Duration::days(1)).and_hms_opt(0, 0, 0).unwrap().and_utc(),
+        };
+        let mut filters = ReportFilters {
+            from: Some(from),
+            through: Some(through),
+            status: Some("submitted"),
+            ..Default::default()
+        };
+        assert!(filters.valid_range());
+        assert!(filters.matches(&report, Some(employee)));
+        report.work_date = through;
+        assert!(filters.matches(&report, Some(employee)));
+        assert!(!filters.matches(&report, Some(other_employee)));
+        report.work_date = through + Duration::days(1);
+        assert!(!filters.matches(&report, Some(employee)));
+        filters.through = None;
+        assert!(filters.matches(&report, None));
+        report.work_date = from - Duration::days(1);
+        assert!(!filters.matches(&report, None));
+        filters.through = Some(from - Duration::days(1));
+        assert!(!filters.valid_range());
+        assert!(!filters.matches(&report, None));
+        filters.from = None;
+        assert!(filters.matches(&report, None));
+        report.status = "returned".into();
+        assert!(!filters.matches(&report, None));
+        assert!(ReportFilters::default().matches(&report, None));
+    }
 }

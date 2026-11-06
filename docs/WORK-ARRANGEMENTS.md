@@ -68,6 +68,11 @@ or returning it. Returned reports can be revised and resubmitted. Each submissio
 and decision remains available in history. Review permissions follow the current
 reporting relationship; an earlier Manager does not retain access after reassignment.
 
+In **Daily reports**, use **From**, **Through** and the status menu to filter the
+report list alongside the employee selection. Both date boundaries are included
+and either can be left open. Counts reflect the visible list. **Clear date and
+status** resets those filters and keeps the employee selection.
+
 In **Daily reports → Remote report follow-ups**, choose a work date and load the
 list of completed remote shifts with a missing, draft or returned report. The
 list uses the work date and attendance method saved at check-in, including hybrid
