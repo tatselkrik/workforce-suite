@@ -69,7 +69,7 @@ pub(super) struct RosterSearch {
 }
 
 impl RosterSearch {
-    pub(super) fn controls(&mut self, ui: &mut Ui, rows: &[crate::attendance::DailyRow]) {
+    pub(super) fn controls(&mut self, ui: &mut Ui, rows: &[crate::attendance::DailyRow]) -> bool {
         let departments = rows
             .iter()
             .map(|row| row.employee.department.trim())
@@ -77,35 +77,46 @@ impl RosterSearch {
         let department_label = |name: &str| {
             if name.is_empty() { "No department".to_owned() } else { name.to_owned() }
         };
+        let mut changed = false;
         ui.horizontal_wrapped(|ui| {
-            ui.add(
-                egui::TextEdit::singleline(&mut self.query)
-                    .id_salt("attendance-roster-search")
-                    .hint_text("Name or code")
-                    .desired_width(180.0),
-            );
+            changed |= ui
+                .add(
+                    egui::TextEdit::singleline(&mut self.query)
+                        .id_salt("attendance-roster-search")
+                        .hint_text("Name or code")
+                        .desired_width(180.0),
+                )
+                .changed();
             let selected = self.department.as_deref().map_or_else(
                 || "All departments".to_owned(),
                 department_label,
             );
             egui::ComboBox::from_id_salt("attendance-roster-department")
+                .width(160.0)
+                .truncate()
                 .selected_text(selected)
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.department, None, "All departments");
+                    changed |= ui
+                        .selectable_value(&mut self.department, None, "All departments")
+                        .changed();
                     for name in departments {
-                        ui.selectable_value(
-                            &mut self.department,
-                            Some(name.to_owned()),
-                            department_label(name),
-                        );
+                        changed |= ui
+                            .selectable_value(
+                                &mut self.department,
+                                Some(name.to_owned()),
+                                department_label(name),
+                            )
+                            .changed();
                     }
                 });
             if (!self.query.is_empty() || self.department.is_some())
                 && ui.button("Clear search").clicked()
             {
                 *self = Self::default();
+                changed = true;
             }
         });
+        changed
     }
 
     pub(super) fn apply(&self, rows: &mut Vec<crate::attendance::DailyRow>) {
@@ -114,6 +125,52 @@ impl RosterSearch {
             self.department.as_deref().is_none_or(|name| name == row.employee.department.trim())
                 && employee_identity_matches(&row.employee, &query)
         });
+    }
+}
+
+const ROSTER_PAGE_SIZE: usize = 25;
+
+#[derive(Default)]
+pub(super) struct RosterPager {
+    page: usize,
+    context: Option<(NaiveDate, Option<Uuid>)>,
+}
+
+impl RosterPager {
+    pub(super) fn set_context(
+        &mut self,
+        date: NaiveDate,
+        employee: Option<Uuid>,
+        filters_changed: bool,
+    ) {
+        let context = Some((date, employee));
+        if self.context != context || filters_changed {
+            self.page = 0;
+        }
+        self.context = context;
+    }
+
+    pub(super) fn controls(&mut self, ui: &mut Ui, total: usize) -> bool {
+        let pages = total.div_ceil(ROSTER_PAGE_SIZE).max(1);
+        self.page = self.page.min(pages - 1);
+        let before = self.page;
+        if pages > 1 {
+            ui.horizontal_wrapped(|ui| {
+                if ui.add_enabled(self.page > 0, egui::Button::new("Previous")).clicked() {
+                    self.page -= 1;
+                }
+                ui.label(format!("Page {} of {pages} · {total} employees", self.page + 1));
+                if ui.add_enabled(self.page + 1 < pages, egui::Button::new("Next")).clicked() {
+                    self.page += 1;
+                }
+            });
+        }
+        self.page != before
+    }
+
+    pub(super) fn range(&self, total: usize) -> std::ops::Range<usize> {
+        let start = self.page * ROSTER_PAGE_SIZE;
+        start..(start + ROSTER_PAGE_SIZE).min(total)
     }
 }
 
@@ -154,6 +211,7 @@ pub(super) struct State {
     pub roster_employee: Option<Uuid>,
     pub roster_filter: RosterFilter,
     pub roster_search: RosterSearch,
+    pub roster_pager: RosterPager,
     pub template: Option<ShiftTemplateDraft>,
     pub assignment: Option<ShiftAssignmentDraft>,
     pub show_inactive: bool,
@@ -704,6 +762,29 @@ fn shift_hours_fields(ui: &mut Ui, start: &mut String, end: &mut String) -> [egu
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn roster_page_resets_for_filters_and_clamps_after_a_refresh() {
+        let today = NaiveDate::from_ymd_opt(2026, 11, 6).unwrap();
+        let mut pager = RosterPager::default();
+        pager.set_context(today, None, false);
+        pager.page = 4;
+        assert_eq!(pager.range(125), 100..125);
+        let ctx = egui::Context::default();
+        let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            pager.controls(ui, 32);
+            assert_eq!(pager.range(32), 25..32);
+        });
+        output.textures_delta.clear();
+        pager.set_context(today, None, true);
+        assert_eq!(pager.range(32), 0..25);
+        pager.page = 2;
+        pager.set_context(today - Duration::days(1), None, false);
+        assert_eq!(pager.range(55), 0..25);
+        pager.page = 2;
+        pager.set_context(today - Duration::days(1), Some(Uuid::from_u128(100)), false);
+        assert_eq!(pager.range(1), 0..1);
+    }
 
     #[test]
     fn attendance_search_composes_with_status_and_scoped_roster() {

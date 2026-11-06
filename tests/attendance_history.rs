@@ -59,6 +59,14 @@ fn historical_roster_separates_missing_and_approved_leave_and_retains_archived_r
         reason: String::new(),
         status: LeaveStatus::Approved,
     });
+    let mut foreign_punch = data.attendance[0].clone();
+    foreign_punch.company_id = Uuid::from_u128(999_001);
+    foreign_punch.employee_id = data.employees[1].id;
+    data.attendance.push(foreign_punch);
+    let mut foreign_leave = data.leave[0].clone();
+    foreign_leave.company_id = Uuid::from_u128(999_001);
+    foreign_leave.employee_id = data.employees[1].id;
+    data.leave.push(foreign_leave);
     let rows = daily_roster(&data, day);
     assert_eq!(rows.len(), 4);
     assert_eq!(rows.iter().filter(|r| r.attendance.is_some()).count(), 2);

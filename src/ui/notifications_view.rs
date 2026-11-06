@@ -413,6 +413,7 @@ impl HrisApp {
                 self.shift_state.roster_employee = None;
                 self.shift_state.roster_filter = shifts_view::RosterFilter::All;
                 self.shift_state.roster_search = shifts_view::RosterSearch::default();
+                self.shift_state.roster_pager = shifts_view::RosterPager::default();
                 self.attendance_date = *date;
                 self.calendar_month = month_start(*date);
             }

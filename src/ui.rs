@@ -1766,6 +1766,7 @@ impl HrisApp {
                 self.shift_state.roster_employee = Some(id);
                 self.shift_state.roster_filter = shifts_view::RosterFilter::All;
                 self.shift_state.roster_search = shifts_view::RosterSearch::default();
+                self.shift_state.roster_pager = shifts_view::RosterPager::default();
                 self.attendance_date = self.data.company.today();
                 self.calendar_month = month_start(self.attendance_date);
                 self.break_state.detail = None;
@@ -3133,15 +3134,24 @@ impl HrisApp {
             rows.retain(|row| row.employee.id == id);
         }
         card(ui, |ui| {
-            ui.label(
+            let roster_header = ui.label(
                 RichText::new(date.format("%A, %B %d, %Y").to_string())
                     .size(17.0)
                     .strong(),
             );
-            self.shift_state.roster_search.controls(ui, &rows);
+            let search_changed = self.shift_state.roster_search.controls(ui, &rows);
             self.shift_state.roster_search.apply(&mut rows);
+            let previous_filter = self.shift_state.roster_filter;
             shifts_view::roster_filters(ui, &rows, &mut self.shift_state.roster_filter);
             rows.retain(|row| self.shift_state.roster_filter.matches(row));
+            let pager = &mut self.shift_state.roster_pager;
+            pager.set_context(
+                date,
+                self.shift_state.roster_employee,
+                search_changed || previous_filter != self.shift_state.roster_filter,
+            );
+            pager.controls(ui, rows.len());
+            let page = pager.range(rows.len());
             ui.add_space(8.0);
             egui::ScrollArea::horizontal().show(ui, |ui| {
                 egui::Grid::new("attendance_table")
@@ -3152,7 +3162,7 @@ impl HrisApp {
                             ui,
                             &["EMPLOYEE / PLANNED SHIFT", "CHECK-IN", "CHECK-OUT", "ELAPSED", "STATUS", ""],
                         );
-                        for row in &rows {
+                        for row in &rows[page] {
                             ui.vertical(|ui| {
                                 ui.set_width(230.0);
                                 ui.label(RichText::new(&row.employee.full_name).strong()).on_hover_text(&row.employee.employee_code);
@@ -3254,6 +3264,9 @@ impl HrisApp {
                         }
                     });
             });
+            if self.shift_state.roster_pager.controls(ui, rows.len()) {
+                ui.scroll_to_rect(roster_header.rect, Some(Align::Min));
+            }
             if rows.is_empty() {
                 empty(ui, if has_roster {
                     "No employees match this attendance filter."
@@ -5866,6 +5879,15 @@ fn date_calendar(
         }
     });
     ui.separator();
+    let check_ins_by_day = attendance.map(|records| {
+        let mut counts = [0; 32];
+        for record in records.iter().filter(|record| {
+            record.work_date.year() == month.year() && record.work_date.month() == month.month()
+        }) {
+            counts[record.work_date.day() as usize] += 1;
+        }
+        counts
+    });
     egui::Grid::new("attendance_calendar_days")
         .spacing([5.0, 4.0])
         .show(ui, |ui| {
@@ -5881,9 +5903,7 @@ fn date_calendar(
                 .unwrap_or(35);
             for (index, cell) in cells.into_iter().take(visible_cells).enumerate() {
                 if let Some(date) = cell {
-                    let count = attendance.map(|records| {
-                        records.iter().filter(|record| record.work_date == date).count()
-                    });
+                    let count = check_ins_by_day.as_ref().map(|days| days[date.day() as usize]);
                     let mut text = RichText::new(date.day().to_string());
                     if count.unwrap_or(0) > 0 {
                         text = text.color(accent(ui)).strong();

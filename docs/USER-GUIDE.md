@@ -142,7 +142,8 @@ employee archive must not be treated as proof that a payment has been made.
 Open **Attendance → Daily attendance** and choose a date from the calendar. Search
 by employee name or code, or choose a department. **Open shifts**, **Completed**,
 **No check-in** and **On leave** count matching roster entries. Choose **All** to
-clear the status filter. The record-a-check-in picker is separate from roster search.
+clear the status filter. Use **Previous** and **Next** when the results span
+multiple pages. The record-a-check-in picker is separate from roster search.
 Review missing punches alongside scheduled work and approved leave.
 Employees use the punch method assigned by HR, either an office station or their
 own Android account.
