@@ -49,6 +49,9 @@ receive the same own-record view as any other employee.
 3. Review **Employment**, contact details and emergency contact information. Record department, job title, joining date, employment type, location and **Reports to** where known.
 4. Save the changes. If another user changed the record, refresh and review the latest values before saving again.
 
+From a search result, **Back to search results** keeps your query. Close or save
+the record to resume your previous workspace with its filters in place.
+
 Use **Attendance**, **Leave** or **Learning & performance** from a saved employee
 record to open that workspace with the employee selected. Save or close open edits
 before switching.

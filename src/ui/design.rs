@@ -814,7 +814,7 @@ impl HrisApp {
         let compact = ui.available_width() < compact_width;
         ui.horizontal(|ui| {
             ui.label(
-                RichText::new(self.desktop.product.label(self.page, &self.data))
+                RichText::new(self.header_page_label())
                     .size(12.0)
                     .color(muted(ui)),
             );

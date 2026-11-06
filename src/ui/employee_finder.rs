@@ -75,28 +75,33 @@ fn finder_dialog(
         };
         let shown = results.len().min(MAX_RESULTS);
         let height = (ctx.content_rect().height() - 220.0).clamp(96.0, 300.0);
-        egui::ScrollArea::vertical()
+        let results_scroll = egui::ScrollArea::vertical()
             .id_salt("employee-finder-results")
-            .max_height(height)
-            .show(ui, |ui| {
-                for employee in results.iter().take(shown) {
-                    let archived = if employee.status == EmployeeStatus::Archived {
-                        " · Archived"
-                    } else {
-                        ""
-                    };
-                    let label = format!(
-                        "{} · {}{archived}",
-                        employee.full_name, employee.employee_code,
-                    );
-                    let button = egui::Button::new(label)
-                        .wrap_mode(egui::TextWrapMode::Wrap)
-                        .min_size(Vec2::new(ui.available_width(), 30.0));
-                    if ui.add_enabled(can_open, button).clicked() {
-                        open = Some(employee.id);
-                    }
+            .max_height(height);
+        let results_scroll = if query.changed() {
+            results_scroll.vertical_scroll_offset(0.0)
+        } else {
+            results_scroll
+        };
+        results_scroll.show(ui, |ui| {
+            for employee in results.iter().take(shown) {
+                let archived = if employee.status == EmployeeStatus::Archived {
+                    " · Archived"
+                } else {
+                    ""
+                };
+                let label = format!(
+                    "{} · {}{archived}",
+                    employee.full_name, employee.employee_code,
+                );
+                let button = egui::Button::new(label)
+                    .wrap_mode(egui::TextWrapMode::Wrap)
+                    .min_size(Vec2::new(ui.available_width(), 30.0));
+                if ui.add_enabled(can_open, button).clicked() {
+                    open = Some(employee.id);
                 }
-            });
+            }
+        });
         if results.len() > MAX_RESULTS {
             ui.small(format!(
                 "Showing {shown} of {}. Type more to narrow the results.",
@@ -124,6 +129,39 @@ impl HrisApp {
             && self.correction_history.is_none()
             && self.session_confirmation.is_none()
             && !self.update_confirmation
+    }
+
+    fn employee_in_finder_scope(&self, id: Uuid) -> bool {
+        self.employee_finder_available()
+            && self.data.employees.iter().any(|employee| {
+                employee.id == id
+                    && employee.company_id == self.data.company.id
+                    && self.data.access.can_read_operational_employee(employee)
+            })
+    }
+
+    pub(super) fn reconcile_found_employee(&mut self, ctx: &egui::Context) {
+        if self.employee_record_search.is_some()
+            && self
+                .employee_form
+                .as_ref()
+                .and_then(|draft| draft.id)
+                .is_none_or(|id| !self.employee_in_finder_scope(id))
+        {
+            self.employee_record_search = None;
+            self.employee_form = None;
+            self.contacts_form = None;
+            self.document_form = None;
+            self.account_form = None;
+            self.clear_profile_secrets(ctx);
+        }
+    }
+
+    pub(super) fn return_to_employee_search(&mut self) {
+        if let Some(mut state) = self.employee_record_search.take() {
+            state.focus_query = true;
+            self.employee_finder = Some(state);
+        }
     }
 
     fn open_employee_finder(&mut self) {
@@ -174,19 +212,12 @@ impl HrisApp {
         }
         if let Some(id) = modal.inner
             && self.can_open_employee_finder()
-            && self.data.employees.iter().any(|employee| {
-                employee.id == id
-                    && employee.company_id == self.data.company.id
-                    && self.data.access.can_read_operational_employee(employee)
-            })
+            && self.employee_in_finder_scope(id)
         {
-            self.navigate(Page::Employees, ctx);
-            if self.page == Page::Employees {
-                self.employee_view = EmployeeView::Directory;
-                self.open_employee(id);
-                clear_edit_history(ctx, &[QUERY_ID]);
-                return;
-            }
+            self.open_employee(id);
+            self.employee_record_search = Some(state);
+            clear_edit_history(ctx, &[QUERY_ID]);
+            return;
         }
         self.employee_finder = Some(state);
     }

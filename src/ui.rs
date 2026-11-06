@@ -111,6 +111,7 @@ pub struct HrisApp {
     work_state: work_activity_view::State,
     review_visit: Option<design::ReviewVisit>,
     employee_finder: Option<employee_finder::State>,
+    employee_record_search: Option<employee_finder::State>,
     services_state: services_view::State,
     relations_state: relations_view::State,
     benefits_state: benefits_view::State,
@@ -392,6 +393,7 @@ impl HrisApp {
             work_state: Default::default(),
             review_visit: None,
             employee_finder: None,
+            employee_record_search: None,
             relations_state: Default::default(),
             benefits_state: Default::default(),
             organization: organization_view::State::default(),
@@ -1190,10 +1192,13 @@ impl HrisApp {
                         self.leave_state.draft = None;
                         self.leave_state.saving_revision = None;
                     }
+                    if self.data.access != data.access || self.data.mode != data.mode {
+                        self.employee_finder = None;
+                        self.employee_record_search = None;
+                        clear_edit_history(ctx, &["find-employee-query"]);
+                    }
                     if self.data.access != data.access {
                         self.review_visit = None;
-                        self.employee_finder = None;
-                        clear_edit_history(ctx, &["find-employee-query"]);
                         self.workspace_draft = None;
                         self.sidebar_last_page = None;
                         self.staff_roles_state = Default::default();
@@ -1432,6 +1437,7 @@ impl HrisApp {
                         self.sidebar_last_page = None;
                     }
                     self.data = data;
+                    self.reconcile_found_employee(ctx);
                     if newly_signed_in {
                         self.page = self.desktop.product.landing(&self.data);
                         if workspaces::prefers_development(&self.data) {
@@ -1531,6 +1537,7 @@ impl HrisApp {
                     if self.close_on_success {
                         self.document_form = None;
                         self.employee_form = None;
+                        self.employee_record_search = None;
                         self.contacts_form = None;
                         self.leave_form = None;
                         self.correction_form = None;
@@ -1707,6 +1714,7 @@ impl HrisApp {
     }
 
     fn open_employee(&mut self, id: Uuid) {
+        self.employee_record_search = None;
         self.document_form = None;
         self.document_search.clear();
         self.document_category = None;
@@ -1744,6 +1752,9 @@ impl HrisApp {
     }
 
     fn open_employee_workspace(&mut self, id: Uuid, page: Page, ctx: &egui::Context) {
+        if self.employee_record_search.is_some() {
+            self.close_review_visit(ctx);
+        }
         self.navigate(page, ctx);
         if self.page != page {
             return;
@@ -1772,6 +1783,20 @@ impl HrisApp {
                 self.career_state.focus_employee(id);
             }
             _ => unreachable!("Only employee workspace shortcuts call this route"),
+        }
+    }
+
+    fn employee_record_visible(&self) -> bool {
+        self.employee_form.is_some()
+            && (self.employee_record_search.is_some()
+                || matches!(self.page, Page::Employees | Page::Accounts))
+    }
+
+    fn header_page_label(&self) -> &'static str {
+        if self.employee_record_search.is_some() {
+            "Employee record"
+        } else {
+            self.desktop.product.label(self.page, &self.data)
         }
     }
 
@@ -1810,6 +1835,9 @@ impl HrisApp {
         let mut close = false;
         let mut save = false;
         let mut shortcut = None;
+        let from_search = self.employee_record_search.is_some();
+        let mut return_to_workspace = false;
+        let mut return_to_results = false;
         let destinations = draft.id.and_then(|id| {
             let employee = self.data.employees.iter().find(|e| e.id == id)?;
             let operational = self.data.access.can_read_operational_employee(employee);
@@ -1822,17 +1850,30 @@ impl HrisApp {
         });
         card(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
-                close = ui
-                    .button(
-                        if self.page == Page::Employees
-                            && self.employee_view == EmployeeView::Organization
-                        {
-                            "< Back to chart"
-                        } else {
-                            "< Back"
-                        },
-                    )
-                    .clicked();
+                if from_search {
+                    let ready = self.employee_shortcuts_ready(&draft, &contacts, access.is_some());
+                    let label = self.desktop.product.label(self.page, &self.data);
+                    return_to_workspace = ui
+                        .add_enabled(ready, egui::Button::new(format!("Back to {label}")))
+                        .on_disabled_hover_text("Save or discard the open changes first.")
+                        .clicked();
+                    return_to_results = ui
+                        .add_enabled(ready, egui::Button::new("Back to search results"))
+                        .on_disabled_hover_text("Save or discard the open changes first.")
+                        .clicked();
+                } else {
+                    close = ui
+                        .button(
+                            if self.page == Page::Employees
+                                && self.employee_view == EmployeeView::Organization
+                            {
+                                "< Back to chart"
+                            } else {
+                                "< Back"
+                            },
+                        )
+                        .clicked();
+                }
                 ui.label(
                     RichText::new(if draft.full_name.is_empty() {
                         "New employee"
@@ -1909,7 +1950,7 @@ impl HrisApp {
             let body_height =
                 (ui.available_height() - if editable { 90.0 } else { 130.0 }).max(80.0);
             let scroll = egui::ScrollArea::vertical()
-                .id_salt("employee_record_body")
+                .id_salt(("employee_record_body", draft.id))
                 .max_height(body_height);
             #[cfg(feature = "qa-screenshot")]
             let scroll = scroll
@@ -1958,7 +1999,8 @@ impl HrisApp {
             });
             ui.add_space(12.0);
             ui.horizontal_wrapped(|ui| {
-                if editable && self.document_form.is_none() {
+                let access_change_open = from_search && self.staff_roles_state.has_draft();
+                if editable && self.document_form.is_none() && !access_change_open {
                     save = primary(
                         ui,
                         if access.is_some() {
@@ -1970,20 +2012,29 @@ impl HrisApp {
                         },
                     );
                 }
+                let close_label = if from_search {
+                    if self.employee_shortcuts_ready(&draft, &contacts, access.is_some()) {
+                        "Close record"
+                    } else {
+                        "Discard changes"
+                    }
+                } else if editable && self.contacts_section != ContactSection::Documents {
+                    "Cancel"
+                } else {
+                    "Close record"
+                };
                 close |= ui
-                    .button(
-                        if editable && self.contacts_section != ContactSection::Documents {
-                            "Cancel"
-                        } else {
-                            "Close record"
-                        },
-                    )
+                    .add_enabled(!access_change_open, egui::Button::new(close_label))
+                    .on_disabled_hover_text("Finish or cancel the open access change first.")
                     .clicked();
             });
             if !editable {
                 ui.label("Employment is managed by HR. Update your own contact and emergency details in Profile.");
             }
         });
+        let back_from_search = (return_to_workspace || return_to_results)
+            && self.employee_shortcuts_ready(&draft, &contacts, access.is_some());
+        close |= back_from_search;
         if let Some((id, page)) = shortcut {
             if self.employee_shortcuts_ready(&draft, &contacts, access.is_some()) {
                 self.open_employee_workspace(id, page, ui.ctx());
@@ -2036,6 +2087,11 @@ impl HrisApp {
             self.account_form = access;
         } else {
             self.document_form = None;
+            if back_from_search && return_to_results && !transferred && shortcut.is_none() {
+                self.return_to_employee_search();
+            } else {
+                self.employee_record_search = None;
+            }
             clear_edit_history(
                 ui.ctx(),
                 &["account-initial-password", "account-initial-confirm"],
@@ -2246,10 +2302,7 @@ impl HrisApp {
         ui.horizontal(|ui| {
             ui.label(
                 RichText::new(
-                    self.desktop
-                        .product
-                        .label(self.page, &self.data)
-                        .to_uppercase(),
+                    self.header_page_label().to_uppercase(),
                 )
                 .color(muted(ui))
                 .size(11.0)
@@ -2409,8 +2462,7 @@ impl HrisApp {
                 "Approval tasks, personal updates and reminders within your current access.",
             ),
         };
-        let employee_open =
-            matches!(self.page, Page::Employees | Page::Accounts) && self.employee_form.is_some();
+        let employee_open = self.employee_record_visible();
         if !employee_open {
             ui.heading(RichText::new(title).strong());
             ui.label(RichText::new(subtitle).color(muted(ui)));
@@ -4656,9 +4708,7 @@ impl eframe::App for HrisApp {
                             .show(ui, |ui| self.staff_provision_form(ui));
                         return;
                     }
-                    if matches!(self.page, Page::Employees | Page::Accounts)
-                        && self.employee_form.is_some()
-                    {
+                    if self.employee_record_visible() {
                         ui.add_enabled_ui(!form_open, |ui| {
                             self.header(ui);
                             ui.add_enabled_ui(!self.busy, |ui| self.employee_record(ui));
