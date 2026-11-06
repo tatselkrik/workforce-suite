@@ -18,6 +18,7 @@ Use the deadline filters to find open training and recorded certifications by
 due date or expiry. Today has its own filter. **Next 30 days** begins tomorrow.
 Completed or cancelled training and archived or revoked certifications stay out
 of deadline queues. Notifications open the exact record within current access.
+Use **Ctrl+F** to focus search. Larger lists show up to 25 records per page.
 
 Optional evidence links to an existing ready, unarchived private 201 document
 for the same company and employee. Binding rows and their events are HR-only;

@@ -13,6 +13,7 @@ pub(super) struct State {
     search: String,
     deadline: DeadlineFilter,
     notice_id: Option<Uuid>,
+    page: ListPager,
     resolved: bool,
     archived: bool,
     pub certificates: bool,
@@ -23,6 +24,7 @@ impl State {
         self.search.clear();
         self.deadline = DeadlineFilter::All;
         self.notice_id = None;
+        self.page = ListPager::default();
     }
 
     pub(super) fn open_notice(&mut self, employee: Uuid, id: Uuid, certificate: bool) {
@@ -124,6 +126,19 @@ fn training_due(training: &learning::Training) -> Option<NaiveDate> {
     }
 }
 
+fn page_learning_rows<T: Clone>(
+    ui: &mut Ui,
+    pager: &mut ListPager,
+    rows: &[&T],
+    noun: &str,
+) -> (Vec<T>, egui::Rect) {
+    let total = rows.len();
+    let anchor = ui.label(format!("Matching {noun} · {total}")).rect;
+    pager.controls(ui, total, noun);
+    let visible = rows[pager.range(total)].iter().copied().cloned().collect();
+    (visible, anchor)
+}
+
 fn area(ui: &mut Ui, label: &str, value: &mut String, rows: usize) {
     ui.label(label);
     ui.add(
@@ -166,6 +181,7 @@ impl HrisApp {
         if self.learning_state.certificates != certificates {
             self.learning_state.deadline = DeadlineFilter::All;
             self.learning_state.notice_id = None;
+            self.learning_state.page = ListPager::default();
         }
         self.learning_state.certificates = certificates;
         if self.learning_decision(ui) {
@@ -187,6 +203,17 @@ impl HrisApp {
             .data
             .access
             .allows(crate::staff_roles::Capability::DevelopmentAdministration);
+        let filter_key = |state: &State| {
+            (
+                state.employee,
+                state.deadline,
+                state.archived,
+                state.resolved,
+                state.notice_id,
+            )
+        };
+        let previous = filter_key(&self.learning_state);
+        let mut query_changed = false;
         card(ui, |ui| {
             if self.learning_state.notice_id.is_some() {
                 ui.horizontal_wrapped(|ui| {
@@ -255,11 +282,12 @@ impl HrisApp {
                             );
                         }
                     });
-                ui.add(
+                query_changed = queue_search(ui.add(
                     egui::TextEdit::singleline(&mut self.learning_state.search)
                         .hint_text("Search employee, title or provider")
                         .desired_width(260.0),
-                );
+                ))
+                .changed();
             });
             ui.horizontal_wrapped(|ui| {
                 for deadline in DeadlineFilter::ALL {
@@ -273,6 +301,9 @@ impl HrisApp {
             });
             ui.label(if certificates{"Recorded certificates and expiry dates; HR retains file evidence separately in private 201 files. "}else{"HR assigns training and records completion. Staff can record their own progress; current reporting Managers can also record team progress. Dates do not change attendance or leave."});
         });
+        if query_changed || previous != filter_key(&self.learning_state) {
+            self.learning_state.page = ListPager::default();
+        }
         ui.add_space(10.0);
         let search = self.learning_state.search.trim().to_lowercase();
         let today = self.data.company.today();
@@ -288,7 +319,6 @@ impl HrisApp {
                     self.learning_state
                         .certificate_matches(&self.data, c, today, &search)
                 })
-                .cloned()
                 .collect();
             if has_deadline_filter {
                 rows.sort_by_key(|c| (c.expires_on, c.id));
@@ -302,10 +332,22 @@ impl HrisApp {
                     ))
                 });
             }
-            for c in rows {
+            let total = rows.len();
+            if total > 0 {
                 found = true;
-                self.learning_certificate_card(ui, &c);
-                ui.add_space(10.0);
+                let (visible, anchor) = page_learning_rows(
+                    ui,
+                    &mut self.learning_state.page,
+                    &rows,
+                    "certifications",
+                );
+                for certificate in visible {
+                    self.learning_certificate_card(ui, &certificate);
+                    ui.add_space(10.0);
+                }
+                if self.learning_state.page.controls(ui, total, "certifications") {
+                    ui.scroll_to_rect(anchor, Some(Align::Min));
+                }
             }
         } else {
             let mut rows: Vec<_> = self
@@ -317,7 +359,6 @@ impl HrisApp {
                     self.learning_state
                         .training_matches(&self.data, t, today, &search)
                 })
-                .cloned()
                 .collect();
             if has_deadline_filter {
                 rows.sort_by_key(|t| (t.due_on, t.id));
@@ -330,10 +371,22 @@ impl HrisApp {
                     ))
                 });
             }
-            for t in rows {
+            let total = rows.len();
+            if total > 0 {
                 found = true;
-                self.learning_training_card(ui, &t);
-                ui.add_space(10.0);
+                let (visible, anchor) = page_learning_rows(
+                    ui,
+                    &mut self.learning_state.page,
+                    &rows,
+                    "training records",
+                );
+                for training in visible {
+                    self.learning_training_card(ui, &training);
+                    ui.add_space(10.0);
+                }
+                if self.learning_state.page.controls(ui, total, "training records") {
+                    ui.scroll_to_rect(anchor, Some(Align::Min));
+                }
             }
         }
         if !found {
@@ -1054,10 +1107,12 @@ mod tests {
         };
         let mut state = State {
             deadline: DeadlineFilter::Overdue,
+            page: ListPager { page: 2 },
             ..Default::default()
         };
         state.open_notice(employee, record.id, false);
         assert!(state.deadline == DeadlineFilter::All);
+        assert_eq!(state.page.page, 0);
         assert!(state.training_matches(&data, &record, today, ""));
         assert!(!state.training_matches(&data, &duplicate, today, ""));
         let foreign = learning::Training {

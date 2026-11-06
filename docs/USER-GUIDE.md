@@ -270,8 +270,10 @@ Record training dates, progress and completion outcomes. Maintain certificate
 issue and expiry dates from supporting facts. Link private evidence only through
 the permitted document workflow. Use **Overdue**, **Due today** and **Next 30 days**
 for open training. Certifications have corresponding expiry filters. A notice
-opens the specific record. Career plans describe development targets and
-milestones; completing a plan does not change salary, job title or department.
+opens the specific record. Press **Ctrl+F** to focus search. Larger training and
+certification lists show 25 records per page. Career plans record development
+targets and milestones. Manage salary in Workforce Payroll and job title and
+department in the employee record.
 
 ### Confidential employee relations
 
