@@ -36,6 +36,9 @@ discard an open decision before switching.
 Use the sidebar to browse workspaces and the circular profile control for your
 personal details.
 
+In **Employees → Directory**, use **Previous** and **Next** to browse larger
+results. Select an employee's name to open their record.
+
 In **Notifications → Document expiry**, filter **Overdue**, **Due today** or
 **Next 30 days**. **Open record** shows the exact document, even if titles are
 repeated. **Back to Notifications** returns to the filtered list.

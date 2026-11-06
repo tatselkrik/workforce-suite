@@ -125,6 +125,7 @@ pub struct HrisApp {
     busy: bool,
     notice: Option<(String, bool)>,
     search: String,
+    directory_page: EmployeePager,
     employee_status: Option<EmployeeStatus>,
     employee_view: EmployeeView,
     organization: organization_view::State,
@@ -388,6 +389,7 @@ impl HrisApp {
             },
             search: String::new(),
             employee_status: Some(EmployeeStatus::Active),
+            directory_page: EmployeePager::default(),
             employee_view: EmployeeView::Directory,
             services_state: Default::default(),
             work_state: Default::default(),
@@ -1232,6 +1234,7 @@ impl HrisApp {
                         self.leave_request_import_state =
                             leave_request_import_view::State::default();
                         self.employee_view = EmployeeView::Directory;
+                        self.directory_page = EmployeePager::default();
                         self.document_form = None;
                         self.account_form = None;
                         self.employee_form = None;
@@ -1274,6 +1277,7 @@ impl HrisApp {
                         self.leave_request_import_state =
                             leave_request_import_view::State::default();
                         self.employee_view = EmployeeView::Directory;
+                        self.directory_page = EmployeePager::default();
                         self.document_form = None;
                         self.clear_profile_secrets(ctx);
                         self.session_confirmation = None;
@@ -1766,7 +1770,7 @@ impl HrisApp {
                 self.shift_state.roster_employee = Some(id);
                 self.shift_state.roster_filter = shifts_view::RosterFilter::All;
                 self.shift_state.roster_search = shifts_view::RosterSearch::default();
-                self.shift_state.roster_pager = shifts_view::RosterPager::default();
+                self.shift_state.roster_pager = EmployeePager::default();
                 self.attendance_date = self.data.company.today();
                 self.calendar_month = month_start(self.attendance_date);
                 self.break_state.detail = None;
@@ -2780,40 +2784,45 @@ impl HrisApp {
             self.organization_chart(ui);
             return;
         }
+        self.employee_directory(ui);
+    }
+
+    fn employee_directory(&mut self, ui: &mut Ui) {
+        let previous = (
+            self.search.clone(),
+            self.department.clone(),
+            self.employee_status,
+            self.employment_type_filter,
+            self.work_location_filter,
+        );
+        let company = self.data.company.id;
         ui.horizontal_wrapped(|ui| {
             ui.add_sized(
-                [250.0, 36.0],
-                egui::TextEdit::singleline(&mut self.search)
-                    .hint_text("Search name, code, or job title…"),
+                [240.0, 36.0],
+                egui::TextEdit::singleline(&mut self.search).hint_text("Name, code or title"),
             );
             egui::ComboBox::from_id_salt("employee_status")
-                .selected_text(
-                    self.employee_status
-                        .map(|s| s.label())
-                        .unwrap_or("All statuses"),
-                )
+                .selected_text(self.employee_status.map_or("All statuses", |s| s.label()))
                 .show_ui(ui, |ui| {
                     ui.selectable_value(&mut self.employee_status, None, "All statuses");
-                    ui.selectable_value(
-                        &mut self.employee_status,
-                        Some(EmployeeStatus::Active),
-                        "Active",
-                    );
-                    ui.selectable_value(
-                        &mut self.employee_status,
-                        Some(EmployeeStatus::Archived),
-                        "Archived",
-                    );
+                    for status in [EmployeeStatus::Active, EmployeeStatus::Archived] {
+                        ui.selectable_value(
+                            &mut self.employee_status,
+                            Some(status),
+                            status.label(),
+                        );
+                    }
                 });
-            let mut departments: Vec<_> = self
+            let departments = self
                 .data
                 .employees
                 .iter()
-                .map(|e| e.department.clone())
-                .collect();
-            departments.sort();
-            departments.dedup();
+                .filter(|e| e.company_id == company && !e.department.is_empty())
+                .map(|e| e.department.as_str())
+                .collect::<std::collections::BTreeSet<_>>();
             egui::ComboBox::from_id_salt("department")
+                .width(165.0)
+                .truncate()
                 .selected_text(if self.department.is_empty() {
                     "All departments"
                 } else {
@@ -2822,7 +2831,7 @@ impl HrisApp {
                 .show_ui(ui, |ui| {
                     ui.selectable_value(&mut self.department, String::new(), "All departments");
                     for department in departments {
-                        ui.selectable_value(&mut self.department, department.clone(), department);
+                        ui.selectable_value(&mut self.department, department.into(), department);
                     }
                 });
         });
@@ -2847,27 +2856,26 @@ impl HrisApp {
                 self.work_location_filter = EmploymentFilter::All;
             }
         });
-        ui.horizontal(|ui| {
-            ui.label(
-                RichText::new(format!("{} employees total", self.data.employees.len()))
-                    .color(muted(ui)),
-            );
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if self
-                    .data
-                    .access
-                    .allows(crate::staff_roles::Capability::Personnel)
-                    && primary(ui, "+ Add employee")
-                {
-                    self.new_employee();
-                }
-            });
-        });
+        if previous
+            != (
+                self.search.clone(),
+                self.department.clone(),
+                self.employee_status,
+                self.employment_type_filter,
+                self.work_location_filter,
+            )
+        {
+            self.directory_page = EmployeePager::default();
+        }
+
         let query = self.search.trim().to_lowercase();
-        let rows: Vec<_> = self
+        let mut total = 0;
+        let rows = self
             .data
             .employees
             .iter()
+            .filter(|e| e.company_id == company)
+            .inspect(|_| total += 1)
             .filter(|e| {
                 self.employee_status.is_none_or(|s| s == e.status)
                     && (self.department.is_empty() || self.department == e.department)
@@ -2887,9 +2895,97 @@ impl HrisApp {
                         .to_lowercase()
                         .contains(&query))
             })
-            .cloned()
-            .collect();
-        card(ui, |ui| {
+            .collect::<Vec<_>>();
+        let can_edit = self
+            .data
+            .access
+            .allows(crate::staff_roles::Capability::Personnel);
+        let mut add = false;
+        let count = ui
+            .horizontal(|ui| {
+                let label = ui.label(
+                    RichText::new(format!("{} of {total} employees", rows.len())).color(muted(ui)),
+                );
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    add = can_edit && primary(ui, "+ Add employee");
+                });
+                label
+            })
+            .inner;
+        let selected = card(ui, |ui| {
+            self.directory_page.controls(ui, rows.len());
+            let page = self.directory_page.range(rows.len());
+            let selected = Self::directory_rows(ui, &self.data, &rows[page], can_edit);
+            if self.directory_page.controls(ui, rows.len()) {
+                ui.scroll_to_rect(count.rect, Some(Align::Min));
+            }
+            if rows.is_empty() {
+                empty(ui, "No employees match these filters.");
+            }
+            selected
+        });
+        ui.label(RichText::new("Balances show the current calendar year. Archive employees from Edit to preserve their history.").color(muted(ui)).size(12.0));
+        ui.label(RichText::new("Contacts are managed by HR and administrators. Staff can update their own contacts in Profile.").color(muted(ui)).size(12.0));
+        if add {
+            self.new_employee();
+        } else if let Some(id) = selected {
+            self.open_employee(id);
+        }
+    }
+
+    fn directory_rows(
+        ui: &mut Ui,
+        data: &Snapshot,
+        employees: &[&Employee],
+        can_edit: bool,
+    ) -> Option<Uuid> {
+        let today = data.company.today();
+        let mut selected = None;
+        if ui.available_width() < 960.0 {
+            for employee in employees {
+                ui.push_id(employee.id, |ui| {
+                    ui.separator();
+                    if ui
+                        .add(egui::Button::new(RichText::new(&employee.full_name).strong()).wrap())
+                        .clicked()
+                    {
+                        selected = Some(employee.id);
+                    }
+                    ui.horizontal_wrapped(|ui| {
+                        ui.small(&employee.employee_code);
+                        badge(
+                            ui,
+                            employee.status.label(),
+                            employee.status == EmployeeStatus::Active,
+                        );
+                    });
+                    ui.horizontal_wrapped(|ui| {
+                        ui.label(&employee.job_title);
+                        ui.label(&employee.department);
+                    });
+                    ui.horizontal_wrapped(|ui| {
+                        ui.label(
+                            EmploymentKind::EmploymentType
+                                .display(data, employee.employment_type_id),
+                        );
+                        ui.label(
+                            EmploymentKind::WorkLocation
+                                .display(data, employee.work_location_id),
+                        );
+                    });
+                    ui.horizontal_wrapped(|ui| {
+                        ui.small(format!("Joined · {}", directory_start(employee)));
+                        ui.small(format!(
+                            "Annual balance · {}",
+                            Self::directory_balance(data, employee, today)
+                        ));
+                        if can_edit && ui.button("Edit").clicked() {
+                            selected = Some(employee.id);
+                        }
+                    });
+                });
+            }
+        } else {
             egui::ScrollArea::horizontal()
                 .id_salt("employee_table_scroll")
                 .show(ui, |ui| {
@@ -2911,7 +3007,7 @@ impl HrisApp {
                                     "",
                                 ],
                             );
-                            for employee in &rows {
+                            for employee in employees {
                                 ui.label(
                                     RichText::new(&employee.employee_code)
                                         .color(muted(ui))
@@ -2923,7 +3019,7 @@ impl HrisApp {
                                         .link(RichText::new(&employee.full_name).strong())
                                         .clicked()
                                     {
-                                        self.open_employee(employee.id);
+                                        selected = Some(employee.id);
                                     }
                                     ui.label(
                                         RichText::new(&employee.job_title)
@@ -2934,62 +3030,44 @@ impl HrisApp {
                                 ui.label(&employee.department);
                                 ui.label(
                                     EmploymentKind::EmploymentType
-                                        .display(&self.data, employee.employment_type_id),
+                                        .display(data, employee.employment_type_id),
                                 );
                                 ui.label(
                                     EmploymentKind::WorkLocation
-                                        .display(&self.data, employee.work_location_id),
+                                        .display(data, employee.work_location_id),
                                 );
-                                ui.label(
-                                    employee
-                                        .joined_on
-                                        .map(|d| d.to_string())
-                                        .unwrap_or_else(|| "Not set".into()),
-                                );
-                                if !self.data.access.can_read_operational_employee(employee) {
-                                    ui.label("Restricted");
-                                } else if let Some(kind) =
-                                    self.data.leave_setup.policy.leave_type("annual")
-                                {
-                                    let today = self.data.company.today();
-                                    let balance = crate::leave::balance(
-                                        &self.data,
-                                        employee,
-                                        kind,
-                                        today.year(),
-                                        today,
-                                        None,
-                                    );
-                                    ui.label(format!(
-                                        "{} days available",
-                                        crate::leave::days(balance.available_units)
-                                    ));
-                                }
+                                ui.label(directory_start(employee));
+                                ui.label(Self::directory_balance(data, employee, today));
                                 badge(
                                     ui,
                                     employee.status.label(),
                                     employee.status == EmployeeStatus::Active,
                                 );
                                 ui.horizontal(|ui| {
-                                    if self
-                                        .data
-                                        .access
-                                        .allows(crate::staff_roles::Capability::Personnel)
-                                        && ui.button("Edit").clicked()
-                                    {
-                                        self.open_employee(employee.id);
+                                    if can_edit && ui.button("Edit").clicked() {
+                                        selected = Some(employee.id);
                                     }
                                 });
                                 ui.end_row();
                             }
                         });
                 });
-            if rows.is_empty() {
-                empty(ui, "No employees match these filters.");
-            }
-        });
-        ui.label(RichText::new("Balances show the current calendar year. Archive employees from Edit to preserve their history.").color(muted(ui)).size(12.0));
-        ui.label(RichText::new("Contacts are managed by HR and administrators. Staff can update their own contacts in Profile.").color(muted(ui)).size(12.0));
+        }
+        selected
+    }
+
+    fn directory_balance(data: &Snapshot, employee: &Employee, today: NaiveDate) -> String {
+        if !data.access.can_read_operational_employee(employee) {
+            return "Restricted".into();
+        }
+        let Some(kind) = data.leave_setup.policy.leave_type("annual") else {
+            return "—".into();
+        };
+        let balance = crate::leave::balance(data, employee, kind, today.year(), today, None);
+        format!(
+            "{} days available",
+            crate::leave::days(balance.available_units)
+        )
     }
 
     fn attendance(&mut self, ui: &mut Ui) {
@@ -3144,12 +3222,9 @@ impl HrisApp {
             let previous_filter = self.shift_state.roster_filter;
             shifts_view::roster_filters(ui, &rows, &mut self.shift_state.roster_filter);
             rows.retain(|row| self.shift_state.roster_filter.matches(row));
+            let filters_changed = search_changed || previous_filter != self.shift_state.roster_filter;
+            self.shift_state.set_roster_context(date, filters_changed);
             let pager = &mut self.shift_state.roster_pager;
-            pager.set_context(
-                date,
-                self.shift_state.roster_employee,
-                search_changed || previous_filter != self.shift_state.roster_filter,
-            );
             pager.controls(ui, rows.len());
             let page = pager.range(rows.len());
             ui.add_space(8.0);
@@ -4776,6 +4851,42 @@ fn employee_record_matches_snapshot(
             || same_contacts(contacts, &EmployeeContacts::empty(data.company.id, employee.id)),
             |saved| same_contacts(contacts, saved),
         )
+}
+
+const EMPLOYEE_PAGE_SIZE: usize = 25;
+
+#[derive(Default)]
+struct EmployeePager {
+    page: usize,
+}
+
+impl EmployeePager {
+    fn controls(&mut self, ui: &mut Ui, total: usize) -> bool {
+        let pages = total.div_ceil(EMPLOYEE_PAGE_SIZE).max(1);
+        self.page = self.page.min(pages - 1);
+        let before = self.page;
+        if pages > 1 {
+            ui.horizontal_wrapped(|ui| {
+                if ui.add_enabled(self.page > 0, egui::Button::new("Previous")).clicked() {
+                    self.page -= 1;
+                }
+                ui.label(format!("Page {} of {pages} · {total} employees", self.page + 1));
+                if ui.add_enabled(self.page + 1 < pages, egui::Button::new("Next")).clicked() {
+                    self.page += 1;
+                }
+            });
+        }
+        self.page != before
+    }
+
+    fn range(&self, total: usize) -> std::ops::Range<usize> {
+        let start = self.page * EMPLOYEE_PAGE_SIZE;
+        start..(start + EMPLOYEE_PAGE_SIZE).min(total)
+    }
+}
+
+fn directory_start(employee: &Employee) -> String {
+    employee.joined_on.map_or_else(|| "Not set".into(), |date| date.to_string())
 }
 
 fn employee_identity_matches(employee: &Employee, query: &str) -> bool {
