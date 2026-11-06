@@ -30,6 +30,11 @@ produce new keys, so a previous read does not hide a later decision or expiry.
   distinct stages. Incomplete/discarded uploads and archived people/documents
   are excluded. Expiry and contract end are separate dates/reminders.
 
+Choose **Document expiry** to filter overdue, due-today or upcoming deadlines.
+**Open record** opens the exact document by its record ID. Choose **Show all
+documents** to see other files for the employee, or **Back to Notifications**
+to return to the current filters and list.
+
 Managers receive eligible team reviews, explicitly assigned leave approval
 steps and their personal updates. A named leave reviewer can see a protected
 receipt even when the requester is outside their employee-directory scope.
@@ -51,7 +56,4 @@ read history** clears only that account's markers, marking current items unread.
 It never deletes HR records or another person's history. Read markers confer
 no record access and inactive accounts immediately lose read/write access.
 
-This module provides in-app notifications while HRIS is open and connected.
-Email/push delivery, configurable escalation, background OS notifications and
-external payroll/accounting/device connectors require separate implementation
-and actual company service configuration.
+Workforce HR refreshes in-app notifications while the desktop is open and connected.

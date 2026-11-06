@@ -87,6 +87,13 @@ fn document_windows_phases_and_active_filed_scope_are_exact() {
     assert_eq!(a.iter().filter(|a| a.urgent).count(), 2);
     assert!(a.iter().any(|a| a.key.ends_with(":expired")));
     assert!(a.iter().any(|a| a.key.ends_with(":today")));
+    let targets: Vec<_> = a.iter().map(|a| match a.target {
+        Target::Document(id) => id.as_u128(),
+        _ => panic!("Expected a document reminder"),
+    }).collect();
+    assert_eq!(targets.iter().filter(|&&id| id == 1).count(), 1);
+    assert_eq!(targets.iter().filter(|&&id| id == 2).count(), 1);
+    assert_eq!(targets.iter().filter(|&&id| id == 3).count(), 2);
     assert!(
         a.iter()
             .all(|a| !format!("{}{}", a.title, a.detail).contains("Private"))

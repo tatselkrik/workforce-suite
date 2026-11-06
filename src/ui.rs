@@ -112,7 +112,7 @@ pub struct HrisApp {
     review_visit: Option<design::ReviewVisit>,
     review_filter: design::ReviewFilter,
     employee_finder: Option<employee_finder::State>,
-    employee_record_search: Option<employee_finder::State>,
+    employee_record_origin: Option<employee_finder::RecordOrigin>,
     services_state: services_view::State,
     relations_state: relations_view::State,
     benefits_state: benefits_view::State,
@@ -394,7 +394,7 @@ impl HrisApp {
             review_visit: None,
             review_filter: design::ReviewFilter::default(),
             employee_finder: None,
-            employee_record_search: None,
+            employee_record_origin: None,
             relations_state: Default::default(),
             benefits_state: Default::default(),
             organization: organization_view::State::default(),
@@ -1194,7 +1194,7 @@ impl HrisApp {
                     }
                     if self.data.access != data.access || self.data.mode != data.mode {
                         self.employee_finder = None;
-                        self.employee_record_search = None;
+                        self.employee_record_origin = None;
                         clear_edit_history(ctx, &["find-employee-query"]);
                     }
                     if self.data.access != data.access {
@@ -1437,7 +1437,7 @@ impl HrisApp {
                         self.sidebar_last_page = None;
                     }
                     self.data = data;
-                    self.reconcile_found_employee(ctx);
+                    self.reconcile_employee_record_origin(ctx);
                     if newly_signed_in {
                         self.page = self.desktop.product.landing(&self.data);
                         if workspaces::prefers_development(&self.data) {
@@ -1537,7 +1537,7 @@ impl HrisApp {
                     if self.close_on_success {
                         self.document_form = None;
                         self.employee_form = None;
-                        self.employee_record_search = None;
+                        self.employee_record_origin = None;
                         self.contacts_form = None;
                         self.leave_form = None;
                         self.correction_form = None;
@@ -1714,7 +1714,7 @@ impl HrisApp {
     }
 
     fn open_employee(&mut self, id: Uuid) {
-        self.employee_record_search = None;
+        self.employee_record_origin = None;
         self.document_form = None;
         self.document_search.clear();
         self.document_category = None;
@@ -1752,7 +1752,7 @@ impl HrisApp {
     }
 
     fn open_employee_workspace(&mut self, id: Uuid, page: Page, ctx: &egui::Context) {
-        if self.employee_record_search.is_some() {
+        if self.employee_record_origin.is_some() {
             self.close_review_visit(ctx);
         }
         self.navigate(page, ctx);
@@ -1789,12 +1789,12 @@ impl HrisApp {
 
     fn employee_record_visible(&self) -> bool {
         self.employee_form.is_some()
-            && (self.employee_record_search.is_some()
+            && (self.employee_record_origin.is_some()
                 || matches!(self.page, Page::Employees | Page::Accounts))
     }
 
     fn header_page_label(&self) -> &'static str {
-        if self.employee_record_search.is_some() {
+        if self.employee_record_origin.is_some() {
             "Employee record"
         } else {
             self.desktop.product.label(self.page, &self.data)
@@ -1836,7 +1836,8 @@ impl HrisApp {
         let mut close = false;
         let mut save = false;
         let mut shortcut = None;
-        let from_search = self.employee_record_search.is_some();
+        let from_overlay = self.employee_record_origin.is_some();
+        let from_search = matches!(self.employee_record_origin, Some(employee_finder::RecordOrigin::Search(_)));
         let mut return_to_workspace = false;
         let mut return_to_results = false;
         let destinations = draft.id.and_then(|id| {
@@ -1851,17 +1852,19 @@ impl HrisApp {
         });
         card(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
-                if from_search {
+                if from_overlay {
                     let ready = self.employee_shortcuts_ready(&draft, &contacts, access.is_some());
                     let label = self.desktop.product.label(self.page, &self.data);
                     return_to_workspace = ui
                         .add_enabled(ready, egui::Button::new(format!("Back to {label}")))
                         .on_disabled_hover_text("Save or discard the open changes first.")
                         .clicked();
-                    return_to_results = ui
-                        .add_enabled(ready, egui::Button::new("Back to search results"))
-                        .on_disabled_hover_text("Save or discard the open changes first.")
-                        .clicked();
+                    if from_search {
+                        return_to_results = ui
+                            .add_enabled(ready, egui::Button::new("Back to search results"))
+                            .on_disabled_hover_text("Save or discard the open changes first.")
+                            .clicked();
+                    }
                 } else {
                     close = ui
                         .button(
@@ -1950,8 +1953,13 @@ impl HrisApp {
             ));
             let body_height =
                 (ui.available_height() - if editable { 90.0 } else { 130.0 }).max(80.0);
+            let focused_document = match &self.employee_record_origin {
+                Some(employee_finder::RecordOrigin::Document(id))
+                    if self.contacts_section == ContactSection::Documents => *id,
+                _ => None,
+            };
             let scroll = egui::ScrollArea::vertical()
-                .id_salt(("employee_record_body", draft.id))
+                .id_salt(("employee_record_body", draft.id, focused_document))
                 .max_height(body_height);
             #[cfg(feature = "qa-screenshot")]
             let scroll = scroll
@@ -2000,7 +2008,7 @@ impl HrisApp {
             });
             ui.add_space(12.0);
             ui.horizontal_wrapped(|ui| {
-                let access_change_open = from_search && self.staff_roles_state.has_draft();
+                let access_change_open = from_overlay && self.staff_roles_state.has_draft();
                 if editable && self.document_form.is_none() && !access_change_open {
                     save = primary(
                         ui,
@@ -2013,7 +2021,7 @@ impl HrisApp {
                         },
                     );
                 }
-                let close_label = if from_search {
+                let close_label = if from_overlay {
                     if self.employee_shortcuts_ready(&draft, &contacts, access.is_some()) {
                         "Close record"
                     } else {
@@ -2033,9 +2041,9 @@ impl HrisApp {
                 ui.label("Employment is managed by HR. Update your own contact and emergency details in Profile.");
             }
         });
-        let back_from_search = (return_to_workspace || return_to_results)
+        let back_from_overlay = (return_to_workspace || return_to_results)
             && self.employee_shortcuts_ready(&draft, &contacts, access.is_some());
-        close |= back_from_search;
+        close |= back_from_overlay;
         if let Some((id, page)) = shortcut {
             if self.employee_shortcuts_ready(&draft, &contacts, access.is_some()) {
                 self.open_employee_workspace(id, page, ui.ctx());
@@ -2088,10 +2096,10 @@ impl HrisApp {
             self.account_form = access;
         } else {
             self.document_form = None;
-            if back_from_search && return_to_results && !transferred && shortcut.is_none() {
+            if back_from_overlay && return_to_results && !transferred && shortcut.is_none() {
                 self.return_to_employee_search();
             } else {
-                self.employee_record_search = None;
+                self.employee_record_origin = None;
             }
             clear_edit_history(
                 ui.ctx(),
@@ -4042,47 +4050,63 @@ impl HrisApp {
         if documents::authorize(&self.data, employee).is_err() {
             return;
         }
-        ui.label(
-            RichText::new("Employee documents / 201 files")
-                .size(18.0)
-                .strong(),
-        );
-        ui.label("Private HR/Admin files. Documents save separately from employee changes.");
-        ui.horizontal_wrapped(|ui| {
-            if primary(ui, "+ Upload document") {
-                self.document_form = Some(DocumentDraft::new(employee));
-                self.notice = None;
-            }
-            ui.checkbox(&mut self.show_archived_documents, "Show archived");
-            ui.checkbox(&mut self.show_discarded_documents, "Show discarded uploads");
-        });
-        ui.horizontal_wrapped(|ui| {
-            ui.add(
-                egui::TextEdit::singleline(&mut self.document_search)
-                    .hint_text("Search document title or filename")
-                    .desired_width(250.0),
+        let mut focus = match &self.employee_record_origin {
+            Some(employee_finder::RecordOrigin::Document(document)) => *document,
+            _ => None,
+        };
+        if focus.is_some() {
+            ui.horizontal_wrapped(|ui| {
+                ui.strong("Opened from a document reminder");
+                if ui.button("Show all documents").clicked() {
+                    self.employee_record_origin = Some(employee_finder::RecordOrigin::Document(None));
+                    focus = None;
+                }
+            });
+        }
+        if focus.is_none() {
+            ui.label(
+                RichText::new("Employee documents / 201 files")
+                    .size(18.0)
+                    .strong(),
             );
-            egui::ComboBox::from_id_salt("document_category_filter")
-                .selected_text(
-                    self.document_category
-                        .map_or("All categories", DocumentCategory::label),
-                )
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.document_category, None, "All categories");
-                    for category in DocumentCategory::ALL {
-                        ui.selectable_value(
-                            &mut self.document_category,
-                            Some(category),
-                            category.label(),
-                        );
-                    }
-                });
-        });
+            ui.label("Private HR/Admin files. Documents save separately from employee changes.");
+            ui.horizontal_wrapped(|ui| {
+                if primary(ui, "+ Upload document") {
+                    self.document_form = Some(DocumentDraft::new(employee));
+                    self.notice = None;
+                }
+                ui.checkbox(&mut self.show_archived_documents, "Show archived");
+                ui.checkbox(&mut self.show_discarded_documents, "Show discarded uploads");
+            });
+            ui.horizontal_wrapped(|ui| {
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.document_search)
+                        .hint_text("Search document title or filename")
+                        .desired_width(250.0),
+                );
+                egui::ComboBox::from_id_salt("document_category_filter")
+                    .selected_text(
+                        self.document_category
+                            .map_or("All categories", DocumentCategory::label),
+                    )
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut self.document_category, None, "All categories");
+                        for category in DocumentCategory::ALL {
+                            ui.selectable_value(
+                                &mut self.document_category,
+                                Some(category),
+                                category.label(),
+                            );
+                        }
+                    });
+            });
+        }
         let query = self.document_search.trim().to_lowercase();
         let rows: Vec<_> = documents::records(&self.data, employee)
             .into_iter()
             .filter(|d| {
-                (self.show_archived_documents || !d.archived)
+                focus.is_none_or(|id| d.id == id)
+                    && (self.show_archived_documents || !d.archived)
                     && (self.show_discarded_documents || d.state != DocumentState::Discarded)
                     && self
                         .document_category
@@ -4097,7 +4121,11 @@ impl HrisApp {
         if rows.is_empty() {
             empty(
                 ui,
-                "No documents match this view. Upload a contract, scan, certificate or other attachment.",
+                if focus.is_some() {
+                    "This file is unavailable in the current view. Choose Show all documents to see available files."
+                } else {
+                    "No documents match this view. Upload a contract, scan, certificate or other attachment."
+                },
             );
         }
         for doc in rows {
@@ -4380,7 +4408,7 @@ impl HrisApp {
                         }
                         ui.label("Notes (optional)");
                         ui.add_sized([ui.available_width(),70.0],egui::TextEdit::multiline(&mut draft.notes).hint_text("Describe this document. Up to 1,000 characters."));
-                        ui.label("Saves independently from Employment and Contact details. Dates are for reference; automated expiry alerts come later.");
+                        ui.label("Saves independently from Employment and Contact details. Expiry and contract end dates appear in eligible document reminders.");
                         #[cfg(feature="qa-screenshot")]
                         if std::env::var("HRIS_PREVIEW_SCROLL").as_deref()==Ok("bottom"){ui.scroll_to_cursor(Some(Align::BOTTOM));}
                     });

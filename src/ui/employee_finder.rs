@@ -9,6 +9,11 @@ pub(super) struct State {
     focus_query: bool,
 }
 
+pub(super) enum RecordOrigin {
+    Search(State),
+    Document(Option<Uuid>),
+}
+
 fn employee_matches<'a>(data: &'a Snapshot, query: &str) -> Vec<&'a Employee> {
     let query = query.trim().to_lowercase();
     if query.is_empty() {
@@ -137,15 +142,18 @@ impl HrisApp {
             })
     }
 
-    pub(super) fn reconcile_found_employee(&mut self, ctx: &egui::Context) {
-        if self.employee_record_search.is_some()
-            && self
-                .employee_form
-                .as_ref()
-                .and_then(|draft| draft.id)
-                .is_none_or(|id| !self.employee_in_finder_scope(id))
-        {
-            self.employee_record_search = None;
+    pub(super) fn reconcile_employee_record_origin(&mut self, ctx: &egui::Context) {
+        let Some(origin) = &self.employee_record_origin else {
+            return;
+        };
+        let visible = self.employee_form.as_ref().and_then(|draft| draft.id).is_some_and(|id| {
+            match origin {
+                RecordOrigin::Search(_) => self.employee_in_finder_scope(id),
+                RecordOrigin::Document(_) => documents::authorize(&self.data, id).is_ok(),
+            }
+        });
+        if !visible {
+            self.employee_record_origin = None;
             self.employee_form = None;
             self.contacts_form = None;
             self.document_form = None;
@@ -155,7 +163,7 @@ impl HrisApp {
     }
 
     pub(super) fn return_to_employee_search(&mut self) {
-        if let Some(mut state) = self.employee_record_search.take() {
+        if let Some(RecordOrigin::Search(mut state)) = self.employee_record_origin.take() {
             state.focus_query = true;
             self.employee_finder = Some(state);
         }
@@ -212,7 +220,7 @@ impl HrisApp {
             && self.employee_in_finder_scope(id)
         {
             self.open_employee(id);
-            self.employee_record_search = Some(state);
+            self.employee_record_origin = Some(RecordOrigin::Search(state));
             clear_edit_history(ctx, &[QUERY_ID]);
             return;
         }

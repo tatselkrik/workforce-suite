@@ -34,7 +34,11 @@ Choose a category to narrow the queue. **Review next** opens the next eligible
 item in that category. Use **Back to review queue** to keep your place. Save or
 discard an open decision before switching.
 Use the sidebar to browse workspaces and the circular profile control for your
-personal details. Notification links open permitted records.
+personal details.
+
+In **Notifications → Document expiry**, filter **Overdue**, **Due today** or
+**Next 30 days**. **Open record** shows the exact document, even if titles are
+repeated. **Back to Notifications** returns to the filtered list.
 
 Workforce Payroll has its own financial navigation. Staff using Workforce Employee
 receive the same own-record view as any other employee.

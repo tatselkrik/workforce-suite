@@ -156,10 +156,7 @@ pub enum Target {
     Correction(Uuid),
     Overtime(Uuid),
     DailyReport(Uuid),
-    Document {
-        employee: Uuid,
-        title: String,
-    },
+    Document(Uuid),
     Attendance(NaiveDate),
     Lifecycle {
         page: String,
@@ -420,10 +417,7 @@ pub fn alerts(data: &Snapshot, now: chrono::DateTime<chrono::Utc>) -> Vec<Alert>
                         detail: format!("{} · {} · {}", name(d.employee_id), d.details.title, date),
                         date,
                         urgent: date <= today,
-                        target: Target::Document {
-                            employee: d.employee_id,
-                            title: d.details.title.clone(),
-                        },
+                        target: Target::Document(d.id),
                     });
                 }
             }

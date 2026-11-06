@@ -1,10 +1,40 @@
 use super::*;
 use crate::notifications::{self, Category, ReadAction, Target};
+
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+enum Deadline {
+    #[default]
+    All,
+    Overdue,
+    Today,
+    Upcoming,
+}
+
+impl Deadline {
+    fn matches(self, date: NaiveDate, today: NaiveDate) -> bool {
+        match self {
+            Self::All => true,
+            Self::Overdue => date < today,
+            Self::Today => date == today,
+            Self::Upcoming => date > today && date <= today + Duration::days(30),
+        }
+    }
+}
+
+fn reminder_document(data: &Snapshot, id: Uuid) -> Option<&documents::EmployeeDocument> {
+    documents::record(data, id).ok().filter(|doc| {
+        doc.state == DocumentState::Ready
+            && !doc.archived
+            && data.active().any(|employee| employee.id == doc.employee_id)
+    })
+}
+
 #[derive(Default)]
 pub(super) struct State {
     pub unread_only: bool,
     pub category: Option<Category>,
     pub page: usize,
+    deadline: Deadline,
     refreshed: Option<std::time::Instant>,
     scope: Option<crate::access::Access>,
     items: std::sync::Arc<Vec<notifications::Alert>>,
@@ -141,6 +171,14 @@ impl HrisApp {
         }
         if form.contains("documents") {
             self.notification_state.category = Some(Category::Documents);
+            if form.contains("overdue") || form.contains("record") {
+                self.notification_state.deadline = Deadline::Overdue;
+            }
+            if form.contains("record") {
+                for doc in &mut self.data.documents {
+                    doc.details.title = "Sample employment contract".into();
+                }
+            }
         }
         if form.contains("approvals") {
             self.notification_state.category = Some(Category::Approvals);
@@ -157,8 +195,12 @@ impl HrisApp {
             self.data.attendance.clear();
         }
         self.page = Page::Notifications;
+        if form == "notifications-documents-record" {
+            self.open_document_reminder(Uuid::from_u128(99700));
+        }
     }
     pub(super) fn notifications_page(&mut self, ui: &mut Ui) {
+        let today = self.data.company.today();
         let all = self
             .notification_state
             .for_product(&self.data, self.desktop.product);
@@ -182,6 +224,7 @@ impl HrisApp {
             let before = (
                 self.notification_state.unread_only,
                 self.notification_state.category,
+                self.notification_state.deadline,
             );
             ui.horizontal_wrapped(|ui| {
                 ui.checkbox(&mut self.notification_state.unread_only, "Unread only");
@@ -203,10 +246,23 @@ impl HrisApp {
                     }
                 }
             });
+            if self.notification_state.category == Some(Category::Documents) {
+                ui.horizontal_wrapped(|ui| {
+                    for (deadline, label) in [
+                        (Deadline::All, "All deadlines"),
+                        (Deadline::Overdue, "Overdue"),
+                        (Deadline::Today, "Due today"),
+                        (Deadline::Upcoming, "Next 30 days"),
+                    ] {
+                        ui.selectable_value(&mut self.notification_state.deadline, deadline, label);
+                    }
+                });
+            }
             if before
                 != (
                     self.notification_state.unread_only,
                     self.notification_state.category,
+                    self.notification_state.deadline,
                 )
             {
                 self.notification_state.page = 0;
@@ -221,6 +277,8 @@ impl HrisApp {
                         .notification_state
                         .category
                         .is_none_or(|c| c == a.category)
+                    && (self.notification_state.category != Some(Category::Documents)
+                        || self.notification_state.deadline.matches(a.date, today))
             })
             .cloned()
             .collect();
@@ -348,12 +406,7 @@ impl HrisApp {
                 self.overtime_state.detail = Some(*id);
             }
             Target::DailyReport(id) => self.open_daily_report_review(*id, ctx),
-            Target::Document { employee, title } => {
-                self.navigate(Page::Employees, ctx);
-                self.open_employee(*employee);
-                self.contacts_section = ContactSection::Documents;
-                self.document_search = title.clone();
-            }
+            Target::Document(id) => self.open_document_reminder(*id),
             Target::Attendance(date) => {
                 self.navigate(Page::Attendance, ctx);
                 self.shift_state.tab = shifts_view::Tab::Daily;
@@ -389,6 +442,23 @@ impl HrisApp {
                 }
             }
         }
+    }
+
+    fn open_document_reminder(&mut self, id: Uuid) {
+        let Some(employee) = reminder_document(&self.data, id).map(|doc| doc.employee_id) else {
+            self.notice = Some((
+                "This document reminder is no longer available. Refresh notifications.".into(),
+                false,
+            ));
+            return;
+        };
+        if self.has_unsaved_edits() {
+            self.notice = Some(("Save or discard the open changes first.".into(), false));
+            return;
+        }
+        self.open_employee(employee);
+        self.employee_record_origin = Some(employee_finder::RecordOrigin::Document(Some(id)));
+        self.contacts_section = ContactSection::Documents;
     }
 }
 
