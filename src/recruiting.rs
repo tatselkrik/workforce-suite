@@ -179,6 +179,17 @@ pub struct Interview {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+impl Interview {
+    pub(crate) fn can_record_feedback(
+        &self,
+        employee_id: Option<Uuid>,
+        now: DateTime<Utc>,
+    ) -> bool {
+        employee_id == Some(self.interviewer_employee_id)
+            && self.status != InterviewStatus::Cancelled
+            && self.starts_at <= now
+    }
+}
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Recommendation {
@@ -464,9 +475,7 @@ impl InterviewAction {
             Self::Feedback(d) => {
                 let r = interview(data, d.interview_id)?;
                 ensure!(
-                    data.access.employee_id == Some(r.interviewer_employee_id)
-                        && r.status != InterviewStatus::Cancelled
-                        && r.starts_at <= now,
+                    r.can_record_feedback(data.access.employee_id, now),
                     "Only the assigned interviewer can submit feedback after it starts."
                 );
                 let old = data

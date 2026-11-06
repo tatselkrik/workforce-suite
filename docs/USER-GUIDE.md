@@ -114,6 +114,10 @@ with the appropriate applicant. An application does not create an employee accou
 3. Schedule an interview and assign the responsible interviewer.
 4. Record feedback against the assigned interview. Managers see their assigned work rather than the complete private applicant record.
 
+In the interview agenda, use **Today** or **Next 7 days** for company dates. The
+seven-day window starts tomorrow. **My pending feedback** shows assigned interviews
+that have started and still need your feedback.
+
 ### Offers and onboarding
 
 Prepare an offer with the reviewed employment and pay terms. Submit it for the

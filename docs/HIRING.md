@@ -53,6 +53,12 @@ positive and no more than eight hours; scheduled assignments cannot overlap
 for the same interviewer. Rescheduling, cancellation and completion require a
 reason and current revision. Future interviews cannot be completed.
 
+In **Interview agenda**, use **Today** or **Next 7 days** to filter in the company
+time zone. The seven-day window starts tomorrow. Interviews display their saved
+time zone and show the company date when it differs. **My pending feedback**
+shows your assigned interviews that have started and still need your feedback,
+including completed interviews.
+
 The assigned interviewer can record a 1–5 rating, Proceed/Hold/Not recommended
 and a written assessment after the start. Corrections require a reason and
 revision. HR sees all retained assessments; a reassigned Manager sees only

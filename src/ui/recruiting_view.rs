@@ -4,6 +4,61 @@ use crate::recruiting::{
     self, FeedbackDraft, InterviewAction, InterviewDraft, InterviewStatus, Recommendation,
     ResumeAction, ResumeDraft,
 };
+use chrono::{DateTime, Utc};
+use chrono_tz::Tz;
+use std::collections::HashSet;
+
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+enum AgendaView {
+    #[default]
+    AllDates,
+    Today,
+    NextSevenDays,
+    MyPendingFeedback,
+}
+
+impl AgendaView {
+    const ALL: [Self; 4] = [
+        Self::AllDates,
+        Self::Today,
+        Self::NextSevenDays,
+        Self::MyPendingFeedback,
+    ];
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::AllDates => "All dates",
+            Self::Today => "Today",
+            Self::NextSevenDays => "Next 7 days",
+            Self::MyPendingFeedback => "My pending feedback",
+        }
+    }
+
+    fn matches(
+        self,
+        interview: &recruiting::Interview,
+        company_now: DateTime<Tz>,
+        show_closed: bool,
+        feedback_pending: bool,
+    ) -> bool {
+        let status_visible = show_closed || interview.status == InterviewStatus::Scheduled;
+        let days_from_today = || {
+            interview
+                .starts_at
+                .with_timezone(&company_now.timezone())
+                .date_naive()
+                .signed_duration_since(company_now.date_naive())
+                .num_days()
+        };
+        match self {
+            Self::AllDates => status_visible,
+            Self::Today => status_visible && days_from_today() == 0,
+            Self::NextSevenDays => status_visible && (1..=7).contains(&days_from_today()),
+            Self::MyPendingFeedback => feedback_pending,
+        }
+    }
+}
+
 #[derive(Default)]
 pub(super) struct State {
     pub agenda: bool,
@@ -17,6 +72,7 @@ pub(super) struct State {
     pub reason: String,
     pub search: String,
     pub show_closed: bool,
+    agenda_view: AgendaView,
     pub include_archived: bool,
 }
 impl State {
@@ -105,6 +161,48 @@ impl State {
         matched
     }
 }
+
+fn agenda_rows(
+    data: &Snapshot,
+    state: &State,
+    applicant: Option<Uuid>,
+    now: DateTime<Utc>,
+) -> Vec<(recruiting::Interview, bool)> {
+    let company_now = now.with_timezone(&data.company.tz());
+    let search = state.search.trim().to_lowercase();
+    let own_feedback: HashSet<_> = data
+        .recruiting
+        .feedback
+        .iter()
+        .filter(|f| f.company_id == data.company.id && f.author_id == data.access.user_id)
+        .map(|f| f.interview_id)
+        .collect();
+    let mut rows: Vec<_> = data
+        .recruiting
+        .interviews
+        .iter()
+        .filter(|i| {
+            i.company_id == data.company.id
+                && recruiting::interview(data, i.id).is_ok()
+                && applicant.is_none_or(|a| a == i.applicant_id)
+                && (search.is_empty()
+                    || format!("{} {} {}", i.title, i.applicant_name, i.position)
+                        .to_lowercase()
+                        .contains(&search))
+        })
+        .filter_map(|i| {
+            let pending =
+                i.can_record_feedback(data.access.employee_id, now) && !own_feedback.contains(&i.id);
+            state
+                .agenda_view
+                .matches(i, company_now, state.show_closed, pending)
+                .then(|| (i.clone(), pending))
+        })
+        .collect();
+    rows.sort_by_key(|(i, _)| (i.starts_at, i.id));
+    rows
+}
+
 impl HrisApp {
     #[cfg(feature = "qa-screenshot")]
     pub(super) fn prepare_recruiting_preview(&mut self) {
@@ -663,42 +761,48 @@ impl HrisApp {
                 }
             }
             ui.horizontal_wrapped(|ui| {
+                for view in AgendaView::ALL {
+                    let choice = ui.selectable_value(
+                        &mut self.recruiting_state.agenda_view,
+                        view,
+                        view.label(),
+                    );
+                    if view == AgendaView::NextSevenDays {
+                        choice.on_hover_text("From tomorrow through seven days from today");
+                    }
+                }
+            });
+            if self.recruiting_state.agenda_view != AgendaView::MyPendingFeedback {
+                ui.small(format!("Agenda dates use {}.", self.data.company.timezone));
+            }
+            ui.horizontal_wrapped(|ui| {
                 ui.add(
                     egui::TextEdit::singleline(&mut self.recruiting_state.search)
                         .hint_text("Search interview, applicant or position")
                         .desired_width(340.0),
                 );
-                ui.checkbox(
-                    &mut self.recruiting_state.show_closed,
-                    "Include completed / cancelled",
-                );
+                if self.recruiting_state.agenda_view != AgendaView::MyPendingFeedback {
+                    ui.checkbox(
+                        &mut self.recruiting_state.show_closed,
+                        "Include completed / cancelled",
+                    );
+                }
             });
             if !hr {
                 ui.label(RichText::new("Only your assigned interviews and your own feedback are visible. Applicant files and private HR notes stay restricted.").small().color(muted(ui)));
             }
         });
-        let search = self.recruiting_state.search.trim().to_lowercase();
-        let mut rows: Vec<_> = self
-            .data
-            .recruiting
-            .interviews
-            .iter()
-            .filter(|i| {
-                recruiting::interview(&self.data, i.id).is_ok()
-                    && applicant.is_none_or(|a| a == i.applicant_id)
-                    && (self.recruiting_state.show_closed || i.status == InterviewStatus::Scheduled)
-                    && (search.is_empty()
-                        || format!("{} {} {}", i.title, i.applicant_name, i.position)
-                            .to_lowercase()
-                            .contains(&search))
-            })
-            .cloned()
-            .collect();
-        rows.sort_by_key(|i| (i.starts_at, i.id));
+        let rows = agenda_rows(&self.data, &self.recruiting_state, applicant, Utc::now());
         if rows.is_empty() {
-            empty(ui, "No interviews match this view.");
+            let message = if self.recruiting_state.agenda_view == AgendaView::MyPendingFeedback {
+                "No pending feedback matches this view."
+            } else {
+                "No interviews match this view."
+            };
+            empty(ui, message);
         }
-        for r in rows {
+        let company_zone = self.data.company.tz();
+        for (r, pending_feedback) in rows {
             ui.add_space(10.0);
             card(ui, |ui| {
                 ui.horizontal_wrapped(|ui| {
@@ -711,21 +815,16 @@ impl HrisApp {
                     badge(ui, r.status.label(), r.status == InterviewStatus::Scheduled);
                 });
                 ui.label(format!("{} · {}", r.applicant_name, r.position));
-                interview_time(ui, &r);
+                let saved_date = interview_time(ui, &r);
+                let company_date = r.starts_at.with_timezone(&company_zone).date_naive();
+                if company_date != saved_date {
+                    ui.small(format!("Company date · {}", company_date.format("%b %d, %Y")));
+                }
                 ui.label(format!(
                     "Interviewer: {}",
                     self.interviewer_name(r.interviewer_employee_id)
                 ));
-                if r.status != InterviewStatus::Cancelled
-                    && r.starts_at <= chrono::Utc::now()
-                    && !self
-                        .data
-                        .recruiting
-                        .feedback
-                        .iter()
-                        .any(|f| f.interview_id == r.id && f.author_id == self.data.access.user_id)
-                    && self.data.access.employee_id == Some(r.interviewer_employee_id)
-                {
+                if pending_feedback {
                     ui.label(RichText::new("Your feedback is pending").color(accent(ui)));
                 }
             });
@@ -836,9 +935,7 @@ impl HrisApp {
         ui.add_space(10.0);
         card(ui, |ui| {
             ui.label(RichText::new("Interview feedback").strong().size(18.0));
-            if self.data.access.employee_id == Some(r.interviewer_employee_id)
-                && r.status != InterviewStatus::Cancelled
-                && r.starts_at <= chrono::Utc::now()
+            if r.can_record_feedback(self.data.access.employee_id, Utc::now())
                 && self.recruiting_state.feedback_form.is_none()
             {
                 if ui
@@ -1012,21 +1109,154 @@ impl HrisApp {
             });
     }
 }
-fn interview_time(ui: &mut Ui, r: &recruiting::Interview) {
+fn interview_time(ui: &mut Ui, r: &recruiting::Interview) -> NaiveDate {
     let tz = r
         .timezone
         .parse::<chrono_tz::Tz>()
         .unwrap_or(chrono_tz::UTC);
+    let start = r.starts_at.with_timezone(&tz);
     ui.label(format!(
         "{}–{} · {}",
-        r.starts_at.with_timezone(&tz).format("%b %d, %Y %H:%M"),
+        start.format("%b %d, %Y %H:%M"),
         r.ends_at.with_timezone(&tz).format("%H:%M"),
         r.timezone
     ));
+    start.date_naive()
 }
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn sample_interview(
+        data: &Snapshot,
+        id: u128,
+        starts_at: &str,
+        status: InterviewStatus,
+    ) -> recruiting::Interview {
+        let starts_at = starts_at.parse::<DateTime<Utc>>().unwrap();
+        recruiting::Interview {
+            id: Uuid::from_u128(id),
+            company_id: data.company.id,
+            applicant_id: Uuid::from_u128(100),
+            interviewer_employee_id: data.access.employee_id.unwrap(),
+            applicant_name: "Fictional applicant".into(),
+            position: "Operations Associate".into(),
+            title: format!("Fictional interview {id}"),
+            starts_at,
+            ends_at: starts_at + Duration::minutes(30),
+            timezone: "America/Los_Angeles".into(),
+            location: String::new(),
+            brief: String::new(),
+            status,
+            revision: 0,
+            created_by: data.access.user_id,
+            created_at: starts_at,
+            updated_at: starts_at,
+        }
+    }
+
+    #[test]
+    fn agenda_dates_follow_company_midnight_and_include_the_seventh_day() {
+        use InterviewStatus::{Cancelled, Scheduled};
+
+        let mut data = DemoStore::new().data;
+        data.company.timezone = "Asia/Manila".into();
+        data.recruiting.interviews = [
+            (1, "2026-11-06T15:59:59Z", Scheduled),
+            (2, "2026-11-06T16:00:00Z", Scheduled),
+            (3, "2026-11-07T04:00:00Z", Cancelled),
+            (4, "2026-11-07T16:00:00Z", Scheduled),
+            (5, "2026-11-14T15:59:59Z", Scheduled),
+            (6, "2026-11-14T16:00:00Z", Scheduled),
+        ]
+        .map(|(id, start, status)| sample_interview(&data, id, start, status))
+        .into();
+        let now = "2026-11-06T16:05:00Z".parse().unwrap();
+        let ids = |state: &State| {
+            agenda_rows(&data, state, None, now)
+                .into_iter()
+                .map(|(row, _)| row.id.as_u128())
+                .collect::<Vec<_>>()
+        };
+        let mut state = State::default();
+        assert_eq!(ids(&state), [1, 2, 4, 5, 6]);
+        state.agenda_view = AgendaView::Today;
+        assert_eq!(ids(&state), [2]);
+        state.show_closed = true;
+        assert_eq!(ids(&state), [2, 3]);
+        state.agenda_view = AgendaView::NextSevenDays;
+        assert_eq!(ids(&state), [4, 5]);
+        state.search = "  INTERVIEW 5  ".into();
+        assert_eq!(ids(&state), [5]);
+    }
+
+    #[test]
+    fn pending_feedback_uses_current_assignment_and_saved_feedback_author() {
+        use InterviewStatus::{Cancelled, Completed, Scheduled};
+
+        let mut data = DemoStore::new().data;
+        data.access.role = Role::Manager;
+        let past = "2026-11-06T07:00:00Z";
+        let start_now = "2026-11-07T08:00:00Z";
+        let now = start_now.parse().unwrap();
+        data.recruiting.interviews = [
+            (1, past, Completed),
+            (2, start_now, Scheduled),
+            (3, past, Cancelled),
+            (4, "2026-11-07T08:00:01Z", Scheduled),
+            (5, past, Scheduled),
+            (6, past, Scheduled),
+            (7, past, Completed),
+            (8, past, Scheduled),
+        ]
+        .map(|(id, start, status)| sample_interview(&data, id, start, status))
+        .into();
+        data.recruiting.interviews[4].interviewer_employee_id = Uuid::from_u128(200);
+        data.recruiting.interviews[7].company_id = Uuid::from_u128(300);
+        data.recruiting.feedback = [(6, data.access.user_id), (7, Uuid::from_u128(400))]
+            .map(|(id, author_id)| recruiting::Feedback {
+                id: Uuid::new_v4(),
+                company_id: data.company.id,
+                interview_id: Uuid::from_u128(id),
+                author_id,
+                author_name: "Fictional interviewer".into(),
+                author_role: Role::Manager,
+                rating: 4,
+                recommendation: Recommendation::Proceed,
+                assessment: "Fictional assessment".into(),
+                revision: 1,
+                submitted_at: now,
+                updated_at: now,
+            })
+            .into();
+
+        let mut state = State {
+            agenda_view: AgendaView::MyPendingFeedback,
+            ..Default::default()
+        };
+        let rows = agenda_rows(&data, &state, None, now);
+        assert!(rows.iter().all(|(_, pending)| *pending));
+        assert_eq!(
+            rows.iter().map(|(row, _)| row.id.as_u128()).collect::<Vec<_>>(),
+            [1, 7, 2],
+        );
+        assert!(agenda_rows(&data, &state, Some(Uuid::from_u128(101)), now).is_empty());
+        state.agenda_view = AgendaView::AllDates;
+        state.show_closed = true;
+        let rows = agenda_rows(&data, &state, None, now);
+        assert!(rows.iter().any(|(row, pending)| row.id.as_u128() == 6 && !pending));
+        assert!(rows.iter().all(|(row, _)| ![5, 8].contains(&row.id.as_u128())));
+
+        data.access.role = Role::Administrator;
+        assert!(agenda_rows(&data, &state, None, now)
+            .iter()
+            .any(|(row, _)| row.id.as_u128() == 5));
+        state.agenda_view = AgendaView::MyPendingFeedback;
+        assert!(agenda_rows(&data, &state, None, now)
+            .iter()
+            .all(|(row, _)| row.id.as_u128() != 5));
+    }
+
     #[test]
     fn unmatched_schedule_or_feedback_response_preserves_the_open_editor() {
         let mut data = DemoStore::new().data;
