@@ -386,6 +386,13 @@ impl HrisApp {
                             month_start(self.report_state.filter.starts_on);
                         self.report_state.end_month = month_start(today);
                     }
+                    if ui.button("Last month").clicked() {
+                        let (start, end) = previous_month(self.data.company.today());
+                        self.report_state.filter.starts_on = start;
+                        self.report_state.filter.ends_on = end;
+                        self.report_state.start_month = month_start(start);
+                        self.report_state.end_month = month_start(end);
+                    }
                 });
             }
             let mut selection = self.report_state.filter.clone();

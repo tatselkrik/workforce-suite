@@ -20,6 +20,12 @@ struct ReportFilters {
 }
 
 impl ReportFilters {
+    fn set_dates(&mut self, range: Option<(NaiveDate, NaiveDate)>) {
+        (self.from, self.through) = range.map_or((None, None), |(start, end)| (Some(start), Some(end)));
+        self.from_month = self.from.map(month_start);
+        self.through_month = self.through.map(month_start);
+    }
+
     fn valid_range(self) -> bool {
         self.from
             .zip(self.through)
@@ -707,6 +713,22 @@ impl HrisApp {
                 today,
                 Some(&self.data.attendance),
             );
+            egui::ComboBox::from_id_salt("daily-report-quick-dates")
+                .selected_text("Quick dates")
+                .show_ui(ui, |ui| {
+                    for (label, dates) in [
+                        ("Any date", None),
+                        ("Today", Some((today, today))),
+                        ("Last 7 days", Some((today - Duration::days(6), today))),
+                        ("Month to date", Some((month_start(today), today))),
+                        ("Last month", Some(previous_month(today))),
+                    ] {
+                        if ui.button(label).clicked() {
+                            filters.set_dates(dates);
+                            ui.close();
+                        }
+                    }
+                });
             let status_label = REPORT_STATUSES
                 .iter()
                 .find(|(status, _)| *status == filters.status)
@@ -1125,5 +1147,17 @@ mod tests {
         report.status = "returned".into();
         assert!(!filters.matches(&report, None));
         assert!(ReportFilters::default().matches(&report, None));
+        let (start, end) = previous_month(NaiveDate::from_ymd_opt(2024, 3, 15).unwrap());
+        assert_eq!(start, NaiveDate::from_ymd_opt(2024, 2, 1).unwrap());
+        assert_eq!(end, NaiveDate::from_ymd_opt(2024, 2, 29).unwrap());
+        filters.set_dates(Some((start, end)));
+        assert_eq!(filters.from_month, Some(start));
+        assert_eq!(filters.through_month, Some(start));
+        filters.set_dates(None);
+        assert_eq!(filters.status, Some("submitted"));
+        assert_eq!((filters.from, filters.through), (None, None));
+        let (start, end) = previous_month(NaiveDate::from_ymd_opt(2026, 1, 1).unwrap());
+        assert_eq!(start, NaiveDate::from_ymd_opt(2025, 12, 1).unwrap());
+        assert_eq!(end, NaiveDate::from_ymd_opt(2025, 12, 31).unwrap());
     }
 }

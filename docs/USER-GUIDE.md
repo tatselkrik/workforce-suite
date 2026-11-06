@@ -232,6 +232,9 @@ and prior decisions, enter a review note, then choose **Approve** or **Return fo
 revision**. Employees can revise and resubmit. The history retains each submission
 and decision.
 
+Use **Quick dates** to filter today's reports, the last seven days, month to date
+or last month. The selected report status still applies.
+
 Reports do not change attendance, overtime, appraisals or pay. An employee can
 check out without submitting a report. Use the shift start date for overnight work.
 
@@ -366,7 +369,8 @@ advice, employee archiving and clearance completion do not establish payment.
 ### HR reports
 
 In Workforce HR, open **Reports**, choose the period and permitted filters, and
-generate the preview. Review attendance and leave summaries, headcount groups or
+generate the preview. **Last month** selects the full previous calendar month.
+Review attendance and leave summaries, headcount groups or
 workforce trends. Save or select custom columns where available, then export a
 new CSV or Excel file.
 

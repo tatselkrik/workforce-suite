@@ -5758,6 +5758,11 @@ fn month_start(date: NaiveDate) -> NaiveDate {
     date.with_day(1).unwrap()
 }
 
+fn previous_month(date: NaiveDate) -> (NaiveDate, NaiveDate) {
+    let end = month_start(date).pred_opt().unwrap();
+    (month_start(end), end)
+}
+
 fn calendar_cells(month: NaiveDate) -> [Option<NaiveDate>; 42] {
     let first = month_start(month);
     let offset = first.weekday().num_days_from_monday() as i64;

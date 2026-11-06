@@ -116,6 +116,10 @@ impl HrisApp {
                             ends_on: self.data.company.today(),
                         };
                     }
+                    if ui.button("Last month").clicked() {
+                        let (starts_on, ends_on) = previous_month(self.data.company.today());
+                        state.filter = Filter { starts_on, ends_on };
+                    }
                 });
             });
             if state.filter != before {
