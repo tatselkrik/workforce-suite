@@ -650,7 +650,7 @@ impl HrisApp {
                     for t in self.data.shifts.templates.iter().filter(|t|t.active){ui.selectable_value(&mut draft.template_id,Some(t.id),format!("{} · {}",t.name,shifts::hours(t.start_minute,t.end_minute)));}
                 });
                 if previous_template!=draft.template_id {draft.expected_template_revision=draft.template_id.and_then(|id|self.data.shifts.templates.iter().find(|t|t.id==id).map(|t|t.revision));}
-                field(ui,"Effective date *",&mut draft.effective_on,"YYYY-MM-DD");
+                forms::date(ui, "Effective date *", &mut draft.effective_on, true, self.data.company.today());
                 field(ui,"Reason *",&mut draft.reason,"Initial assignment, schedule change or correction (up to 500 characters)");
                 if let Some(t)=draft.template_id.and_then(|id|self.data.shifts.templates.iter().find(|t|t.id==id)) {ui.label(format!("{} · {} · {}",shifts::hours(t.start_minute,t.end_minute),shifts::day_names(&t.days),self.data.company.timezone));}
                 ui.add_space(10.0);ui.label(RichText::new("Applies from this date until the next dated assignment. A later save for the same date takes precedence; every earlier change stays in history. Past dates correct the schedule shown for that period. Recorded attendance and filed leave keep their saved snapshots.").color(muted(ui)));

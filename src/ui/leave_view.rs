@@ -626,7 +626,7 @@ impl HrisApp {
         ui.add_enabled_ui(!self.busy && self.leave_state.policy_pending.is_none(),|ui|{
             card(ui,|ui|{
                 ui.heading("Effective-date policy version");
-                field(ui,"Effective date",&mut self.leave_state.policy_date,"YYYY-MM-DD");
+                forms::date(ui, "Effective date", &mut self.leave_state.policy_date, true, self.data.company.today());
                 ui.label("Calendar, labels and approvals can change today or later. Annual grant, accrual, carry and new finite entitlements start on a future January 1. Use Credit adjustments for current-year corrections.");
                 ui.label("Existing request charges and approvers are retained. Employee allowance edits become future defaults once this company's dated workflow is enabled.");
                 field(ui,"Private reason",&mut self.leave_state.policy_reason,"Explain the scheduled policy version");
@@ -638,7 +638,7 @@ impl HrisApp {
                 ui.label("These settings calculate new requests. Existing saved day charges stay unchanged.");
                 ui.horizontal_wrapped(|ui|{for (i,name) in ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].iter().enumerate(){let d=i as u32+1;let mut checked=p.workweek.contains(&d);if ui.checkbox(&mut checked,*name).changed(){if checked{p.workweek.push(d);p.workweek.sort_unstable();}else{p.workweek.retain(|x|*x!=d);}}}});
                 ui.add_space(6.0);
-                field(ui,"Holiday date",&mut self.leave_state.holiday_date,"YYYY-MM-DD");field(ui,"Holiday name",&mut self.leave_state.holiday_name,"Company holiday");
+                forms::date(ui, "Holiday date", &mut self.leave_state.holiday_date, true, self.data.company.today());field(ui,"Holiday name",&mut self.leave_state.holiday_name,"Company holiday");
                 if ui.button("Add holiday").clicked(){match parse_date(&self.leave_state.holiday_date){Ok(date) if !self.leave_state.holiday_name.trim().is_empty()&&!p.holidays.iter().any(|h|h.date==date)=>{p.holidays.push(Holiday{date,name:self.leave_state.holiday_name.trim().into()});p.holidays.sort_by_key(|h|h.date);self.leave_state.holiday_date.clear();self.leave_state.holiday_name.clear();},_=>self.notice=Some(("Enter a unique holiday date and a name.".into(),true))}}
                 let mut remove=None;
                 egui::ScrollArea::vertical().id_salt("policy_holidays").max_height(180.0).show(ui,|ui|{for (i,h) in p.holidays.iter().enumerate(){ui.horizontal_wrapped(|ui|{ui.label(format!("{} · {}",h.date,h.name));if ui.small_button("Remove").clicked(){remove=Some(i);}});}});
@@ -754,9 +754,9 @@ impl HrisApp {
                     ui.selectable_value(&mut draft.options.day_part, p, p.label());
                 }
             });
-        field(ui, "Start date", &mut draft.starts_on, "YYYY-MM-DD");
+        forms::date(ui, "Start date", &mut draft.starts_on, true, self.data.company.today());
         if draft.options.day_part == DayPart::Full {
-            field(ui, "End date", &mut draft.ends_on, "YYYY-MM-DD");
+            forms::date(ui, "End date", &mut draft.ends_on, true, self.data.company.today());
         } else {
             draft.ends_on = draft.starts_on.clone();
         }

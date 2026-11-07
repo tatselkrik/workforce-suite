@@ -147,15 +147,15 @@ fn area(ui: &mut Ui, label: &str, value: &mut String, rows: usize) {
             .desired_width(f32::INFINITY),
     );
 }
-fn dates(ui: &mut Ui, first: (&str, &mut String), second: (&str, &mut String)) {
+fn dates(ui: &mut Ui, first: (&str, &mut String), second: (&str, &mut String), today: NaiveDate) {
     if ui.available_width() >= 500.0 {
         ui.columns(2, |cols| {
-            field(&mut cols[0], first.0, first.1, "YYYY-MM-DD or blank");
-            field(&mut cols[1], second.0, second.1, "YYYY-MM-DD or blank");
+            forms::date(&mut cols[0], first.0, first.1, first.0.ends_with('*'), today);
+            forms::date(&mut cols[1], second.0, second.1, second.0.ends_with('*'), today);
         });
     } else {
-        field(ui, first.0, first.1, "YYYY-MM-DD or blank");
-        field(ui, second.0, second.1, "YYYY-MM-DD or blank");
+        forms::date(ui, first.0, first.1, first.0.ends_with('*'), today);
+        forms::date(ui, second.0, second.1, second.0.ends_with('*'), today);
     }
 }
 fn controls(ui: &mut Ui, data: &Snapshot, a: &Change, label: &str) -> (bool, bool) {
@@ -701,8 +701,9 @@ impl HrisApp {
                 ui,
                 ("Starts on", &mut d.starts_on),
                 ("Ends on", &mut d.ends_on),
+                self.data.company.today(),
             );
-            field(ui, "Target due date", &mut d.due_on, "YYYY-MM-DD or blank");
+            forms::date(ui, "Target due date", &mut d.due_on, false, self.data.company.today());
             ui.checkbox(&mut d.required, "Required company training");
             field(ui, "Save reason *", &mut d.reason, "");
             ui.label("Reasons and progress stay with this record and may be visible to the employee and current reporting Manager. Record completion separately after saving.");
@@ -751,6 +752,7 @@ impl HrisApp {
                 ui,
                 ("Issued on *", &mut d.issued_on),
                 ("Expires on", &mut d.expires_on),
+                self.data.company.today(),
             );
             field(ui, "Save reason *", &mut d.reason, "");
             ui.label("These certificate details are visible to the employee and current reporting Manager. Add private file evidence after saving, using an existing employee 201 document.");
@@ -868,7 +870,7 @@ impl HrisApp {
                         ui.label(format!("{} · {}", t.employee_name, t.title));
                     }
                     if status == "completed" {
-                        field(ui, "Completed on *", completed_on, "YYYY-MM-DD");
+                        forms::date(ui, "Completed on *", completed_on, true, self.data.company.today());
                         ui.horizontal_wrapped(|ui| {
                             let mut recorded = learning_minutes.is_some();
                             if ui

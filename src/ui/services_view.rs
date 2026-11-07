@@ -598,12 +598,7 @@ impl State {
                             }
                         }
                     });
-                ui.label("Due date (YYYY-MM-DD, optional)");
-                ui.add(
-                    egui::TextEdit::singleline(&mut f.due_on)
-                        .id(egui::Id::unique("services-due"))
-                        .desired_width(180.0),
-                );
+                forms::date_with_id(ui, "Due date", &mut f.due_on, false, data.company.today(), egui::Id::unique("services-due"));
             }
             if f.kind == Kind::Progress {
                 ui.label("New status");

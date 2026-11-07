@@ -247,7 +247,8 @@ impl HrisApp {
                     }
                 } else {
                     ui.add_enabled_ui(!self.busy,|ui|{
-                        ui.horizontal_wrapped(|ui|{ui.label("Effective date");ui.add(egui::TextEdit::singleline(&mut state.date).desired_width(130.0).hint_text("YYYY-MM-DD"));ui.label("Days to add or deduct");ui.add(egui::TextEdit::singleline(&mut state.delta).desired_width(115.0).hint_text("2 or -0.5"));});
+                        forms::date(ui, "Effective date", &mut state.date, true, self.data.company.today());
+                        field(ui, "Days to add or deduct *", &mut state.delta, "2 or -0.5");
                         if state.reverse.is_some(){ui.label("This draft reverses the full selected original adjustment. Keep its employee, type and opposite number of days.");}
                         ui.label("Reason (required)");ui.add(egui::TextEdit::multiline(&mut state.reason).desired_rows(2).desired_width(f32::INFINITY));
                         ui.label("Supporting reference (optional, private to HR/Admin)");ui.add(egui::TextEdit::singleline(&mut state.reference).desired_width(f32::INFINITY));

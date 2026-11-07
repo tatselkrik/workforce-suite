@@ -1048,12 +1048,12 @@ impl HrisApp {
             area(ui, "How progress is measured", &mut d.measure, 2);
             if ui.available_width() >= 500.0 {
                 ui.columns(2, |cols| {
-                    field(&mut cols[0], "Starts on *", &mut d.starts_on, "YYYY-MM-DD");
-                    field(&mut cols[1], "Due on *", &mut d.due_on, "YYYY-MM-DD");
+                    forms::date(&mut cols[0], "Starts on *", &mut d.starts_on, true, self.data.company.today());
+                    forms::date(&mut cols[1], "Due on *", &mut d.due_on, true, self.data.company.today());
                 });
             } else {
-                field(ui, "Starts on *", &mut d.starts_on, "YYYY-MM-DD");
-                field(ui, "Due on *", &mut d.due_on, "YYYY-MM-DD");
+                forms::date(ui, "Starts on *", &mut d.starts_on, true, self.data.company.today());
+                forms::date(ui, "Due on *", &mut d.due_on, true, self.data.company.today());
             }
             field(
                 ui,
@@ -1098,19 +1098,14 @@ impl HrisApp {
             );
             if ui.available_width() >= 500.0 {
                 ui.columns(2, |cols| {
-                    field(
-                        &mut cols[0],
-                        "Period starts *",
-                        &mut d.starts_on,
-                        "YYYY-MM-DD",
-                    );
-                    field(&mut cols[1], "Period ends *", &mut d.ends_on, "YYYY-MM-DD");
+                    forms::date(&mut cols[0], "Period starts *", &mut d.starts_on, true, self.data.company.today());
+                    forms::date(&mut cols[1], "Period ends *", &mut d.ends_on, true, self.data.company.today());
                 });
             } else {
-                field(ui, "Period starts *", &mut d.starts_on, "YYYY-MM-DD");
-                field(ui, "Period ends *", &mut d.ends_on, "YYYY-MM-DD");
+                forms::date(ui, "Period starts *", &mut d.starts_on, true, self.data.company.today());
+                forms::date(ui, "Period ends *", &mut d.ends_on, true, self.data.company.today());
             }
-            field(ui, "Review deadline *", &mut d.due_on, "YYYY-MM-DD");
+            forms::date(ui, "Review deadline *", &mut d.due_on, true, self.data.company.today());
             field(ui, "Save reason *", &mut d.reason, "");
             ui.label("Reviewers are assigned separately. Dates and labels freeze when a review is assigned; published reviews remain unchanged when the cycle is reopened.");
             let valid = Change::CycleSave(d.clone()).payload(&self.data);

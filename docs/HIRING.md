@@ -53,6 +53,11 @@ positive and no more than eight hours; scheduled assignments cannot overlap
 for the same interviewer. Rescheduling, cancellation and completion require a
 reason and current revision. Future interviews cannot be completed.
 
+Interview and application dates support **Calendar** alongside typed
+**YYYY-MM-DD** entry. An asterisk marks required fields. Interview scheduling
+shows time-format and duration errors beside the corresponding Start or End
+field, using the same company-time-zone rules as saving the interview.
+
 In **Interview agenda**, use **Today** or **Next 7 days** to filter in the company
 time zone. The seven-day window starts tomorrow. Interviews display their saved
 time zone and show the company date when it differs. **My pending feedback**

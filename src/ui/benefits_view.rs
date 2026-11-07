@@ -808,13 +808,7 @@ fn fields(ui: &mut Ui, f: &mut Form, c: &Context) {
             }
             ui.label(&e.plan_snapshot.eligibility_guidance);
             if *ending {
-                input(
-                    ui,
-                    "Final coverage date (YYYY-MM-DD)",
-                    "benefits-to",
-                    to,
-                    false,
-                );
+                forms::date_with_id(ui, "Final coverage date", to, true, c.today, egui::Id::unique("benefits-to"));
                 ui.label("The prior review and dependent identities are retained; existing dependent end dates are clipped to this end date.");
             } else {
                 ui.horizontal_wrapped(|ui| {
@@ -840,14 +834,8 @@ fn fields(ui: &mut Ui, f: &mut Form, c: &Context) {
                     &mut e.eligibility_basis,
                     true,
                 );
-                input(
-                    ui,
-                    "Coverage from (YYYY-MM-DD)",
-                    "benefits-from",
-                    from,
-                    false,
-                );
-                input(ui, "Coverage to (optional)", "benefits-to", to, false);
+                forms::date_with_id(ui, "Coverage from", from, true, c.today, egui::Id::unique("benefits-from"));
+                forms::date_with_id(ui, "Coverage to", to, false, c.today, egui::Id::unique("benefits-to"));
                 ui.label(RichText::new("Dependents").strong());
                 let mut remove = None;
                 for (i, d) in dependents.iter_mut().enumerate() {
@@ -867,27 +855,9 @@ fn fields(ui: &mut Ui, f: &mut Form, c: &Context) {
                                     ui.selectable_value(&mut d.value.relationship, v, v.label());
                                 }
                             });
-                        input(
-                            ui,
-                            "Date of birth (optional)",
-                            &format!("benefits-dependent-{i}-birth"),
-                            &mut d.birth,
-                            false,
-                        );
-                        input(
-                            ui,
-                            "Dependent coverage from",
-                            &format!("benefits-dependent-{i}-from"),
-                            &mut d.from,
-                            false,
-                        );
-                        input(
-                            ui,
-                            "Dependent coverage to (optional)",
-                            &format!("benefits-dependent-{i}-to"),
-                            &mut d.to,
-                            false,
-                        );
+                        forms::date_with_id(ui, "Date of birth", &mut d.birth, false, c.today, egui::Id::unique(format!("benefits-dependent-{i}-birth")));
+                        forms::date_with_id(ui, "Dependent coverage from", &mut d.from, true, c.today, egui::Id::unique(format!("benefits-dependent-{i}-from")));
+                        forms::date_with_id(ui, "Dependent coverage to", &mut d.to, false, c.today, egui::Id::unique(format!("benefits-dependent-{i}-to")));
                         if ui.button("Remove from this review").clicked() {
                             remove = Some(i);
                         }

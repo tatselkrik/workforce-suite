@@ -304,12 +304,7 @@ impl HrisApp {
             } else if let Some(id) = d.employee_id {
                 ui.label(self.data.employee_name(id));
             }
-            field(
-                ui,
-                "Last working date *",
-                &mut d.last_working_on,
-                "YYYY-MM-DD",
-            );
+            forms::date(ui, "Last working date *", &mut d.last_working_on, true, self.data.company.today());
             ui.label("Separation category (private to HR)");
             egui::ComboBox::from_id_salt("exit_category")
                 .selected_text(d.category.replace('_', " "))
@@ -492,7 +487,7 @@ impl HrisApp {
                         );
                     }
                 });
-            field(ui, "Due date (optional)", &mut d.due_on, "YYYY-MM-DD");
+            forms::date(ui, "Due date (optional)", &mut d.due_on, false, self.data.company.today());
             ui.checkbox(
                 &mut d.required,
                 "Required before clearance can be completed",

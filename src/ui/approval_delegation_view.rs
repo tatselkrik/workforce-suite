@@ -189,8 +189,11 @@ impl HrisApp {
                         ui.label("Original approver");egui::ComboBox::from_id_salt("delegation-principal").width(340.0).selected_text(c.staff.iter().find(|s|Some(s.user_id)==state.principal).map(|s|format!("{} · {}",s.name,s.label())).unwrap_or_else(||"Choose staff member".into())).show_ui(ui,|ui|{for s in &c.staff{ui.selectable_value(&mut state.principal,Some(s.user_id),format!("{} · {}",s.name,s.label()));}});ui.end_row();
                         ui.label("Substitute approver");let original=c.staff.iter().find(|s|Some(s.user_id)==state.principal);
                         egui::ComboBox::from_id_salt("delegation-substitute").width(340.0).selected_text(c.staff.iter().find(|s|Some(s.user_id)==state.delegate).map(|s|format!("{} · {}",s.name,s.label())).unwrap_or_else(||"Choose substitute".into())).show_ui(ui,|ui|{for s in c.staff.iter().filter(|s|original.is_some_and(|p|p.user_id!=s.user_id&&approvals::substitute_roles(state.workflow,&p.roles(),&s.roles()))){ui.selectable_value(&mut state.delegate,Some(s.user_id),format!("{} · {}",s.name,s.label()));}});ui.end_row();
-                        ui.label("Starts on");ui.add(egui::TextEdit::singleline(&mut state.starts).desired_width(180.0).hint_text("YYYY-MM-DD"));ui.end_row();
-                        ui.label("Ends on (inclusive)");ui.add(egui::TextEdit::singleline(&mut state.ends).desired_width(180.0).hint_text("YYYY-MM-DD"));ui.end_row();
+
+                    });
+                    ui.columns(2, |cols| {
+                        forms::date(&mut cols[0], "Starts on", &mut state.starts, true, self.data.company.today());
+                        forms::date(&mut cols[1], "Ends on (inclusive)", &mut state.ends, true, self.data.company.today());
                     });
                     ui.label(RichText::new("HR Generalist requires an HR/Admin substitute. Administrator steps require another Administrator. Other staff cover named leave assignments only unless they also hold team-review authority. Use one delegation per workflow; overlapping assignments for the same original approver are blocked.").small().color(muted(ui)));
                 }

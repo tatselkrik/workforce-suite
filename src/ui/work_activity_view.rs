@@ -955,14 +955,14 @@ impl HrisApp {
                     "station_pin_reset"=>{ui.label("New personal attendance PIN (6–12 digits)");ui.add(egui::TextEdit::singleline(&mut form.note).password(true).char_limit(12).id(egui::Id::unique("work-station-pin")));ui.label("Give this PIN to the employee privately. Saving replaces their previous PIN and clears a PIN lock.");},
                     "policy_save" => {
                         egui::ComboBox::from_id_salt("work-arrangement").selected_text(&form.choice).show_ui(ui,|ui|{for v in ["onsite","remote","hybrid"]{ui.selectable_value(&mut form.choice,v.into(),v);}});
-                        editor_text(ui,"Effective from (YYYY-MM-DD)",&mut form.date,false,10);editor_text(ui,"Until (optional)",&mut form.end,false,10);
+                        forms::date_with_id(ui,"Effective from",&mut form.date,true,self.data.company.today(),egui::Id::unique("work-Effective from (YYYY-MM-DD)"));forms::date_with_id(ui,"Until",&mut form.end,false,self.data.company.today(),egui::Id::unique("work-Until (optional)"));
                         if form.choice=="hybrid"{ui.label("Office weekdays");ui.horizontal_wrapped(|ui|{for(i,d)in["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].iter().enumerate(){ui.checkbox(&mut form.office_days[i],*d);}});}
                         editor_text(ui,"Reason for this version",&mut form.note,true,500);
                         ui.checkbox(&mut form.enabled,"Activate this version from its effective date");ui.label("Leave unchecked to save a draft. Office restrictions require a verified registered kiosk.");
                     },
-                    "task_save" => {editor_text(ui,"Task",&mut form.title,false,200);editor_text(ui,"Expected outcome",&mut form.outcome,true,4000);editor_text(ui,"Due work date (YYYY-MM-DD)",&mut form.date,false,10);
+                    "task_save" => {editor_text(ui,"Task",&mut form.title,false,200);editor_text(ui,"Expected outcome",&mut form.outcome,true,4000);forms::date_with_id(ui,"Due work date",&mut form.date,true,self.data.company.today(),egui::Id::unique("work-Due work date (YYYY-MM-DD)"));
                         egui::ComboBox::from_id_salt("work-priority").selected_text(&form.choice).show_ui(ui,|ui|{for v in ["normal","high","urgent"]{ui.selectable_value(&mut form.choice,v.into(),v);}});},
-                    "report_save" => {ui.add_enabled_ui(form.revision<0,|ui|editor_text(ui,"Work date (shift start date for overnight work)",&mut form.date,false,10));
+                    "report_save" => {ui.add_enabled_ui(form.revision<0,|ui|forms::date_with_id(ui,"Work date (shift start date for overnight work)",&mut form.date,true,self.data.company.today(),egui::Id::unique("work-Work date (shift start date for overnight work)")));
                         editor_text(ui,"Work summary",&mut form.body.summary,true,4000);editor_text(ui,"Completed work",&mut form.body.completed,true,4000);
                         editor_text(ui,"Unfinished work",&mut form.body.unfinished,true,4000);editor_text(ui,"Blockers",&mut form.body.blockers,true,4000);editor_text(ui,"Next actions",&mut form.body.next_steps,true,4000);
                         ui.collapsing("Include snapshots of my assigned tasks",|ui|{if let Some(c)=&self.work_state.context{for t in c.tasks.iter().filter(|t|Some(t.employee_id)==self.data.access.employee_id){let mut selected=form.task_ids.contains(&t.id);if ui.checkbox(&mut selected,&t.title).changed(){if selected{form.task_ids.push(t.id);}else{form.task_ids.retain(|id|*id!=t.id);}}}}});},

@@ -8,6 +8,20 @@ use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
 use std::collections::HashSet;
 
+fn interview_time_errors(draft: &InterviewDraft, data: &Snapshot) -> [Option<String>; 2] {
+    let Ok(date) = parse_date(&draft.date) else {
+        return [None, None];
+    };
+    let mut errors = [&draft.start, &draft.end].map(|time| {
+        crate::corrections::local_time(date, time, data.company.tz())
+            .err().map(|error| error.to_string())
+    });
+    if errors.iter().all(Option::is_none) {
+        errors[1] = draft.times(data).err().map(|error| error.to_string());
+    }
+    errors
+}
+
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 enum AgendaView {
     #[default]
@@ -658,7 +672,7 @@ impl HrisApp {
                     "Company time zone: {} · Use 24-hour times",
                     self.data.company.timezone
                 ));
-                field(
+                forms::required_text(
                     ui,
                     "Interview title *",
                     &mut draft.title,
@@ -684,10 +698,20 @@ impl HrisApp {
                             );
                         }
                     });
+                if draft.interviewer.is_none() {
+                    ui.label(RichText::new("Choose an active staff interviewer.").small().color(muted(ui)));
+                }
+                let time_errors = interview_time_errors(&draft, &self.data);
                 ui.columns(3, |cols| {
-                    field(&mut cols[0], "Date *", &mut draft.date, "YYYY-MM-DD");
+                    forms::date(&mut cols[0], "Date *", &mut draft.date, true, self.data.company.today());
                     field(&mut cols[1], "Start *", &mut draft.start, "09:00");
+                    if let Some(message) = &time_errors[0] {
+                        forms::error(&mut cols[1], message);
+                    }
                     field(&mut cols[2], "End *", &mut draft.end, "10:00");
+                    if let Some(message) = &time_errors[1] {
+                        forms::error(&mut cols[2], message);
+                    }
                 });
                 field(
                     ui,
@@ -701,7 +725,7 @@ impl HrisApp {
                         .desired_rows(3)
                         .desired_width(f32::INFINITY),
                 );
-                field(
+                forms::required_text(
                     ui,
                     "Change reason *",
                     &mut draft.reason,
@@ -1158,6 +1182,30 @@ fn interview_time(ui: &mut Ui, r: &recruiting::Interview) -> NaiveDate {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn inline_interview_errors_identify_the_field_and_use_the_saved_time_rules() {
+        let mut data = DemoStore::new().data;
+        let mut draft = InterviewDraft::new(&data, Uuid::new_v4());
+        draft.date = "2028-02-29".into();
+        draft.start = "not a time".into();
+        let errors = interview_time_errors(&draft, &data);
+        assert!(errors[0].as_ref().unwrap().contains("24-hour"));
+        assert!(errors[1].is_none());
+        draft.start = "09:00".into();
+        draft.end = "08:59".into();
+        let errors = interview_time_errors(&draft, &data);
+        assert!(errors[0].is_none());
+        assert_eq!(errors[1].as_ref().unwrap(), &draft.times(&data).unwrap_err().to_string());
+        draft.end = "17:00".into();
+        assert!(interview_time_errors(&draft, &data).iter().all(Option::is_none));
+        draft.end = "17:01".into();
+        assert!(interview_time_errors(&draft, &data)[1].is_some());
+        data.company.timezone = "America/New_York".into();
+        draft.date = "2026-11-01".into();
+        draft.start = "01:30".into();
+        assert!(interview_time_errors(&draft, &data)[0].as_ref().unwrap().contains("twice"));
+    }
 
     fn sample_interview(
         data: &Snapshot,

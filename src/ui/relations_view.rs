@@ -697,8 +697,7 @@ impl State {
                 }
             }
             if f.kind == Kind::FollowUp {
-                ui.label("Due date (YYYY-MM-DD)");
-                ui.add(egui::TextEdit::singleline(&mut f.due_on).desired_width(160.0));
+                forms::date(ui, "Due date", &mut f.due_on, true, data.company.today());
             }
             ui.label(match f.kind {
                 Kind::Create => "Initial confidential description",

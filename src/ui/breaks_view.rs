@@ -382,8 +382,8 @@ impl HrisApp {
                     });
                     if draft.rule_id.is_none(){field(ui,"Break name *",&mut draft.name,"For example, Meal break");ui.checkbox(&mut draft.paid,"Paid break");}
                 }else{ui.label(format!("{} · {}",draft.name,if draft.paid{"Paid"}else{"Unpaid"}));}
-                ui.columns(2,|cols|{field(&mut cols[0],"Start date *",&mut draft.started_date,"YYYY-MM-DD");field(&mut cols[1],"Start time *",&mut draft.started_time,"24-hour time, e.g. 12:00");});
-                ui.columns(2,|cols|{field(&mut cols[0],"End date",&mut draft.ended_date,"YYYY-MM-DD");field(&mut cols[1],"End time",&mut draft.ended_time,"Leave empty if in progress");});
+                ui.columns(2,|cols|{forms::date(&mut cols[0], "Start date *", &mut draft.started_date, true, self.data.company.today());field(&mut cols[1],"Start time *",&mut draft.started_time,"24-hour time, e.g. 12:00");});
+                ui.columns(2,|cols|{forms::date(&mut cols[0], "End date", &mut draft.ended_date, !draft.ended_time.trim().is_empty(), self.data.company.today());field(&mut cols[1],"End time",&mut draft.ended_time,"Leave empty if in progress");});
                 field(ui,"Reason *",&mut draft.reason,"Explain why this record is added or corrected");
                 ui.label(RichText::new("Breaks must stay inside the recorded attendance period and cannot overlap. Voided records and corrections remain in history.").small().color(muted(ui)));
                 ui.separator();ui.horizontal_wrapped(|ui|{save=primary(ui,"Save break");cancel=ui.button("Cancel").clicked();});

@@ -325,6 +325,16 @@ impl InterviewDraft {
             reason: String::new(),
         }
     }
+    pub(crate) fn times(&self, data: &Snapshot) -> Result<(DateTime<Utc>, DateTime<Utc>)> {
+        let date = crate::domain::parse_date(&self.date)?;
+        let start = crate::corrections::local_time(date, &self.start, data.company.tz())?;
+        let end = crate::corrections::local_time(date, &self.end, data.company.tz())?;
+        ensure!(
+            end > start && end <= start + Duration::hours(8),
+            "Set an end time after the start, within eight hours on the selected date."
+        );
+        Ok((start, end))
+    }
     pub fn payload(&self, data: &Snapshot) -> Result<Value> {
         hiring::authorize(&data.access, data)?;
         let app = hiring::record(data, self.applicant_id)?;
@@ -344,13 +354,7 @@ impl InterviewDraft {
         text(&self.title, 120, true, false, "Interview title")?;
         text(&self.location, 240, false, false, "Location")?;
         text(&self.brief, 1000, false, true, "Interview brief")?;
-        let date = crate::domain::parse_date(&self.date)?;
-        let start = crate::corrections::local_time(date, &self.start, data.company.tz())?;
-        let end = crate::corrections::local_time(date, &self.end, data.company.tz())?;
-        ensure!(
-            end > start && end <= start + Duration::hours(8),
-            "Set an end time after the start, within eight hours on the selected date."
-        );
+        let (start, end) = self.times(data)?;
         if let Some(old) = &self.original {
             let latest = interview(data, self.id)?;
             ensure!(

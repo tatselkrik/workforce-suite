@@ -549,12 +549,7 @@ impl HrisApp {
                             &mut e.draft.source,
                             "e.g. Referral, walk-in, job board",
                         );
-                        field(
-                            &mut cols[1],
-                            "Application date *",
-                            &mut e.draft.applied_on,
-                            "YYYY-MM-DD",
-                        );
+                        forms::date(&mut cols[1], "Application date *", &mut e.draft.applied_on, true, self.data.company.today());
                     });
                     ui.label("Private HR notes");
                     ui.add(

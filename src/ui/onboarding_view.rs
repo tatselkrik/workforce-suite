@@ -418,13 +418,8 @@ impl HrisApp {
             field(ui, "Job title *", &mut d.job_title, "");
             field(ui, "Department", &mut d.department, "");
             ui.columns(2, |c| {
-                field(&mut c[0], "Start date *", &mut d.starts_on, "YYYY-MM-DD");
-                field(
-                    &mut c[1],
-                    "Expiry date (optional)",
-                    &mut d.expires_on,
-                    "YYYY-MM-DD",
-                );
+                forms::date(&mut c[0], "Start date *", &mut d.starts_on, true, self.data.company.today());
+                forms::date(&mut c[1], "Expiry date (optional)", &mut d.expires_on, false, self.data.company.today());
             });
             ui.columns(2, |c| {
                 field(&mut c[0], "Base amount *", &mut d.amount, "25000.00");
@@ -917,7 +912,7 @@ impl HrisApp {
                         );
                     }
                 });
-            field(ui, "Due date (optional)", &mut d.due_on, "YYYY-MM-DD");
+            forms::date(ui, "Due date (optional)", &mut d.due_on, false, self.data.company.today());
             ui.checkbox(
                 &mut d.required,
                 "Required before onboarding can be completed",

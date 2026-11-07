@@ -1,6 +1,7 @@
 mod work_activity_view;
 mod design;
 mod employee_finder;
+mod forms;
 mod leadership_view;
 mod benefits_view;
 mod services_view;
@@ -4355,9 +4356,9 @@ impl HrisApp {
         let mut cancel = false;
         egui::Window::new(if editing{"Edit document details"}else if retrying{"Retry document upload"}else{"Upload employee document"})
             .id(egui::Id::unique("employee_document_dialog")).open(&mut open).collapsible(false).resizable(false)
-            .default_width(520.0).anchor(egui::Align2::CENTER_CENTER,[0.0,0.0]).show(ctx,|ui| {
+            .default_width(520.0).default_height((ctx.content_rect().height()-100.0).clamp(320.0,720.0)).anchor(egui::Align2::CENTER_CENTER,[0.0,0.0]).show(ctx,|ui| {
                 ui.add_enabled_ui(!self.busy,|ui| {
-                    egui::ScrollArea::vertical().id_salt("document_form_body").max_height((ctx.content_rect().height()-260.0).max(130.0)).show(ui,|ui| {
+                    egui::ScrollArea::vertical().id_salt("document_form_body").max_height((ui.available_height().min(ctx.content_rect().height()-100.0)-110.0).max(130.0)).show(ui,|ui| {
                         ui.label(RichText::new(self.data.employee_name(draft.employee_id)).size(18.0).strong());
                         if editing {
                             ui.add(egui::Label::new(format!("Original file: {}",draft.original.as_ref().unwrap().original_filename)).wrap());
@@ -4382,11 +4383,11 @@ impl HrisApp {
                             for category in DocumentCategory::ALL {ui.selectable_value(&mut draft.category,category,category.label());}
                         });
                         if previous!=draft.category && draft.category!=DocumentCategory::Contract {draft.contract_start.clear();draft.contract_end.clear();}
-                        field(ui,"Issue date (optional)",&mut draft.issued_on,"YYYY-MM-DD");
-                        field(ui,"Expiry date (optional)",&mut draft.expires_on,"YYYY-MM-DD");
+                        forms::date(ui, "Issue date (optional)", &mut draft.issued_on, false, self.data.company.today());
+                        forms::date(ui, "Expiry date (optional)", &mut draft.expires_on, false, self.data.company.today());
                         if draft.category==DocumentCategory::Contract {
-                            field(ui,"Contract start (optional)",&mut draft.contract_start,"YYYY-MM-DD");
-                            field(ui,"Contract end (optional)",&mut draft.contract_end,"YYYY-MM-DD");
+                            forms::date(ui, "Contract start (optional)", &mut draft.contract_start, false, self.data.company.today());
+                            forms::date(ui, "Contract end (optional)", &mut draft.contract_end, false, self.data.company.today());
                         }
                         ui.label("Notes (optional)");
                         ui.add_sized([ui.available_width(),70.0],egui::TextEdit::multiline(&mut draft.notes).hint_text("Describe this document. Up to 1,000 characters."));
@@ -4463,9 +4464,9 @@ impl HrisApp {
                                 ui.label(attendance_times(before, &self.data));
                             }
                             ui.add_space(8.0);
-                            field(ui, "Check-in date *", &mut draft.checked_in_date, "YYYY-MM-DD; overnight shifts may check in the next day");
+                            forms::date(ui, "Check-in date *", &mut draft.checked_in_date, true, self.data.company.today());
                             field(ui, "Check-in time *", &mut draft.checked_in, "24-hour time, e.g. 08:30");
-                            field(ui, "Check-out date", &mut draft.checked_out_date, "YYYY-MM-DD (supports overnight shifts)");
+                            forms::date(ui, "Check-out date", &mut draft.checked_out_date, !draft.checked_out.trim().is_empty(), self.data.company.today());
                             field(ui, "Check-out time", &mut draft.checked_out, "24-hour time, or leave empty if still open");
                             if draft.checked_out.trim().is_empty() {
                                 ui.label(RichText::new("An open shift prevents another check-in until it is closed. Use Correct to enter a missed check-out.").color(muted(ui)).small());
@@ -5207,8 +5208,8 @@ fn employment_filter(
 }
 
 fn employment_fields(ui: &mut Ui, draft: &mut EmployeeDraft, data: &Snapshot) {
-    field(ui, "Employee code", &mut draft.employee_code, "EMP-001");
-    field(ui, "Full name", &mut draft.full_name, "Employee name");
+    forms::required_text(ui, "Employee code", &mut draft.employee_code, "EMP-001");
+    forms::required_text(ui, "Full name", &mut draft.full_name, "Employee name");
     field(ui, "Department", &mut draft.department, "Not set");
     field(ui, "Job title", &mut draft.job_title, "Not set");
     let _choices = ui.scope(|ui| {
@@ -5231,12 +5232,7 @@ fn employment_fields(ui: &mut Ui, draft: &mut EmployeeDraft, data: &Snapshot) {
     if std::env::var("HRIS_PREVIEW_FORM").is_ok_and(|v| v.starts_with("employment-")) {
         ui.scroll_to_rect(_choices.response.rect, Some(Align::Center));
     }
-    field(
-        ui,
-        "Date joined (optional)",
-        &mut draft.joined_on,
-        "YYYY-MM-DD; leave blank if not set",
-    );
+    forms::date(ui, "Date joined (optional)", &mut draft.joined_on, false, data.company.today());
     ui.label("Reports to");
     egui::ComboBox::from_id_salt("employee_reports_to")
         .selected_text(

@@ -520,13 +520,8 @@ impl HrisApp {
                     );
                 });
                 ui.columns(2, |c| {
-                    field(&mut c[0], "Starts on *", &mut d.starts_on, "YYYY-MM-DD");
-                    field(
-                        &mut c[1],
-                        "Target date",
-                        &mut d.target_on,
-                        "YYYY-MM-DD or blank",
-                    );
+                    forms::date(&mut c[0], "Starts on *", &mut d.starts_on, true, self.data.company.today());
+                    forms::date(&mut c[1], "Target date", &mut d.target_on, false, self.data.company.today());
                 });
             } else {
                 field(ui, "Target role (aspiration)", &mut d.target_role, "");
@@ -536,8 +531,8 @@ impl HrisApp {
                     &mut d.target_department,
                     "",
                 );
-                field(ui, "Starts on *", &mut d.starts_on, "YYYY-MM-DD");
-                field(ui, "Target date", &mut d.target_on, "YYYY-MM-DD or blank");
+                forms::date(ui, "Starts on *", &mut d.starts_on, true, self.data.company.today());
+                forms::date(ui, "Target date", &mut d.target_on, false, self.data.company.today());
             }
             area(ui, "Skills to develop", &mut d.skills_focus, 3);
             area(ui, "Shared coaching notes", &mut d.shared_notes, 3);
@@ -577,7 +572,7 @@ impl HrisApp {
             }
             field(ui, "Milestone title *", &mut d.title, "");
             area(ui, "Actions / practice steps", &mut d.action_steps, 3);
-            field(ui, "Due date", &mut d.due_on, "YYYY-MM-DD or blank");
+            forms::date(ui, "Due date", &mut d.due_on, false, self.data.company.today());
             ui.checkbox(
                 &mut d.required,
                 "Required before this plan can be completed",
@@ -626,7 +621,7 @@ impl HrisApp {
                     summary,
                     ..
                 } if status == "completed" => {
-                    field(ui, "Actual completion date *", completed_on, "YYYY-MM-DD");
+                    forms::date(ui, "Actual completion date *", completed_on, true, self.data.company.today());
                     area(ui, "Development outcome / summary *", summary, 5);
                     ui.label("At least one milestone must be done and every required milestone must be resolved. Completion saves milestone facts and related context in history.");
                 }
@@ -637,7 +632,7 @@ impl HrisApp {
                     ..
                 } if status != "open" => {
                     if status == "done" {
-                        field(ui, "Actual completion date *", completed_on, "YYYY-MM-DD");
+                        forms::date(ui, "Actual completion date *", completed_on, true, self.data.company.today());
                     }
                     area(
                         ui,

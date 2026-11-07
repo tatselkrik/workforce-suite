@@ -491,6 +491,14 @@ Save your work before installing a company update. Keep each application on its
 own update path and use only a package supplied for that company. A source-code
 download is not a configured installer.
 
+### Dates and required fields
+
+In HR forms, an asterisk marks a required field. Choose **Calendar** or type
+**YYYY-MM-DD**. **Today** uses the company's date; **Clear** leaves an optional
+date blank. Opening or closing a calendar preserves your draft until you choose
+a date. Date errors appear beside the field. Interview **Start** and **End**
+errors use 24-hour times and the existing eight-hour limit.
+
 ### Common situations
 
 | Situation | What to do |

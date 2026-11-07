@@ -325,8 +325,8 @@ impl HrisApp {
                 ui.label("No attendance record is currently saved for this date.");
             }
             ui.add_enabled_ui(!self.busy,|ui|{
-    ui.columns(2,|c|{field(&mut c[0],"Check-in date *",&mut draft.checked_in_date,"YYYY-MM-DD");field(&mut c[1],"Check-in time *",&mut draft.checked_in,"24-hour time, e.g. 08:30");});
-    ui.columns(2,|c|{field(&mut c[0],"Check-out date",&mut draft.checked_out_date,"YYYY-MM-DD");field(&mut c[1],"Check-out time",&mut draft.checked_out,"Empty if still open");});
+    ui.columns(2,|c|{forms::date(&mut c[0], "Check-in date *", &mut draft.checked_in_date, true, self.data.company.today());field(&mut c[1],"Check-in time *",&mut draft.checked_in,"24-hour time, e.g. 08:30");});
+    ui.columns(2,|c|{forms::date(&mut c[0], "Check-out date", &mut draft.checked_out_date, !draft.checked_out.trim().is_empty(), self.data.company.today());field(&mut c[1],"Check-out time",&mut draft.checked_out,"Empty if still open");});
     ui.label("Reason *");ui.add_sized([ui.available_width(),90.0],egui::TextEdit::multiline(&mut draft.reason).hint_text("Explain the missing or incorrect time. Avoid sensitive personal details."));
     ui.label(RichText::new(format!("{} / 500 characters",draft.reason.trim().chars().count())).small().color(muted(ui)));
     ui.label("Submitting does not change attendance. Keep one pending request per date; cancel and resubmit to revise it. Overnight check-ins may use the next date within the saved shift. An open shift prevents another check-in.");
