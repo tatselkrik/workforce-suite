@@ -59,6 +59,10 @@ time zone and show the company date when it differs. **My pending feedback**
 shows your assigned interviews that have started and still need your feedback,
 including completed interviews.
 
+Larger interview lists show 25 matches per page. Use **Previous** and **Next**.
+Changing the search, date view, status or applicant returns to the first page.
+Opening an interview and returning to the agenda keeps your page.
+
 The assigned interviewer can record a 1–5 rating, Proceed/Hold/Not recommended
 and a written assessment after the start. Corrections require a reason and
 revision. HR sees all retained assessments; a reassigned Manager sees only

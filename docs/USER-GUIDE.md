@@ -118,6 +118,9 @@ In the interview agenda, use **Today** or **Next 7 days** for company dates. The
 seven-day window starts tomorrow. **My pending feedback** shows assigned interviews
 that have started and still need your feedback.
 
+Use **Previous** and **Next** to browse larger agendas, with 25 interviews per
+page. Changing filters returns to the first page.
+
 ### Offers and onboarding
 
 Prepare an offer with the reviewed employment and pay terms. Submit it for the

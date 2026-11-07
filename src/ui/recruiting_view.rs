@@ -73,6 +73,8 @@ pub(super) struct State {
     pub search: String,
     pub show_closed: bool,
     agenda_view: AgendaView,
+    agenda_page: ListPager,
+    agenda_applicant: Option<Uuid>,
     pub include_archived: bool,
 }
 impl State {
@@ -731,6 +733,11 @@ impl HrisApp {
             }
             self.recruiting_state.detail = None;
         }
+        let previous = (
+            self.recruiting_state.agenda_view,
+            self.recruiting_state.show_closed,
+        );
+        let mut search_changed = false;
         card(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
                 ui.label(
@@ -776,11 +783,13 @@ impl HrisApp {
                 ui.small(format!("Agenda dates use {}.", self.data.company.timezone));
             }
             ui.horizontal_wrapped(|ui| {
-                ui.add(
-                    egui::TextEdit::singleline(&mut self.recruiting_state.search)
-                        .hint_text("Search interview, applicant or position")
-                        .desired_width(340.0),
-                );
+                search_changed = ui
+                    .add(
+                        egui::TextEdit::singleline(&mut self.recruiting_state.search)
+                            .hint_text("Search interview, applicant or position")
+                            .desired_width(340.0),
+                    )
+                    .changed();
                 if self.recruiting_state.agenda_view != AgendaView::MyPendingFeedback {
                     ui.checkbox(
                         &mut self.recruiting_state.show_closed,
@@ -792,6 +801,16 @@ impl HrisApp {
                 ui.label(RichText::new("Only your assigned interviews and your own feedback are visible. Applicant files and private HR notes stay restricted.").small().color(muted(ui)));
             }
         });
+        if search_changed
+            || previous != (
+                self.recruiting_state.agenda_view,
+                self.recruiting_state.show_closed,
+            )
+            || self.recruiting_state.agenda_applicant != applicant
+        {
+            self.recruiting_state.agenda_page = ListPager::default();
+        }
+        self.recruiting_state.agenda_applicant = applicant;
         let rows = agenda_rows(&self.data, &self.recruiting_state, applicant, Utc::now());
         if rows.is_empty() {
             let message = if self.recruiting_state.agenda_view == AgendaView::MyPendingFeedback {
@@ -800,9 +819,16 @@ impl HrisApp {
                 "No interviews match this view."
             };
             empty(ui, message);
+            return;
         }
+        let total = rows.len();
+        let count = ui.label(format!("Matching interviews · {total}"));
+        self.recruiting_state
+            .agenda_page
+            .controls(ui, total, "interviews");
+        let page = self.recruiting_state.agenda_page.range(total);
         let company_zone = self.data.company.tz();
-        for (r, pending_feedback) in rows {
+        for (r, pending_feedback) in rows.into_iter().skip(page.start).take(page.len()) {
             ui.add_space(10.0);
             card(ui, |ui| {
                 ui.horizontal_wrapped(|ui| {
@@ -828,6 +854,12 @@ impl HrisApp {
                     ui.label(RichText::new("Your feedback is pending").color(accent(ui)));
                 }
             });
+        }
+        if self.recruiting_state
+            .agenda_page
+            .controls(ui, total, "interviews")
+        {
+            ui.scroll_to_rect(count.rect, Some(Align::Min));
         }
     }
     fn interviewer_name(&self, id: Uuid) -> String {
